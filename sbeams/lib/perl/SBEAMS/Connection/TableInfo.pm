@@ -8,7 +8,7 @@ package SBEAMS::Connection::TableInfo;
 # Description : This is part of the SBEAMS::Connection module which returns
 #               information about various tables.
 #
-# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2014 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -952,6 +952,30 @@ sub get_guest_contact_id {
   username = 'guest'
   END
   return $id;
+}
+
+#+
+# Method to fetch organism_id and name
+#-
+sub get_organism_hash {
+  my $self = shift;
+  my %args = ( key => 'organism_id', @_ );
+
+  my $sql = qq~
+  SELECT organism_id, organism_name
+  FROM $TB_ORGANISM where 
+  record_status = 'N'
+  ~;
+  my $sth = $self->get_statement_handle( $sql );
+
+  my %name2id;
+  my %id2name;
+  while ( my @row = $sth->fetchrow_array() ) {
+    $name2id{$row[1]} = $row[0];
+    $id2name{$row[0]} = $row[1];
+  }
+  return \%id2name if $args{key} eq 'organism_id';
+  return \%name2id;
 }
 
 #+
