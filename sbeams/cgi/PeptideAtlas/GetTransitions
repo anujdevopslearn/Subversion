@@ -294,20 +294,10 @@ $(document).ready(function() {
       <br>
       ~
     }
-
-
-
     print $sbeams->getTabbedPanesDHTML();
   }
 
-# TABs debugging kruft
-#  print $sbeams->addTabbedPane( label => 'best' );
-#  print $sbeams->closeTabbedPane();
-#  print $sbeams->addTabbedPane( label => 'rest' );
-#  print $sbeams->closeTabbedPane();
-
   # Print form regardless.  A heavily-modified manage table form, 
-
   my $err = '';
   if ( !$pabst_build_id ) {
     $err = $sbeams->makeErrorText( "<BR>No valid builds found for this user" );
@@ -507,21 +497,11 @@ sub print_form {
     $form .= $ion_filters;
     $form .= $mod_filters;
 
-
-#    open FRM, ">/tmp/form";
-#    print FRM qq~
-#    $form
-#    ~;
-
-#    <TR><TD COLSPAN=3>$sub_form</TD></TR>
-  print $sbeams->addTabbedPane( label => 'form' );
-  print "<TABLE>$form\n";
+  print $sbeams->addTabbedPane( label => 'Form' );
+  print "$form\n";
     #### Display the form action buttons
-  $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
-#  print "</TABLE>\n";
-#  unless ( $args{action} && $args{action} =~ /QUERY/ ) {
-    print $sbeams->closeTabbedPane( selected => 'form' );
-#  }
+    $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
+    print $sbeams->closeTabbedPane( selected => 'Form' );
 
 
 } # end print_form
@@ -617,7 +597,7 @@ sub get_mod_filters {
     }
   }
 
-    my $mods_help = mk_help_link( title => 'Allowed Modifications', text => 'Checking options will allow peptides containing specified modification(s) in MRM list' );
+    my $mods_help = mk_help_link( title => 'Allowed Modifications', text => 'Checking options will allow peptides containing specified modification(s) in SRM list' );
 
   my $checks = qq~
     <DIV class=clear_info_box>
@@ -744,7 +724,7 @@ sub get_ion_filters {
     $n_loss_ions = ( $opts{n_loss_ions} ) ? 'checked' : '';
   }
 
-  my $ions_help = mk_help_link( title => 'Ion Types', text => 'Checking options will allow that ion type in the MRM list' );
+  my $ions_help = mk_help_link( title => 'Ion Types', text => 'Checking options will allow that ion type in the SRM list' );
   my $b_ions_chk = "<INPUT TYPE=checkbox NAME=b_ions $b_ions></INPUT>";
   my $y_ions_chk = "<INPUT TYPE=checkbox NAME=y_ions $y_ions></INPUT>";
   my $n_loss_chk = "<INPUT TYPE=checkbox NAME=n_loss_ions $n_loss_ions></INPUT>";
@@ -823,10 +803,10 @@ sub get_download_form {
     </SCRIPT>
     <SELECT NAME=download ID=download>
       <OPTION VALUE='TSV' >TSV</OPTION>
-      <OPTION VALUE='AgilentQQQ' >Agilent QQQ MRM</OPTION>
-      <OPTION VALUE='AgilentQQQ_dynamic' >Agilent QQQ dynamic MRM</OPTION>
-      <OPTION VALUE='ABSCIEX_QTRAP_MRM' >AB SCIEX QTRAP MRM</OPTION>
-      <OPTION VALUE='ABSCIEX_QTRAP_MRMMSMS' >AB SCIEX QTRAP MRM-MS2</OPTION>
+      <OPTION VALUE='AgilentQQQ' >Agilent QQQ SRM</OPTION>
+      <OPTION VALUE='AgilentQQQ_dynamic' >Agilent QQQ dynamic SRM</OPTION>
+      <OPTION VALUE='ABSCIEX_QTRAP_SRM' >AB SCIEX QTRAP SRM</OPTION>
+      <OPTION VALUE='ABSCIEX_QTRAP_SRMMSMS' >AB SCIEX QTRAP SRM-MS2</OPTION>
       <OPTION VALUE='ThermoTSQ' >Thermo TSQ</OPTION>
       <OPTION VALUE='Skyline' >Skyline TSV</OPTION>
     </SELECT>
@@ -1474,8 +1454,6 @@ sub fetch_transitions {
     push @headings, 'QQQ ', ' QTRAP ';
   }
 
-#  if ( $parameters{rt_type} && $parameters{rt_type} ne 'SSRCalc' ) {
-
   #  peptides_only
   if ( $parameters{peptides_only} ) {
     splice( @headings, 5, 8 );
@@ -1807,7 +1785,7 @@ sub fetch_transitions {
         my $srm_img = "<img src='$HTML_BASE_DIR/images/srm_icon_clear.gif' border=0 />";
         $q->delete( 'protein_name_constraint', 'n_peptides_per_protein', 'n_highest_intensity_fragment_ions' );
         my $recall_url = $q->self_url();
-        $recall_url .= ";protein_name_constraint=$prot;n_peptides_per_protein=500;n_highest_intensity_fragment_ions=1;omit_predicted=1";
+        $recall_url .= ";protein_name_constraint=$prot;n_peptides_per_protein=500;n_highest_intensity_fragment_ions=1;omit_predicted=1;protein_context=1";
         $pa_link = qq~
         <A HREF='GetProtein?organism_name=$organism_name;protein_name=$prot;apply_action=GO&action=GO#Sequence%20Motifs' TARGET='_peptideatlas' title='Look up protein in the Peptide Atlas' class='popup'>$pa_img</A>
         ~;
@@ -2191,11 +2169,15 @@ sub fetch_transitions {
 #    print FRM qq~
 #    $content
 #    ~;
-  print $sbeams->addTabbedPane( label => 'results' );
-#  print 'resultula';
-  print "<TABLE >$content</TABLE>\n";
-  print $sbeams->closeTabbedPane( selected => 'results' );
-#  print "$content</BR></BR>";
+  print $sbeams->addTabbedPane( label => 'Results' );
+  print "$content\n";
+  print $sbeams->closeTabbedPane( selected => 'Results' );
+
+  return unless ( $parameters{protein_context} );
+
+  print $sbeams->addTabbedPane( label => 'Context' );
+  print get_protein_context( %parameters );
+  print $sbeams->closeTabbedPane( selected => 'Results' );
 
 } # end fetch_transitions
 
@@ -2232,6 +2214,32 @@ sub get_quant_info {
 	return \%quant;
 }
 
+sub get_protein_context {
+
+  my %args = @_;
+#  die Dumper( %args );
+
+  my $sql = qq~
+  SELECT DISTINCT peptide_sequence,
+  FROM $TBAT_PROTEOTYPIC_PEPTIDE PP 
+  JOIN $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING PPM
+  ON PP.proteotypic_peptide_id = PPM.proteotypic_peptide_id
+  JOIN $TBAT_BIOSEQUENCE B
+  ON PPM.source_biosequence_id = B.biosequence_id
+  WHERE biosequence_set_id = $parameters{build_bss_id}   
+  ~;
+
+  my %bioseqs;
+#  my $sth = $sbeams->get_statement_handle($sql);
+#  while ( my @row = $sth->fetchrow_array() ) {
+#	}
+
+  return 'Content';
+  return '<table><tr><td>content</td></tr></table>';
+}
+
+
+##################
 sub get_peptide_mappings {
 
   my %mappings;
