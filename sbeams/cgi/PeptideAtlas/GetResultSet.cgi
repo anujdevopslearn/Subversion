@@ -8,12 +8,12 @@
 # Description : This CGI program dumps the ResultSet data to the user
 #               in various formats
 #
-# SBEAMS is Copyright (C) 2000-2013 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2014 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
 # LICENSE file distributed with this software.
-#
+4
 ###############################################################################
 
 
@@ -208,10 +208,10 @@ sub handle_request {
     } elsif ( $download =~ /AgilentQQQ/i ) {
       my $method = $atlas->get_qqq_unscheduled_transition_list( method => $tsv_formatted, params => \%parameters );
       print $method;
-    } elsif ( $download =~ /ABSCIEX_QTRAP_MRM/i ) {
+    } elsif ( $download =~ /ABSCIEX_QTRAP_SRM/i ) {
       my $method = $atlas->get_qtrap_mrm_method( method => $tsv_formatted, params => \%parameters );
       print $method;
-    } elsif ( $download =~ /ABSCIEX_QTRAP_MRMMSMS/i ) {
+    } elsif ( $download =~ /ABSCIEX_QTRAP_SRMMSMS/i ) {
       my $method = $atlas->get_qtrap_mrmms_method( method => $tsv_formatted, params => \%parameters);
       print $method;
     } elsif ( $download =~ /ThermoTSQ/i ) {
