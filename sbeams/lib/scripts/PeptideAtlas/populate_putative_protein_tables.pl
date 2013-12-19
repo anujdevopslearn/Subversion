@@ -47,7 +47,7 @@ my $TESTONLY = 0;
 my $VERBOSE = 0;
 
 my $atlas_output_dir = "/net/db/projects/PeptideAtlas/pipeline/output";
-my $atlas_build_dir = "HumanPublic_201301_PAB";
+my $atlas_build_dir = "HumanPublic_201307"; # "HumanPublic_201301_PAB";
 
 # We need a list of non-Swiss-Prot identifiers that we have evidence for
 # Can be created thusly:
@@ -62,7 +62,11 @@ my $protein_file = "${atlas_output_dir}/${atlas_build_dir}/DATA_FILES/PAprotlist
 # We need the entries from the peptide_mapping.tsv file that map to those identifiers but not to Swiss-Prot.
 # Needs file peptides_mappable_to_swiss.tsv, created thusly:
 # (1) awk 'BEGIN{FS="\t"}{print $2}' peptide_mapping_swiss.tsv | sort | uniq >| peptides_mappable_to_swiss.tsv
-# (2) $SBEAMS/lib/scripts/PeptideAtlas/find_peps_not_in_swiss.pl > peptide_mapping_not_swiss.tsv # Must run in same directory as peptide_mapping.tsv and peptides_mappable_to_swiss.tsv
+# (2) $SBEAMS/lib/scripts/PeptideAtlas/find_peps_not_in_swiss.pl > peptide_mapping_not_swiss.tsv 
+
+# replace step (1) and (2): 
+# $SBEAMS/lib/scripts/PeptideAtlas/find_peps_not_in_swiss.pl sprot.list # Must run in same directory as peptide_mapping.tsv
+
 my $peptide_file = "${atlas_output_dir}/${atlas_build_dir}/DATA_FILES/peptide_mapping_not_swiss.tsv";
 
 # open data files
@@ -112,6 +116,12 @@ while (my $line = <$pepfh>) {
     }
   }
 }
+
+## purge putative_protein, putative_peptide, putative_protein_peptide table first
+## current tables support one build only
+purge_putative_protein_peptide();
+
+print "Addding new data to tables\n";
 
 # for each protein, create a putative_protein record
 #  and a putative_protein_peptide record for each of its
@@ -171,4 +181,28 @@ for my $acc (keys %{$pepid_href}) {
   );
 }
 
+
 # We are done!
+
+sub purge_putative_protein_peptide {
+  print "Purging PUTATIVE $TBAT_PUTATIVE_PROTEIN_PEPTIDE  ...\n";
+   my $sql = qq~
+     DELETE FROM $TBAT_PUTATIVE_PROTEIN_PEPTIDE 
+    ~ ;
+  my $result = $sbeams->executeSQL($sql);
+  print "$result\n";
+  print "Purging PUTATIVE $TBAT_PUTATIVE_PEPTIDE  ...\n";
+  $sql = qq~
+     DELETE FROM $TBAT_PUTATIVE_PEPTIDE
+    ~ ;
+  $result = $sbeams->executeSQL($sql);
+  print "$result\n";
+  print "Purging PUTATIVE $TBAT_PUTATIVE_PROTEIN  ...\n";
+  $sql = qq~
+     DELETE FROM $TBAT_PUTATIVE_PROTEIN
+    ~ ;
+  $result = $sbeams->executeSQL($sql);
+  print "$result\n";
+}
+
+
