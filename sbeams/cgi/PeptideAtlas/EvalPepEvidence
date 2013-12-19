@@ -161,7 +161,7 @@ sub handle_request {
     my @accessible_project_ids = $sbeams->getAccessibleProjects();
     my $accessible_project_ids = join( ",", @accessible_project_ids ) || '0';
 
-    my $ATLAS_BUILD_ID = 368;
+    my $ATLAS_BUILD_ID = 393;
     my $biosequence_id = $parameters{'biosequence_id'};
 
     #### Get a list of putative peptides mapping to a putative protein
