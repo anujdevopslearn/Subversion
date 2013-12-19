@@ -112,8 +112,8 @@ sub get_annotated_peaks_from_speclib {
   # Remove trailing charge
   $spectrum_name =~ s/\.\d{1,2}$//;
 
-  my $speclib = "${data_location}/raw.sptxt";
-  my $specidx = "${data_location}/raw.specidx";
+  my $speclib = "${data_location}/RAW.sptxt";
+  my $specidx = "${data_location}/RAW.specidx";
 
   # Use index file to get positon of desired spectrum. Seek to that position.
   if (! -e $specidx) {
