@@ -375,6 +375,7 @@ sub asHTML {
 #-
 sub asMenuCSSHTML {
   my $this = shift;
+  $this->{extra_width} = 499 if !defined $this->{extra_width};
 
   my $spc = "&nbsp;";
 
@@ -436,7 +437,7 @@ sub asMenuCSSHTML {
     }
 
   }
-  $table .= "<td style='width:500;border-bottom:1px solid #bb0000;'><IMG SRC='$HTML_BASE_DIR/images/transparent.gif' HEIGHT='1' WIDTH='499' BORDER='0'></td>\n</tr>\n";
+  $table .= "<td style='width:500;border-bottom:1px solid #bb0000;'><IMG SRC='$HTML_BASE_DIR/images/transparent.gif' HEIGHT='1' WIDTH='$this->{extra_width}' BORDER='0'></td>\n</tr>\n";
 
   if ($tabmenu) {
       $tabmenu->setCurrentTab( currtab => $this->{_currentSubTab} );
