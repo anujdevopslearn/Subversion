@@ -12,7 +12,7 @@ package SBEAMS::Connection::HTMLPrinter;
 #		there are several different contexts under which the a user
 #		can be in, and the header, button bar, etc. vary by context
 #
-# SBEAMS is Copyright (C) 2000-2012 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2014 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -308,6 +308,10 @@ my $module_styles =<<"  END_STYLE";
   .sec_obs_seq_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5; color: green }	
   .obs_seq_bg_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5; background-color: lightskyblue }	
   .sec_obs_seq_bg_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5; background-color: springgreen }	
+
+table.freeze_table { table-layout: fixed; width: 1000px; *margin-left: -100px;/*ie7*/}
+     .freeze_table td, th { vertical-align: top; width:100px;  }
+     .freeze_table th {  position:absolute; *position: relative; /*ie7*/ left:0; width:100px;  }
 
   /* Phosphopep */
   .invalid_parameter_value  {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_LG}pt; text-decoration: none; color: #FC0; font-style: Oblique; }
