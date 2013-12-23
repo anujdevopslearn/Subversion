@@ -1625,13 +1625,7 @@ sub get_pabst_build {
   # Get most recent build (highest build_id) for organism
   if ( !$found && $organism ) {
     for my $build_id ( sort { $b <=> $a } ( keys( %build_names ) ) ) {
-      if ( ( lc( $build_organisms{$build_id} ) eq lc( $organism ) )
-	   # Kludge added to be sure to get vanilla buiid for organism.
-	   # Correct solution is to implement concept of "default build" as with
-	   # the shotgun section of PeptideAtlas.
-	   && ( $build_names{$build_id} !~ /plasma/i )
-	   && ( $build_names{$build_id} =~ /$organism/i ) 
-	 ) {
+      if ( ( lc( $build_organisms{$build_id} ) eq lc( $organism ) ) ) {
         $validated_build_id = $build_id;
         $log->debug( "Returning $validated_build_id based on organism" );
         $found++;
