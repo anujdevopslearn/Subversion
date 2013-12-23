@@ -6,7 +6,7 @@
 #
 # Description : Searches the search_key table for matching elements
 #
-# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2014 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -278,6 +278,7 @@ sub handle_request {
 
   #### Get the HTML to display the tabs
   my $tabMenu = $sbeamsMOD->getTabMenu(
+    extra_width => 1,
     parameters_ref => \%parameters,
     program_name => $PROG_NAME,
   );
@@ -289,7 +290,7 @@ sub handle_request {
   my $search_types_clause = getSearchTypeClause( params => \%parameters );
 
   if ($sbeams->output_mode() eq 'html') {
-      my $spacer = $sbeams->getGifSpacer(800);
+      my $spacer = $sbeams->getGifSpacer(100);
       my $sm_spacer = '&nbsp;' x 20;
 
       $buffer .= $q->start_form(-method=>"POST",
@@ -317,11 +318,11 @@ sub handle_request {
       $buffer .= qq~<BR>
       <TABLE WIDTH=50% ALIGN=CENTER BORDER=0 CELLPADDING=0>
       <TR VALIGN=CENTER >
-      <TD ALIGN=RIGHT>
-      <label for='btype' style="float:left margin-right:3px;";>Build type: </label> 
-      <select name="build_type_name" id='btype'> $build_type_selection->{HTML_optionlist} </select> 
+      <TD ALIGN=RIGHT { white-space: nowrap } >
+      <label for='btype' style="float:left margin-right:3px;";>Build type:&nbsp;</label> 
+      <select name="build_type_name" id='btype'> $build_type_selection->{HTML_optionlist}</select> 
       </TD>
-      <TD WIDTH=10% ALIGN=LEFT>
+      <TD WIDTH=10% ALIGN=LEFT { white-space: nowrap } >
       <DT>
       <INPUT ID="exact_match" TYPE=radio $search_type_param{exact_match} NAME="exact_match"
           ONCLICK=toggle_radiobutton(this)>
@@ -331,7 +332,7 @@ sub handle_request {
           Tabular Results 
       </TD>
       <TR VALIGN=LEFT ><TD>&nbsp;&nbsp;
-      </TD><TD WIDTH=30%>
+      </TD><TD WIDTH=30% { white-space: nowrap } >
       &nbsp;$advanced
       </TD></TR></TABLE>
       <BR>
@@ -905,7 +906,7 @@ sub displayTable{
    my $max_width_ref = $args{max_width_ref};
    my $base_url = $args{base_url};
    my $ini_search_key = $args{search_key};
-   my $spacer = $sbeams->getGifSpacer(800);
+   my $spacer = $sbeams->getGifSpacer(100);
    
 	 my %filtered_result = ();
    ### one search key may have several search key type, we only keep one
