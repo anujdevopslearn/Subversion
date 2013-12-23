@@ -243,7 +243,8 @@ sub getTabMenu
 
     ## set up tab structure:
     my $tabmenu = SBEAMS::Connection::TabMenu->
-        new( cgi => $q,
+        new( %args,
+             cgi => $q,
              activeColor => 'f3f1e4',
              inactiveColor   => 'c6c1b8',
              hoverColor => 'f3f1e4',
