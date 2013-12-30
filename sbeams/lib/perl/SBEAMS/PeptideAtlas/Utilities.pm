@@ -2394,6 +2394,7 @@ sub get_qqq_dynamic_transition_list {
     my $rt = $line[14];
     my $rtd = 5;
 
+    $acc =~ s/\s//g;
     my $name = $acc . '.' . $seq;
 
     my $full_lbl = $lbl;
