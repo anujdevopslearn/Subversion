@@ -160,8 +160,15 @@ sub handle_request {
 
 
   # Get the search keyword
-   $peptide = $parameters{'searchForThis'};
-
+  $peptide = $parameters{'searchForThis'};
+  if ( $peptide =~ /^PAp\d+$/ ) {
+    my $sql = "SELECT DISTINCT peptide_sequence FROM $TBAT_PEPTIDE WHERE peptide_accession = '$peptide'";
+    my $sth = $sbeams->get_statement_handle( $sql );
+    while( my @row = $sth->fetchrow_array() ) {
+      $peptide = $row[0];
+      last;
+    }
+  }
 
   # Getting the last session information for a user, if it exists or setting up a new one
   # If a new protein_name was supplied, store it
