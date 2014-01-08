@@ -2318,6 +2318,8 @@ Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Dwell	Fragmentor	C
 		my @line = @{$row};
     next if $line[0] eq 'Protein';
     my $acc = $line[0];
+    $acc =~ s/\s+$//g;
+
     my $seq = $line[2];
     my $q1 = $line[6];
     my $q1c = $line[7];
@@ -2380,6 +2382,8 @@ sub get_qqq_dynamic_transition_list {
 		my @line = @{$row};
     next if $line[0] eq 'Protein';
     my $acc = $line[0];
+    $acc =~ s/\s+$//g;
+
     my $seq = $line[2];
     my $q1 = $line[6];
     my $q1c = $line[7];
@@ -2394,7 +2398,6 @@ sub get_qqq_dynamic_transition_list {
     my $rt = $line[14];
     my $rtd = 5;
 
-    $acc =~ s/\s//g;
     my $name = $acc . '.' . $seq;
 
     my $full_lbl = $lbl;
@@ -2442,10 +2445,11 @@ sub clear_massmods {
   return $sequence;
 }
 
-sub get_qtrap_mrmmsms_method {
+sub get_qtrap_mrmms_method {
 
   my $self = shift;
-  my $tsv = shift || return '';
+  my %opts = @_;
+  my $tsv = $opts{method} || return '';
 
   my $sep = "\t";
   $sep = ",";
@@ -2459,6 +2463,8 @@ sub get_qtrap_mrmmsms_method {
     next if $line[0] eq 'Protein';
 
     my $acc = $line[0];
+    $acc =~ s/\s+$//g;
+
     my $seq = $line[2];
     my $q1 = $line[6];
     my $q1c = $line[7];
@@ -2495,6 +2501,8 @@ sub get_qtrap_mrm_method {
     next if $line[0] eq 'Protein';
 
     my $acc = $line[0];
+    $acc =~ s/\s+$//g;
+
     my $seq = $line[2];
     my $q1 = $line[6];
     my $q1c = $line[7];
@@ -2533,6 +2541,8 @@ sub get_skyline_export {
     next if $line[0] eq 'Protein';
 
     my $acc = $line[0];
+    $acc =~ s/\s+$//g;
+
     my $mod_seq = $line[2];
     my $clean_seq = $self->clear_massmods( $line[2] );
     my $q1 = $line[6];
@@ -2564,6 +2574,8 @@ sub get_thermo_tsq_mrm_method {
     next if $line[0] eq 'Protein';
 
     my $acc = $line[0];
+    $acc =~ s/\s+$//g;
+
     my $seq = $line[2];
     my $q1 = $line[6];
     my $q1c = $line[7];
