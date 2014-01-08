@@ -502,6 +502,7 @@ sub get_srm_resultset {
   JOIN $TBAT_BIOSEQUENCE BS
     ON BS.biosequence_id = PM.biosequence_id    
   WHERE peptide_sequence = '$params->{peptide}'
+  AND PB.project_id IN ( $params->{project_string} )
   ~;
   
   my %id2name;
