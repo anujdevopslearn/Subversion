@@ -931,18 +931,27 @@ sub getPASSMetaData {
     return $response;
   }
 
-  my ($key,$value);
-  my $prevKey = '';
+  #### Define a set of keys allowed to be in a DESCRIPTION file. All other keys will be assumed to be parts of the previous entry
+  my @supportedKeys = qw ( identifier type tag title summary contributors publication growth treatment extraction separation digestion acquisition informatics instruments species massModifications );
+  my %supportedKeys;
+  foreach my $supportedKey ( @supportedKeys ) {
+    $supportedKeys{$supportedKey} = 1;
+  }
+
+  my $prevKey = 'none';
   while (my $line = <INFILE>) {
     $line =~ s/[\r\n]//g;
-    if ($line =~ /^\s*([^:]{0,}):\s*(.*)$/) {
-      $key = $1;
-      $value = $2;
-      $response->{$key} = $value;
-      $prevKey = $key;
+    if ($line =~ /^\s*(\w+):\s*(.*)$/) {
+      my $key = $1;
+      my $value = $2;
+      if ( $supportedKeys{$key} ) {
+	$response->{$key} = $value;
+	$prevKey = $key;
+      } else {
+	$response->{$prevKey} .= "<BR>\n$line";
+      }
     } else {
-      $key = $prevKey;
-      $response->{$key} .= "<BR>\n$line";
+      $response->{$prevKey} .= "<BR>\n$line";
     }
   }
 
