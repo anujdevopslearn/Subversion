@@ -7,7 +7,7 @@
 # Description : Prints summary of a given peptide given selection
 #               atlas build, and peptide name or sequence.
 #
-# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2014 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -2504,6 +2504,10 @@ sub displayExternalLinksSection {
 
   #### Link to all instances of this peptide in Swiss-Prot (from PIR)
   $link="http://proteininformationresource.org/cgi-bin/peptidematch?peptide=$pepseq";
+
+  # Updated 2014-01 DSC
+  $link = "http://research.bioinformatics.udel.edu/peptidematch/peptidewithorganisms.jsp?input_option=all&organism_name=&organism_id=all&keyword=$pepseq&start=0&initialed=false&searchtype=peptide&rows=20&uniref100=N&lEqi=N";
+
   my $peptide_pir_html_link="<A HREF=$link TARGET=_BLANK color=blue>$pepseq</A>";
   my $tooltip = $sbeamsMOD->make_pa_tooltip( link_text => $peptide_pir_html_link,
                                         tip_text => "Retrieve all peptide hits from UniProtKB (all species)",
