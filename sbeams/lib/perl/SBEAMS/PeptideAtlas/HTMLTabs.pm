@@ -214,28 +214,28 @@ sub getTabMenu
 
     #### SWATH Atlas tabs
     } elsif ($PROG_NAME =~ /DIA_library_download/) {
-       $current_tab=7;
+       $current_tab=8;
        $current_subtab=1;
     } elsif ($PROG_NAME =~ /DIA_library_subset/) {
-       $current_tab=7;
+       $current_tab=8;
        $current_subtab=2;
     } elsif ($PROG_NAME =~ /DIA_search/) {
-       $current_tab=7;
+       $current_tab=8;
        $current_subtab=3;
     } elsif ($PROG_NAME =~ /DIA_processing/) {
-       $current_tab=7;
+       $current_tab=8;
        $current_subtab=4;
 
 
     #### PeptideAtlas Submission System PASS tabs
     } elsif ($PROG_NAME =~ /^PASS_Summary/) {
-       $current_tab=8;
+       $current_tab=7;
        $current_subtab=1;
     } elsif ($PROG_NAME =~ /^PASS_Submit/) {
-       $current_tab=8;
+       $current_tab=7;
        $current_subtab=2;
     } elsif ($PROG_NAME =~ /^PASS_View/) {
-       $current_tab=8;
+       $current_tab=7;
        $current_subtab=3;
     }
 
@@ -408,6 +408,30 @@ if ($activate_PASSEL) {
          url => "$CGI_BASE_DIR/PeptideAtlas/GetPTPAtlasStat"
          );
 
+    #### PeptideAtlas Submission System PASS tabs
+    if (1) {
+    $tabmenu->addTab( label => 'Submission',
+         label => 'Submission',
+         helptext => 'Submit or access datasets',
+         url => "$CGI_BASE_DIR/PeptideAtlas/PASS_Submit"
+         );
+    $tabmenu->addMenuItem( tablabel => 'Submission',
+			   label => 'Datasets Summary',
+			   helptext => 'View/manage submitted datasets',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/PASS_Summary"
+			   );
+    $tabmenu->addMenuItem( tablabel => 'Submission',
+			   label => 'Submit Dataset',
+			   helptext => 'Submit a datasets to one of the PeptideAtlas resources',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/PASS_Submit"
+			   );
+    $tabmenu->addMenuItem( tablabel => 'Submission',
+			   label => 'View Dataset',
+			   helptext => 'View/access a previously submitted dataset',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/PASS_View"
+			   );
+    }
+
 
     #### SWATH tabs
     if ( 0 && !$sbeams->isGuestUser() ) {
@@ -435,35 +459,6 @@ if ($activate_PASSEL) {
          url => "$CGI_BASE_DIR/PeptideAtlas/DIA_processing"
          );
     }
-
-
-
-
-    #### PeptideAtlas Submission System PASS tabs
-    if (1) {
-    $tabmenu->addTab( label => 'Submission',
-         label => 'Submission',
-         helptext => 'Submit or access datasets',
-         url => "$CGI_BASE_DIR/PeptideAtlas/PASS_Submit"
-         );
-    $tabmenu->addMenuItem( tablabel => 'Submission',
-			   label => 'Datasets Summary',
-			   helptext => 'View/manage submitted datasets',
-			   url => "$CGI_BASE_DIR/PeptideAtlas/PASS_Summary"
-			   );
-    $tabmenu->addMenuItem( tablabel => 'Submission',
-			   label => 'Submit Dataset',
-			   helptext => 'Submit a datasets to one of the PeptideAtlas resources',
-			   url => "$CGI_BASE_DIR/PeptideAtlas/PASS_Submit"
-			   );
-    $tabmenu->addMenuItem( tablabel => 'Submission',
-			   label => 'View Dataset',
-			   helptext => 'View/access a previously submitted dataset',
-			   url => "$CGI_BASE_DIR/PeptideAtlas/PASS_View"
-			   );
-    }
-
-
 
 
     $tabmenu->setCurrentTab( currtab => $current_tab, currsubtab => $current_subtab );
