@@ -981,7 +981,7 @@ sub displayTable{
      }
   }
 
-  if($n_result_rows <= 2 ){
+  if( $parameter_ref->{open_all} || $n_result_rows <= 2 ){
     $visible =1;
   }
 
