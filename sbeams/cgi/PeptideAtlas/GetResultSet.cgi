@@ -207,11 +207,11 @@ sub handle_request {
     } elsif ( $download =~ /AgilentQQQ/i ) {
       my $method = $atlas->get_qqq_unscheduled_transition_list( method => $tsv_formatted, params => \%parameters );
       print $method;
-    } elsif ( $download =~ /ABSCIEX_QTRAP_SRM/i ) {
-      my $method = $atlas->get_qtrap_mrm_method( method => $tsv_formatted, params => \%parameters );
-      print $method;
     } elsif ( $download =~ /ABSCIEX_QTRAP_SRMMSMS/i ) {
       my $method = $atlas->get_qtrap_mrmms_method( method => $tsv_formatted, params => \%parameters);
+      print $method;
+    } elsif ( $download =~ /ABSCIEX_QTRAP_SRM/i ) {
+      my $method = $atlas->get_qtrap_mrm_method( method => $tsv_formatted, params => \%parameters );
       print $method;
     } elsif ( $download =~ /ThermoTSQ/i ) {
       my $method = $atlas->get_thermo_tsq_mrm_method( method => $tsv_formatted, params => \%parameters );
@@ -221,6 +221,7 @@ sub handle_request {
       print $method;
     } elsif ( $download =~ /TSV/i ) {
       for my $row ( @{$tsv_formatted} ) {
+        $row->[0] =~ s/\s+$//g;
         print join( "\t", @{$row} ) . "\n";
       }
     } else {
