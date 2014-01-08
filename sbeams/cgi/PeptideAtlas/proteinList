@@ -3,7 +3,7 @@
 ###############################################################################
 # $Id: $
 #
-# SBEAMS is Copyright (C) 2000-2007 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2014 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -362,7 +362,7 @@ sub get_list_table {
 
   my $spc = '&nbsp;' x 3;
   my $fbox = "<span title='Text entered into the box will filter the protein list (all fields)'>Filter List: $spc</span>";
-  my $atlas_select = "<select name=atlas id=atlas><option value='SRM' selected>SRM Atlas</option><option value='Peptide'>Peptide Atlas</option></select>";
+  my $atlas_select = "<select name=atlas id=atlas><option value='SRM' selected>SRM Atlas</option><option value='Peptide'>Peptide Atlas</option><option value'DIA'>SWATH Atlas</option></select>";
   my $submit = "<span title='This will submit the selected proteins to query the SRM or Peptide Atlas'>$atlas_select $spc</span>";
   my $show = "<span title='Controls which subset of the protein list is visible'>Show: $spc</span>";
 
