@@ -264,6 +264,7 @@ sub handle_request {
   #### If a dataset identifier was supplied, get the metadata for this dataset
   #### and check to see if current user is the owner
   my $datasetIdentifier = $parameters{'identifier'};
+  $datasetIdentifier = uc($datasetIdentifier) if ($datasetIdentifier);
   my $datasetMetadata;
   my $isOwner = 0;
   my $isAccessible = 0;
