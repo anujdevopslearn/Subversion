@@ -1569,7 +1569,7 @@ sub fetch_transitions {
   }
 
   # If no params were changed, use static values
-     $log->debug( "Iterating over results " . time() );
+  $log->debug( "Iterating over results " . time() );
   print STDERR "iterating " . time()  . "\n";
   update_status( "Selecting optimum transitions" );
 
@@ -1592,6 +1592,8 @@ sub fetch_transitions {
   }
 
 
+  my %cc;
+  my $pfrag;
   for my $row ( @transitions ) {
     if ( $is_changed ) {
       $row->[20] = $row->[25];
@@ -1602,6 +1604,51 @@ sub fetch_transitions {
 #    $kseen{$key}++;
 
     my @row = @{$row};
+
+# 1 PI.modified_peptide_sequence,
+# 2 following_residue,
+# 3 synthesis_adjusted_score,
+# 4 instrument_type_name,
+# 5 precursor_ion_mz,
+# 6 precursor_ion_charge,
+# 7 fragment_ion_mz,
+# 8 fragment_ion_charge,
+# 9 fragment_ion_label,
+# 10 ion_rank,
+    if ( 1 && $row[1] =~ /C\[160\]C\w/ ) {
+      use  SBEAMS::PeptideAtlas::PeptideFragmenter;
+      $pfrag ||= new SBEAMS::PeptideAtlas::PeptideFragmenter( MzMaximum => 3000, MzMinimum => 200 );
+
+      my $alt_seq = $row[1];
+      $alt_seq =~ s/C(\w)/C[160]$1/g;
+
+      if ( ! $cc{$alt_seq} ) {
+        $log->info( "CC bug - calculating fragments for $alt_seq" );
+        for my $charge ( 1, 2, 3 ) {
+          $cc{$alt_seq} ||= {};
+          my $frags = $pfrag->getExpectedFragments( modifiedSequence => $alt_seq,
+                                                              charge => $charge,
+                                                      omit_precursor => 0,
+                                                      precursor_excl => 1,
+                                                     fragment_charge => $charge,
+                                                );
+          for my $frag ( @{$frags} ) {
+            my $s = $frag->{series};
+            my $o = $frag->{ordinal};
+            my $mz = $frag->{mz};
+            my $ch = $frag->{charge};
+            my $fkey = $s . $o . $ch;
+            if ( $frag->{label} eq 'precursor' ) {
+              $fkey = 'precursor' . $ch;
+            }
+            $cc{$alt_seq}->{$row[6]}->{$fkey} = $mz;
+          }
+        }
+      }
+      $row[1] = $alt_seq;
+      $row[5] = $cc{$alt_seq}->{$row[6]}->{'precursor' . $row[6]};
+      $row[7] = $cc{$alt_seq}->{$row[6]}->{$row[9] . $row[8]};
+    }
 
 #      my $rowdata = join( ':', @row );
 #      $log->debug( "$row_cnt> $rowdata" );
