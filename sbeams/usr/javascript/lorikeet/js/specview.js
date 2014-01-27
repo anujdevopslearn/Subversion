@@ -948,7 +948,7 @@
                 {
                     for(var i = 0; i < options.charge; i += 1) label += "+";
                 }
-                container.data("precursorPeak", {data: [[match.bestPeak[0], match.bestPeak[1]]], labels: [label], color: "#ffd700"})
+                container.data("precursorPeak", {data: [[match.bestPeak[0], match.bestPeak[1]]], labels: [label], color: "#ccaa00"})
             }
         }
     }
