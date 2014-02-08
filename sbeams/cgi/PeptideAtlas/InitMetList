@@ -1,0 +1,711 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# $Id: $
+#
+# SBEAMS is Copyright (C) 2000-2014 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+###############################################################################
+
+
+###############################################################################
+# Get the script set up with everything it will need
+###############################################################################
+use strict;
+use lib qw (../../lib/perl);
+use Data::Dumper;
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::DataTable;
+use SBEAMS::Connection::GoogleVisualization;
+use SBEAMS::Connection::TabMenu;
+
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
+
+###############################################################################
+# Global Variables
+###############################################################################
+my $sbeams = new SBEAMS::Connection;
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+my $atlas = new SBEAMS::PeptideAtlas;
+$atlas->setSBEAMS($sbeams);
+
+# Read input parameters
+my $params = process_params();
+$params->{build_id} ||= 393;
+
+my $show_image = 0;
+
+
+{ # Main 
+
+    # Authenticate or exit
+    my $username = $sbeams->Authenticate( allow_anonymous_access => 1) || exit;
+
+
+
+    ## get current settings
+    my $project_id = $sbeams->getCurrent_project_id();
+
+    my $page = $sbeams->getGifSpacer( 700 ) . "<BR>\n";
+
+    # Get the HTML to display the tabs
+    my $tabMenu = $atlas->getTabMenu(
+      parameters_ref => $params,
+      program_name => 'proteinList',
+    );
+
+    $page .=<<"    END";
+		$tabMenu
+     <br>
+    END
+
+    # Add general section 
+    $page .= "<BR>";
+
+    $page .= get_list_selector();
+    $page .= get_list_table();
+
+    # Print what we already have, speed up apparent page loading time.
+    $atlas->display_page_header( onload => "sortables_init(); set_toggle_box( 'protein_list_table' );" );
+		print $page;
+		$atlas->display_page_footer();
+
+} # end main
+
+sub get_table_help {
+  my %args = @_;
+  my $name = $args{table};
+  return '' unless $name;
+  $args{mode} ||= 'section';
+  my @entries;
+  my $hidetext;
+  my $showtext;
+  my $heading;
+  my $description;
+
+  if ( $name eq 'build' ) {  
+    @entries = ( { key => 'Build Name', value => 'The simple name for this build, usually contains organism, prophet cutoff, and other information. ' },
+                 { key => 'Build Description', value => 'More detailed information about build. ' },
+                 { key => 'Reference Database', value => 'Database to which peptides were mapped, generally different than search database.  This mapping is done by running BLAST, and allows the peptides to be mapped the the organism\'s genomic sequence. ' },
+                 { key => 'Build Date', value => 'Date upon which build was finished. ' },
+                 { key => '# Samples', value => 'The number of individual samples which comprise this build.  Each sample contains one or more LCMS/MS runs, and generally corresponds to a single scientific experiment.' } ,
+                 { key => 'Distinct Peptides', value => 'This shows the number of distinct peptide sequences that were seen in this build.  Observations of the peptide in different charge states or with different modifications are coalesced.' } ,
+                 { key => 'Total Observations ', value => 'The total number of spectra that yeilded identifications above the build threshold.  Observations of the same base peptide sequences multiple times or in various charge states/modifications, whould each contribute to the total' }
+        );
+                 
+    $showtext = 'show row descriptions';
+    $hidetext = 'hide row descriptions';
+    $heading = 'Build Overview';
+    $description= 'These values pertain to the atlas build as a whole';
+
+
+  } elsif ( $name eq 'batch' ) {
+    @entries = ( { key => 'ID', value => 'Database ID for this sample (search batch) ' },
+                 { key => 'Sample_Name', value => 'Simple name for this sample/experiment. ' },
+                 { key => '#_Spectra_Searched', value => 'The total number of spectra searched in the sample. ' },
+                 { key => "#_Spectra_ID'd", value => 'The number of spectra identifed with a probability greater than the atlas threshold ' },
+                 { key => '#_Distinct', value => 'The number of distinct peptide sequences, seen more than once (multiobs), in this build that are seen in this sample. ' },
+                 { key => '#_Unique', value => "The number of distinct, multiobs peptides that are seen only in this sample (unique contribution).  This discriminates against smaller samples, and is less useful in atlas' with a large number of samples. " },
+                 { key => '#_Progressive', value => 'Order-dependent unique multiobs peptides contributed by a given sample.  The contribution for each sample is based on the samples that have gone before it, so later samples tend to have a lower progressive contribution. ' },
+                 { key => '#_Cumulative', value => 'Order-dependent cumulative number of unique multiobs peptides contributed to build by this and previous samples. ' },
+                 { key => '#_Proteins', value => 'The number of canonical (highly distinguishable, non-redundant) protein sequences identified from the peptides in this sample.' },
+                 { key => '#_Cum_Prots', value => 'Order-dependent cumulative number of canonical proteins contributed to build by this and previous samples.<br>Counts non-human contaminants, so final tally may be greater than Canonical Proteins count in Build Overview. ' },
+#                 { key => 'Sens', value => 'The sensitivity of the Peptide Prophet model at a probablility of 0.9, the percent of true positives that would be included at that threshold was used as a cutoff. ' },
+                 { key => 'FDR_(%)', value => 'The error rate of peptides above the threshold Peptide Prophet model at a probablility of 0.9, the percent of false positives that would be included at the build threshold. ' },
+                 { key => 'Sample_Date', value => ''},
+        );
+    $heading = 'Sample Overview'; 
+    $description = 'These values pertain to individual samples within the atlas';
+
+  } elsif ( $name eq 'mayu' ) {
+   @entries = ( { key => 'nr_runs', value => 'Number of MS runs contributing to this build '},
+  
+		{ key => 'nr_files', value => 'Always 1 '},
+  
+		{ key => 'mFDR', value => 'Data in current row applies to all data meting this PSM (spectrum) FDR threshold. '},
+		{ key => 'target_PSM', value => 'Number of non-decoy PSMs at this mFDR (counts peptides mappable to protein reference set only)'},
+  
+		{ key => 'decoy_PSM', value => 'Number of decoy PSMs at this mFDR '},
+  
+		{ key => 'FP_PSM', value => 'Number of false positive PSMs predicted by Mayu for this mFDR. Usually near, but not exactly the same as, the number of decoys. '},
+  
+		{ key => 'TP_PSM', value => 'target_PSM - FP_PSM '},
+  
+		{ key => 'target_pepID', value => 'Number of non-decoy unique peptides at this mFDR (counts peptides mappable to protein reference set only) '},
+  
+		{ key => 'decoy_pepID', value => 'Number of decoy unique peptides at this mFDR '},
+  
+		{ key => 'FP_pepID', value => 'Number of false positive unique peptides predicted by Mayu for this mFDR. Usually near, but not exactly the same as, the number of decoys. '},
+  
+		{ key => 'FP_pepID_stdev', value => ' '},
+  
+		{ key => 'TP_pepID', value => 'target_pepID - FP_pepID '},
+  
+		{ key => 'pepFDR', value => 'Peptide FDR (unique peptides)'},
+  
+		{ key => 'target_protID', value => 'Number of non-decoy protein identifications at this mFDR. Applied to the covering set of proteins -- a set that is close to the smallest necessary to explain all the pepIDs. Includes all canonicals and some possibly_distinguished. '},
+  
+		{ key => 'decoy_protID', value => 'Number of decoy protein identifications at this mFDR. '},
+  
+		{ key => 'FP_protID', value => 'Number of false postiive protein identifications predicted by Mayu for this mFDR.  Usually near, but not exactly the same as, the number of decoys. '},
+  
+		{ key => 'FP_protID_stdev', value => ' '},
+  
+		{ key => 'TP_protID', value => 'target_protID - FP_protID '},
+  
+		{ key => 'protFDR', value => 'Protein FDR. The largest value in this column is the protein FDR for the entire build. '},
+		{ key => 'lFDR1, lFDR5, lFDR10,2 lFDR5', value => 'Local protein FDR, computed over the previous step (i.e. between the previous row in the table and the current row), the previous 5 steps, the previous 10 steps, and the previous 25 steps.<br>Often there are fewer than 25 rows in the table, in which case column lFDR25 is uninformative. '},
+  
+		{ key => 'target_protIDs, decoy_protIDs, etc.', value => 'Same as above, except for singleton proteins (those identified by only one PSM) only. '},
+		{ key => 'target_protIDns, decoy_protIDns, etc.', value => 'Same as above, except for multiply-observed proteins only. '},
+  
+        );
+    $heading = 'Mayu'; 
+    $description = 'Reiter L, Claassen M, et al., Protein identification false discovery rates for very large proteomics data sets generated by tandem mass spectrometry, Mol Cell Proteomics. 2009 Nov;8(11):2405-17 ';
+  }
+
+
+  return unless @entries;
+  return \@entries if $args{mode} eq 'entries_only';
+
+  my $help = $atlas->get_table_help_section( name => $name,
+                                             description => $description,
+                                             heading => $heading,
+                                             entries => \@entries,
+                                             showtext => $showtext,
+                                             hidetext => $hidetext  );
+  return $help;
+
+} # end get_table_help
+
+
+# General list information
+sub get_list_overview {
+
+  my $build_id = shift;
+  
+  # Get a list of accessible project_ids
+  my @project_ids = $sbeams->getAccessibleProjects();
+  my $project_ids = join( ",", @project_ids ) || '0';
+
+  my $info = $sbeams->selectrow_hashref( <<"  BUILD" );
+  SELECT title, description, n_proteins, original_file, protein_list_id,
+         contributors, url, image_path, abstract, image_caption
+  FROM $TBAT_DOMAIN_PROTEIN_LIST 
+  WHERE protein_list_id = $params->{protein_list_id}
+  AND record_status <> 'D'
+  AND project_id IN ( $project_ids );
+  BUILD
+
+
+  my $table = "<TABLE WIDTH=800>\n";
+
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'build_overview',
+                                                  visible => 1,
+                                                  tooltip => 'Show/Hide Section',
+                                                  imglink => 1,
+                                                  sticky  => 1 );
+
+  $table .= $atlas->encodeSectionHeader(
+      text => ' Protein List Overview',
+      span => 4,
+      link => $link
+  );
+  for my $key ( keys( %{$info} ) ) {
+    $info->{lc($key)} = $info->{$key};
+  }
+
+  my $file_url = "$CGI_BASE_DIR/PeptideAtlas/ManageTable.cgi/$info->{original_file}?TABLE_NAME=AT_Domain_Protein_list;ForceDownload=1;protein_list_id=" . $info->{protein_list_id} . ";GetFile=original_file";
+  my $file_link = "<a href='$file_url'>$info->{original_file}</a>";
+
+  my $spc = $sbeams->getGifSpacer(500);
+  my $tab = $sbeams->getGifSpacer(25);
+
+  my $img = '';
+  my $caption = '';
+  if ( $info->{image_path} ) {
+    my @path = split( /\//, $info->{image_path});
+    my $web_path = "/devDC/sbeams/images/$path[$#path]";
+    $img = "$tab<img src=$web_path height=80 width=80></img>\n";
+    $caption = $info->{image_caption} || '';
+  }
+
+  my $abstract = '';
+  if ( $info->{abstract} ) {
+    $abstract = $info->{abstract};
+    $abstract =~ s/\r//;
+    $abstract =~ s/\n/<br>/g;
+  }
+
+
+  $table .= $atlas->encodeSectionItem( key   => 'List Name', tr_info => $tr,
+                            value => $info->{title} . $spc, vspan => 3 ) . "\n";
+  $table .= $atlas->encodeSectionItem( key   => 'Contributors', tr_info => $tr,
+                            value => $info->{contributors}, vspan => 3 ) . "\n";
+  $table .= $atlas->encodeSectionItem( key   => 'Description', tr_info => $tr,
+                            value => $info->{description}, vspan => 3 ) . "\n";
+  $table .= $atlas->encodeSectionItem( key   => 'Number of Proteins', tr_info => $tr,
+                            value => $info->{n_proteins}, vspan => 3 ) . "\n";
+  $table .= $atlas->encodeSectionItem( key   => 'Original File', tr_info => $tr,
+                            value => $file_link, vspan => 3 ) . "\n";
+
+  $table .= "<tr><td>$img</td><td>$caption</td></tr>";
+  $table .= "<tr><td colspan=2>$abstract</td></tr>";
+  $table .= "</TABLE>\n";
+  return $table;
+
+}
+
+# Peptide build stats
+sub get_list_table {
+
+  my $table = "<table width=600  id='protein_list_section'>\n";
+
+  my $atlas_select = get_atlas_select();
+
+  my @headings = ( qw( Protein Type Peptide N_map Nobs Nobs_actyl SP NP Term Both ) );
+  my %defs = ( Protein => 'Protein Accession',
+                  Type => 'Peptide Type C(leaved) or P(reserved)',
+               Peptide => 'Peptide Sequence',
+                 N_map => 'Number of core proteins to which peptide maps', 
+             N_tot_map => 'Total number of proteins to which peptide maps, including isoforms ', 
+             Actl_nobs => 'Number of observations of peptide in acetylated form', 
+            Total_nobs => 'Total number of observations of peptide', 
+                  Both => 'Does protein have evidence for both cleaved and preserved Init Met', 
+                    SP => 'SwissProt annotation regarding init_met cleavage', 
+                    NP => 'NextProt annotation regarding init_met cleavage', 
+                  Term => 'TermiNator prediction for protein N-terminus', 
+      );
+
+  my @db_headings = ( qw( build_id acc type cleaved cleaved_map cleaved_iso_map cleaved_alt_map cleaved_acetyl_obs cleaved_total_obs not_cleaved not_cleaved_map not_cleaved_iso_map not_cleaved_alt_map not_cleaved_acetyl_obs not_cleaved_total_obs sp np term_type term_like ) );
+  my $head_str = join( ',', @db_headings );
+
+  my @sort_headings;
+  for my $heading ( @headings ) {
+    push @sort_headings, $heading, $defs{$heading};
+  }
+  my $href = $atlas->make_sort_headings( headings => \@sort_headings, default => 'Protein' );
+  my @samples;
+  push @samples, $href;
+
+  my $sql = "SELECT $head_str FROM peptideatlas.dbo.initiator_methionine_evidence WHERE build_id = $params->{build_id}";
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+# 0 build_id
+# 1 acc
+# 2 type
+# 3 cleaved
+# 4 cleaved_map
+# 5 cleaved_iso_map
+# 6 cleaved_alt_map
+# 7 cleaved_acetyl_nobs
+# 8 cleaved_total_nobs
+# 9 not_cleaved
+# 10 not_cleaved_map
+# 11 not_cleaved_iso_map
+# 12 not_cleaved_alt_map
+# 13 not_cleaved_acetyl_nobs
+# 14 not_cleaved_total_nobs
+# 15 sp
+# 16 np
+# 17 term_type
+# 18 term_like
+#
+# 0 Protein
+# 1 Type
+# 2 Peptide
+# 3 N_map
+# 4 Nobs
+# 5 Nobs_actyl
+# 6 SP
+# 7 NP
+# 8 Term
+# 9 Both
+    my $t = 'C';
+    my $b = 'N';
+    my $na = $sbeams->makeInactiveText( 'n/a' ); 
+    $row[16] = $na if !$params->{is_human};
+
+    if ( !$row[15] && length($row[1]) > 6 ) {
+      $row[15] = $na;
+    } elsif ( $row[15] =~ /Not Annotated/ ) {
+      $row[15] = '';
+    }
+
+    if ( $row[2] eq 'Both' ) {
+      $b = 'Y';
+      push @samples, [ $row[1], $t, @row[3,4,8,7,15,16,17], $b];
+      $t = 'P';
+      push @samples, [ $row[1], $t, @row[9,10,14,13,15,16,17], $b];
+    } elsif ( $row[2] eq 'Cleaved' ) {
+      push @samples, [ $row[1], $t, @row[3,4,8,7,15,16,17], $b];
+    } else {
+      $t = 'P';
+      push @samples, [ $row[1], $t, @row[9,10,14,13,15,16,17], $b];
+    }
+  }
+
+  my $table = SBEAMS::Connection::DataTable->new( class => 'scrolltable', 
+                                                     id => 'protein_list_table',
+                                          '__use_thead' => 1 );
+
+  $table->setRowAttr( ROWS => [1], BGCOLOR => '#0000A0', CLASS => 'sortheader' );
+  my $rnum = 2;
+  for my $row ( @samples ) {
+    if ( $rnum > 2 ) {
+      if ( length( $row->[2] ) > 30 ) {
+        $row->[2] = substr( $row->[2], 0, 30 ); 
+      }
+      $row->[2] = "<a target=var_evidence href=GetVariantEvidence?atlas_build_id=$params->{build_id}&protein_name=$row->[0]&variant_type=init_met&apply_action=&action=GO>$row->[2]</a>";
+      $row->[0] = "<a target=get_protein href=GetProtein?protein_name=$row->[0]&action=QUERY&atlas_build_id=$params->{build_id}>$row->[0]</a>";
+      if ( length( $row->[7] ) > 30 ) {
+        $row->[7] = substr( $row->[7], 0, 30 ); 
+      }
+    }
+    $table->addRow( $row );
+    $table->setRowAttr( ROWS => [$rnum], BGCOLOR => '#EAEAEA' );
+    $rnum++;
+  }
+  my $nrows = $table->getRowNum();
+  $table->setColAttr(  COLS => [2,6,10], ROWS => [1..$nrows], ALIGN => 'CENTER' );
+  $table->setColAttr(  COLS => [4,5], ROWS => [1..$nrows], ALIGN => 'CENTER' );
+
+my $style = qq~
+
+
+
+
+  <style>
+   
+   table.scrolltable tbody { height:500px; overflow-y:scroll; display:block; }
+   table.scrolltable thead { display:block; overflow-y: scroll; }
+
+    .border_div { border: 1px solid }
+    .border_scroll_div { border: 1px solid; height:300px; overflow-y:scroll; display:block; }
+		.highlighted { background: lightskyblue; }
+    .protein_list_button { -moz-box-shadow:inset 0px 1px 14px -1px #bbdaf7; -webkit-box-shadow:inset 0px 1px 14px -1px #bbdaf7; box-shadow:inset 0px 1px 14px -1px #bbdaf7; background:-webkit-gradient( linear, left top, left bottom, color-stop(0.05, #79bbff), color-stop(1, #378de5) ); background:-moz-linear-gradient( center top, #79bbff 5%, #378de5 100% ); filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#79bbff', endColorstr='#378de5'); background-color:#79bbff; -moz-border-radius:6px; -webkit-border-radius:6px; border-radius:6px; border:1px solid #84bbf3; display:inline-block; color:#ffffff; font-family:Monospace; font-size:12px; font-weight:bold; padding:4px 22px; text-decoration:none; text-shadow:1px 1px 5px #528ecc; }
+    .protein_list_button:hover { background:-webkit-gradient( linear, left top, left bottom, color-stop(0.05, #378de5), color-stop(1, #79bbff) ); background:-moz-linear-gradient( center top, #378de5 5%, #79bbff 100% ); filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#378de5', endColorstr='#79bbff'); background-color:#378de5; }
+    .protein_list_button:active { position:relative; top:1px; }
+    /* This imageless css button was generated by CSSButtonGenerator.com */
+	</style>
+
+  ~;
+
+  my $js = qq~
+    <script type="text/javascript">
+  function submit_form( table ) {
+   var form = document.getElementById('build_list');
+   form.submit();
+   return true;
+  }
+
+  function set_toggle_box( table ) {
+
+    toggle_table = document.getElementById( table );
+    this.colwidth = new Array();
+
+	  for (var r = 0; r < toggle_table.rows.length; r++) {
+      var row = toggle_table.rows[r].cells;
+
+      for (var c = 0; c < row.length; c++) {
+        if ( !this.colwidth[c] ) {
+          this.colwidth[c] = row[c].offsetWidth;
+        } else if ( row[c].offsetWidth > this.colwidth[c] ) {
+          this.colwidth[c] = row[c].offsetWidth;
+        }
+      }
+    }
+    set_col_widths(table);
+
+    // replace with count in loop above
+    return false;
+  }
+
+  function set_fctl(event, table) {
+    if ( event.keyCode == 13 ) {
+      event.preventDefault;
+    }
+    var show_select = document.getElementById( 'show_select' );
+    show_select.selectedIndex = 3;
+    show_select[3].text = 'Filtered';
+    set_col_widths( table);
+    return false;
+  }
+
+  function show_proteins( table ) {
+    document.getElementById( 'filterbox' ).value = '';
+    var toggle_table = document.getElementById( table );
+    dehighlight( toggle_table );
+
+    var show_select = document.getElementById( 'show_select' );
+    var selected = show_select.selectedIndex;
+    var selected_txt = show_select[selected].value;
+
+    var hidden = 0;
+    var visible = 0;
+	  for (var r = 1; r < toggle_table.rows.length; r++) {
+      if ( selected_txt == 'All' ) {
+        toggle_table.rows[r].style.display = '';
+        visible += 1;
+      } else if ( selected_txt == 'Cleaved' ) {
+        if ( toggle_table.rows[r].cells[1].innerHTML == 'C' ) {
+          toggle_table.rows[r].style.display = '';
+          visible += 1;
+        } else {
+          toggle_table.rows[r].style.display = 'none';
+          hidden += 1;
+        }
+      } else if ( selected_txt == 'Preserved' ) {
+        if ( toggle_table.rows[r].cells[1].innerHTML == 'C' ) {
+          toggle_table.rows[r].style.display = 'none';
+          hidden += 1;
+        } else {
+          toggle_table.rows[r].style.display = '';
+          visible += 1;
+        }
+      } else if ( selected_txt == 'Both' ) {
+        if ( toggle_table.rows[r].cells[9].innerHTML == 'Y' ) {
+          toggle_table.rows[r].style.display = '';
+          visible += 1;
+        } else {
+          toggle_table.rows[r].style.display = 'none';
+          hidden += 1;
+        }
+      } 
+    }
+    var total = visible + hidden;
+    document.getElementById( 'chk_status' ).innerHTML = visible + ' of ' + total + ' evidentiary peptides are currently shown';
+    set_col_widths(table);
+    return false;
+  }
+
+    function set_col_widths ( table ) {
+    var toggle_table = document.getElementById( table );
+
+    var head = toggle_table.rows[0].cells;
+    for ( var c = 0; c < head.length; c++ ) {
+      head[c].width = window.colwidth[c];
+    }
+
+    var chk_row = 1;
+	  for (var r = 1; r < toggle_table.rows.length; r++) {
+      if ( toggle_table.rows[r].style.display == 'none' ) {
+        continue;
+      }
+      chk_row = r;
+      break;
+    }
+
+    var first = toggle_table.rows[chk_row].cells;
+    for ( var c = 0; c < first.length; c++ ) {
+      first[c].width = window.colwidth[c];
+    }
+
+    if (navigator.appName == 'Microsoft Internet Explorer') {
+       var border_div = document.getElementById( 'border_div' );
+       border_div.className = 'border_scroll_div';
+
+  	  for (var r = 0; r < toggle_table.rows.length; r++) {
+       toggle_table.rows[r].height = 10;
+      }
+    }
+    cnt_visible( table );
+    return false;
+  }
+
+  function cnt_visible ( table ) {
+    var visible = 0;
+    var hidden  = 0;
+	  for (var r = 1; r < toggle_table.rows.length; r++) {
+      if ( toggle_table.rows[r].style.display == 'none' ) {
+        hidden += 1;
+      } else {
+        visible += 1;
+      }
+    }
+    var total = visible + hidden;
+    document.getElementById( 'chk_status' ).innerHTML = visible + ' of ' + total + ' evidentiary peptides are currently shown';
+  }
+
+
+
+
+
+  </script>
+  <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/filterTable/filterTable.js"></script>
+  ~;
+  my $spc = '&nbsp;&nbsp;';
+  my $fbox = "<span title='Text entered into the box will filter the protein list (all fields)'>Filter List: $spc</span>";
+  my $submit = "<span title='This will submit the selected proteins to query the SRM or Peptide Atlas'>$atlas_select $spc</span>";
+  my $show = "<span title='Controls which subset of the protein list is visible'>Show: $spc</span>";
+
+  my $form = "$style";
+  $form .= "$js";
+
+  my $type_select = qq~
+  <select id=show_select onchange="show_proteins('protein_list_table');return false;">
+    <option selected>All</option>
+    <option>Cleaved</option>
+    <option>Preserved</option>
+    <option>Both</option>
+  </select>
+  ~;
+
+  $form .= qq~
+  <BR>
+  <BR>
+  <BR>
+  <form name=build_list id=build_list>
+  <table>
+   <tr>
+    <td align=right>Select an Atlas build to investigate:</td><td> $atlas_select </td>
+   </tr>
+  </table>
+  </form>
+  <BR>
+  <BR>
+  <table border=0>
+   <tr>
+    <td class=bold_text align=left$fbox<input type="text" size=32 id="filterbox" onkeyup="filterTable(this, protein_list_table);set_fctl(event, 'protein_list_table');return false"></input>
+    </td> <td>&nbsp;</td>
+    <td class=bold_text align=right>$show $type_select</td>
+   </tr>
+   <tr>
+    <td colspan=3><div class=border_div id=border_div> $table </div></td>
+   </tr>
+   <tr>
+    <td align=right class=bold_text>&nbsp;</td> 
+    <td align=right class=bold_text>&nbsp;</td> 
+    <td align=right><div class=description id=chk_status></div></td>
+   </tr>
+  </table>
+  </form>
+
+
+
+  ~;
+  return ( "$form" );
+
+}
+
+sub get_atlas_select {
+
+  my $sql = qq~
+  SELECT DISTINCT atlas_build_id, atlas_build_name 
+  FROM $TBAT_ATLAS_BUILD A 
+  JOIN peptideatlas.dbo.initiator_methionine_evidence I
+    ON I.build_id = A.atlas_build_id
+  ORDER BY atlas_build_name ASC
+  ~;
+
+  my $select = "<select name=build_id onchange=submit_form()>\n";
+  my $sth = $sbeams->get_statement_handle( $sql );
+
+  while ( my @row = $sth->fetchrow_array() ) {
+    my $build_name = $row[1];
+    my $selected = '';
+    if ( $params->{build_id} == $row[0] ) {
+      $selected = 'selected';
+      $params->{is_human} = ( $build_name =~ /human/i ) ? 1 : 0;
+    }
+    $select .= "<option $selected value=$row[0]>$build_name</option>\n";
+  }
+  $select .= "</select>\n";
+  return $select;
+
+}
+
+
+sub get_btxt {
+  my @tags = @_;
+  my $max = 0;
+  for my $tag ( @tags ) {
+    $max = length( $tag ) if length( $tag ) > $max;
+  }
+  my %btxt;
+  for my $tag ( @tags ) {
+    my $len = length( $tag );
+    my $delta = $max - $len;
+    my $pad = 0;
+    if ( $delta ) {
+      $pad = int($delta/2 + 0.5);
+    }
+    my $prepad = '&nbsp;' x $pad; 
+    my $postpad = '&nbsp;' x ($max - $len - $pad); 
+    $btxt{$tag} = $prepad . $tag . $postpad;
+  }
+  return \%btxt; 
+
+}
+sub get_list_selector {
+
+#  <div id=gradient style="background-image: -linear-gradient(to left,#FF5A00,#FFAE00})"> Foofoo </div>
+
+  my $sql =<<"  END";
+  SELECT title, first_name, last_name, protein_list_id
+  FROM $TBAT_DOMAIN_PROTEIN_LIST DPL
+  JOIN $TB_CONTACT C ON DPL.owner_contact_id = C.contact_id
+  ORDER BY title
+  END
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my $help = qq~
+   <div style="font-family:Helvetica, Arial, sans-serif;font-size:200%;font-weight:bold" id=heading> Initiator Methionine Evidence </div>
+   <br>
+   <div id=help style="width:800px"> 
+   This tool list proteins with evidence for/against init_met cleavage in PeptideAtlas.
+
+  </div>
+  <br>
+  <br>
+  ~;
+
+
+  return $help;
+}
+
+sub process_params {
+  my $params = {};
+  $sbeams->parse_input_parameters( q => $q, parameters_ref => $params );
+  $sbeams->processStandardParameters( parameters_ref => $params );
+  $params->{protein_list_id} ||= 1;
+  return( $params );
+}
+
+sub get_build_path {
+  my %args = @_;
+  return unless $args{build_id};
+  my $path = $atlas->getAtlasBuildDirectory( atlas_build_id => $args{build_id} );
+  $path =~ s/DATA_FILES//;
+  return $path;
+}
+
+sub get_draw_chart_function {
+	my $sample_arrayref = shift || return '';
+
+	my @samples;
+	for my $s ( @{$sample_arrayref} ) {
+		push @samples, [ $s->[1], $s->[4], $s->[7] ];
+	}
+	my $GV = SBEAMS::Connection::GoogleVisualization->new();
+  my ( $chart ) = $GV->setDrawBarChart(  samples => \@samples,
+                                    	data_types => [ 'string', 'number', 'number' ],
+                                      	headings => [ 'Sample', 'Distinct peptides (n_obs > 1)', 'Cumulative peptides (n_obs > 1)' ],
+                                      show_table => 0,
+                                 truncate_labels => 24
+ 	);
+	my $header = $GV->getHeaderInfo();
+  return ( $chart, $header );
+}
+
+__DATA__
