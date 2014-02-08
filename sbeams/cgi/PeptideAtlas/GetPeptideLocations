@@ -340,8 +340,7 @@ sub print_locations {
   JOIN locations ON locations.id = plates.location_id
   JOIN plate_peptides ON plate_peptides.plate_id = plates.id
   JOIN peptides  ON peptides.id = plate_peptides.peptide_id
-  JOIN vendor_plate_detail  ON vendor_plate_detail.plate_peptide_id = plate_peptides.id
---  WHERE plate_type = 'MASTER'
+  LEFT JOIN vendor_plate_detail  ON vendor_plate_detail.plate_peptide_id = plate_peptides.id
   WHERE 1 = 1
   $peptide_and
   $plate_and
