@@ -436,8 +436,8 @@ my $style = qq~
       event.preventDefault;
     }
     var show_select = document.getElementById( 'show_select' );
-    show_select.selectedIndex = 3;
-    show_select[3].text = 'Filtered';
+    show_select.selectedIndex = 4;
+    show_select[4].text = 'Filtered';
     set_col_widths( table);
     return false;
   }
@@ -558,6 +558,7 @@ my $style = qq~
     <option>Cleaved</option>
     <option>Preserved</option>
     <option>Both</option>
+    <option></option>
   </select>
   ~;
 
