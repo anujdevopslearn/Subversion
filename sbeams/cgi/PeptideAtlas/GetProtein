@@ -2917,6 +2917,7 @@ sub displayAnnotatedSequence {
 
   my $html_seq = $sbeamsMOD->get_html_seq_vars( seq => $sequence,
                                           accession => $biosequence->{biosequence_name},
+                                      show_all_snps => 1, 
                                           tags => $tags, 
                                        alt_enz => $alt_enz,
                                       peptides => \@peptides,
