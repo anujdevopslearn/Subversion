@@ -2932,7 +2932,7 @@ sub displayAnnotatedSequence {
     my $cnt;
 
     if ( $html_seq->{has_variants} ) {
-      print "<TR $tr><TD><B>Annotated Variants:</B> </TD></TR>\n";
+      print "<TR $tr><TD><B>Annotated Variants (SwissProt):</B> </TD></TR>\n";
       for my $var (  @{$html_seq->{variant_list}} ) {
         $cnt++;
         $variant_list .= '<SPAN style="display:none" ID=var_list>' if $cnt == 12;
