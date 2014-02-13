@@ -892,7 +892,7 @@ sub handle_request {
 #
 #
   my $group_by_clause = '';
-  my @labels = ( 'Accession', 'Pre AA', 'Sequence', 'Fol AA', 'ESS','Best Prob', 'Best Adj Prob', 'N Obs', 'EOS', 'SSRT', 'N Prot Map', 'N Gen Loc', 'N Samples', 'Subpep of' );
+  my @labels = ( 'Accession', 'Pre AA', 'Sequence', 'Fol AA', 'ESS','Best Prob', 'Best Adj Prob', 'N Obs', 'EOS', 'SSRT', 'N Prot Map', 'N Gen Loc', 'N Samples', 'Subpep of', 'Charge', 'modified_peptide_instance_id' );
   my @column_array = (
     ["peptide_accession","P.peptide_accession","Accession"],
     ["preceding_residue","PI.preceding_residue","<DIV TITLE='Preceding (towards the N terminus) amino acid'>Pre AA</DIV>"],
@@ -910,9 +910,11 @@ sub handle_request {
     ["is_subpeptide_of","PI.is_subpeptide_of",'Subpep of'],
     ["peptide_instance_id","PI.peptide_instance_id","peptide_instance_id"],
     ["modified_peptide_sequence","MPI.modified_peptide_sequence","modified_peptide_sequence"],
-    ["n_mod_observations","SUM(MPI.n_observations)","n_mod_observations"]
+    ["n_mod_observations","SUM(MPI.n_observations)","n_mod_observations"],
+    ["peptide_charge","MPI.peptide_charge","Charge"],
+    ["modified_peptide_instance_id","modified_peptide_instance_id","modified_peptide_instance_id"]
   );
-  $group_by_clause = 'GROUP BY ' . join( ",", (qw( P.peptide_accession PI.preceding_residue P.peptide_sequence PI.following_residue PI.best_probability PI.best_adjusted_probability PI.n_observations PI.empirical_proteotypic_score P.SSRCalc_relative_hydrophobicity PI.n_protein_mappings PI.n_genome_locations MPI.sample_ids PI.is_subpeptide_of PI.peptide_instance_id MPI.modified_peptide_sequence ) ) ) . "\n";
+  $group_by_clause = 'GROUP BY ' . join( ",", (qw( P.peptide_accession PI.preceding_residue P.peptide_sequence PI.following_residue PI.best_probability PI.best_adjusted_probability PI.n_observations PI.empirical_proteotypic_score P.SSRCalc_relative_hydrophobicity PI.n_protein_mappings PI.n_genome_locations MPI.sample_ids PI.is_subpeptide_of PI.peptide_instance_id MPI.modified_peptide_sequence peptide_charge modified_peptide_instance_id ) ) ) . "\n";
 
 
   #### Build the columns part of the SQL statement
@@ -956,6 +958,7 @@ sub handle_request {
 	  $group_by_clause
     ORDER BY P.peptide_accession, SUM(MPI.n_observations) DESC
   ~;
+
   #### Define the hypertext links for columns that need them
   %url_cols = (
     'Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
@@ -1017,12 +1020,10 @@ sub handle_request {
 #                  level => $level );
 #    die Dumper( $pcounts );
     my $peptides = [ @{$pcounts->{support}}, @{$pcounts->{refute}} ];
-
     my $obs = $pcounts->{acount};
     my $tcounts = $pcounts->{tcount};
     my $ecount = scalar( @{$peptides} );
 
-    # Eric's whim # 7
     my %support;
     for my $pep ( @{$pcounts->{support}} ) {
       $support{$pep}++;
@@ -1031,6 +1032,7 @@ sub handle_request {
     for my $pep ( @{$pcounts->{refute}} ) {
       $refute{$pep}++;
     }
+#    die Dumper( $pcounts->{support} );
 
     my $speps = 0;
     my $smods = 0;
@@ -1092,17 +1094,6 @@ sub handle_request {
         tr_info => $tr,
         value=>$biosequence->{biosequence_desc},
       );
-
-
-
-
-#      my $ortho = get_ortholog_information ( $biosequence );
-#      if ( $ortho ) {
-#        print $sbeamsMOD->encodeSectionItem( tr_info => $tr,
-#                                                 key => 'Ortholog Group',
-#                                               value => $ortho );
-#      }
-
 
       print "<tr><td colspan=2>$caveat_text</td></tr>\n";
       print "</table><br>\n";
@@ -1179,16 +1170,11 @@ sub handle_request {
                                              value => $smods );
 
 
-      if ( 0 && $pcounts->{level} eq 'canonical' && $speps ) {
-        print $sbeamsMOD->encodeSectionItem( tr_info => $tr,
-                                                 key => 'Canonical protein',
-                                               value => 'True' );
-      }
-
   print "</table><br>\n";
 
 
   my $stable = get_peptide_table ( 'support', $pcounts, \%support );
+
   print "<table>$stable</table><br><br>\n";
 
   my $section_header = $sbeamsMOD->encodeSectionHeader(
@@ -1207,24 +1193,20 @@ sub handle_request {
   print $sbeamsMOD->encodeSectionItem( tr_info => $tr,
                                            key => '# Peptide Observations',
                                          value => $robs );
+  print $sbeamsMOD->encodeSectionItem( tr_info => $tr,
+                                           key => '# Distinct Modified Peptides',
+                                         value => $rmods );
 
-      if ( 0 && $pcounts->{level} eq 'subsumed' ) {
-        print $sbeamsMOD->encodeSectionItem( tr_info => $tr,
-                                                 key => 'Subsumed protein',
-                                               value => 'True' );
-      }
 
   print "</table><br>\n";
   my $stable = get_peptide_table ( 'refute', $pcounts, \%refute );
   print "<table>$stable</table><br><br>\n";
 
-
-#  my %observed = (    start => [],
-#                        end => [],
-#                      class => 'pa_observed_sequence',
-#                     number => 0 );
-#                                               tags => $tags, 
-
+  my $section_header = $sbeamsMOD->encodeSectionHeader(
+    text => "Virtual western peptide expression plot",
+  );
+  my $heater = get_heatmap ( $pcounts );
+  print "<table width=600>$section_header</table>$heater\n";
 
   return;
 
@@ -1441,9 +1423,6 @@ sub handle_request {
       column_titles_ref=>\@column_titles,
       no_escape => 1
     );
-#    use Data::Dumper;
-#    $log->debug( Dumper( $best_peptide_information ) );
-#    $log->debug( Dumper( $resultset_ref ) );
 
     my %instance_ids;
     my $max_peptides = 40;
@@ -2664,15 +2643,16 @@ sub getPeptideCount {
   my $rs = $args{resultset_ref};
   my %peptides;
   my %clean_peptides;
-  my @support;
-  my @refute;
+  my %support;
+  my %refute;
   my @neutral;
   my @nomap;
   for my $row ( @{$rs->{data_ref}} ) {
     $tobs += $row->[7];
 #    $peptides{$row->[2]} = { n_map => $row->[11], n_obs => $row->[7], group_number => $grp_id, desc => $desc };
+    my $pepion = $row->[15] . '_' . $row->[17];
     my $n_samples = scalar(split( /,/, $row->[12] ) );
-    $peptides{$row->[15]} = { n_map => $row->[11], n_obs => $row->[7], n_mod_obs => $row->[16], mod_seq => $row->[15], 'N Samples' => $n_samples };
+    $peptides{$pepion} = { n_map => $row->[11], n_obs => $row->[7], n_mod_obs => $row->[16], mod_seq => $row->[15], 'N Samples' => $n_samples, 'samples' => $row->[12] };
     $clean_peptides{$row->[2]}++;
     my $posns = $sbeamsMOD->get_site_positions( seq => $seq, pattern => $row->[2] );
     my $map = '';
@@ -2693,20 +2673,19 @@ sub getPeptideCount {
       $map = 'yes';
       $posn = $posns->[0] + 1;
     }
-    $peptides{$row->[15]}->{posn} = $posn;
-    $peptides{$row->[15]}->{mapping} = $map;
+    $peptides{$pepion}->{posn} = $posn;
+    $peptides{$pepion}->{mapping} = $map;
+    $peptides{$pepion}->{charge} = $row->[17];
 
-
-
-    for my $attr ( 'peptide_accession', 'preceding_residue', 'peptide_sequence', 'following_residue', 'best_probability', 'n_observations', 'SSRCalc_relative_hydrophobicity', 'n_genome_locations' ) {
-      $peptides{$row->[15]}->{$attr} = $row->[$rs->{column_hash_ref}->{$attr}];
+    for my $attr ( 'peptide_accession', 'preceding_residue', 'peptide_sequence', 'following_residue', 'best_probability', 'n_observations', 'SSRCalc_relative_hydrophobicity', 'n_genome_locations', 'modified_peptide_instance_id' ) {
+      $peptides{$pepion}->{$attr} = $row->[$rs->{column_hash_ref}->{$attr}];
     }
 
     if ( $parameters{variant_type} =~ /init_met/i ) {
       if ( $posn == 1 ) {
-        push @refute, $row->[2];
+        $refute{$row->[2]}++;
       } elsif ( $posn == 2 ) {
-        push @support, $row->[2];
+        $support{$row->[2]}++;
       } elsif ( $map eq 'no' ) {
         push @nomap, $row->[2];
       } else {
@@ -2717,59 +2696,16 @@ sub getPeptideCount {
   }
   my $pcnt = scalar( keys( %clean_peptides) );
 
-  my %results = ( support => \@support,
-                  refute => \@refute,
-                  peptides => \%peptides,
+  my %results = ( support => [keys(%support)],
+                   refute => [keys(%refute)],
+                 peptides => \%peptides,
                   neutral => \@neutral,
-                  nomap => \@neutral,
-                  tcount => $tobs,
-                  acount => $nobs,
-                  group => $grp,
+                    nomap => \@neutral,
+                   tcount => $tobs,
+                   acount => $nobs,
+                    group => $grp,
                   level => $level );
   return \%results;
-
-  my $foo = q~
-
-          'biosequence_name' => 'A6NCN2',
-          'group_rep' => 'P01834',
-          'level_name' => 'possibly_distinguished',
-          'biosequence_id' => 10792518,
-          'biosequence_accession' => 'A6NCN2',
-          'relationship_name' => undef,
-          'biosequence_seq' => 'MSCLYSRLSAPCGVRA'
-          'reference_biosequence_name' => undef,
-          'biosequence_desc' => 'KT81L_HUMAN Keratin-81-like protein OS=Homo sapiens PE=2 SV=3 CONCAT=1',
-          'n_observations' => 13917
-
-          'column_list_ref' => [
-                                 'peptide_accession',
-                                 'preceding_residue',
-                                 'peptide_sequence',
-                                 'following_residue',
-                                 'suitability_score',
-                                 'best_probability',
-                                 'best_adjusted_probability',
-                                 'n_observations',
-                                 'empirical_proteotypic_score',
-                                 'SSRCalc_relative_hydrophobicity',
-                                 'n_protein_mappings',
-                                 'n_genome_locations',
-                                 'sample_ids',
-                                 'is_subpeptide_of',
-                                 'peptide_instance_id'
-                               ],
-
-                                 'peptide_accession',
-                                 'preceding_residue',
-                                 'peptide_sequence',
-                                 'following_residue',
-                                 'best_probability',
-                                 'n_observations',
-                                 'SSRCalc_relative_hydrophobicity',
-                                 'n_genome_locations',
-
-  ~;
-
 }
 
 sub get_peptide_table {
@@ -2778,7 +2714,7 @@ sub get_peptide_table {
   my $members = shift;
 
   return '' unless scalar( keys( %{$members} ) );
-  my @headings = ( 'peptide_accession', 'preceding_residue', 'peptide_sequence', 'following_residue', 'mod_seq', 'posn', 'n_genome_locations', 'best_probability', 'SSRCalc_relative_hydrophobicity', 'n_mod_obs', 'N Samples'  );
+  my @headings = ( 'peptide_accession', 'preceding_residue', 'peptide_sequence', 'following_residue', 'mod_seq', 'posn', 'n_genome_locations', 'best_probability', 'SSRCalc_relative_hydrophobicity', 'n_mod_obs', 'N Samples', 'charge'  );
   my %head2display = ( peptide_accession => 'Accession',
                        preceding_residue => 'Pre AA',
                        following_residue => 'Fol AA',
@@ -2787,8 +2723,7 @@ sub get_peptide_table {
                        peptide_sequence => 'Sequence',
                        n_genome_locations => '# Gen Loc',
                        n_mod_obs => 'N Obs',
-
-
+                       charge => 'Chg',
                      );
   my @display_headings;
   for my $head ( @headings ) {
@@ -2800,7 +2735,24 @@ sub get_peptide_table {
   my @table_data = ( \@display_headings );
   my $pep_link_base = "<a href=GetPeptide?_tab=3&atlas_build_id=$parameters{atlas_build_id}&searchWithinThis=Peptide+Name&action=QUERY&searchForThis=PEPTIDENAME>PEPTIDENAME</a>";
   my %seen;
-  for my $modpep ( sort{ $pcounts->{peptides}->{$a} <=> $pcounts->{peptides}->{$b} || $a <=> $b } keys( %{$pcounts->{peptides}} ) ) {
+
+ 
+# If we want to coalesce multiple charge states we can do it here (or in get_pcounts)
+#  my %pepdata;
+  for my $pepion ( keys( %{$pcounts->{peptides}} ) ) {
+#    my ( $modpep, $charge ) = split( /_/, $pepion );
+#    die Dumper( $pcounts->{peptides}->{$pepion} );
+#    if ( $pepdata{$modpep} ) {
+#    } else {
+#    }
+  }
+
+
+
+  for my $modpep ( sort{ $pcounts->{peptides}->{$a}->{peptide_sequence} <=> $pcounts->{peptides}->{$b}->{peptide_sequence} ||
+                         $pcounts->{peptides}->{$a}->{mod_seq} <=> $pcounts->{peptides}->{$b}->{mod_seq}  ||
+                         $pcounts->{peptides}->{$a}->{n_obs} <=> $pcounts->{peptides}->{$b}->{n_obs} 
+                       } keys( %{$pcounts->{peptides}} ) ) {
     next unless $members->{$pcounts->{peptides}->{$modpep}->{peptide_sequence}};
     my @row;
     for my $head ( @headings ) {
@@ -2823,13 +2775,127 @@ sub get_peptide_table {
                                                  rows_to_show => 50,
                                                      max_rows => 50,
                                                     help_text => '',
-                                                        align => [ qw( left center left center right right right right right right right) ],
+                                                        align => [ qw( left center left center right right right right right right right right) ],
                                                      bg_color => '#EAEAEA',
                                                      sortable => 0,
                                                      table_id => '$mode Evidence',
                                                      );
   return $table;
 
+}
+
+sub get_heatmap {
+  my $pcounts = shift;
+
+  my %evidence;
+  my @ordered_peptides;
+  for my $pep ( sort(@{$pcounts->{support}}),sort(@{$pcounts->{refute}}) ) {
+    $evidence{$pep}++;
+    push @ordered_peptides, $pep;
+  }
+
+  my %mpi;
+  for my $pepion ( keys( %{$pcounts->{peptides}} ) ) {
+    next unless $evidence{$pcounts->{peptides}->{$pepion}->{peptide_sequence}};
+    $mpi{$pcounts->{peptides}->{$pepion}->{modified_peptide_instance_id}}++;
+  }
+  my $mpi_str = join( ',', keys( %mpi ) );
+  my $sql = qq~
+  select DISTINCT sample_tag, S.sample_id, modified_peptide_sequence, peptide_charge, MPIS.n_observations
+  FROM $TBAT_SAMPLE S 
+  JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ASB.sample_id = S.sample_id
+  JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE_SEARCH_BATCH MPIS on ASB.atlas_search_batch_id = MPIS.atlas_search_batch_id
+  JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI on MPI.modified_peptide_instance_id = MPIS.modified_peptide_instance_id
+  WHERE MPI.modified_peptide_instance_id IN ( $mpi_str )
+  ORDER BY modified_peptide_sequence, peptide_charge
+  ~;
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my %samples;
+  my %pepions;
+  my %peptides;
+  while ( my @row = $sth->fetchrow_array() ) {
+    my $pepion = $row[2] . '_' . $row[3];
+    my $clean_seq = $row[2];
+    $clean_seq =~ s/\[\d+\]//g;
+    $pepions{$pepion}++;
+    $samples{$row[0]} ||= {};
+    $samples{$row[0]}->{$pepion} = $row[4];
+    $peptides{$clean_seq} ||= [];
+    push @{$peptides{$clean_seq}}, $pepion;
+
+  }
+  my @samples = sort( keys( %samples ) );
+  my @pepions;
+  my %seen;
+  for my $pep ( @ordered_peptides ) {
+    for my $pion ( @{$peptides{$pep}} ) {
+      push @pepions, $pion unless $seen{$pion}++;
+    }
+  }
+
+  my $max = 0;
+  for my $sample ( @samples ) {
+    for my $pepion ( @pepions ) {
+      if ( $samples{$sample}->{$pepion} ) {
+        $samples{$sample}->{$pepion} = log( $samples{$sample}->{$pepion} );
+      } else {
+        $samples{$sample}->{$pepion} = 0;
+      }
+      $max = $samples{$sample}->{$pepion} if $max < $samples{$sample}->{$pepion};
+    }
+  }
+  my $num_colors = ( $max > 64 ) ? 64 : $max;
+
+  my $heatmap = qq~
+  <script type="text/javascript">
+  google.setOnLoadCallback(drawHeatMap);
+  function drawHeatMap() {
+  var data = new google.visualization.DataTable();
+  data.addColumn('string', 'Sample Name');
+  ~;
+  for my $pepion ( @pepions ) {
+    $heatmap .= "data.addColumn( 'number', '$pepion' );\n";
+  }
+  my $scnt = scalar( @samples );
+  $heatmap .= "data.addRows($scnt);\n";
+
+  my $row = 0;
+  for my $sample ( @samples ) {
+    my $col = 0;
+    $heatmap .= "    data.setValue( $row, $col, '$sample' );\n";
+    $col++;
+    for my $pepion ( @pepions ) {
+      $heatmap .= "    data.setValue( $row, $col, '$samples{$sample}->{$pepion}' );\n";
+      $col++;
+    }
+    $row++;
+  }
+  $heatmap .= qq~
+  heatmap = new org.systemsbiology.visualization.BioHeatMap(document.getElementById('heatmapContainer'));
+  heatmap.draw(data, {numberOfColors:$num_colors,passThroughBlack:false,startColor:{r:255,g:255,b:255,a:1},endColor:{r:100,g:100,b:100,a:1},emptyDataColor:{r:256,g:256,b:256,a:1}});
+  }
+  </script>
+  ~;
+
+  my $content .= qq~
+  <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/jsapi"></script>
+  <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/ga.js"></script>
+  <script type="text/javascript">
+    google.load("visualization", "1", {});
+    google.load("prototype", "1.6");
+  </script>
+  <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/main/js/load.js"></script>
+  <script type="text/javascript">
+    systemsbiology.load("visualization", "1.0", {packages:["bioheatmap"]});
+  </script>
+  $heatmap
+	<BR><BR>
+  <TABLE WIDTH=800>
+  <TR><TD><DIV ID="heatmapContainer"></DIV></TD></TR>
+  </TABLE>
+  ~;
+  return $content;
 }
 
 ###############################################################################
