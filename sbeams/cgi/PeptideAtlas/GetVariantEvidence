@@ -2799,6 +2799,7 @@ sub get_heatmap {
     next unless $evidence{$pcounts->{peptides}->{$pepion}->{peptide_sequence}};
     $mpi{$pcounts->{peptides}->{$pepion}->{modified_peptide_instance_id}}++;
   }
+
   my $mpi_str = join( ',', keys( %mpi ) );
   my $sql = qq~
   select DISTINCT sample_tag, S.sample_id, modified_peptide_sequence, peptide_charge, MPIS.n_observations
@@ -2814,17 +2815,19 @@ sub get_heatmap {
   my %samples;
   my %pepions;
   my %peptides;
+  my %seen_peptide;
   while ( my @row = $sth->fetchrow_array() ) {
     my $pepion = $row[2] . '_' . $row[3];
     my $clean_seq = $row[2];
     $clean_seq =~ s/\[\d+\]//g;
+    $clean_seq =~ s/^n//g;
     $pepions{$pepion}++;
     $samples{$row[0]} ||= {};
     $samples{$row[0]}->{$pepion} = $row[4];
     $peptides{$clean_seq} ||= [];
-    push @{$peptides{$clean_seq}}, $pepion;
-
+    push @{$peptides{$clean_seq}}, $pepion unless $seen_peptide{$pepion}++;
   }
+
   my @samples = sort( keys( %samples ) );
   my @pepions;
   my %seen;
@@ -2838,14 +2841,14 @@ sub get_heatmap {
   for my $sample ( @samples ) {
     for my $pepion ( @pepions ) {
       if ( $samples{$sample}->{$pepion} ) {
-        $samples{$sample}->{$pepion} = log( $samples{$sample}->{$pepion} );
+        $samples{$sample}->{$pepion} = 1 + log( $samples{$sample}->{$pepion} );
       } else {
         $samples{$sample}->{$pepion} = 0;
       }
       $max = $samples{$sample}->{$pepion} if $max < $samples{$sample}->{$pepion};
     }
   }
-  my $num_colors = ( $max > 64 ) ? 64 : $max;
+  my $num_colors = ( $max < 64 ) ? 64 : $max;
 
   my $heatmap = qq~
   <script type="text/javascript">
@@ -2866,7 +2869,7 @@ sub get_heatmap {
     $heatmap .= "    data.setValue( $row, $col, '$sample' );\n";
     $col++;
     for my $pepion ( @pepions ) {
-      $heatmap .= "    data.setValue( $row, $col, '$samples{$sample}->{$pepion}' );\n";
+      $heatmap .= "    data.setValue( $row, $col, '$samples{$sample}->{$pepion}' );\n" if defined $samples{$sample}->{$pepion};
       $col++;
     }
     $row++;
