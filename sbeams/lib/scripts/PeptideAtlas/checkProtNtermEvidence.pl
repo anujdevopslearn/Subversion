@@ -14,11 +14,8 @@
 use strict;
 use Getopt::Long;
 use List::Util qw( min max );
+use Data::Dumper;
 use FindBin;
-
-use lib "/net/db/projects/PeptideAtlas/lib/Swissknife_1.67/lib";
-use SWISS::Entry;
-use SWISS::FTs;
 
 $|=1;
 
@@ -80,14 +77,15 @@ EOU
 
 
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
-         "atlas_build_id=s","protid=s","no_variants","sprot_dat",
+         "atlas_build_id=s","protid=s","no_variants","sprot=s", 'nprot=s',
+         'terminome=s', 'observed=s', 'species=s'
     )) {
 
     die "\n$USAGE";
 }
 
 if ($OPTIONS{"help"}) {
-  print $USAGE; exit;
+  print STDERR $USAGE; exit;
 }
 
 $VERBOSE = $OPTIONS{"verbose"} || 0;
@@ -95,15 +93,30 @@ $QUIET = $OPTIONS{"quiet"} || 0;
 $DEBUG = $OPTIONS{"debug"} || 0;
 $TESTONLY = $OPTIONS{"testonly"} || 0;
 
+$OPTIONS{species} ||= 'Homo_sapiens';
+
 if ($DEBUG) {
-    print "Options settings:\n";
-    print "  VERBOSE = $VERBOSE\n";
-    print "  QUIET = $QUIET\n";
-    print "  DEBUG = $DEBUG\n";
-    print "  TESTONLY = $TESTONLY\n";
+    print STDERR "Options settings:\n";
+    print STDERR "  VERBOSE = $VERBOSE\n";
+    print STDERR "  QUIET = $QUIET\n";
+    print STDERR "  DEBUG = $DEBUG\n";
+    print STDERR "  TESTONLY = $TESTONLY\n";
 }
 
 my $atlas_build_id = $OPTIONS{"atlas_build_id"};
+
+my %obs;
+if ( $OPTIONS{observed} ) {
+  open OBS, $OPTIONS{observed} || die;
+  while ( my $line = <OBS> ) {
+    chomp $line;
+    my @line = split( /\t/, $line );
+    $obs{$line[0]} ||= {};
+    $obs{$line[0]}->{$line[1]} = $line[2];
+    $obs{$line[0]}->{total} += $line[2];
+  }
+  close OBS;
+}
 
 my $n_atlases;
 my $data_path;
@@ -115,10 +128,10 @@ my $query = qq~
 ~;
 ($data_path) = $sbeams->selectOneColumn($query);
 if (! $data_path) {
-  print "No data_path for atlas_build $atlas_build_id, or build doesn't exist.\n";
+  print STDERR "No data_path for atlas_build $atlas_build_id, or build doesn't exist.\n";
   exit;
 } else {
-  print "$atlas_build_id $data_path\n" if $VERBOSE;
+  print STDERR "$atlas_build_id $data_path\n" if $VERBOSE;
 }
 
 my $one_protid = $OPTIONS{'protid'};
@@ -132,78 +145,22 @@ $sprot_dat_file = $OPTIONS{'sprot_dat'} if $OPTIONS{'sprot_dat'};
 my %prot_pep;
 my %pep_prot;
 
-# Read SwissProt DAT file, unless no variant annotations wanted
-# This code processes about 10,000 entries/minute. Since there are
-# > 540,000 entries in the file, this would take nearly an hour
-#--------------------------------------------------
-# print "Using SwissKnife to get all human entries from uniprot_sprot.dat\n" if $VERBOSE;
-# unless ($no_variants) {
-#   local $/ = "\n//\n";
-#   open ( my $infh, $sprot_dat_file) || die "Can't open $sprot_dat_file";
-#   my $cnt = 0;
-#   while ( my $record = <$infh>){
-# 
-#     $cnt++;
-#     unless ($QUIET) {
-#       print STDERR "." unless $cnt % 100;
-#       print STDERR "$cnt" unless  $cnt % 1000;
-#     }
-# 
-#     # Read the entry
-#     my $entry = SWISS::Entry->fromText($record);
-#     $entry->fullParse();  # this line is super slow
-#     next unless is_human( $entry );
-# 
-#     my $fasta = $entry->toFasta();
-#     next if !$fasta;
-# 
-#     $fasta = split_fasta( $fasta );
-#     my $acc = $fasta->[0];
-#     my $seq = $fasta->[1];
-#     if ( !$seq || !$acc ) {
-#       next;
-#     }
-# 
-#     my $clean_acc;
-#     if ( $acc =~ /sp\|([^|]+)\|/ ) {
-#       $clean_acc = $1;
-#     }
-#     $clean_acc ||= $acc;
-# 
-#     my $var_list = get_vars( $entry );
-# 
-#     for my $var (@{$var_list}) {
-#       my ($var_type, $var_num, $var_start, $var_end, $var_info) = (@{$var});
-#       if ($var_type eq 'InitMet') {
-# 	$prot_pep{$clean_acc}->{InitMet} = $var_info;
-#       } elsif (($var_type eq 'Signal') && ($var_num == 1)) {
-# 	# One protein in this analysis had two Signal vars, one for each
-# 	#  of two splice variants. They were basically the same, but had different
-# 	#  start residue numbers. We just use the first of the two.
-# 	$prot_pep{$clean_acc}->{Signal_end} = $var_end;
-# 	$prot_pep{$clean_acc}->{Signal_info} = $var_info;
-#       }
-#     }
-#   }
-# }
-#-------------------------------------------------- 
-
 # Get all the SwissProt identifiers in this build
 my $swiss_idents_in_build;
 if ($one_protid) {
   $swiss_idents_in_build = { $one_protid => 1 }
 } else {
-  print "Getting all SwissProt identifiers for this build ...\n" if $VERBOSE;
+  print STDERR "Getting all SwissProt identifiers for this build ...\n" if $VERBOSE;
   $swiss_idents_in_build = $prot_info->get_swiss_idents_in_build(
     atlas_build_id=>$atlas_build_id,
   );
 }
 my $nprots = scalar keys %{$swiss_idents_in_build};
-print "$nprots swissprot idents in this build.\n" if $VERBOSE;
+print STDERR "$nprots swissprot idents in this build.\n" if $VERBOSE;
 
 # Get the sequences for all these proteins from the fasta file
-print "Getting sequences for all SwissProt identifiers from fasta file ...\n" if $VERBOSE;
-my $fasta_file = "/net/db/projects/PeptideAtlas/pipeline/output/${data_path}/Homo_sapiens.fasta";
+print STDERR "Getting sequences for all SwissProt identifiers from fasta file ...\n" if $VERBOSE;
+my $fasta_file = "/net/db/projects/PeptideAtlas/pipeline/output/${data_path}/$OPTIONS{species}.fasta";
 my %seqmap;
 open (my $infh, $fasta_file) or die "Can't open $fasta_file";
 my ($protid, $seq);
@@ -218,16 +175,19 @@ while (my $line = <$infh>) {
   }
 }
 my $nseqs = scalar keys %seqmap;
-print "$nseqs fasta sequences stored with SwissProt idents.\n" if $VERBOSE;
+print STDERR "$nseqs fasta sequences stored with SwissProt idents.\n" if $VERBOSE;
 
 # Read peptide_mapping.tsv file
 my $prot_pep_file = "/net/db/projects/PeptideAtlas/pipeline/output/${data_path}/peptide_mapping.tsv";
-print "Reading peptide_mapping file ...\n" if $VERBOSE;
+print STDERR "Reading peptide_mapping file ...\n" if $VERBOSE;
 open (my $infh, $prot_pep_file) || die "Can't open $prot_pep_file";
+my %peps2prots;
 while (my $line = <$infh>) {
   chomp $line;
   my ($pep_acc, $pepseq, $protid, $start, $end) = split ("\t", $line);
   if (is_sprot($protid, $swiss_idents_in_build)) {
+    $peps2prots{$pepseq} ||= {};
+    $peps2prots{$pepseq}->{$protid}++;
     $prot_pep{$protid}->{$start}->{peps}->{$pepseq} = 1;
     my ($base_protid) = substr($protid, 0, 6);
     $pep_prot{$pepseq}->{prots}->{$base_protid} = 1;
@@ -238,7 +198,7 @@ for my $pepseq (keys %pep_prot) {
 }
 
 $nprots = scalar keys %prot_pep;
-print "$nprots swissprot idents have peptides in this build.\n" if $VERBOSE;
+print STDERR "$nprots swissprot idents have peptides in this build.\n" if $VERBOSE;
 
 
 ###############################################################################
@@ -256,7 +216,7 @@ my %first_observed_pep_nontryptic_nterm;
 # If $VERBOSE, print summary for each protein to STDOUT.
 my %mult_mapping_firstpeps;
 my $nprots = scalar keys %prot_pep;
-print "Processing each of $nprots protein identifiers " if $VERBOSE;
+print STDERR "Processing each of $nprots protein identifiers " if $VERBOSE;
 my $counter=0;
 for my $protid (sort keys %prot_pep) {
   $counter++;
@@ -287,28 +247,42 @@ for my $protid (sort keys %prot_pep) {
 	$prot_pep{$protid}->{Signal_info} = $var_info;
       }
     }
-    print "." if (! ($counter%100) && ($VERBOSE == 1));
-    print "$counter" if (! ($counter%1000) && ($VERBOSE == 1));
+    print STDERR "." if (! ($counter%100) && ($VERBOSE == 1));
+    print STDERR "$counter" if (! ($counter%1000) && ($VERBOSE == 1));
   }
   
   my $firstpep;
   my $firststart;
   my $pos2pep;
   # For each of the six leftmost positions ...
-  print "$protid: " if ($VERBOSE > 1);
+  print STDERR "$protid: " if ($VERBOSE > 1);
   for (my $i=0; $i < min($nstarts, 6); $i++) {
     my $start = $starts[$i];
-    print " $start" if ($VERBOSE > 1);
+    print STDERR " $start" if ($VERBOSE > 1);
     $firststart = $start if ($i == 0);
-    # Use the longest pep at this position; it will have the fewest mappings
+
     my @peps = keys %{$prot_pep{$protid}->{$start}->{peps}};
     my $n_peps = scalar @peps;
-    my $pep = shift (@peps);
-    for my $trial_pep (@peps) {
-      if (length($trial_pep) > length($pep)) {
-	$pep = $trial_pep;
+    my $pep = '';
+
+    # Use most abundant peptide at a given position
+    if ( $OPTIONS{observed} ) {
+      my $max = 0;
+      for my $trial_pep ( @peps ) {
+        if ( $obs{$trial_pep}->{total} > $max ) {
+          $max = $obs{$trial_pep}->{total};
+          $pep = $trial_pep;
+        }
+      }
+    } else {
+      # Use the longest pep at this position; it will have the fewest mappings
+      for my $trial_pep (@peps) {
+        if (length($trial_pep) > length($pep)) {
+      	  $pep = $trial_pep;
+        }
       }
     }
+
     my $n_mappings = $pep_prot{$pep}->{nprots};
     $pep_prot{$pep}->{nmappings} = $n_mappings;
     my $mult_mappings = ($n_mappings > 1);
@@ -316,11 +290,11 @@ for my $protid (sort keys %prot_pep) {
     # Print n_peps at this position, n_mappings for longest pep
     if ($VERBOSE > 1) {
       if (($n_peps > 1) || ($n_mappings > 1)) {
-	print "(";
-	print "$n_peps" if $n_peps>1;
-	print ".";
-	print "$n_mappings" if $n_mappings > 1;
-	print ")";
+	print STDERR "(";
+	print STDERR "$n_peps" if $n_peps>1;
+	print STDERR ".";
+	print STDERR "$n_mappings" if $n_mappings > 1;
+	print STDERR ")";
       }
     }
     if ($start == 1) {
@@ -337,29 +311,29 @@ for my $protid (sort keys %prot_pep) {
       $pos2pep = $pep;
     }
   }
-  print " ", $firstpep if ($VERBOSE > 1);
+  print STDERR " ", $firstpep if ($VERBOSE > 1);
   if ($init_met_observed) {
-    print " init_met_not_cleaved" if ($VERBOSE > 1);
+    print STDERR " init_met_not_cleaved" if ($VERBOSE > 1);
     $init_met_not_cleaved{$protid} = $firstpep;
   }
   if ($init_met_cleaved) {
-    print " init_met_cleaved" if ($VERBOSE > 1);
+    print STDERR " init_met_cleaved" if ($VERBOSE > 1);
     $init_met_cleaved{$protid} = $pos2pep;
   }
   if ($init_non_met_observed) {
-    print " init_non_met_observed" if ($VERBOSE > 1);
+    print STDERR " init_non_met_observed" if ($VERBOSE > 1);
     $init_non_met_observed{$protid} = $firstpep;
   }
   # Does KR near N-terminus make PeptideAtlas evidence unlikely?
   if ($seq =~ m/^.{1,6}[KR]/i) {
-    print " first_tryptic_pep_too_short" if ($VERBOSE > 1);
+    print STDERR " first_tryptic_pep_too_short" if ($VERBOSE > 1);
     $first_tryptic_pep_too_short{$protid} = substr($seq,0,20);
   }
   # If first pep is at position > 2, is it preceded by K or R?
   if ($firststart > 2) {
     my $preceding_residue = substr($seq, $firststart-2, 1);
     if ($preceding_residue !~ m/[KR]/i) {
-      print " first_observed_pep_nontryptic_nterm ($preceding_residue)" if ($VERBOSE > 1);
+      print STDERR " first_observed_pep_nontryptic_nterm ($preceding_residue)" if ($VERBOSE > 1);
       $first_observed_pep_nontryptic_nterm{$protid}->{seq} = $firstpep;
       $first_observed_pep_nontryptic_nterm{$protid}->{start} = $firststart;
       $first_observed_pep_nontryptic_nterm{$protid}->{preceding_residue} = $preceding_residue;
@@ -372,17 +346,206 @@ for my $protid (sort keys %prot_pep) {
       $first_observed_pep_nontryptic_nterm{$protid}->{start6} = ($starts[5] < $firststart + 25) ? $starts[5] : '';
     }
   }
-  print "\n" if ($VERBOSE > 1);
+  print STDERR "\n" if ($VERBOSE > 1);
 }
-print "\n" if $VERBOSE == 1;
+print STDERR "\n" if $VERBOSE == 1;
 
-printf "%d multiple mapping firstpeps\n", scalar keys %mult_mapping_firstpeps if $VERBOSE;
+print STDERR "%d multiple mapping firstpeps\n", scalar keys %mult_mapping_firstpeps if $VERBOSE;
 
 ###############################################################################
 ### Create files of the awesome result sets!
 ###############################################################################
 my $outfh;
 my $htmlfh;
+
+# Preamble is done, open some auxillary files
+
+#==> HUMAN_SP_2013-12_initmet.tsv <==
+#P31946  Removed; alternate      MTMDKSELVQKAKLAEQAER
+#Q04917  Removed MGDREQLLQRARLAEQAERY
+my %sp;
+if ( $OPTIONS{sprot} ) {
+  open SP, $OPTIONS{sprot} || die;
+  while ( my $line = <SP> ) {
+    chomp $line;
+    my @line = split( /\t/, $line );
+    $sp{$line[0]} = $line[1];
+  }
+  close SP;
+}
+
+#==> HUMAN_NP_2014-01_initmet.tsv <==
+#Q99471
+#Q99471-2
+my %np;
+if ( $OPTIONS{nprot} ) {
+  open NP, $OPTIONS{nprot} || die;
+  while ( my $line = <NP> ) {
+    chomp $line;
+    $np{$line} = 'Removed';
+  }
+  close NP;
+}
+
+#==> TermiNator.tsv <==
+#Protein Terminus        Likelihood      Trans_eff       Half-life
+#P31946  Ac-T(2) 77      1       65
+my %term;
+if ( $OPTIONS{terminome} ) {
+  open TM, $OPTIONS{terminome} || die;
+  while ( my $line = <TM> ) {
+    chomp $line;
+    my @line = split( /\t/, $line );
+    $term{$line[0]} = { type => $line[1], likelihood => $line[2] };
+  }
+  close TM;
+}
+
+my %all_keys;
+
+my $nc;
+my $c;
+for my $id ( keys ( %init_met_not_cleaved ) ) {
+  $all_keys{$id}++;
+  $nc ||= $id;
+}
+for my $id ( keys ( %init_met_cleaved ) ) {
+  $all_keys{$id}++;
+  $c ||= $id;
+}
+my $str = Dumper( $init_met_not_cleaved{$nc} );
+$str .= Dumper( $init_met_cleaved{$c} );
+
+my %results;
+my %varsplic;
+my $has_np = ( scalar( keys( %np ) ) ) ? 1 : 0;
+
+for my $acc ( sort ( keys( %all_keys ) ) ) {
+  my $sp = $sp{$acc} || '';
+  my $np = $np{$acc} || '';
+  if ( !$has_np ) {
+    $np = 'na';
+  }
+  my $tm_type = '';
+  my $tm_like = 'NULL';
+  if ( $term{$acc} ) {
+    $tm_type = $term{$acc}->{type};
+    $tm_like = $term{$acc}->{likelihood};
+  }
+
+  my $base = $acc;
+  if ( length( $acc ) > 6 ) {
+    # We have a varsplic -is it the same as canonical?
+    $base =~ s/\-\d+//;
+    if ( $init_met_cleaved{$acc} && $varsplic{$base}->{$init_met_cleaved{$acc}} ) {
+      next;
+    } elsif ( $init_met_not_cleaved{$acc} && $varsplic{$base}->{$init_met_not_cleaved{$acc}} ) {
+      next;
+    }
+  }
+  next unless ( $init_met_cleaved{$acc} || $init_met_not_cleaved{$acc}  );
+
+  # Cache this, so we only get one n-terminal peptide per accession set (base + var)
+  $varsplic{$base} ||= {};
+  $varsplic{$base}->{$init_met_cleaved{$acc}}++;
+  $varsplic{$base}->{$init_met_not_cleaved{$acc}}++;
+
+  my $type = 'None';
+  if ( $init_met_cleaved{$acc} ) {
+    if ( $init_met_not_cleaved{$acc} ) {
+      $type = 'Both';
+    } else {
+      $type = 'Cleaved';
+    }
+  } else {
+    if ( $init_met_not_cleaved{$acc} ) {
+      $type = 'NotCleaved';
+    }
+  }
+
+
+  $results{$acc} ||= {};
+
+  $results{$acc}->{sp} = $sp;
+  $results{$acc}->{np} = $np;
+
+  $results{$acc}->{cleaved} = $init_met_cleaved{$acc} || '';
+  $results{$acc}->{cleaved_alt_map} = 0;
+  $results{$acc}->{cleaved_iso_map} = 0;
+  $results{$acc}->{cleaved_map} = 0;
+  $results{$acc}->{cleaved_acetyl_obs} = 0;
+  $results{$acc}->{cleaved_total_obs} = 0;
+
+  if ( $results{$acc}->{cleaved} ) {
+
+    if ( $OPTIONS{observed} ) {
+      for my $mod ( keys( %{$obs{$results{$acc}->{cleaved}}} ) ) {
+        if ( $mod =~ /^n\[43\]/ ) {
+          $results{$acc}->{cleaved_acetyl_obs} += $obs{$results{$acc}->{cleaved}}->{$mod};
+        }
+        $results{$acc}->{cleaved_total_obs} += $obs{$results{$acc}->{cleaved}}->{$mod};
+      }
+    }
+
+    for my $prot ( keys( %{$peps2prots{$results{$acc}->{cleaved}}} ) ) {
+      if ( $prot =~ /$base/ ) {
+        $results{$acc}->{cleaved_iso_map}++;
+      } else {
+        $results{$acc}->{cleaved_alt_map}++;
+      }
+    }
+    $results{$acc}->{cleaved_map} = scalar( keys( %{$peps2prots{$results{$acc}->{cleaved}}} ) );
+  }
+
+  $results{$acc}->{not_cleaved} = $init_met_not_cleaved{$acc} || '';
+  $results{$acc}->{not_cleaved_map} = 0;
+  $results{$acc}->{not_cleaved_alt_map} = 0;
+  $results{$acc}->{not_cleaved_iso_map} = 0;
+  $results{$acc}->{not_cleaved_acetyl_obs} = 0;
+  $results{$acc}->{not_cleaved_total_obs} = 0;
+  if ( $results{$acc}->{not_cleaved} ) {
+
+    if ( $OPTIONS{observed} ) {
+      for my $mod ( keys( %{$obs{$results{$acc}->{not_cleaved}}} ) ) {
+        if ( $mod =~ /^n\[43\]/ ) {
+          $results{$acc}->{not_cleaved_acetyl_obs} += $obs{$results{$acc}->{not_cleaved}}->{$mod};
+        }
+        $results{$acc}->{not_cleaved_total_obs} += $obs{$results{$acc}->{not_cleaved}}->{$mod};
+      }
+    }
+
+    for my $prot ( keys( %{$peps2prots{$results{$acc}->{not_cleaved}}} ) ) {
+      if ( $prot =~ /$base/ ) {
+        $results{$acc}->{not_cleaved_iso_map}++;
+      } else {
+        $results{$acc}->{not_cleaved_alt_map}++;
+      }
+    }
+    $results{$acc}->{not_cleaved_map} = scalar( keys( %{$peps2prots{$results{$acc}->{not_cleaved}}} ) );
+  }
+
+  $results{$acc}->{term_type} = $tm_type;
+  $results{$acc}->{term_like} = $tm_like;
+  $results{$acc}->{type} = $type;
+
+
+}
+print "acc";
+#  for my $key ( qw( type cleaved cleaved_map cleaved_iso_map cleaved_alt_map cleaved_acetyl not_cleaved not_cleaved_map not_cleaved_iso_map not_cleaved_alt_map sp np term_type term_like ) ) {
+for my $key ( qw( type cleaved cleaved_map cleaved_iso_map cleaved_alt_map cleaved_acetyl_obs cleaved_total_obs not_cleaved not_cleaved_map not_cleaved_iso_map not_cleaved_alt_map not_cleaved_acetyl_obs not_cleaved_total_obs sp np term_type term_like ) ) {
+  print "\t$key";
+}
+print "\n";
+
+for my $acc ( sort( keys( %results ) ) ) {
+  print "$acc";
+  for my $key ( qw( type cleaved cleaved_map cleaved_iso_map cleaved_alt_map cleaved_acetyl_obs cleaved_total_obs not_cleaved not_cleaved_map not_cleaved_iso_map not_cleaved_alt_map not_cleaved_acetyl_obs not_cleaved_total_obs sp np term_type term_like ) ) {
+    print "\t$results{$acc}->{$key}";
+  }
+  print "\n";
+}
+
+exit;
 
 my $i=1;
 # We have to print this list first, before init_met_both_cleaved_and_not,
