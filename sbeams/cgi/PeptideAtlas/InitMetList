@@ -8,7 +8,7 @@
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
 # LICENSE file distributed with this software.
-###############################################################################
+#..o##############################################################################
 
 
 ###############################################################################
@@ -70,9 +70,10 @@ my $show_image = 0;
     END
 
     # Add general section 
-    $page .= "<BR>";
-
     $page .= get_list_selector();
+    my $proteome_cover = $atlas->get_proteome_coverage( $params->{build_id} );
+    $page .= $proteome_cover;
+
     $page .= get_list_table();
 
     # Print what we already have, speed up apparent page loading time.
