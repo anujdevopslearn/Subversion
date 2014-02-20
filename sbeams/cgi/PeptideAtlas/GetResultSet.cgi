@@ -22,6 +22,7 @@
 use strict;
 use Getopt::Long;
 use FindBin;
+use Data::Dumper;
 
 use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
@@ -191,6 +192,27 @@ sub handle_request {
     $log->debug( "Convert to TSV: " . $mem );
 
     my $tsv_formatted = get_tsv_format( $resultset_ref, $remove_markup );
+    my @mrm_format;
+    my %mrm_link_idx;
+    for my $row ( @{$tsv_formatted} ) {
+      if ( !scalar( keys( %mrm_link_idx ) ) ) {
+        my %link_cols = ( 'External Links' => 1, 'QTOF' => 1, 'QTOF_CE' => 1, 'QTrap5500' => 1, 'QQQ' => 1, 'IonTrap' => 1, 'QQQ ' => 1, ' QTRAP ' => 1 );
+        my $idx = 0;
+        for my $item ( @{$row} ) {
+          $mrm_link_idx{$idx}++ if $link_cols{$item};
+          $idx++;
+        }
+      }
+      my $idx = 0;
+      my @new_row;
+      for my $item ( @{$row} ) {
+        if ( !$mrm_link_idx{$idx} ) {
+          push @new_row, $item;
+        }
+        $idx++;
+      }
+      push @mrm_format, \@new_row;
+    }
 
     $mem = $sbeams->memusage( pid => $pid );
     $log->debug( "Done: " . $mem );
@@ -198,27 +220,31 @@ sub handle_request {
     $mem = $sbeams->memusage( pid => $pid );
     $log->debug( "Convert to mrm format: " . $mem );
 
-#    use Data::Dumper;
 #    die Dumper( %parameters );
 
     if ( $download =~ /AgilentQQQ_dynamic/i ) {
-      my $method = $atlas->get_qqq_dynamic_transition_list( method => $tsv_formatted, params => \%parameters );
+      my $method = $atlas->get_qqq_dynamic_transition_list( method => \@mrm_format, params => \%parameters );
       print $method;
     } elsif ( $download =~ /AgilentQQQ/i ) {
-      my $method = $atlas->get_qqq_unscheduled_transition_list( method => $tsv_formatted, params => \%parameters );
+      my $method = $atlas->get_qqq_unscheduled_transition_list( method => \@mrm_format, params => \%parameters );
       print $method;
     } elsif ( $download =~ /ABSCIEX_QTRAP_SRMMSMS/i ) {
-      my $method = $atlas->get_qtrap_mrmms_method( method => $tsv_formatted, params => \%parameters);
+      my $method = $atlas->get_qtrap_mrmms_method( method => \@mrm_format , params => \%parameters);
       print $method;
     } elsif ( $download =~ /ABSCIEX_QTRAP_SRM/i ) {
-      my $method = $atlas->get_qtrap_mrm_method( method => $tsv_formatted, params => \%parameters );
+      my $method = $atlas->get_qtrap_mrm_method( method => \@mrm_format , params => \%parameters );
       print $method;
     } elsif ( $download =~ /ThermoTSQ/i ) {
-      my $method = $atlas->get_thermo_tsq_mrm_method( method => $tsv_formatted, params => \%parameters );
+      my $method = $atlas->get_thermo_tsq_mrm_method( method => \@mrm_format , params => \%parameters );
       print $method;
     } elsif ( $download =~ /Skyline/i ) {
-      my $method = $atlas->get_skyline_export( method => $tsv_formatted, params => \%parameters );
+      my $method = $atlas->get_skyline_export( method => \@mrm_format , params => \%parameters );
       print $method;
+    } elsif ( $download =~ /TSV_MRM/i ) {
+      for my $row ( @mrm_format ) {
+        $row->[0] =~ s/\s+$//g;
+        print join( "\t", @{$row} ) . "\n";
+      }
     } elsif ( $download =~ /TSV/i ) {
       for my $row ( @{$tsv_formatted} ) {
         $row->[0] =~ s/\s+$//g;
