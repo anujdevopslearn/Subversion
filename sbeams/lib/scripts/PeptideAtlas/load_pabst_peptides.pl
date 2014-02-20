@@ -740,10 +740,13 @@ sub load_build_peptides {
         # other mods are from the mrm libraries
         my $modified_sequence = $line[2];
         if ( $modified_sequence =~ /C/ ) {
-          $modified_sequence =~ s/C([^\[])/C[160]$1/g;
-          $modified_sequence =~ s/C$/C[160]/; 
+          # Skip if alread modded
+          next if $modified_sequence =~ /\d/; 
+
+          # Change *all* Cys (prev regex skipped second C of CC peptides)
+          $modified_sequence =~ s/C/C[160]/g;
         }
-#        print "$line[2] becomes $modified_sequence\n";
+#        print STDERR "$line[2] becomes $modified_sequence\n";
     
         my $pep_key = $line[1] . $line[2] . $line[3];
   
@@ -1311,7 +1314,7 @@ sub readSpectrastSRMFile {
   }
   return \%srm;
 
-# 00 Protein name YJL026W
+# 00 Lib Name
 # 01 reps in best run /total reps    0/0
 # 02 pI   4.03
 # 03 Q1 m/z   608.8246
