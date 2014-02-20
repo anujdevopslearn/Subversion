@@ -1515,15 +1515,34 @@ sub get_proteome_coverage {
 #    AND biosequence_name NOT LIKE '%-%'
   my $dbh = $sbeams->getDBHandle();
   my $sth = $dbh->prepare( $prep_sql );
-  my @return = ( [ qw( Database N_Prots N_Obs_Prots Pct_Obs ) ] );
+
+
+  my @headings;
+  my %head_defs = ( Database => 'Name of databse, which collectively form the reference database for this build',
+                    N_Prots => 'Total number of entries in subject database',
+                    N_Obs_Prots => 'Number of proteins within the subject database to which at least one observed peptide maps',
+                    Pct_Obs => 'The percentage of the subject proteome covered by one or more observed peptides' );
+
+  for my $head ( qw( Database N_Prots N_Obs_Prots Pct_Obs ) ) {
+    push @headings, $head, $head_defs{$head};
+  }
+  my $headings = $self->make_sort_headings( headings => \@headings, default => 'Database' );
+
+  my @return = ( $headings );
   for my $row ( @names ) {
     $sth->execute( $row->[3], $row->[1] );
     while ( my @row = $sth->fetchrow_array() ) {
+      my $db = $row->[2]; 
+      if ( $db eq 'Swiss-Prot' ) {
+        $db .= ' (may include Varsplic)';
+      } elsif ( $db eq 'UniProt' ) {
+        $db .= ' (excludes SwissProt if shown)';
+      }
       my $pct = 0;
       if ( $row[0] && $row->[0] ) {
         $pct = sprintf( "%0.1f", 100*($row[0]/$row->[0]) );
       }
-      push @return, [ $row->[2], $row->[0], $row[0], $pct ];
+      push @return, [ $db, $row->[0], $row[0], $pct ];
     }
   }
 
