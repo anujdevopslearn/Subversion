@@ -465,6 +465,8 @@ sub get_column_defs {
     'Rank' => 'PABST Transition rank',
     'RI' => 'Relative Intensity of peak in CID spectrum',
 
+    'ProtLinks' => 'Links to information about this protein in other resources',
+    'External Links' => 'Links to information about this protein in other resources',
     'SpecLinks' => 'Links to spectra for this peptide ion in one or more spectral libraries',
     '6530 QTOF' => 'Consensus spectrum from Agilent 6530 QTOF instrument(s)',
     '6460 QQQ' => 'Consensus spectrum from Agilent 6460 QQQ instrument(s)',
