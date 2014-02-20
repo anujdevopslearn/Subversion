@@ -608,6 +608,12 @@ sub encodeSectionHeader {
   $args{anchor} ||= $args{text};
   my $anchor = ( $args{anchor} ) ? "<A NAME='$args{anchor}'></A>" : '';
 
+  my $mouseover = '';
+  if ( $args{mouseover} ) {
+    my $qmark = "<img src='$HTML_BASE_DIR/images/greyqmark.gif' />";
+    $text = "<div title='$args{mouseover}'>$text&nbsp;$qmark</div>";
+  }
+
   my $buffer = qq~
         <TR><TD colspan="2" background="$HTML_BASE_DIR/images/fade_orange_header_2.png" width="600">$link<font color="white">$anchor$text</font></TD></TR>
 ~;
@@ -1524,7 +1530,8 @@ sub get_proteome_coverage {
   my $table = '<table width=600>';
 
   $table .= $self->encodeSectionHeader(
-      text => 'Proteome Coverage',
+      text => 'Proteome Coverage (exhaustive)',
+      mouseover => "This shows an exhaustive mapping of the observed peptides to all proteins in each target proteome",
       width => 600
   );
 
