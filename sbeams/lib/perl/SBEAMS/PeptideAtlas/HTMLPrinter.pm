@@ -1476,6 +1476,71 @@ sub get_atlas_select {
   return $select;
 }
 
+sub get_proteome_coverage {
+  my $self = shift;
+  my $build_id = shift || return [];
+
+  my $sbeams = $self->getSBEAMS();
+
+  my $sql = qq~
+  SELECT COUNT(*), B.dbxref_id, dbxref_name, B.biosequence_set_id 
+  FROM $TBAT_ATLAS_BUILD AB
+  JOIN $TBAT_BIOSEQUENCE B ON B.biosequence_set_id = AB.biosequence_set_id
+  JOIN biolink.dbo.dbxref DX ON DX.dbxref_id = B.dbxref_id
+  WHERE atlas_build_id = $build_id
+  AND B.dbxref_id IS NOT NULL
+  GROUP BY B.dbxref_id, dbxref_name, B.biosequence_set_id
+  ORDER BY B.dbxref_id
+  ~;
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my @names;
+  while ( my @row = $sth->fetchrow_array() ) {
+    push @names, \@row;
+  }
+  use Data::Dumper;
+  my $prep_sql = qq~
+  SELECT COUNT( DISTINCT biosequence_id ) 
+  FROM $TBAT_BIOSEQUENCE B
+  JOIN $TBAT_PEPTIDE_MAPPING PM 
+    ON PM.matched_biosequence_id = B.biosequence_id
+  WHERE B.biosequence_set_id = ?
+    AND B.dbxref_id = ?
+  ~;
+#    AND biosequence_name NOT LIKE '%-%'
+  my $dbh = $sbeams->getDBHandle();
+  my $sth = $dbh->prepare( $prep_sql );
+  my @return = ( [ qw( Database N_Prots N_Obs_Prots Pct_Obs ) ] );
+  for my $row ( @names ) {
+    $sth->execute( $row->[3], $row->[1] );
+    while ( my @row = $sth->fetchrow_array() ) {
+      my $pct = 0;
+      if ( $row[0] && $row->[0] ) {
+        $pct = sprintf( "%0.1f", 100*($row[0]/$row->[0]) );
+      }
+      push @return, [ $row->[2], $row->[0], $row[0], $pct ];
+    }
+  }
+
+  my $table = '<table width=600>';
+
+  $table .= $self->encodeSectionHeader(
+      text => 'Proteome Coverage',
+      width => 600
+  );
+
+  $table .= $self->encodeSectionTable( rows => \@return, 
+                                        header => 1, 
+                                        table_id => 'proteome_cover',
+                                        align => [ qw(left right right right ) ], 
+                                        bg_color => '#EAEAEA',
+                                        rows_to_show => 25,
+                                        sortable => 1 );
+  $table .= '</TABLE>';
+
+  return $table;
+}
+
+
 1;
 
 __END__
