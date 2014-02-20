@@ -802,7 +802,7 @@ sub get_download_form {
 
     </SCRIPT>
     <SELECT NAME=download ID=download>
-      <OPTION VALUE='TSV' >TSV</OPTION>
+      <OPTION VALUE='TSV_MRM' >TSV</OPTION>
       <OPTION VALUE='AgilentQQQ' >Agilent QQQ SRM</OPTION>
       <OPTION VALUE='AgilentQQQ_dynamic' >Agilent QQQ dynamic SRM</OPTION>
       <OPTION VALUE='ABSCIEX_QTRAP_SRM' >AB SCIEX QTRAP SRM</OPTION>
@@ -1249,7 +1249,7 @@ sub fetch_transitions {
 
   # Added 2012-02 
   my $peptide_sql = qq~
-  SELECT DISTINCT biosequence_name, BS.biosequence_id, PP.pabst_peptide_id, PP.peptide_sequence
+  SELECT DISTINCT biosequence_name, BS.biosequence_id, PP.pabst_peptide_id, PP.peptide_sequence, biosequence_gene_name
   FROM $TBAT_PABST_PEPTIDE PP 
   JOIN $TBAT_PABST_PEPTIDE_MAPPING PM 
     ON PM.pabst_peptide_id = PP.pabst_peptide_id
@@ -1266,12 +1266,14 @@ sub fetch_transitions {
   ~;
 
   my $sth = $sbeams->get_statement_handle( $peptide_sql );
+  my %acc2gene;
   my %pep_ids;
   my %pep_seqs;
   my %bioseq_ids;
   my %bioseq2name;
   my %bioseq2peptides;
   while ( my @row = $sth->fetchrow_array() ) {
+    $acc2gene{$row[0]} ||= $row[4];
     $pep_ids{$row[2]}++;
     $pep_seqs{$row[3]}++;
     $bioseq_ids{$row[1]}++;
@@ -1279,6 +1281,9 @@ sub fetch_transitions {
     $bioseq2peptides{$row[1]} ||= {};
     $bioseq2peptides{$row[1]} ||= {$row[2]};
   }
+
+  fill_in_genes( \%acc2gene );
+
   my $pep_id_string = join( ',', keys( %pep_ids ) ) || 1;
   my $pep_seq_string = "'" . join( "','", keys( %pep_seqs ) ) . "'" || '';
   my $bioseq_id_string = join( ',', keys( %bioseq_ids ) ) || 1;
@@ -1411,7 +1416,7 @@ sub fetch_transitions {
   my ( $ssr_type ) = $sbeams->selectOneColumn( "SELECT elution_time_type_id FROM $TBAT_ELUTION_TIME_TYPE WHERE elution_time_type = 'SSRCalc'" );
   $parameters{rt_type} ||= $ssr_type;
 
-  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Ion', 'Rank', 'RI', 'SSRT'  );
+  my @headings = ( 'Protein', 'External Links', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Ion', 'Rank', 'RI', 'SSRT'  );
 
 
   # Code to get only pertinent headings here...
@@ -1826,10 +1831,14 @@ sub fetch_transitions {
       my $srm_link = '';
       my $organism_name = $id2name->{$organism} || 'unknown';
 
-      if ( !$guest ) {
+      my $links = '';
+      if ( !$guest || $super_guest ) {
         my @bids = keys( %{$build_resources->{atlas_build}} );
         my $pa_img = "<img src='$HTML_BASE_DIR/images/pa_tiny_clear.png' border=0 />";
         my $srm_img = "<img src='$HTML_BASE_DIR/images/srm_icon_clear.gif' border=0 />";
+        my $np_img = "<img src='$HTML_BASE_DIR/images/neXtprot_small.png' border=0 />";
+        my $pratlas_img = "<img src='$HTML_BASE_DIR/images/ProteinAtlasTiny.gif' border=0 />";
+
         $q->delete( 'protein_name_constraint', 'n_peptides_per_protein', 'n_highest_intensity_fragment_ions' );
         my $recall_url = $q->self_url();
         $recall_url .= ";protein_name_constraint=$prot;n_peptides_per_protein=500;n_highest_intensity_fragment_ions=1;omit_predicted=1;protein_context=1";
@@ -1839,17 +1848,39 @@ sub fetch_transitions {
         $srm_link = qq~
         <A HREF='$recall_url' TARGET='_srmatlas' title='Find all peptides for this protein in SRM Atlas' class='popup'>$srm_img</A>
         ~;
-        $prot .= "$pa_link$srm_link";
-        $prot =~ s/\n//g;
-        $prot = "<span class=nowrap_text>$prot</span>";
+
+        my $gene = $prot;
+        if ( $gene =~ /^IPI/ || $gene =~ /^ENSP/ ) {
+          $gene = $acc2gene{$gene} if $acc2gene{$gene};
+        }
+
+        my $pratlas_link = qq~
+        <A HREF="http://www.proteinatlas.org/search/$gene" TARGET='_external' title='Look up protein in the Human Protein Atlas' class='popup'>$pratlas_img</A>&nbsp;
+        ~;
+
+
+        my $np_link = '';
+        if ( $parameters{organism} == 2 ) {
+          $gene = 'NX_' . $gene if length( $gene ) == 6;
+          $np_link = qq~
+          <A HREF='http://www.nextprot.org/db/search#{f:"name/identifier",t:$gene}' TARGET='_external' title='Look up protein in neXtprot knowledgebase' class='popup'>$np_img</A>&nbsp;
+          ~;
+        }
+
+
+
+
+        $links = "$srm_link$pa_link$pratlas_link$np_link";
+        $links =~ s/\n//g;
+        $links = "<span class=nowrap_text>$links</span>";
       } else {
         $prot = "<A HREF='GetProtein?organism_name=$organism_name;protein_name=$prot;apply_action=GO&action=GO#Sequence%20Motifs' TARGET='_peptideatlas' title='Look up protein in the Peptide Atlas'>$prot</A>";
       }
 
       if ( ( $guest && !$super_guest && $parameters{rt_type} eq 'iRT' ) || $parameters{rt_type} == $ssr_type ) {
-        @rowdata = ( $prot, @row[0..12] );
+        @rowdata = ( $prot, $links, @row[0..12] );
       } else {
-        @rowdata = ( $prot, @row[0..13] );
+        @rowdata = ( $prot, $links, @row[0..13] );
       }
 
       if ( $has_mappings ) {
@@ -2128,14 +2159,14 @@ sub fetch_transitions {
 # 13 Protein name => 
 # 13 Merged score =>  
 
-  my $align = [qw(center center left center center right right right center right left right right)];
+  my $align = [qw(center center center left center center right right right center right left right right)];
 
   my $col_info = $atlas->get_column_defs( labels => \@headings );
   my $help_text = $atlas->make_table_help( description => 'Q1/Q3 transition pairs for SRM experiments',
                                                    entries => $col_info,
                                                    ); 
 
-  my $change_on = 2;
+  my $change_on = 3;
   if ( $args{cmod_mass} && !$args{peptides_only}  ) {
     $change_on = 10;
   }
@@ -2227,6 +2258,29 @@ sub fetch_transitions {
   print $sbeams->closeTabbedPane( selected => 'Results' );
 
 } # end fetch_transitions
+
+sub fill_in_genes {
+  my $acc2gene = shift;
+  my %mia;
+  for my $prot ( keys( %{$acc2gene} ) ) {
+    $mia{$prot}++ unless $acc2gene->{$prot};
+  }
+  return unless scalar( keys( %mia ) );
+  my $pstr = "'" . join( "'", keys( %mia ) ) . "'";
+  my $sql = qq~
+    SELECT DISTINCT biosequence_name, biosequence_gene_name 
+    FROM $TBAT_BIOSEQUENCE
+    WHERE biosequence_name IN ( $pstr )
+    AND biosequence_gene_name IS NOT NULL
+    AND biosequence_gene_name <> ''
+  ~;
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    $acc2gene->{$row[0]} ||= $row[1];
+  }
+  return;
+}
+
 
 sub update_status {
   my $msg = shift || return;
