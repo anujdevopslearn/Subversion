@@ -102,6 +102,11 @@ my $show_image = 0;
     $page .= get_build_overview ( $build_id );
 #  print STDERR 'sample info ' . time() . "\n";
 
+    my $proteome_cover = $atlas->get_proteome_coverage( $build_id );
+    $page .= "<BR>\n";
+    $page .= $proteome_cover;
+    $page .= "<BR>\n";
+
     my ( $sample_table, $sample_arrayref ) = get_sample_info( $build_id );
     my ( $chart_div, $header ) = get_draw_chart_function( $sample_arrayref );
 
@@ -160,7 +165,10 @@ sub get_table_help {
                  { key => 'Build Date', value => 'Date upon which build was finished. ' },
                  { key => '# Samples', value => 'The number of individual samples which comprise this build.  Each sample contains one or more LCMS/MS runs, and generally corresponds to a single scientific experiment.' } ,
                  { key => 'Distinct Peptides', value => 'This shows the number of distinct peptide sequences that were seen in this build.  Observations of the peptide in different charge states or with different modifications are coalesced.' } ,
-                 { key => 'Total Observations ', value => 'The total number of spectra that yeilded identifications above the build threshold.  Observations of the same base peptide sequences multiple times or in various charge states/modifications, whould each contribute to the total' }
+                 { key => 'Total Observations ', value => 'The total number of spectra that yeilded identifications above the build threshold.  Observations of the same base peptide sequences multiple times or in various charge states/modifications, whould each contribute to the total' },
+                 { key => 'Probability threshold', value => 'iProphet probability threshold applied to each experiment in this build' },
+                 { key => 'Canonical Proteins', value => 'Minimally redunant set of proteins required to explain (virtually) all non-decoy peptides observed in build (<a target=_termdefs href="http://www.peptideatlas.org/docs/protein_ident_terms.php">more info</a>)' },
+                 { key => 'PSM FDR threshold', value => 'PSM (peptide-spectrum match) level FDR threshold applied to each experiment in this build' },
         );
                  
     $showtext = 'show row descriptions';
@@ -681,14 +689,14 @@ sub get_build_overview {
 #  $table .= $atlas->encodeSectionItem( key   => 'Deltas ', tr_info => $tr,
 #                                          value => "$deltacnt ( $deltaobs )" ) . "\n";
 
-  if ($build_info->{protpro_PSM_FDR_per_expt} == 0) {
-    $build_info->{protpro_PSM_FDR_per_expt} = "N/A";
+  if ($build_info->{protpro_PSM_FDR_per_expt} <= 0) {
+    $build_info->{protpro_PSM_FDR_per_expt} =  $sbeams->makeInactiveText( 'n/a' );
   } else {
     $build_info->{protpro_PSM_FDR_per_expt} = sprintf( "%0.7f", $build_info->{protpro_PSM_FDR_per_expt} );
     $build_info->{protpro_PSM_FDR_per_expt} =~ s/ /&nbsp;/g;
   }
-  if ($build_info->{probability_threshold} == 0) {
-    $build_info->{probability_threshold} = "N/A";
+  if ($build_info->{probability_threshold} <= 0) {
+    $build_info->{probability_threshold} = $sbeams->makeInactiveText( 'n/a' );
   } else {
     $build_info->{probability_threshold} = sprintf( "%0.4f", $build_info->{probability_threshold} );
     $build_info->{probability_threshold} =~ s/ /&nbsp;/g;
@@ -704,7 +712,7 @@ sub get_build_overview {
                             value => $build_info->{build_date} ) . "\n";
   $table .= $atlas->encodeSectionItem( key   => '# Samples', tr_info => $tr,
                             value => $smpl_count->{cnt}, align => 'right' ) . "\n";
-  $table .= $atlas->encodeSectionItem( key   => 'PSM FDR threshold<br>(applied to each experiment)', tr_info => $tr,
+  $table .= $atlas->encodeSectionItem( key   => 'PSM FDR threshold', tr_info => $tr,
                             value => $build_info->{protpro_PSM_FDR_per_expt}, align => 'right' ) . "\n";
   $table .= $atlas->encodeSectionItem( key   => 'Probability threshold', tr_info => $tr,
                             value => $build_info->{probability_threshold}, align => 'right' ) . "\n";
