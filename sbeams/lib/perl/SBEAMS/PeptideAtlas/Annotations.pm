@@ -500,7 +500,10 @@ sub get_column_defs {
     'N Human Mapping' => 'Number of Human protein mapping, including SwissProt, IPI and Ensembl Proteins',
     'N Mouse Mapping' => 'Number of Mouse protein mapping, including SwissProt, IPI and Ensembl Proteins',
     'N Yeast Mapping', => 'Number of Yeast protein mapping, including SwissProt, SGD and Ensembl Proteins',
+    'Probability threshold'	=> 'iProphet probability threshold applied to build',
+    'Canonical Proteins' => 'Minimally redunant set of proteins required to explain (virtually) all non-decoy peptides observed in build',
     );
+
   if ( $args{labels} ) {
     my @entries;
     for my $label ( @{$args{labels}} ) {
@@ -511,11 +514,14 @@ sub get_column_defs {
           push @entries, $label => 'Not Defined';
         }
       } else {
-        if ( $coldefs{$label} ) {
-          push @entries, { key => $label, value => $coldefs{$label} };
-        } else {
-          push @entries, { key => $label, value => 'Not Defined' };
+        if ( !defined $coldefs{$label} ) {
+          if ( $label =~ /PSM FDR threshold/ ) {
+            $coldefs{$label} = 'PSM (peptide-spectrum match) level FDR threshold applied to build';
+          } else {
+            $coldefs{$label} = 'Not Defined';
+          }
         }
+        push @entries, { key => $label, value => $coldefs{$label} };
       }
     }
     return \@entries;
