@@ -1077,14 +1077,23 @@ sub get_swiss_prot_hash {
     WHERE biosequence_set_id = $bssid
     ~;
     my @rows = $sbeams->selectSeveralColumns($sql);
+    my %var;
     foreach my $row (@rows) {
       my $biosequence_id = $row->[0];   #not currently used
       my $biosequence_name = $row->[1];
       my $dbxref_id = $row->[2];
-      if ((defined $dbxref_id) && ($dbxref_id == 1)) {
-	$swiss_prot_href->{$biosequence_name} = 1
+      if ((defined $dbxref_id) && ($dbxref_id == 1 || $dbxref_id == 1135)) {
+        if ( $biosequence_name =~ /\-[23456789]/ ) {
+          $var{$biosequence_name}++;
+          $swiss_prot_href->{$biosequence_name}++;
+        } else {
+          $swiss_prot_href->{$biosequence_name}++;
+        }
       }
     }
+    my $var = scalar( keys( %var ) );
+    my $sp = scalar( keys( %{$swiss_prot_href} ) );
+    print STDERR "Saw $sp Swiss Prot and $var Varsplic entries\n";
   }
   return $swiss_prot_href;
 }
