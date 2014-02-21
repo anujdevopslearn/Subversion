@@ -43,6 +43,7 @@
                 showIonTable: true,
                 showViewingOptions: true,
                 showOptionsTable: true,
+                peakLabelOpt: 'mz',
                 showSequenceInfo: true,
                 labelImmoniumIons: true,
                 labelPrecursorPeak: true,
@@ -2134,7 +2135,8 @@
 		myTable+= '<div> Peak Labels:<br/> ';
 		myTable+= '<input type="radio" name="'+getRadioName(container, "peakLabelOpt")+'" value="ion" checked="checked"/><span style="font-weight: bold;">Ion</span>';
 		myTable+= '<input type="radio" name="'+getRadioName(container, "peakLabelOpt")+'" value="mz"/><span style="font-weight: bold;">m/z</span><br/>';
-		myTable+= '<input type="radio" name="'+getRadioName(container, "peakLabelOpt")+'" value="none"/><span style="font-weight: bold;">None</span> ';
+		myTable+= '<input type="radio" name="'+getRadioName(container, "peakLabelOpt")+'" value="both"/><span style="font-weight: bold;">Both</span>';
+		myTable+= '<input type="radio" name="'+getRadioName(container, "peakLabelOpt")+'" value="none"/><span style="font-weight: bold;">None</span><br/>';
 		myTable+= '</div> ';
 		myTable += '</td> </tr> ';
 		

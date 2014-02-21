@@ -1781,8 +1781,11 @@
                 		
                 		if(series.labelType == 'mz') {
                 			var label = x.toFixed(2);
-                		}
-                		else  {
+                		} else if ( series.labelType == 'both') {
+               		    var mz = x.toFixed(2);
+               		    var ion = series.labels[l];
+                 		  label = ion + ' [' + mz + ']';
+                		} else  {
 		                	if(series.labels) {
 		                		//alert(myx1+", "+myx2);
 		                		label = series.labels[l];
