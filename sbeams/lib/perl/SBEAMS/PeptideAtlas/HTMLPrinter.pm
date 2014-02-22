@@ -1503,19 +1503,22 @@ sub get_proteome_coverage {
   while ( my @row = $sth->fetchrow_array() ) {
     push @names, \@row;
   }
-  use Data::Dumper;
-  my $prep_sql = qq~
-  SELECT COUNT( DISTINCT biosequence_id ) 
+
+  my $obs_sql = qq~
+  SELECT COUNT(DISTINCT biosequence_id), dbxref_id
   FROM $TBAT_BIOSEQUENCE B
   JOIN $TBAT_PEPTIDE_MAPPING PM 
     ON PM.matched_biosequence_id = B.biosequence_id
-  WHERE B.biosequence_set_id = ?
-    AND B.dbxref_id = ?
+  JOIN $TBAT_PEPTIDE_INSTANCE PI 
+    ON PM.peptide_instance_id = PI.peptide_instance_id
+  WHERE atlas_build_id = $build_id
+  GROUP BY dbxref_id
   ~;
-#    AND biosequence_name NOT LIKE '%-%'
-  my $dbh = $sbeams->getDBHandle();
-  my $sth = $dbh->prepare( $prep_sql );
-
+  my $sth = $sbeams->get_statement_handle( $obs_sql );
+  my %obs;
+  while ( my @row = $sth->fetchrow_array() ) {
+    $obs{$row[1]} = $row[0];
+  }
 
   my @headings;
   my %head_defs = ( Database => 'Name of databse, which collectively form the reference database for this build',
@@ -1527,23 +1530,21 @@ sub get_proteome_coverage {
     push @headings, $head, $head_defs{$head};
   }
   my $headings = $self->make_sort_headings( headings => \@headings, default => 'Database' );
-
   my @return = ( $headings );
+
   for my $row ( @names ) {
-    $sth->execute( $row->[3], $row->[1] );
-    while ( my @row = $sth->fetchrow_array() ) {
-      my $db = $row->[2]; 
-      if ( $db eq 'Swiss-Prot' ) {
-        $db .= ' (may include Varsplic)';
-      } elsif ( $db eq 'UniProt' ) {
-        $db .= ' (excludes SwissProt if shown)';
-      }
-      my $pct = 0;
-      if ( $row[0] && $row->[0] ) {
-        $pct = sprintf( "%0.1f", 100*($row[0]/$row->[0]) );
-      }
-      push @return, [ $db, $row->[0], $row[0], $pct ];
+    my $db = $row->[2]; 
+    if ( $db eq 'Swiss-Prot' ) {
+      $db .= ' (may include Varsplic)';
+    } elsif ( $db eq 'UniProt' ) {
+      $db .= ' (excludes SwissProt if shown)';
     }
+    my $pct = 0;
+    my $obs = $obs{$row->[1]};
+    if ( $obs && $row->[0] ) {
+        $pct = sprintf( "%0.1f", 100*($obs/$row->[0]) );
+    }
+    push @return, [ $db, $row->[0], $obs, $pct ];
   }
 
   my $table = '<table width=600>';
