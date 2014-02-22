@@ -42,9 +42,9 @@ $atlas->setSBEAMS($sbeams);
 
 # Read input parameters
 my $params = process_params();
+$|++;
 
 my $show_image = 0;
-
 
 { # Main 
 
@@ -95,7 +95,6 @@ my $show_image = 0;
 		   $atlas->display_page_footer();
        exit;
     }
-
 
     # Add general section 
 #  print STDERR 'build overV ' . time() . "\n";
