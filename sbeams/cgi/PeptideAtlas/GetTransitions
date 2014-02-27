@@ -2266,7 +2266,7 @@ sub fill_in_genes {
     $mia{$prot}++ unless $acc2gene->{$prot};
   }
   return unless scalar( keys( %mia ) );
-  my $pstr = "'" . join( "'", keys( %mia ) ) . "'";
+  my $pstr = "'" . join( "','", keys( %mia ) ) . "'";
   my $sql = qq~
     SELECT DISTINCT biosequence_name, biosequence_gene_name 
     FROM $TBAT_BIOSEQUENCE
