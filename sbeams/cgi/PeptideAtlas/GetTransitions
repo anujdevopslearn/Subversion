@@ -2025,7 +2025,8 @@ sub fetch_transitions {
               $#mod_row = 14;
 
               if ( $parameters{cmod_opts} eq 'heavy_only' || $parameters{cmod_opts} eq 'both' ) {
-                 push @peptides, \@mod_row;
+                # We are now pushing a links column into the row[1]
+                 push @peptides, [ $mod_row[0], $rowdata[1], @mod_row[1..14] ];
               }
 
             # if original row was heavy (modified)
@@ -2045,7 +2046,8 @@ sub fetch_transitions {
 
               # Store this only if light version was requested
               if ( $parameters{cmod_opts} eq 'light_only' || $parameters{cmod_opts} eq 'both' ) {
-                 push @peptides, \@mod_row;
+                # We are now pushing a links column into the row[1]
+                push @peptides, [ $mod_row[0], $rowdata[1], @mod_row[1..14] ];
               }
             }
 
