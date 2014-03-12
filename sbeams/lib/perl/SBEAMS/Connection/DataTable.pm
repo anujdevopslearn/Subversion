@@ -235,7 +235,11 @@ sub addRow {
 #-
 sub asTSV {
   my $this = shift;
+  my %args = @_;
   my $tsv = $this->_delimitData( "\t" );
+  if ( $args{strip_markup} ) {
+    $tsv =~ s/<[^>]+>//gm;
+  }
   return $tsv;
 }
 
