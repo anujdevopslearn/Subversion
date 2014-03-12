@@ -201,20 +201,85 @@ sub get_QTOF_stepping {
 
 }
 
-
+#+ 
+# Routine to extract spectrum peaks from a raw or gzipped sptxt file. Split
+# apart from process_spectrum_record 2014-03-11
+#- 
 sub get_spectrum_peaks {
+
 	my $self = shift;
 	my %args = @_;
+#  use Data::Dumper;
+#  die Dumper( %args );
 
   for my $arg ( qw( file_path entry_idx ) ) {
-		$log->printStack( 'warn' );
     die $arg unless defined $args{$arg};
   }
 
-#  print "Looking in file $args{file_path} for index $args{entry_idx}\n";
+  my @lines;
+  if ( $args{bgzipped} ) {
+    for my $arg ( qw( rec_len ) ) {
+      die $arg unless defined $args{$arg};
+    }
+    my $bgz_out = `/tools/bin/bgzip -b $args{entry_idx} -s $args{rec_len} -c -d $args{file_path} `;
+    @lines = split( /\n/, $bgz_out );
+  } else {
+    open FIL, $args{file_path} || die "Unable to open library file $args{file_path}";
+    seek ( FIL, $args{entry_idx}, 0 );
+    my $cnt = 0;
+    my $name_seen = 0;
+    while ( my $line = <FIL> ) {
+      # First record should be Name: sequence/charge
+      if ( $cnt++ < 2 && !$name_seen ) {
+        if ( $line =~ /^Name:/ ) {
+          $name_seen++;
+        } elsif ( $cnt > 1 ) {
+          $log->warn( "Spectrum record does not contain Name: $line\n" );
+        } else {
+          if ( $line ) {
+            $log->warn( "First line of spectrum record is not Name: $line\n" );
+            $name_seen++;
+          }
+        }
+      }
+      last if $line =~ /^\s*$/;
+      push @lines, $line;
+    }
+    close FIL;
+  }
 
-  open FIL, $args{file_path} || die "Unable to open library file $args{file_path}";
-  seek ( FIL, $args{entry_idx}, 0 );
+  if ( $args{return_record_as_array} ) {
+    return \@lines;
+  }
+
+  my $spectrum = $self->process_spectrum_record( %args, lines => \@lines );
+  return $spectrum;
+
+  # deprecated debugging stuff!
+  my @keys = sort( keys( %{$spectrum} ) );
+  my $specdump = "Spectrum has " . scalar( @keys ) . " keys:\n";
+  for my $key ( @keys ) {
+    my $ref = ref $spectrum->{$key} || 'SCALAR';
+    $specdump .= "$key is a(n) $ref ";
+    if ( $ref eq 'ARRAY' ) {
+      $specdump .= " with " . scalar( @{$spectrum->{$key}} ) . " entries\n";
+    } elsif ( $ref eq 'HASH' ) {
+      $specdump .= " with " . scalar( keys( %{$spectrum->{$key}} ) ) . " keys\n";
+    } else {
+      $specdump .= " with " . length( $spectrum->{$key} ) . " characters\n";
+    }
+  }
+  $log->warn( $specdump );
+}
+
+#+ 
+# Routine to process records from a spectrum passed as an array
+#- 
+sub process_spectrum_record {
+
+	my $self = shift;
+	my %args = @_;
+
   my $collect_peaks;
   my %spectrum = ( n_peaks => 0,
                    masses => [],
@@ -224,11 +289,14 @@ sub get_spectrum_peaks {
                    max_intensity => 1,
                    full_name => '' );
 
-  my $cnt = 0;
+  if ( !$args{lines} ) {
+    $log->warn( "No lines!" );
+    return \%spectrum;
+  }
+
   my $peak_cnt;
-  while ( my $line = <FIL> ) {
-    $cnt++;
-    chomp $line;
+
+  for my $line ( @{$args{lines}} ) {
 
     # Nreps=2/2 
     if ( $line =~ /Nreps=(\d+\/\d+)\s+/ ) {
@@ -257,7 +325,6 @@ sub get_spectrum_peaks {
       die "Why didn't $line trip it!";
     }
     next unless $collect_peaks;
-    last if $line =~ /^\s*$/;
 
     my ( $mass, $intensity, $annot ) = $line =~ /(\S+)\s+(\S+)\s+(\S+)\s.*$/;
     my @annot = split( /\//, $annot );
@@ -269,10 +336,6 @@ sub get_spectrum_peaks {
     push @{$spectrum{labels}}, $annot[0];
 
     push @{$spectrum{masses}}, $mass;
-
-#    if ( $annot[0] eq 'y8' ) {
-#      print STDERR "pushing $mass and $intensity for $annot[0]\n";
-#    }
 
     # User wants intensities normalized to precursor m/z 
     if ( $args{precursor_normalize} ) {
@@ -297,44 +360,10 @@ sub get_spectrum_peaks {
 #    print STDERR "pushing $1 and $2 to the m/i arrays\n";
     $peak_cnt++;
     if ( $peak_cnt > $spectrum{n_peaks} ) {
-      print STDERR "Past our due date with $line\n";
+      $log->warn( "Past our due date with $line\n" );
       last;
     }
   }
-#  print " saw $cnt total rows for $args{file_path} entry $args{entry_idx}!\n";
-#  print STDERR " masses: " . scalar( @{$spectrum{masses}} ) . " entries";
-#  print STDERR " intensities: " . scalar( @{$spectrum{intensities}} ) . " entries";
-#
-my $example = qq~
-Name: AAAAASAAGPGGLVAGK/2
-LibID: 1
-MW: 1340.7401
-PrecursorMZ: 670.3700
-Status: Normal
-FullName: X.AAAAASAAGPGGLVAGK.X/2
-Comment: AvePrecursorMz=670.7645 BestRawSpectrum=QT07072010_ISBHJKXXX000035_W1_P3-r001.mzML.1161415.1161415.2 BinaryFileOffset=6362 CollisionEnergy=31.4 ConsFracAssignedPeaks=0.720 DotConsensus=0.89,0.01;0/2 FracUnassigned=0.29,2/5;0.32,7/20;0.38,886/1299 Inst=1/quadrupole,2,0 MassDiffCounts=1/0:2 MaxRepSN=18.8 Mods=0 NAA=17 NISTProtein=1/ISBHJKXXX000035 NMC=0 NTT=1 Nreps=2/2 OrigMaxIntensity=2.3e+03 Parent=670.37 Pep=Tryptic PrecursorIntensity=5.7e+04 Prob=1.0000 ProbRange=1,1,1,1 Protein=1/1/ISBHJKXXX000035 RepFracAssignedPeaks=0.325 RepNumPeaks=1060.0/239.0 RetentionTime=1158.0,1161.4,1154.6 SN=200.0 Sample=1/interact-ipro.pep.xml,2,2 Se=1^K2:ex=4.0000e-04/0.0000e+00,fv=7.1410/0.3379,hs=481.0000/10.0000,ns=236.5000/5.5000,pb=0.9992/0.0000 Spec=Consensus TotalIonCurrent=3.6e+05
-NumPeaks: 150
-70.0642 1703.7  IPA/-0.00,IPA/-0.00     2/2 0.0000|0.07
-72.0817 1145.5  b1/0.04,b2^2/0.04,IVA/0.00,IVA/0.00     2/2 0.0000|0.01
-84.0833 531.1   y2-35^2/-0.97   2/2 0.0040|0.51
-86.0968 1252.8  ILA/0.00,ILA/0.00       2/2 0.0022|0.47
-102.0594        398.2   y2^2/-0.51,y1-46/0.95   2/2 0.0028|0.64
-115.0859        2260.5  a2/-0.00,y3-46^2/-0.00  2/2 0.0000|0.06
-120.0795        244.4   y3-35^2/-0.49   2/2 0.0021|0.15
-127.0866        678.6   ?       2/2 0.0000|0.14
-129.1022        1619.6  y1-18/-0.00,y3-17^2/-0.47,y3-18^2/0.02,a4^2/0.02        2/2 0.0000|0.19
-130.0892        892.9   y1-17/0.00      2/2 0.0036|0.15
-139.0673        376.4   y3^2/0.98       2/2 0.0208|0.00
-143.0809        7889.9  b4^2/-0.00,b2/-0.00     2/2 0.0000|0.10
-144.0798        917.4   b2i/-0.00       2/2 0.0031|0.45
-147.1094        1130.3  y1/-0.00        2/2 0.0019|0.03
-148.1146        261.9   y1i/0.00        2/2 0.0074|0.04
-155.0817        346.8   ?       2/2 0.0033|0.03
-159.0737        770.6   y2-46/0.94      2/2 0.0019|0.40
-
-
-~;
-
   return \%spectrum;
 }
 
