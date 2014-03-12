@@ -27,7 +27,7 @@ require Exporter;
 $VERSION = q[$Id$];
 @EXPORT_OK = qw();
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw( $log );
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::Settings;
 use SBEAMS::PeptideAtlas::Tables;
@@ -676,36 +676,73 @@ sub getSpectrumPeaks_Lib {
 
   # If location does not begin with slash, prepend default dir.
   $buffer .= "library_location = $library_idx_file\n";
-  my $filename = $library_idx_file;
-  open (IDX, "<$filename") or die "cannot open $filename\n";
 
-  my $position;
-  $spectrum_name =~ s/\.\d$//;
-  while (my $line = <IDX>){
-    chomp $line;
-    if ($line =~ /$spectrum_name\t(\d+)/){
-      $position = $1;
-      last;
-    }
-  }
-  close IDX; 
-
-  if ($position eq ''){
-    die ("ERROR: cannot find $spectrum_name in $filename");
-  }
-  $filename =~ s/.specidx/.sptxt/;
-  if ( ! -e "$filename"){
-    die ("ERROR: cannot find file $filename");
-  }
-  $filename =~ /.*\/(.*)/;
-  print "get spectrum from $1<BR>";
   use SBEAMS::PeptideAtlas::ConsensusSpectrum;
   my $consensus = new SBEAMS::PeptideAtlas::ConsensusSpectrum;
   $consensus->setSBEAMS($sbeams);
-  my $peaks = $consensus->get_spectrum_peaks( file_path=>$filename, 
-                                              entry_idx=>$position, 
-                                              denormalize => 0, 
-                                              strip_unknowns => 1 );
+  my $peaks;
+
+  my $comp_lib_idx_file = $library_idx_file;
+  $comp_lib_idx_file =~ s/specidx/compspecidx/;
+  if ( -e $comp_lib_idx_file ) {
+    $log->debug( "Using compressed library $comp_lib_idx_file" );
+    my $idx_line = `grep -m1 $args{spectrum_name} $comp_lib_idx_file`;
+    chomp $idx_line;
+    if ( $idx_line ) {
+      my @line = split( /\t/, $idx_line );
+      my $off = $line[4];
+      my $len = $line[3];
+      my $filename = $comp_lib_idx_file;
+      $filename =~ s/.compspecidx/.sptxt.gz/;
+
+      $peaks = $consensus->get_spectrum_peaks( file_path => $filename, 
+                                               entry_idx => $off, 
+                                                 rec_len => $len, 
+                                                bgzipped => 1,
+                                             denormalize => 0, 
+                                          strip_unknowns => 1 );
+
+      $log->debug( "Compressed fetch failed" ) if !scalar( @{$peaks->{labels}} );
+    }
+  }
+
+  if ( !$peaks  || !scalar( @{$peaks->{labels}} ) ) {
+    $log->debug( "Using native library" );
+
+    my $filename = $library_idx_file;
+    open (IDX, "<$filename") or die "cannot open $filename\n";
+
+    my $position;
+    $spectrum_name =~ s/\.\d$//;
+    while (my $line = <IDX>){
+      chomp $line;
+      if ($line =~ /$spectrum_name\t(\d+)/){
+        $position = $1;
+        last;
+      }
+    }
+    close IDX; 
+
+    if ($position eq ''){
+      die ("ERROR: cannot find $spectrum_name in $filename");
+    }
+    $filename =~ s/.specidx/.sptxt/;
+    if ( ! -e "$filename"){
+      die ("ERROR: cannot find file $filename");
+    }
+    $filename =~ /.*\/(.*)/;
+
+    # Dubious print statement!
+    #  print "get spectrum from $1<BR>";
+
+    $peaks = $consensus->get_spectrum_peaks( file_path => $filename, 
+                                             entry_idx => $position, 
+                                           denormalize => 0, 
+                                        strip_unknowns => 1 );
+#  } else {
+#    use Data::Dumper;
+#    die Dumper( $peaks );
+  }
 
   #### Read the spectrum data
   my @mz_intensities;
