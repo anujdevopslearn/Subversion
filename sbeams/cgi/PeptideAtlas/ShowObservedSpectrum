@@ -522,14 +522,15 @@ sub get_spectrum
   }
 
   my $library_idx_file = "/regis/sbeams/archive/$data_location/RAW.specidx";
-
-  if ( ! -e $library_idx_file) { 
+  my $comp_idx_file = "/regis/sbeams/archive/$data_location/RAW.compspecidx";
+  if ( !-e $library_idx_file && !-e $comp_idx_file ) { 
     $build_path ="/net/db/projects/PeptideAtlas/pipeline/output/$build_path"; 
     $build_path =~ /.*\/(.*)\/DATA_FILES/;
     $library_idx_file ="$build_path/$1_all_raw.specidx";
+    $comp_idx_file ="$build_path/$1_all_raw.compspecidx";
   }
 
-  if (-e "$library_idx_file"){
+  if (-e $library_idx_file || -e $comp_idx_file ){
     @mass_intensities = $spectra->getSpectrumPeaks_Lib(
     spectrum_name => $spectrum_name,
     library_idx_file => $library_idx_file,
