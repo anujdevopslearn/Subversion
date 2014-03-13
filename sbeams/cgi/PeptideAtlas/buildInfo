@@ -24,6 +24,7 @@ use vars qw ($q $sbeams $sbeamsMOD $PROG_NAME
              $current_contact_id $current_username);
 use lib qw (../../lib/perl);
 use CGI::Carp qw(fatalsToBrowser croak);
+use Data::Dumper;
 
 use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::DataTable;
@@ -115,13 +116,13 @@ sub main
 ###############################################################################
 sub handle_request {
 
-    my %args = @_;
+  my %args = @_;
 
     #### Process the arguments list
-    my $ref_parameters = $args{'ref_parameters'}
+  my $ref_parameters = $args{'ref_parameters'}
         || die "ref_parameters not passed";
 
-    my %parameters = %{$ref_parameters};
+  my %parameters = %{$ref_parameters};
 
 
   #### Get the current atlas_build_id based on parameters or session
@@ -198,8 +199,21 @@ sub handle_request {
     $atlas_build_hash{$id} = $atlas_build;
   }
 
+  my %accessible_default_builds;
+  my $adb_sql = qq~
+  SELECT AB.atlas_build_id, atlas_build_name 
+  FROM $TBAT_DEFAULT_ATLAS_BUILD DAB 
+  JOIN $TBAT_ATLAS_BUILD AB ON AB.atlas_build_id = DAB.atlas_build_id
+  WHERE organism_specialized_build IS NULL
+  AND DAB.organism_id IS NOT NULL
+  ~;
+  my $sth = $sbeams->get_statement_handle( $adb_sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    $accessible_default_builds{$row[0]} = $row[1];
+  }
+
   my $table = SBEAMS::Connection::DataTable->new();
-  print $table->asTSV();
+#  print $table->asTSV();
 
   my $is_html = ( $sbeams->output_mode =~ /html/i ) ? 1 : 0;
 
@@ -327,6 +341,10 @@ sub handle_request {
       push (@ppt_headers, $header);
     }
     @headers = @ppt_headers;
+  } else {
+    if ( $parameters{protease_info} ) {
+      push @headers, 'Build Enzyme Usage';
+    }
   }
 
   # Define header row
@@ -338,11 +356,18 @@ sub handle_request {
   # Read in the rows
   my $selected = '';
   my @rows;
+  my @build_ids;
   while (my $line = <TSV>) {
     chomp $line;
     my @row = split("\t", $line);
     push (@rows, \@row);
+    push @build_ids, $row[$#row]; # Assumes build id is last column
   }
+
+#  my %accessible_default_builds;
+#  my %atlas_build_hash;
+  my $accessible_string = join( ',', keys( %atlas_build_hash ) );
+  my $enzyme_info = get_enzyme_info( $accessible_string );
 
   # Sort the rows based on organism.
   my %organisms = (
@@ -394,6 +419,12 @@ sub handle_request {
     my $atlas_build = $atlas_build_hash{$id};
     next if (! defined $atlas_build);
 
+    if ( $parameters{organism_default_builds} ) {
+      next if !$accessible_default_builds{$id};
+    }
+    if ( $parameters{protease_info} ) {
+      push @row, $enzyme_info->{$id}->{enz_info};
+    }
 
     # Post-processing for ppt format
     my $row_id;
@@ -506,8 +537,40 @@ sub handle_request {
     print $q->endform;
 
   } elsif ( $sbeams->output_mode =~ /tsv/i ) {
-#    use Data::Dumper;
-#    die Dumper( $table );
     print $table->asTSV( strip_markup => 1 );
   }
 } # end showMainPage
+
+
+
+sub get_enzyme_info {
+  my $build_str = shift || return {};
+  my $enz_sql = qq~
+  SELECT atlas_build_id, name, COUNT(*) 
+  FROM $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB 
+  JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id
+  JOIN $TBAT_SAMPLE S on S.sample_id = ASB.sample_id
+  JOIN $TBAT_PROTEASES P on P.id = S.protease_id
+  WHERE atlas_build_id IN ( $build_str )
+  GROUP BY P.name, atlas_build_id
+  ORDER BY atlas_build_id, name
+  ~;
+  my %builds;
+  my $sth = $sbeams->get_statement_handle( $enz_sql );
+  my %enz;
+  while ( my @row = $sth->fetchrow_array() ) {
+    $builds{$row[0]} ||= {};
+    $builds{$row[0]}->{$row[1]} = $row[2];
+    $builds{$row[0]}->{total} += $row[2];
+    $enz{$row[1]}++;
+  }
+  for my $id ( keys( %builds ) ) {
+    for my $enz ( sort( keys( %{$builds{$id}} ) ) ) {
+      next if $enz eq 'total';
+      $builds{$id}->{$enz} = sprintf( "%0.1f", 100*($builds{$id}->{$enz}/$builds{$id}->{total}) );
+      my $sep = ( $builds{$id}->{enz_info} ) ? ', ' : '';
+      $builds{$id}->{enz_info} .= $sep . "$enz: $builds{$id}->{$enz}" . '%';
+    }
+  }
+  return \%builds;
+}
