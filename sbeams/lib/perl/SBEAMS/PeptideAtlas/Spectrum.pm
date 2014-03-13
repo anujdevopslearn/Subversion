@@ -684,13 +684,14 @@ sub getSpectrumPeaks_Lib {
 
   my $comp_lib_idx_file = $library_idx_file;
   $comp_lib_idx_file =~ s/specidx/compspecidx/;
+  my $off;
   if ( -e $comp_lib_idx_file ) {
     $log->debug( "Using compressed library $comp_lib_idx_file" );
     my $idx_line = `grep -m1 $args{spectrum_name} $comp_lib_idx_file`;
     chomp $idx_line;
     if ( $idx_line ) {
       my @line = split( /\t/, $idx_line );
-      my $off = $line[4];
+      $off = $line[4];
       my $len = $line[3];
       my $filename = $comp_lib_idx_file;
       $filename =~ s/.compspecidx/.sptxt.gz/;
@@ -710,7 +711,16 @@ sub getSpectrumPeaks_Lib {
     $log->debug( "Using native library" );
 
     my $filename = $library_idx_file;
-    open (IDX, "<$filename") or die "cannot open $filename\n";
+
+    if ( -e $comp_lib_idx_file && !-e $library_idx_file ) {
+      print $sbeams->makeErrorText("Temporarily unable to open spectrum, this error has been logged.<BR>");
+      my $libname = $comp_lib_idx_file;
+      $libname =~ s/.compspecidx/.sptxt.gz/;
+      $log->error( "unable to extract spectrum $off from $libname, and $filename does not exist" );
+      return undef;
+    } else {
+      open (IDX, "<$filename") or die "cannot open $filename\n";
+    }
 
     my $position;
     $spectrum_name =~ s/\.\d$//;
