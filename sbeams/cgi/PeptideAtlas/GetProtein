@@ -3570,7 +3570,7 @@ sub printUserAnnotations {
     my $parameters_href = $args{parameters_href};
     my $protein_name = $args{protein_name};
 
-    my $buffer;
+    my $buffer = '<br><br>';
     my $total = 0; # this starts as a counter, then becomes a string
     my $show_form = 1;
     my $line_sep = "<tr><td colspan='2'><hr size='1' noshade></td></tr>";
@@ -3618,9 +3618,9 @@ sub printUserAnnotations {
 
     my @rows = $sbeams->selectSeveralColumns($sql);
 
-    $buffer = qq~
+    $buffer .= qq~
 	<table width="100%" class="table_setup">
-	<tr class="orange_bg"><th>User annotations: how good is the UNIQUE evidence for this protein in this PeptideAtlas build? Should this protein form be included in Swiss-Prot and neXtProt?</th><td><a name="user_annotations">&nbsp;</a></td></tr>
+	<tr class="orange_bg"><td colspan=2>User annotations: how good is the UNIQUE evidence for this protein in this PeptideAtlas build? Should this protein form be included in Swiss-Prot and neXtProt?</td><a name="user_annotations"></a></tr>
 	~;
 
     if (@rows) {
