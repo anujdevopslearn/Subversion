@@ -689,6 +689,19 @@ sub getSpectrumPeaks_Lib {
     $log->debug( "Using compressed library $comp_lib_idx_file" );
     my $idx_line = `grep -m1 $args{spectrum_name} $comp_lib_idx_file`;
     chomp $idx_line;
+    if ( !$idx_line ) {
+      # spectra names are *not* supposed to have charges appended, but...
+      my $trimmed_specname = $args{spectrum_name};
+      $trimmed_specname =~ s/\.\d$//;
+      $idx_line = `grep -m1 $trimmed_specname $comp_lib_idx_file`;
+      chomp $idx_line;
+      if ( $idx_line ) {
+        $log->debug( "$trimmed_specname worked after removing .charge suffix" );
+      } else {
+        $log->error( "$trimmed_specname still doesn't work without .charge suffix" );
+      }
+    }
+
     if ( $idx_line ) {
       my @line = split( /\t/, $idx_line );
       $off = $line[4];
@@ -704,6 +717,8 @@ sub getSpectrumPeaks_Lib {
                                           strip_unknowns => 1 );
 
       $log->debug( "Compressed fetch failed" ) if !scalar( @{$peaks->{labels}} );
+    } else {
+      $log->debug( "unable to find $args{spectrum_name} in $comp_lib_idx_file" );
     }
   }
 
