@@ -202,6 +202,13 @@ sub returnTableInfo {
       FROM $TBAT_PASS_SUBMITTER
       WHERE record_status!='D'
       END_QUERY
+
+    } elsif ($info_key eq "FULLQuery") {
+      return( <<"      END_QUERY" ); 
+     	SELECT submitter_id, firstName, lastName, emailAddress,
+	    emailReminders, emailPasswords, comment, date_created, created_by_id, date_modified, modified_by_id, owner_group_id, record_status
+      FROM $TBAT_PASS_SUBMITTER
+      END_QUERY
     }
 
   } elsif ( uc($table_name) eq 'AT_PASS_DATASET' ) {
