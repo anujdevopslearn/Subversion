@@ -124,7 +124,7 @@ sub validateDatasetAnnotations {
   $test = $formParameters->{datasetTag};
   unless (defined($test) && $test =~ /^[A-Za-z0-9\_\-]+$/ && length($test) > 5 && length($test) <= 20) {
     $response->{result} = 'Failed';
-    push(@{$response->{errors}},"Dataset Tag must be an alphanumeric string with length more than 5 up to 20");
+    push(@{$response->{errors}},"Dataset Tag must be an alphanumeric string with length more than 5 up to 20 (no spaces or strange characaters)");
   }
 
   $test = $formParameters->{datasetTitle};
