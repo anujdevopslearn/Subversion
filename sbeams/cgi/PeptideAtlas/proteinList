@@ -231,6 +231,8 @@ sub get_list_overview {
   for my $key ( keys( %{$info} ) ) {
     $info->{lc($key)} = $info->{$key};
   }
+  my $redundant_abs = 0;
+  $redundant_abs++ if $info->{abstract} eq $info->{description};
 
   my $file_url = "$CGI_BASE_DIR/PeptideAtlas/ManageTable.cgi/$info->{original_file}?TABLE_NAME=AT_Domain_Protein_list;ForceDownload=1;protein_list_id=" . $info->{protein_list_id} . ";GetFile=original_file";
   my $file_link = "<a href='$file_url'>$info->{original_file}</a>";
@@ -246,6 +248,7 @@ sub get_list_overview {
     $img = "$tab<img src=$web_path height=80 width=80></img>\n";
     $caption = $info->{image_caption} || '';
   }
+
 
   my $abstract = '';
   if ( $info->{abstract} ) {
@@ -267,7 +270,7 @@ sub get_list_overview {
                             value => $file_link, vspan => 3 ) . "\n";
 
   $table .= "<tr><td>$img</td><td>$caption</td></tr>";
-  $table .= "<tr><td colspan=2>$abstract</td></tr>";
+  $table .= "<tr><td colspan=2>$abstract</td></tr>" unless $redundant_abs;
   $table .= "</TABLE>\n";
   return $table;
 
