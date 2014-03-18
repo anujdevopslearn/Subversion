@@ -36,10 +36,13 @@ use SBEAMS::PeptideAtlas::Tables;
 use CGI qw(:standard);
 
 my $sbeams;
+our $summary;
 
 my @datasetTypes = ( 'MSMS' => 'MS/MS dataset',
 		     'SRM' => 'SRM dataset',
 		     'MS1' => 'MS1 dataset',
+                     'SWATH' => 'SWATH MS dataset',
+                     'XlinkMS' => 'Cross-linking MS dataset',
 		     'QC' => 'Ongoing QC dataset',
 		     'Other' => 'Other',
 		     );
@@ -192,6 +195,412 @@ sub validateDatasetAnnotations {
   return $response;
 
 }
+
+
+#######################################################################
+# getPASSSummary
+#######################################################################
+sub getPASSSummary {
+  my $self = shift;
+  my %args = @_;
+  my $SUB_NAME = 'getPASSSummary';
+
+  my $response;
+  $response->{result} = 'Success';
+
+  my $sql = qq~
+    SELECT datasetIdentifier,submitter_id,datasetType,datasetPassword,datasetTag,datasetTitle,publicReleaseDate,finalizedDate
+      FROM $TBAT_PASS_DATASET
+     ORDER BY datasetIdentifier
+  ~;
+  my @rows = $sbeams->selectSeveralColumns($sql);
+  if (@rows) {
+    $summary->{nDatasets} = scalar(@rows);
+    my ($datasetIdentifier,$submitter_id,$datasetType,$datasetPassword,$datasetTag,$datasetTitle,$publicReleaseDate,$finalizedDate) = 
+      @{$rows[0]};
+    $summary->{datasetRows} = \@rows;
+
+    categorizeDatasets();
+
+  } else {
+    $response->{result} = 'Failed';
+    push(@{$response->{errors}},"ERROR: Query<PRE>\n$sql</PRE> failed to return any rows.<BR>");
+    $summary->{nDatasets} = 0;
+  }
+
+  $summary->{result} = $response->{result};
+  $summary->{errors} = $response->{errors};
+  return $summary;
+}
+
+
+#######################################################################
+# showPASSSummaryHTML
+#######################################################################
+sub showPASSSummaryHTML {
+  my $self = shift;
+  my %args = @_;
+  my $SUB_NAME = 'showPASSSummaryHTML';
+
+  my $response;
+  $response->{result} = 'Success';
+
+  our %categories;
+
+  if ($summary->{nDatasets} < 1) {
+    $response->{result} = 'Failed';
+    push(@{$response->{errors}},"ERROR: There are no datasets in the repository to display.<BR>");
+    return $response;
+  }
+
+
+  print "<H3>Public Test Datasets (should not happen)</H3>\n";
+  my $buffer = '';
+  print "<TABLE>\n";
+  my $counter = 0;
+  foreach my $datasetIdentifier ( sort(keys(%{$summary->{categorizedDatasets}->{isPublic}->{datasets}})) ) {
+    my $row = $summary->{datasets}->{$datasetIdentifier};
+    if ($summary->{categorizedDatasets}->{isTest}->{datasets}->{$datasetIdentifier}) {
+      $buffer .= "<TR><TD><A HREF=\"$CGI_BASE_DIR/PeptideAtlas/PASS_View?datasetIdentifier=$row->[0]\">$row->[0]</A></TD><TD>$row->[5]</TD></TR>\n";
+      $counter++;
+    }
+  }
+  $buffer .= "</TABLE>\n";
+  if ($counter) {
+    print $buffer;
+  } else {
+    print "<TR><TD>none</TD></TR></TABLE>\n";
+  }
+
+
+  print "<H3>Non public Test Datasets</H3>\n";
+  my $buffer = '';
+  print "<TABLE>\n";
+  my $counter = 0;
+  foreach my $datasetIdentifier ( sort(keys(%{$summary->{categorizedDatasets}->{notPublic}->{datasets}})) ) {
+    my $row = $summary->{datasets}->{$datasetIdentifier};
+    if ($summary->{categorizedDatasets}->{isTest}->{datasets}->{$datasetIdentifier}) {
+      $buffer .= "<TR><TD><A HREF=\"$CGI_BASE_DIR/PeptideAtlas/PASS_View?identifier=$row->[0]\">$row->[0]</A></TD><TD>$row->[5]</TD></TR>\n";
+      $counter++;
+    }
+  }
+  $buffer .= "</TABLE>\n";
+  if ($counter) {
+    print $buffer;
+  } else {
+    print "<TR><TD>none</TD></TR></TABLE>\n";
+  }
+
+
+  print "<H3>Public Datasets that are Finalized</H3>\n";
+  my $buffer = '';
+  print "<TABLE>\n";
+  my $counter = 0;
+  foreach my $datasetIdentifier ( sort(keys(%{$summary->{categorizedDatasets}->{isPublic}->{datasets}})) ) {
+    my $row = $summary->{datasets}->{$datasetIdentifier};
+    unless ($summary->{categorizedDatasets}->{isTest}->{datasets}->{$datasetIdentifier}) {
+      if ($summary->{categorizedDatasets}->{isFinalized}->{datasets}->{$datasetIdentifier}) {
+	$buffer .= "<TR><TD><A HREF=\"$CGI_BASE_DIR/PeptideAtlas/PASS_View?identifier=$row->[0]\">$row->[0]</A></TD><TD>$row->[5]</TD></TR>\n";
+	$counter++;
+      }
+    }
+  }
+  $buffer .= "</TABLE>\n";
+  if ($counter) {
+    print $buffer;
+  } else {
+    print "<TR><TD>none</TD></TR></TABLE>\n";
+  }
+
+
+  print "<H3>Public Datasets that are not Finalized</H3>\n";
+  my $buffer = '';
+  print "<TABLE>\n";
+  my $counter = 0;
+  foreach my $datasetIdentifier ( sort(keys(%{$summary->{categorizedDatasets}->{isPublic}->{datasets}})) ) {
+    my $row = $summary->{datasets}->{$datasetIdentifier};
+    unless ($summary->{categorizedDatasets}->{isTest}->{datasets}->{$datasetIdentifier}) {
+      if ($summary->{categorizedDatasets}->{notFinalized}->{datasets}->{$datasetIdentifier}) {
+	$buffer .= "<TR><TD><A HREF=\"$CGI_BASE_DIR/PeptideAtlas/PASS_View?identifier=$row->[0]\">$row->[0]</A></TD><TD>$row->[5]</TD></TR>\n";
+	$counter++;
+	$summary->{tasks}->{$datasetIdentifier}->{datasetIdentifier} = $datasetIdentifier;
+	$summary->{tasks}->{$datasetIdentifier}->{taskName} = 'remindToFinalizePublicDataset';
+      }
+    }
+  }
+  $buffer .= "</TABLE>\n";
+  if ($counter) {
+    print $buffer;
+  } else {
+    print "<TR><TD>none</TD></TR></TABLE>\n";
+  }
+
+
+  print "<H3>Not Yet Public Datasets that are Finalized</H3>\n";
+  my $buffer = '';
+  print "<TABLE>\n";
+  my $counter = 0;
+  foreach my $datasetIdentifier ( sort(keys(%{$summary->{categorizedDatasets}->{notPublic}->{datasets}})) ) {
+    my $row = $summary->{datasets}->{$datasetIdentifier};
+    unless ($summary->{categorizedDatasets}->{isTest}->{datasets}->{$datasetIdentifier}) {
+      if ($summary->{categorizedDatasets}->{isFinalized}->{datasets}->{$datasetIdentifier}) {
+	$buffer .= "<TR><TD><A HREF=\"$CGI_BASE_DIR/PeptideAtlas/PASS_View?identifier=$row->[0]\">$row->[0]</A></TD><TD>$row->[5]</TD></TR>\n";
+	$counter++;
+      }
+    }
+  }
+  $buffer .= "</TABLE>\n";
+  if ($counter) {
+    print $buffer;
+  } else {
+    print "<TR><TD>none</TD></TR></TABLE>\n";
+  }
+
+
+  print "<H3>Not Yet Public Datasets that are not Finalized</H3>\n";
+  my $buffer = '';
+  print "<TABLE>\n";
+  my $counter = 0;
+  foreach my $datasetIdentifier ( sort(keys(%{$summary->{categorizedDatasets}->{notPublic}->{datasets}})) ) {
+    my $row = $summary->{datasets}->{$datasetIdentifier};
+    unless ($summary->{categorizedDatasets}->{isTest}->{datasets}->{$datasetIdentifier}) {
+      if ($summary->{categorizedDatasets}->{notFinalized}->{datasets}->{$datasetIdentifier}) {
+	$buffer .= "<TR><TD><A HREF=\"$CGI_BASE_DIR/PeptideAtlas/PASS_View?identifier=$row->[0]\">$row->[0]</A></TD><TD>$row->[5]</TD></TR>\n";
+	$counter++;
+      }
+    }
+  }
+  $buffer .= "</TABLE>\n";
+  if ($counter) {
+    print $buffer;
+  } else {
+    print "<TR><TD>none</TD></TR></TABLE>\n";
+  }
+
+
+  print "<H3>Datasets with no public release information (should not happen)</H3>\n";
+  my $buffer = '';
+  print "<TABLE>\n";
+  my $counter = 0;
+  foreach my $datasetIdentifier ( sort(keys(%{$summary->{categorizedDatasets}->{noPublic}->{datasets}})) ) {
+    my $row = $summary->{datasets}->{$datasetIdentifier};
+    $buffer .= "<TR><TD><A HREF=\"$CGI_BASE_DIR/PeptideAtlas/PASS_View?identifier=$row->[0]\">$row->[0]</A></TD><TD>$row->[5]</TD></TR>\n";
+    $counter++;
+  }
+  $buffer .= "</TABLE>\n";
+  if ($counter) {
+    print $buffer;
+  } else {
+    print "<TR><TD>none</TD></TR></TABLE>\n";
+  }
+
+
+  print "<H3>Datasets with finalized date in the future (should not happen)</H3>\n";
+  my $buffer = '';
+  print "<TABLE>\n";
+  my $counter = 0;
+  foreach my $datasetIdentifier ( sort(keys(%{$summary->{categorizedDatasets}->{futureFinalized}->{datasets}})) ) {
+    my $row = $summary->{datasets}->{$datasetIdentifier};
+    $buffer .= "<TR><TD><A HREF=\"$CGI_BASE_DIR/PeptideAtlas/PASS_View?identifier=$row->[0]\">$row->[0]</A></TD><TD>$row->[5]</TD></TR>\n";
+    $counter++;
+  }
+  $buffer .= "</TABLE>\n";
+  if ($counter) {
+    print $buffer;
+  } else {
+    print "<TR><TD>none</TD></TR></TABLE>\n";
+  }
+
+
+  print "<HR>\n";
+  print "<H3>Task Queue</H3>\n";
+  my $buffer = '';
+  print "<TABLE>\n";
+  my $counter = 0;
+  foreach my $task ( keys(%{$summary->{tasks}}) ) {
+    my $datasetIdentifier = $summary->{tasks}->{$task}->{datasetIdentifier};
+    my $taskName = $summary->{tasks}->{$task}->{taskName};
+    my $row = $summary->{datasets}->{$datasetIdentifier};
+    $buffer .= "<TR><TD>$datasetIdentifier</TD><TD>$taskName</TD></TR>\n";
+    $self->initiateTask(
+      datasetIdentifier => $datasetIdentifier,
+      taskName => $taskName,
+    );
+    $counter++;
+  }
+  $buffer .= "</TABLE>\n";
+  if ($counter) {
+    print $buffer;
+  } else {
+    print "<TR><TD>none</TD></TR></TABLE>\n";
+  }
+
+  return $response;
+}
+
+
+#######################################################################
+# categorizeDatasets
+#######################################################################
+sub categorizeDatasets {
+  my $self = shift;
+  my %args = @_;
+  my $SUB_NAME = 'categorizeDatasets';
+
+  my $response;
+  $response->{result} = 'Success';
+
+  if ($summary->{nDatasets} < 1) {
+    $response->{result} = 'Failed';
+    push(@{$response->{errors}},"ERROR: There are no datasets in the repository to categorize.<BR>");
+    return $response;
+  }
+
+  #### Get current date
+  my ($date) = `date '+%F'`;
+  chomp($date);
+  $summary->{currentDateTime} = $date;
+
+  #### Define our categories
+  our %categories = (
+    isPublic => 'Public Datasets',
+    notPublic => 'Not public Datasets',
+    noPublic => 'Datasets with no public release date',
+  );
+  foreach my $category ( keys(%categories) ) {
+    $summary->{categorizedDatasets}->{$category}->{name} = $categories{$category};
+  }
+
+  #### Known test datasets
+  my %testDatasets = (
+    PASS00001 => 1,
+    PASS00002 => 1,
+    PASS00003 => 1,
+    PASS00028 => 1,
+    PASS00029 => 1,
+    PASS00039 => 1,
+    PASS00040 => 1,
+    PASS00049 => 1,
+    PASS00052 => 1,
+    PASS00381 => 1,
+		      );
+
+
+  #### Iterate through all datasets and categorize them
+  foreach my $row ( @{$summary->{datasetRows}} ) {
+    my ($datasetIdentifier,$submitter_id,$datasetType,$datasetPassword,
+        $datasetTag,$datasetTitle,$publicReleaseDate,$finalizedDate) = @{$row};
+    $summary->{datasets}->{$datasetIdentifier} = $row;
+
+    #### Label the public datasets
+    if ($publicReleaseDate) {
+      if (substr($date,0,10) ge substr($publicReleaseDate,0,10)) {
+	$summary->{categorizedDatasets}->{isPublic}->{datasets}->{$datasetIdentifier} = 1;
+	$summary->{categorizedDatasets}->{isPublic}->{count}++;
+      } else {
+	$summary->{categorizedDatasets}->{notPublic}->{datasets}->{$datasetIdentifier} = 1;
+	$summary->{categorizedDatasets}->{notPublic}->{count}++;
+      }
+    } else {
+      $summary->{categorizedDatasets}->{noPublic}->{datasets}->{$datasetIdentifier} = 1;
+      $summary->{categorizedDatasets}->{noPublic}->{count}++;
+    }
+
+    #### Label the finalized datasets
+    if ($finalizedDate) {
+      if (substr($date,0,10) ge substr($finalizedDate,0,10)) {
+	$summary->{categorizedDatasets}->{isFinalized}->{datasets}->{$datasetIdentifier} = 1;
+	$summary->{categorizedDatasets}->{isFinalized}->{count}++;
+      } else {
+	$summary->{categorizedDatasets}->{futureFinalized}->{datasets}->{$datasetIdentifier} = 1;
+	$summary->{categorizedDatasets}->{futureFinalized}->{count}++;
+      }
+    } else {
+      $summary->{categorizedDatasets}->{notFinalized}->{datasets}->{$datasetIdentifier} = 1;
+      $summary->{categorizedDatasets}->{notFinalized}->{count}++;
+    }
+
+    #### Label the test datasets
+    if ($testDatasets{$datasetIdentifier}) {
+      $summary->{categorizedDatasets}->{isTest}->{datasets}->{$datasetIdentifier} = 1;
+      $summary->{categorizedDatasets}->{isTest}->{count}++;
+    }
+
+  }
+
+  return $response;
+}
+
+
+
+#######################################################################
+# initiateTask
+#######################################################################
+sub initiateTask {
+  my $self = shift;
+  my %args = @_;
+  my $SUB_NAME = 'initiateTask';
+
+  my $response;
+  $response->{result} = 'Success';
+
+  our $summary;
+
+  #### Decode the argument list
+  my $datasetIdentifier = $args{'datasetIdentifier'} || die "[$SUB_NAME] ERROR: datasetIdentifier not passed";
+  my $taskName = $args{'taskName'} || die "[$SUB_NAME] ERROR: taskName not passed";
+
+  my ($datasetIdentifier,$submitter_id,$datasetType,$datasetPassword,
+      $datasetTag,$datasetTitle,$publicReleaseDate,$finalizedDate) = @{$summary->{datasets}->{$datasetIdentifier}};
+
+  my $submitter = $self->getSubmitterInfo(submitter_id=>$submitter_id);
+  unless ($submitter->{firstName} && $submitter->{lastName}) {
+    print "ERROR: Did not find firstName and LastName\n";
+    return $response;
+  }
+
+  my $reminderMessage = qq~
+Dear $submitter->{firstName},\n\nThank you again for submitting your dataset to PeptideAtlas. Your efforts to make your proteomics data publicly available are much appreciated.\n\nWhile reviewing datasets, I found that your dataset $datasetIdentifier has not been finalized, even though it is publicly accessible.\n\nWould you take a moment to go to:\nhttp://www.peptideatlas.org/PASS/$datasetIdentifier\nand click the FINALIZE button to finalize your dataset?\n\nOr alternatively, if you find that you can improve the annotations first, please do that and then finalize.\n\nThank you for your time.\n\nThe PeptideAtlas Agent\non behalf of the PeptideAtlas Team\n
+~;
+
+  print "<HR><PRE>$reminderMessage</PRE><HR>\n";
+
+  return $response;
+}
+
+
+#######################################################################
+# getSubmitterInfo
+#######################################################################
+sub getSubmitterInfo {
+  my $self = shift;
+  my %args = @_;
+  my $SUB_NAME = 'getSubmitterInfo';
+
+  #### Decode the argument list
+  my $submitter_id = $args{'submitter_id'} || die "[$SUB_NAME] ERROR: submitter_id not passed";
+
+  my $response;
+  $response->{result} = 'Success';
+
+  my @columns = qw( submitter_id firstName lastName emailAddress password emailReminders emailPasswords );
+  my $columns = join(',',@columns);
+
+  my $sql = qq~
+    SELECT $columns
+      FROM $TBAT_PASS_SUBMITTER
+     WHERE submitter_id = '$submitter_id'
+  ~;
+  my @rows = $sbeams->selectSeveralColumns($sql);
+  if (@rows) {
+    for (my $i=0; $i<scalar(@{$rows[0]}); $i++) {
+      $response->{$columns[$i]} = $rows[0]->[$i];
+    }
+  }
+
+  return $response;
+}
+
 
 
 
