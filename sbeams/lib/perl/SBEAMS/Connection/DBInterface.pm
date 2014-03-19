@@ -22,6 +22,7 @@ use vars qw(@ERRORS $dbh $sth $q $resultset_ref $rs_params_ref
             $SORT_COLUMN $SORT_TYPE $timing_info
            );
 use CGI::Carp qw(croak);
+use URI::Escape;
 use DBI;
 use File::Basename;
 use POSIX;
@@ -6952,53 +6953,43 @@ function switchProject(){
 </FORM>
 ~;
 
-    #### FORM FOR PROJECT CHANGE
-    print qq~
-<FORM NAME="projectChooser" METHOD="GET" ACTION="$submit_string">
-    ~;
+  #### FORM FOR PROJECT CHANGE
+  print qq~
+  <FORM NAME="projectChooser" METHOD="GET" ACTION="$submit_string">
+  ~;
 
+  ## PRINT CGI parameters
+  my @query_parameters = $q->param();
+  my $clean_parameters = $self->sanitize_parameters( \@query_parameters );
 
-    ## PRINT CGI parameters
-    my $project_query_string = $ENV{'QUERY_STRING'};
-    my @query_parameters = split  /&/, $project_query_string;
-    foreach my $temp_param (@query_parameters) {
-      $temp_param =~ /(.*)\=(.*)/;
-      unless ($1 eq "set_current_project_id" || $1 eq "set_current_work_group"){
-	print qq~
-<INPUT TYPE="hidden" NAME="$1" VALUE="$2">
-          ~;
-      }
-    }
-    print qq~
-<INPUT TYPE="hidden" NAME="set_current_project_id">
-</FORM>
-    ~;
+  foreach my $param ( @query_parameters ) {
+    next if $param =~ /set_current_project_id|set_current_work_group/;
+    print qq~<INPUT TYPE="hidden" NAME="$param" VALUE="$clean_parameters->{$param}">\n~;
+  }
+  print qq~
+  <INPUT TYPE="hidden" NAME="set_current_project_id">
+  </FORM>
+  ~;
 
-    #### FORM FOR WORK GROUP CHANGE
-    print qq~
-<FORM NAME="groupChooser" METHOD="GET" ACTION="$submit_string">
-    ~;
-    ## PRINT CGI parameters
-    my $group_query_string = $ENV{'QUERY_STRING'};
-    @query_parameters = split  /&/, $group_query_string;
-    foreach my $temp_param (@query_parameters) {
-      $temp_param =~ /(.*)\=(.*)/;
-      unless ($1 eq "set_current_project_id" || $1 eq "set_current_work_group"){
-	print qq~
-<INPUT TYPE="hidden" NAME="$1" VALUE="$2">
-	  ~;
-      }
-    }
-    print qq~
-<INPUT TYPE="hidden" NAME="set_current_work_group">
-</FORM>
-    ~;
+  #### FORM FOR WORK GROUP CHANGE
+  print qq~
+  <FORM NAME="groupChooser" METHOD="GET" ACTION="$submit_string">
+  ~;
+  ## PRINT CGI parameters
+  foreach my $param ( @query_parameters ) {
+    next if $param =~ /set_current_project_id|set_current_work_group/;
+    print qq~<INPUT TYPE="hidden" NAME="$param" VALUE="$clean_parameters->{$param}">\n~;
+  }
+  print qq~
+  <INPUT TYPE="hidden" NAME="set_current_work_group">
+  </FORM>
+  ~;
 
-    #### End First TD of master TABLE, and begin new TD
-    print qq~
-</TD>
-<TD>
-   ~;
+  #### End First TD of master TABLE, and begin new TD
+  print qq~
+  </TD>
+  <TD>
+  ~;
     
     ## Suggestion Form
     #print qq~
@@ -7024,6 +7015,28 @@ function switchProject(){
 	!;
   }
 }
+
+sub sanitize_parameters {
+  my $self = shift;
+  my $paramkeys = shift;
+
+  my %clean_params;
+  for my $param ( @{$paramkeys} ) {
+    my $value = $q->param( $param );
+    my $uxvalue = uri_unescape( $value );
+    if ( $uxvalue =~ /[<>'"]/ ) {
+      $log->warn( "Potentially dangerous parameter being sanitized: $param -> $uxvalue" );
+      $uxvalue =~ s/[<>'"]/_/g;
+    }
+    if ( $uxvalue ne $value ) {
+      $log->warn( "Sanitized $param: $value -> $uxvalue" );
+      $value = $uxvalue;
+    }
+    $clean_params{$param} = $value;
+  }
+  return \%clean_params;
+}
+
 
 ###############################################################################
 # linkToColumnText: Creates link to popup window with column info text inside
