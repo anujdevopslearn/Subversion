@@ -224,6 +224,13 @@ sub get_spectrum_peaks {
     my $bgz_out = `/tools/bin/bgzip -b $args{entry_idx} -s $args{rec_len} -c -d $args{file_path} `;
     @lines = split( /\n/, $bgz_out );
   } else {
+    if ( ! -e $args{file_path} ) {
+      $log->warn( "missing sptxt file $args{file_path}" );
+      if ( -e "$args{file_path}.gz" ) {
+        $log->warn( "sptxt file is seen as gzipped, please inform an administrator $args{file_path}.gz" );
+      }
+      return undef;
+    }
     open FIL, $args{file_path} || die "Unable to open library file $args{file_path}";
     seek ( FIL, $args{entry_idx}, 0 );
     my $cnt = 0;
@@ -238,11 +245,10 @@ sub get_spectrum_peaks {
         } else {
           if ( $line ) {
             $log->warn( "First line of spectrum record is not Name: $line\n" );
-            $name_seen++;
           }
         }
       }
-      last if $line =~ /^\s*$/;
+      last if $line =~ /^\s*$/ && $cnt > 2; # fudge factor to help off-by-one indexing.
       push @lines, $line;
     }
     close FIL;
