@@ -256,6 +256,7 @@ my $module_styles =<<"  END_STYLE";
   .white_bg{background-color: #FFFFFF }
   .grey_bg{ background-color: #CCCCCC }
   .bold_italic_text{font-weight:bold;font-style:italic}
+  .bold_red_italic_text{font-weight:bold;font-style:italic;color:red}
   .inactive_text {color:#AAAAAA}
   .med_gray_bg{ background-color: #CCCCCC; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; Padding:2}
   .grey_header{ font-family: Helvetica, Arial, sans-serif; color: #000000; font-size: ${FONT_SIZE_HG}pt; background-color: #CCCCCC; font-weight: bold; padding:1 2}
@@ -1259,8 +1260,11 @@ sub get_http_header {
   my %param_hash;
 
 #	print STDERR "Browser is $HTTP_USER_AGENT\n";
-  $log->debug( "Host is $ENV{REMOTE_HOST}" ) if $ENV{REMOTE_HOST};
-  $log->debug( "Addr is $ENV{REMOTE_ADDR}" ) if $ENV{REMOTE_ADDR};
+  unless ( $self->{_host_logged} ) {
+    $log->debug( "Host is $ENV{REMOTE_HOST}" ) if $ENV{REMOTE_HOST};
+    $log->debug( "Addr is $ENV{REMOTE_ADDR}" ) if $ENV{REMOTE_ADDR};
+    $self->{_host_logged}++;
+  }
 	my $host = $ENV{REMOTE_HOST} || $ENV{REMOTE_ADDR};
 
   my @dhost;
@@ -1314,6 +1318,10 @@ sub processSBEAMSuiCookie {
   my $self = shift;
 
   # Fetch cookie from cgi object
+  if ( !defined $q ) {
+    use CGI qw(-no_debug);
+    $q = new CGI;
+  }
   my %ui_cookie = $q->cookie('SBEAMSui');
 
   # If the cookie is there, process.
