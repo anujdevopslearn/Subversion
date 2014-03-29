@@ -6,6 +6,8 @@
 ###############################################################################
 use strict;
 use FindBin;
+use Data::Dumper;
+use File::Basename;
 
 use lib "$FindBin::Bin/../../lib/perl";
 
@@ -23,8 +25,6 @@ use SBEAMS::PeptideAtlas::ModificationHelper;
 use SBEAMS::PeptideAtlas::ConsensusSpectrum;
 
 use SBEAMS::Proteomics::SpecViewer;
-
-use File::Basename;
 
 my $denormalize = 0;
 my $curveType = 'function';
@@ -70,7 +70,6 @@ sub main {
   $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
-  use Data::Dumper;
   my $spectrum = get_consensus( %parameters );
 #  die Dumper $spectrum;
 
@@ -187,7 +186,11 @@ sub get_consensus {
 
     my $peaks;
     if ( $parameters{file_path} ) {
-      $peaks = $consensus->get_spectrum_peaks( %parameters, denormalize => 0, strip_unknowns => 1 );
+      if ( -e $parameters{file_path} ) {
+        $peaks = $consensus->get_spectrum_peaks( %parameters, denormalize => 0, strip_unknowns => 1 );
+      } else {  
+        $peaks = $consensus->get_spectrum_peaks( %parameters, denormalize => 0, strip_unknowns => 1, use_gzipped => 1 );
+      }
     } else {
       $peaks = get_db_peaks($parameters{consensus_library_spectrum_id}); 
     }
