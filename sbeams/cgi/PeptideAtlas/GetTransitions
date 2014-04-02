@@ -40,6 +40,7 @@ my $massCalculator = new SBEAMS::Proteomics::PeptideMassCalculator;
 use constant ROW_LIMIT => 50000;
 use constant MZ_TOLERANCE => 0.005;
 
+
 # Set up Atlas objects
 my $sbeams = new SBEAMS::Connection;
 my $atlas = new SBEAMS::PeptideAtlas;
@@ -52,6 +53,7 @@ $PROG_NAME = 'GetTransitions';
 my $consensus = new SBEAMS::PeptideAtlas::ConsensusSpectrum;
 $consensus->setSBEAMS( $sbeams );
 my $pabst_build_id;
+my $akey = $sbeams->getRandomString( num_chars => 30 );
 
 # Params are global - is this a problem?
 my %parameters = ( prefetch => 0 );
@@ -62,6 +64,8 @@ my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
 
 my $guest = 1;
 my $super_guest = 0;
+my $SRMAuth;
+my $isAuthorized;
 
 main();
 #$sbeams->profile_sql( list => 1 );
@@ -142,6 +146,12 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
   # Some users have access to a subset of certain builds
   # FIXME - don't add if already there.  Also, multiple lists?
   my $restricted_build_js = ''; 
+
+  # provisional access issue
+  if ( $parameters{pabst_build_id} && $parameters{pabst_build_id} !~ /^\d+$/ ){ 
+    die "illegal build specified";
+  }
+
   my $protein_list_info = $atlas->getProteinListInfo( username => $current_username, build_id => $parameters{pabst_build_id} );
   if ( $protein_list_info->{build_ok} && ( !$guest || $super_guest ) ) {
     $restricted_build_js = qq~
@@ -172,11 +182,45 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
 
     # Could be allowed via a protein list
     $restricted_proteins = " AND biosequence_name IN ( '" . join( "','", keys( %{$protein_list_info->{proteins}} ) ) . " ' ) \n";
-    $log->info( "Allowed access for $current_username to build $pabst_build_id proteins $restricted_proteins" );
+#    $log->info( "Allowed access for $current_username to build $pabst_build_id proteins $restricted_proteins" );
   }
+  # Decide what action to take based on information so far
+  my $project_id = $atlas->getProjectID(
+    atlas_build_id => $parameters{atlas_build_id}
+  );
+  #$sbeams->printUserContext();
+  $atlas->display_page_header(project_id => $project_id);
 
   if ( $parameters{pabst_build_id} && $parameters{pabst_build_id} != $pabst_build_id ) {
-    $bad_build_specified++;
+    my $auth_path = get_auth_path();
+
+    # Remove any expired auth files
+    clear_auth( $auth_path );
+
+    $SRMAuth = $q->cookie( 'SRMAtlasAuthorized' );
+    if ( $guest && $SRMAuth && $parameters{pabst_build_id} == 146 ) {
+
+      # This mechanism supercedes the restricted proteins mechanism
+      $restricted_proteins = '';
+
+      if ( -e "$auth_path/$SRMAuth" ) {
+        $isAuthorized++;
+        unlink( "$auth_path/$SRMAuth" );
+        $super_guest++;
+        $pabst_build_id = $parameters{pabst_build_id};
+        print qq~
+        <p>
+        <br>
+        <span class=info_box>You are being allowed access to the Complete Human SRM Atlas subject to the provisional license agreement</span>
+        <br>
+        </p>
+        ~
+      } else {
+        $bad_build_specified++;
+      }
+    } else {
+      $bad_build_specified++;
+    }
   }
 
   # set up some defaults, only in command-line mode, to time queries/operations
@@ -198,23 +242,40 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
     $parameters{SwissProt} ||= 'checked';
   }
 
-
-
-  # Decide what action to take based on information so far
-  my $project_id = $atlas->getProjectID(
-    atlas_build_id => $parameters{atlas_build_id}
-  );
-
-  #$sbeams->printUserContext();
-  $atlas->display_page_header(project_id => $project_id);
-
   # Add select list javascript
   if ( $is_html ) {
-    print "<script type='text/javascript' src='$HTML_BASE_DIR/usr/javascript/jquery/jquery.js'></script>";
+    print qq~
+      <link rel="stylesheet" href="//code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css">
+       <script src="//code.jquery.com/jquery-1.9.1.js"></script>
+<script src="//code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
+    ~;
+
     print q~
+    <style text/css>
+     .ui-dialog-titlebar-close { visibility: hidden; }
+     .ui-widget-overlay { opacity: .30; filter: Alpha(Opacity=30); background: #AAA }
+    </style>
+
+
 <script type="text/javascript" charset="utf-8">
 $(document).ready(function() {
   window.onload = function() {
+
+ // Set cookie value to false with each page load
+     var cookie = document.cookie;
+     var regex = new RegExp( "SRMAtlasAuthorized=([^;]+)" );
+     cookie = "SRMAtlasAuthorized=XXX";
+     document.cookie = cookie;
+
+    var build_option = document.getElementById( 'pabst_build_id' );
+    var special_option = 0;
+    for (var i = 0; i < build_option.length; i++){
+      if( build_option.options[i].value == 'specialaccess' ) {
+        var new_idx = i + 1;
+        build_option.selectedIndex = new_idx
+      }
+    }
+
     ~;
     print "$restricted_build_js\n";
     print q~
@@ -263,10 +324,111 @@ $(document).ready(function() {
       namespace.innerHTML = options;
     })
 
+    var build_option = document.getElementById( 'pabst_build_id' );
+    if ( build_option[build_option.selectedIndex].value == 'specialaccess' ) {
+//      var confirmation = confirm( "The Complete Human SRM Atlas is being made available on a provisional basis. By selecting 'Yes', you are agreeing to the conditions on its use." ); 
+    var dialog_div = document.getElementById( 'access_agreement' );
+
+    // pre-fill email if they have already set it once
+    var cookie = document.cookie;
+    var regex = new RegExp( "SRMAuthEmail=([^;]+)" );
+    var match = regex.exec( cookie + ";" );
+    var previous_email = ''; 
+    if ( match ) {
+      previous_email = match[1]; 
+    }
+
+    dialog_div.innerHTML = "Access to the Complete Human SRMAtlas is provided as a preview for feedback and improvements.<br>\n";
+    dialog_div.innerHTML += "This is not a full public release of the Human SRMAtlas and is only provided as a pre-publication preview.<br>\n";
+    dialog_div.innerHTML += "If you agree with these terms, please enter your email address to preview the Complete Human SRMAtlas.<br> \n";
+    dialog_div.innerHTML += "<br><i>Results will be limited to 50 proteins per query. </i> <br> \n";
+    dialog_div.innerHTML += "<br><b><align=center>email:</align></b><input type=text value='" + previous_email + "' size=16 id=email_address></input>";
+      get_agreement( );
+    }
+
   })
 
 })
+
+function agree_callback ( status ) {
+  var build_option = document.getElementById( 'pabst_build_id' );
+  var special_option = 0;
+  for (var i = 0; i < build_option.length; i++){
+    if( build_option.options[i].value == 'specialaccess' || build_option.options[i].value == 146  ) {
+      special_option = i;
+    }
+  }
+
+  if ( status ) {
+    // First check email format.
+    var email_ok = false;
+    var email = document.getElementById('email_address');
+    if ( email.value.length > 1 ) {
+      var email_regex = new RegExp( "(.*@.*\..*)" );
+      var email_match = email_regex.exec( email.value );
+      if ( email_match ) {
+        // nothing here yet
+        var cookie = document.cookie;
+        var regex = new RegExp( "SRMAuthEmail=([^;]+)" );
+        var match = regex.exec( cookie + ";" );
+        cookie = "SRMAuthEmail=" + email_match[0];
+        document.cookie = cookie;
+        var email_ok = true;
+      } else {
+        alert( "email address " + email.value + " appears invalid " );
+        get_agreement()
+      }
+    } else {
+      alert( 'Please enter a valid email address' );
+      get_agreement( );
+    }
+    // Set acceptance cookie
+    // Set value to build_id  
+    if ( email_ok ) {
+      build_option.options[special_option].value = 146;
+      var cookie = document.cookie;
+      var regex = new RegExp( "SRMAtlasAuthorized=([^;]+)" );
+      var match = regex.exec( cookie + ";" );
+    ~;
+    print "     var akey = '$akey'\n";
+    print q~
+      cookie = "SRMAtlasAuthorized=" + akey;
+      document.cookie = cookie;
+    }
+  } else {
+    // Delete special option
+    build_option.options[special_option].remove();
+  }
+
+}
+
+function get_agreement() {
+
+  $( "#access_agreement" ).dialog({
+                          position: "center top",
+                          resizable: false,
+                          autoOpen: false,
+                          height: 'auto',
+                          width: 'auto',
+                          modal: true,
+                          buttons: {
+                            "Agree to terms": function() {
+                              $( this ).dialog( "close" );
+                              return agree_callback( true );
+                            },
+                            "Disagree": function() {
+                               $( this ).dialog( "close" );
+                               return agree_callback( false );
+                             }
+                          }
+   })
+  var agreement = $( "#access_agreement" ).dialog( "open" );
+
+}
+
 </script>
+<div id=access_agreement>
+</div>
   ~;
   }
 
@@ -426,6 +588,15 @@ sub print_form {
     my $form = $sbeams->fetchSTDOUT();
 #      <TD><SELECT NAME="pabst_build_id" >
     $form =~ s/QTrap/QTRAP/gm;
+
+    if ( $guest ) {
+     my $auth_path = get_auth_path();
+     clear_auth( $auth_path );
+     `touch $auth_path/$akey`;
+     close AUTH;
+
+     $form =~ s/<SELECT NAME="pabst_build_id" >/<SELECT NAME="pabst_build_id" >\n<option class=bold_red_italic_text value=specialaccess><div class=bold_red_italic_text>Complete Human SRM Atlas<\/div><\/option>\n/gm;
+    }
     $form =~ s/(NAME="pabst_build_id")/$1 ID="pabst_build_id"/gm;
     $form =~ s/(NAME="source_instrument_type_id")/$1 ID="source_instrument_type_id"/gm;
 
@@ -506,11 +677,25 @@ sub print_form {
 
 } # end print_form
 
+sub clear_auth {
+  my $auth_dir = shift || return '';
+  my $clear = `find $auth_dir -mmin +5 -type f`;
+  for my $old_file ( split( /\n/, $clear ) ) {
+    unlink( $old_file );
+  }
+}
+
 sub mk_help_link {
   my %args = @_;
   my $title = $q->escape( $args{title} );
   my $text = $q->escape( $args{text} );
   return qq~<TD BGCOLOR=E0E0E0><span title='$args{text}' class=popup><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' BORDER=0 ONCLICK="popitup('$CGI_BASE_DIR/help_popup.cgi?title=$title;text=$text;email_link=no');"></SPAN></TD>~;
+}
+
+sub get_auth_path {
+  my $srmauth_dir = $CONFIG_SETTING{SRMATLAS_AUTH} || 'SRMAuth';
+  my $authdir = $PHYSICAL_BASE_DIR . '/tmp/' . $srmauth_dir;
+  return $authdir;
 }
 
 sub get_src_weights {
@@ -1272,7 +1457,15 @@ sub fetch_transitions {
   my %bioseq_ids;
   my %bioseq2name;
   my %bioseq2peptides;
+
+  # We will limit the total number of proteins queried to 50 for 'superuser' 
+  my $max_query_proteins = 50;
+
   while ( my @row = $sth->fetchrow_array() ) {
+    if ( $super_guest && keys( %bioseq2name ) >= $max_query_proteins ) {
+      next unless $bioseq2name{$row[1]};
+    }
+
     $acc2gene{$row[0]} ||= $row[4];
     $pep_ids{$row[2]}++;
     $pep_seqs{$row[3]}++;
@@ -1287,6 +1480,14 @@ sub fetch_transitions {
   my $pep_id_string = join( ',', keys( %pep_ids ) ) || 1;
   my $pep_seq_string = "'" . join( "','", keys( %pep_seqs ) ) . "'" || '';
   my $bioseq_id_string = join( ',', keys( %bioseq_ids ) ) || 1;
+
+  if ( $isAuthorized ) {
+    $SRMAuth;
+    my $SRMAuthEmail = $q->cookie( 'SRMAuthEmail' );
+    my $time = time();
+    my $bioseq_str = join( ':', keys( %acc2gene ) );
+    $log->info( "Allowed provisional access: $SRMAuth, $SRMAuthEmail, $ENV{REMOTE_HOST}, $bioseq_str" );
+  }
 
   my $nprots = scalar( keys( %bioseq_ids ) );
   my $npeps = scalar( keys( %pep_ids ) );
@@ -1860,7 +2061,7 @@ sub fetch_transitions {
 
 
         my $np_link = '';
-        if ( $parameters{organism} == 2 ) {
+        if ( $parameters{organism} == 2 || $pabst_build_id == 146 ) {
           $gene = 'NX_' . $gene if length( $gene ) == 6;
           $np_link = qq~
           <A HREF='http://www.nextprot.org/db/search#{f:"name/identifier",t:$gene}' TARGET='_external' title='Look up protein in neXtprot knowledgebase' class='popup'>$np_img</A>&nbsp;
