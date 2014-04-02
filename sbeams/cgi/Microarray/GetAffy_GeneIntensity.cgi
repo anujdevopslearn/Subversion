@@ -1340,7 +1340,7 @@ sub print_simple_form {
 		foreach my $file_ext (@file_types){       #loop through the column names to add checkboxes
 			my $checked = '';
 			if ( grep { $file_ext eq $_ } @default_files ) {
-				$checked = "UNCHECKED";
+				$checked = "CHECKED";
 			}
 
 			foreach my $row_aref ( @{$aref} )
