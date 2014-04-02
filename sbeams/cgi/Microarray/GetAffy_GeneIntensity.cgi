@@ -1340,7 +1340,7 @@ sub print_simple_form {
 		foreach my $file_ext (@file_types){       #loop through the column names to add checkboxes
 			my $checked = '';
 			if ( grep { $file_ext eq $_ } @default_files ) {
-				$checked = "CHECKED";
+				$checked = "UNCHECKED";
 			}
 
 			foreach my $row_aref ( @{$aref} )
@@ -1359,11 +1359,10 @@ sub print_simple_form {
 				my $input = '';
 				if ($file_exists)
 				{ #make Check boxes for all the files that are present <array_id__File extension> example 48__CHP
-					$input =
-"<input type='checkbox' name='get_all_files' value='${array_id}__$file_ext' $checked>";
+					$input = "<input type='checkbox' name='get_all_files' value='${array_id}__$file_ext' $checked>";
 				}
 				else {
-					$input = "No File";
+					$input = "<input type='checkbox' name='get_all_files' value='${array_id}__$file_ext' $checked>";
 				}
 
 				push @$row_aref, $input;    #append on the new data
