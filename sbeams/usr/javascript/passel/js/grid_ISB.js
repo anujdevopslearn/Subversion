@@ -387,6 +387,7 @@ function sortFileSz(a,b){
    return html;
  };
 
+
  this.characteristics_renderer = function ( obj ){
    var html = "";
 
@@ -543,6 +544,11 @@ this.files_renderer = function( value, metaData, record, rowIndex ){
 
 this.transitions_renderer = function (value,  metadata, record, rowIndex ) {
   var html = '<a href="GetSELTransitions?SEL_experiments='+record.data.SEL_experiment_id+'&action=QUERY">'+value+'</a>';
+  return html;
+}
+
+this.px_renderer = function (value,  metadata, record, rowIndex ) {
+  var html = '<a href="http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID='+record.data.px_identifier+'">'+value+'</a>';
   return html;
 }
 
@@ -1503,6 +1509,7 @@ var SampleRecord = Ext.data.Record.create([
 { name: 'author',  mapping: 'publication.author' },
 { name: 'cite',  mapping: 'publication.cite' },
 { name: 'title' },
+{ name: 'px_identifier'},
   ]);
 var sample_reader = new Ext.data.JsonReader({	
 id: "acc",
@@ -1702,12 +1709,11 @@ header: "mPro", width: 25, fixed: false, dataIndex: 'mprophet',
 {
 header: "Publication", dataIndex: 'publication_name', width: 100,
 	tooltip: 'Publication'
-	  //        renderer: common.publication_render
+},
+{ 
+header: "PXD Identifier", width: 50, dataIndex: 'px_identifier',
+renderer: common.px_renderer,
 }
-/*	{ 
-header: "Release Date", width: 60, dataIndex: 'release',  tooltip: 'Release Date' , align: 'right',
-renderer: common.date_renderer
-}*/
 ]);
 
 sample_cm.defaultSortable = true;

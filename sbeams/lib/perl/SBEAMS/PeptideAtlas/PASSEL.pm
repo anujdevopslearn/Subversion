@@ -191,7 +191,8 @@ sub srm_experiments_2_json_all {
      COUNT (distinct SELT.SEL_transition_id) as n_transitions,
      SELE.project_id,
      SELE.heavy_label,
-     SELE.mprophet_analysis
+     SELE.mprophet_analysis,
+     SELE.PX_identifier 
    from $TBAT_SEL_EXPERIMENT SELE
    join $TBAT_SAMPLE S
      on S.sample_id = SELE.sample_id
@@ -224,7 +225,8 @@ sub srm_experiments_2_json_all {
      O.organism_name,
      SELE.project_id,
      SELE.heavy_label,
-     SELE.mprophet_analysis
+     SELE.mprophet_analysis,
+     SELE.PX_identifier
   ORDER BY O.organism_name,SELE.experiment_title
   ~;
 
@@ -252,7 +254,7 @@ sub srm_experiments_2_json_all {
      $sample_date, $instrument_name, $sample_publication_ids, $sample_description,
      $data_contributors,$SEL_experiment_id,$organism_name,
      $n_prots, $n_peps, $n_ions, $n_transition_groups,
-     $n_transitions, $project_id, $spikein, $mprophet ) = @{$row};
+     $n_transitions, $project_id, $spikein, $mprophet,$px_identifier ) = @{$row};
    my $acc = $SEL_experiment_id;
 
     # TODO: get all publications, if multiple. For now we just get the first.
@@ -328,6 +330,7 @@ sub srm_experiments_2_json_all {
     $data{"counts"}{"prots"} = "$n_prots",
     $data{"counts"}{"transition_groups"} = "$n_transition_groups",
     $data{"counts"}{"transitions"} = "$n_transitions",
+    $data{"px_identifier"} = "$px_identifier",
     $data{"peptideatlas_project_id"} = "$project_id",
 
     # push onto json data structure
