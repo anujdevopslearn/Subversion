@@ -3897,8 +3897,9 @@ sub displayExternalLinksSection {
       $external_links .= $sbeamsMOD->encodeSectionItem(
         key => 'Human Protein Atlas',
         tr_info => $tr,
-        value => qq~<div style="display:none"><form name="hpa" method="POST" action="http://www.proteinatlas.org/search_advanced.php" target="_info"><input type="hidden" name="search_str" value="$entrezGeneID"></form></div><a href="javascript:document.hpa.submit()" title="Look up $entrezGeneID in the Human Protein Atlas">$entrezGeneID</a>~,
-        url => "",
+        value => qq~<div style="display:none"><form name="hpa" method="POST" action="http://www.proteinatlas.org/search/gene_name:$entrezGeneID" target="_info"><input type="hidden" name="search_str" value="$entrezGeneID"></form></div><a href="javascript:document.hpa.submit()" title="Look up $entrezGeneID in the Human Protein Atlas">$entrezGeneID</a>~,
+        value => "<img src=$HTML_BASE_DIR/images/ProteinAtlasTiny.gif border=0 />" . '&nbsp;' . $entrezGeneID,
+        url => "http://www.proteinatlas.org/search/gene_name:$entrezGeneID",
       );
     }
   }
@@ -3912,7 +3913,9 @@ sub displayExternalLinksSection {
         key => 'Global Proteome Machine',
         tr_info => $tr,
         value => $ensemblProtein,
+        value => "<img src=$HTML_BASE_DIR/images/gpm_tiny.ico border=0 />" . '&nbsp;' . $ensemblProtein,
         url => "http://gpmdb.thegpm.org/protein/accession/$ensemblProtein",
+       
       );
     }
   }
@@ -3926,10 +3929,30 @@ sub displayExternalLinksSection {
         key => 'Protter (Interactive Protein visualization)',
         tr_info => $tr,
         value => $uniprotProtein,
+        value => "<img src=$HTML_BASE_DIR/images/Protter.ico border=0 />" . '&nbsp;' . $uniprotProtein,
         url => "http://wlab.ethz.ch/protter/#up=${uniprotProtein}&tm=auto",
       );
     }
   }
+
+  #### Display a link to Pathway commons 
+  if ($entrezGeneID) {
+    if ($sbeams->output_mode() eq 'html') {
+      $external_links .= $sbeamsMOD->encodeSectionItem(
+        key => 'Pathway Commons 2',
+        tr_info => $tr,
+        value => $entrezGeneID,
+        value => "<img src=$HTML_BASE_DIR/images/pc2_tiny.png border=0 />" . '&nbsp;' . $entrezGeneID,
+        url => "http://www.pathwaycommons.org/pcviz/#neighborhood/$entrezGeneID",
+      );
+    }
+  }
+
+
+
+
+#####################
+
 
 
   #### Close section
