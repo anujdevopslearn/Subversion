@@ -65,8 +65,6 @@ sub main
                                                         );
   print $sbeams->get_http_header();
   print process_query();
-  $log->error( "got here" );
-  $log->error( Dumper( \%params ) );
 
 } # end main
 
@@ -111,7 +109,6 @@ sub GetProtein_VariantDisplay {
 sub GetTransitions_SourceSelect {
 
   my @select;
-  $log->error( Dumper( %params ) );
 
   if ( $params{pabst_build_id} && $params{pabst_build_id} =~ /^\d+$/ ) {
 
@@ -241,7 +238,6 @@ sub SEL_Transitions_Run_Select {
 
   my $div_text = { optionValue=>'', optionText => '&nbsp;' x 20 };
   my @select;
-  $log->error( $div_text );
   my $json_text;
 
   my $runs;
