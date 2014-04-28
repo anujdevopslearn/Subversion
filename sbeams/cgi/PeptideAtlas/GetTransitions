@@ -75,7 +75,7 @@ exit(0);
 sub main 
 {
 
-  $log->debug( "in main" . time() );
+  $sbeams->time_stmt( "in main" );
 
   # Authenticate and exit if a username is not returned
   my $current_username = $sbeams->Authenticate( allow_anonymous_access => 1 );
@@ -110,6 +110,7 @@ sub main
   $is_html = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
 
 
+  $sbeams->time_stmt( "Set target" );
   # Set default target instrument
   if ( !$parameters{target_instrument} ) {
     my ( $qqq ) = $sbeams->selectrow_array( "SELECT instrument_type_id FROM $TBAT_INSTRUMENT_TYPE WHERE instrument_type_name = 'QQQ'" );
@@ -142,6 +143,7 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
   $pabst_build_id = $best_peptide->get_pabst_build( %parameters );
   $parameters{organism} ||= $best_peptide->getBuildOrganism( pabst_build_id => $pabst_build_id );
 	$parameters{build_bss_id} = $best_peptide->get_pabst_bss_id( pabst_build_id => $pabst_build_id );  
+  $sbeams->time_stmt( "Go build, organism, etc." );
 
   # Some users have access to a subset of certain builds
   # FIXME - don't add if already there.  Also, multiple lists?
@@ -438,6 +440,7 @@ function get_agreement() {
       program_name => $PROG_NAME,
   );
 
+  $sbeams->time_stmt( "Added tabmenu" );
 
   # SRM mode is if we want to show SRM Atlas skin, currently disabled.
   unless ( 0 && $atlas->is_srm_mode() ) {
@@ -456,7 +459,9 @@ function get_agreement() {
       <br>
       ~
     }
-    print $sbeams->getTabbedPanesDHTML();
+    my $dhtml = $sbeams->getTabbedPanesDHTML();
+    $log->debug( Dumper( $dhtml ) );
+    print $dhtml;
   }
 
   # Print form regardless.  A heavily-modified manage table form, 
@@ -471,6 +476,7 @@ function get_agreement() {
   print "<DIV id=query_info></DIV>\n";
 
   print_form ( %parameters );  
+  $sbeams->time_stmt( "Printed form" );
 
   if ( $parameters{action} && $parameters{action} eq 'QUERY' && !$err ) {
     $log->debug( "  Going to fetch transitions"  . time());
@@ -1107,6 +1113,7 @@ sub fetch_transitions {
 #    print "<BR>Done<BR>\n";
 #    print time() . "\n";
   }
+  $sbeams->time_stmt( "Got Consensus links" );
 
   # Try to limit size of returned resultset.
   my %ok_param = ( overall => 0 );
@@ -1229,13 +1236,13 @@ sub fetch_transitions {
       $transition_source_clause =~ s/\'7\'//g;
     } else {
 #      $transition_source_clause = "AND PTI.source_instrument_type_id NOT IN ( '7' )";
-		  $transition_source_clause .= "\nAND PTI.is_predicted = 'N'";
+#		  $transition_source_clause .= "\nAND PTI.is_predicted = 'N'";
     }
   }
 
   # FIXME, we should handle this more robustly
 	if ( $transition_source_clause && $transition_source_clause !~ /7/  ) {
-		$transition_source_clause .= "\nAND PTI.is_predicted = 'N'";
+#		$transition_source_clause .= "\nAND PTI.is_predicted = 'N'";
 	}
 
   my $target_instrument_clause = "AND PSP.target_instrument_type_id = $parameters{target_instrument}";
@@ -1450,7 +1457,9 @@ sub fetch_transitions {
   $namespace_clause
   ~;
 
+  $sbeams->time_stmt( "Protein/peptide SQL" );
   my $sth = $sbeams->get_statement_handle( $peptide_sql );
+  $sbeams->time_stmt( "done" );
   my %acc2gene;
   my %pep_ids;
   my %pep_seqs;
@@ -1476,6 +1485,9 @@ sub fetch_transitions {
   }
 
   fill_in_genes( \%acc2gene );
+  $sbeams->time_stmt( "Filled in genes" );
+  my $acc2symbol = get_gene_symbols( [keys( %acc2gene )] );
+  $sbeams->time_stmt( "got symbols" );
 
   my $pep_id_string = join( ',', keys( %pep_ids ) ) || 1;
   my $pep_seq_string = "'" . join( "','", keys( %pep_seqs ) ) . "'" || '';
@@ -1520,6 +1532,7 @@ sub fetch_transitions {
   }
 
   my $build_resources = $atlas->fetchBuildResources( pabst_build_id => $parameters{pabst_build_id} );
+  $sbeams->time_stmt( "got resources" );
 
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
@@ -1562,7 +1575,6 @@ sub fetch_transitions {
 
   my $limit_clause = $sbeams->buildLimitClause( row_limit => 100000 );
   my $weight_clause = get_src_weights( \%parameters );
-  print STDERR "lib_sql " . time()  . "\n";
   my $lib_sql = qq~
     SELECT DISTINCT preceding_residue, PI.modified_peptide_sequence, following_residue,
     synthesis_adjusted_score, instrument_type_name, precursor_ion_mz, 
@@ -1613,7 +1625,8 @@ sub fetch_transitions {
 
 #   die Dumper( %CONFIG_SETTINGS )
 #   print "<PRE>$lib_sql</PRE>\n";  
-#
+  $log->info( $lib_sql );
+
   my ( $ssr_type ) = $sbeams->selectOneColumn( "SELECT elution_time_type_id FROM $TBAT_ELUTION_TIME_TYPE WHERE elution_time_type = 'SSRCalc'" );
   $parameters{rt_type} ||= $ssr_type;
 
@@ -1690,10 +1703,10 @@ sub fetch_transitions {
     }
   }
   my $start = time;
-  $log->debug( "Exec SQL: " . time() );
 #  $log->debug( $lib_sql );
+  $sbeams->time_stmt( "Lib SQL" );
   my $sth = $sbeams->get_statement_handle( $lib_sql );
-  $log->debug( "Done : " . time() );
+  $sbeams->time_stmt( "Done" );
   my $end = time;
 	my $delta = $end - $start;
 
@@ -1718,6 +1731,7 @@ sub fetch_transitions {
     $row[14] = $bioseq2name{$row[14]};
     push @transitions, \@row;
   }
+  $sbeams->time_stmt( "Initial row cache" );
 
   # If the user has modified any of the weights we have to do this from scratch...
   if ( $is_changed  ) {
@@ -2039,10 +2053,11 @@ sub fetch_transitions {
         my $srm_img = "<img src='$HTML_BASE_DIR/images/srm_icon_clear.gif' border=0 />";
         my $np_img = "<img src='$HTML_BASE_DIR/images/neXtprot_small.png' border=0 />";
         my $pratlas_img = "<img src='$HTML_BASE_DIR/images/ProteinAtlasTiny.gif' border=0 />";
+        my $pcommons_img = "<img src='$HTML_BASE_DIR/images/pc2_tiny.png' border=0 />";
 
         $q->delete( 'protein_name_constraint', 'n_peptides_per_protein', 'n_highest_intensity_fragment_ions' );
         my $recall_url = $q->self_url();
-        $recall_url .= ";protein_name_constraint=$prot;n_peptides_per_protein=500;n_highest_intensity_fragment_ions=1;omit_predicted=1;protein_context=1";
+        $recall_url .= ";protein_name_constraint=$prot;n_peptides_per_protein=50;n_highest_intensity_fragment_ions=1;omit_predicted=1;protein_context=1";
         $pa_link = qq~
         <A HREF='GetProtein?organism_name=$organism_name;protein_name=$prot;apply_action=GO&action=GO#Sequence%20Motifs' TARGET='_peptideatlas' title='Look up protein in the Peptide Atlas' class='popup'>$pa_img</A>
         ~;
@@ -2053,6 +2068,12 @@ sub fetch_transitions {
         my $gene = $prot;
         if ( $gene =~ /^IPI/ || $gene =~ /^ENSP/ ) {
           $gene = $acc2gene{$gene} if $acc2gene{$gene};
+        }
+        my $pc_link = '';
+        if ( $acc2symbol->{$prot} ) {
+          $pc_link = qq~
+          <A HREF="http://www.pathwaycommons.org/pcviz/#neighborhood/$acc2symbol->{$prot}" TARGET='_external' title='Look up protein interactions at Pathway Commons' class='popup'>$pcommons_img</A>&nbsp;
+          ~;
         }
 
         my $pratlas_link = qq~
@@ -2071,7 +2092,7 @@ sub fetch_transitions {
 
 
 
-        $links = "$srm_link$pa_link$pratlas_link$np_link";
+        $links = "$srm_link$pa_link$pratlas_link$np_link$pc_link";
         $links =~ s/\n//g;
         $links = "<span class=nowrap_text>$links</span>";
       } else {
@@ -2454,11 +2475,13 @@ sub fetch_transitions {
   print "$content\n";
   print $sbeams->closeTabbedPane( selected => 'Results' );
 
+  $sbeams->time_stmt( "Done.  Almost" );
   return unless ( $parameters{protein_context} );
+  $sbeams->time_stmt( "Context? What is context?" );
 
-  print $sbeams->addTabbedPane( label => 'Context' );
-  print get_protein_context( %parameters );
-  print $sbeams->closeTabbedPane( selected => 'Results' );
+#  print $sbeams->addTabbedPane( label => 'Context' );
+#  print get_protein_context( %parameters );
+#  print $sbeams->closeTabbedPane( selected => 'Results' );
 
 } # end fetch_transitions
 
@@ -2482,6 +2505,26 @@ sub fill_in_genes {
     $acc2gene->{$row[0]} ||= $row[1];
   }
   return;
+}
+
+sub get_gene_symbols {
+  my $acc = shift;
+  my $pstr = "'" . join( "','", @{$acc} ) . "'";
+  my %acc2symbol;
+  my $sql = qq~
+    SELECT DISTINCT entry_accession, gene_symbol 
+    FROM $TBAT_UNIPROT_DB_ENTRY
+    WHERE entry_accession IN ( $pstr )
+    AND gene_symbol IS NOT NULL
+  ~;
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    my $symbol = $row[1];
+    $symbol =~ s/://g;
+    $symbol =~ s/;//g;
+    $acc2symbol{$row[0]} ||= $symbol;
+  }
+  return \%acc2symbol;
 }
 
 
