@@ -463,15 +463,15 @@ AT_consensus_library	1	consensus_library_id	Consensus Library ID	int	4	0	N		Y			
 AT_consensus_library	2	consensus_library_name	Consensus Library Name	varchar	100	0	N		N							Y	Y		Consensus library name		
 AT_consensus_library	3	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	N	Organism for which this default applies.  Leave empty for overall default	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 AT_consensus_library	4	project_id	Project	int	4	0	Y		N	project	project_id	N	optionlist			Y	Y	N	Project under which this entity is organized and for which user privileges is controlled	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
-AT_consensus_library	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-AT_consensus_library	5	md5sum	md5 Checksum	varchar	64	0	Y		N				text	32		Y	Y	N	md5 checksum of spectral library file		
-AT_consensus_library	6	file_path	File Path	varchar	255	0	y		N				text	50		Y	Y	N	"Path to spectral library file, used to extract spectra"		
-AT_consensus_library	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_consensus_library	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_consensus_library	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_consensus_library	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_consensus_library	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_consensus_library	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_consensus_library	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_consensus_library	6	md5sum	md5 Checksum	varchar	64	0	Y		N				text	32		Y	Y	N	md5 checksum of spectral library file		
+AT_consensus_library	7	file_path	File Path	varchar	255	0	y		N				text	50		Y	Y	N	"Path to spectral library file, used to extract spectra"		
+AT_consensus_library	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_consensus_library	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_consensus_library	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_consensus_library	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_consensus_library	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_consensus_library	13	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_consensus_library_spectrum	1	consensus_library_spectrum_id	Consensus Library Spectrum ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_consensus_library_spectrum	2	consensus_library_id	Consensus Library ID	int	4	0	N		N	AT_consensus_library	consensus_library_id	Y				N	N	Y	Consensus library ID		
 AT_consensus_library_spectrum	3	sequence	Amino Acid Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	N	Amino acid sequence assigned to the spectrum		
@@ -734,24 +734,24 @@ AT_GetPABSTList	12	exclusion_range	Precursor Exclusion Range									N	text	10		
 AT_pabst_tmp_build	1	pabst_build_id	PABST Build Id	int	4	0	N		Y			N						Y			
 AT_pabst_tmp_build	2	build_name	Build Name	varchar	255	0	Y		N			Y	text	24		Y	Y	N			
 AT_pabst_tmp_build	3	build_comment	Build Comment	varchar	2000	0	Y		N			Y	text	24		Y	Y	N			
-AT_pabst_tmp_build	8	parameter_string	Parameter String	varchar	255	0	Y		N			Y	text	24		Y	Y	N			
-AT_pabst_tmp_build	9	organism_id	Organism Id	int	4	0	Y		N	organism	organism_id	Y	optionlist			Y	Y	N			
-AT_pabst_tmp_build	10	parameter_file	Parameter File	text	16	0	Y		N			Y	text	24		Y	Y	N			
-AT_pabst_tmp_build	11	project_id	Project Id	int	4	0	Y		N	project	project_id	Y	optionlist			Y	Y	N			
-AT_pabst_tmp_build	12	build_date	Build Date	datetime	8	0	Y		N			N						N			
-AT_pabst_tmp_build	13	biosequence_set_id	Biosequence Set Id	int	4	0	Y		N			N						N			
-AT_pabst_tmp_build	14	is_default	Is Default	char	1	0	Y		N			N						N			
+AT_pabst_tmp_build	4	parameter_string	Parameter String	varchar	255	0	Y		N			Y	text	24		Y	Y	N			
+AT_pabst_tmp_build	5	organism_id	Organism Id	int	4	0	Y		N	organism	organism_id	Y	optionlist			Y	Y	N			
+AT_pabst_tmp_build	6	parameter_file	Parameter File	text	16	0	Y		N			Y	text	24		Y	Y	N			
+AT_pabst_tmp_build	7	project_id	Project Id	int	4	0	Y		N	project	project_id	Y	optionlist			Y	Y	N			
+AT_pabst_tmp_build	8	build_date	Build Date	datetime	8	0	Y		N			N						N			
+AT_pabst_tmp_build	9	biosequence_set_id	Biosequence Set Id	int	4	0	Y		N			N						N			
+AT_pabst_tmp_build	10	is_default	Is Default	char	1	0	Y		N			N						N			
 AT_pabst_build_resource	1	pabst_build_id	PABST Build ID	int	4	0	N		N	AT_pabst_tmp_build	pabst_build_id	Y	optionlist			Y	Y	Y	PABST build with which resource is associated	"SELECT pabst_build_id, build_name FROM $TBAT_PABST_BUILD PB JOIN $TB_ORGANISM O ON O.organism_id = PB.organism_id WHERE is_default = 'T' AND project_id IN ( $accessible_project_ids ) order by build_name "	
 AT_pabst_build_resource	2	instrument_type_id	Instrument type ID	int	4	0	N		Y	AT_instrument_type	instrument_type_id	N	optionlist					Y	Instrument type for this resource	"SELECT instrument_type_id, instrument_type_name FROM $TBAT_INSTRUMENT_TYPE order by instrument_type_name "	
 AT_pabst_build_resource	3	resource_id	Resource ID	int	4	0	N		N			Y	text	24		Y	Y	Y	Primary key of linked resource		
 AT_pabst_build_resource	4	resource_type	Resource Name	varchar	36	0	N		N			Y	optionlist	24		Y	Y	N	"Name of resource, one of qtof_ce_set,instrument_type,spectral_lib,chromatogram_set,pabst_build,elution_set"	"SELECT DISTINCT( resource_type ), DISTINCT( resource_type) FROM $TBAT_PABST_BUILD_RESOURCE order by resource_type "	
 AT_pabst_tmp_build_file	1	pabst_build_file_id	PABST Build File Id	int	4	0	N		Y			N						Y	Primary Key		
-AT_pabst_tmp_build_file	1	pabst_build_id	PABST Build Id	int	4	0	N		N	AT_pabst_tmp_build	pabst_build_id	Y	optionlist			Y	Y	Y	PABST build with which file is associated	"SELECT pabst_build_id, build_name FROM $TBAT_PABST_BUILD PB JOIN $TB_ORGANISM O ON O.organism_id = PB.organism_id WHERE is_default = 'T' AND project_id IN ( $accessible_project_ids ) order by build_name "	
-AT_pabst_tmp_build_file	1	file_order	File Order	int	4	0	N		N			Y	text	24		Y	Y	Y	Order in which file was considered		
-AT_pabst_tmp_build_file	2	file_name	File Name	varchar	255	0	N		N			Y	text	24		Y	Y	N	file name		
-AT_pabst_tmp_build_file	3	file_path	File Path	varchar	2000	0	N		N			Y	text	24		Y	Y	N	path to file		
-AT_pabst_tmp_build_file	8	file_checksum	File Checksum	varchar	255	0	N		N			Y	text	24		Y	Y	N	md5 checksum of file		
-AT_pabst_tmp_build_file	9	source_instrument_type_id	Source Instrument ID	int	4	0	N		N	AT_source_instrument	source_instrument_type_id	Y	optionlist			Y	Y	Y	Source instrument 	"SELECT instrument_id, instrument_name FROM $TBAT_INSTRUMENT WHERE type='source'"	
+AT_pabst_tmp_build_file	2	pabst_build_id	PABST Build Id	int	4	0	N		N	AT_pabst_tmp_build	pabst_build_id	Y	optionlist			Y	Y	Y	PABST build with which file is associated	"SELECT pabst_build_id, build_name FROM $TBAT_PABST_BUILD PB JOIN $TB_ORGANISM O ON O.organism_id = PB.organism_id WHERE is_default = 'T' AND project_id IN ( $accessible_project_ids ) order by build_name "	
+AT_pabst_tmp_build_file	3	file_order	File Order	int	4	0	N		N			Y	text	24		Y	Y	Y	Order in which file was considered		
+AT_pabst_tmp_build_file	4	file_name	File Name	varchar	255	0	N		N			Y	text	24		Y	Y	N	file name		
+AT_pabst_tmp_build_file	5	file_path	File Path	varchar	2000	0	N		N			Y	text	24		Y	Y	N	path to file		
+AT_pabst_tmp_build_file	6	file_checksum	File Checksum	varchar	255	0	N		N			Y	text	24		Y	Y	N	md5 checksum of file		
+AT_pabst_tmp_build_file	7	source_instrument_type_id	Source Instrument ID	int	4	0	N		N	AT_source_instrument	source_instrument_type_id	Y	optionlist			Y	Y	Y	Source instrument 	"SELECT instrument_id, instrument_name FROM $TBAT_INSTRUMENT WHERE type='source'"	
 AT_pabst_tmp_peptide_mapping	1	pabst_peptide_mapping_id	PABST Peptide Mapping Id	int	4	0	N		Y			N						Y			
 AT_pabst_tmp_peptide_mapping	2	biosequence_id	Biosequence Id	int	4	0	Y		N	AT_biosequence	biosequence_id	N						N			
 AT_pabst_tmp_peptide_mapping	3	pabst_peptide_id	PABST Peptide Id	int	4	0	Y		N	AT_pabst_tmp_peptide	pabst_peptide_id	N						N			
@@ -1096,26 +1096,40 @@ AT_domain_protein_list	1	protein_list_id	Protein List ID	int	4	0	N		Y							N	N	
 AT_domain_protein_list	2	Title	Title	varchar	255	0	N		N		 		text			Y	Y	Y	 		
 AT_domain_protein_list	3	Description	Description	varchar	2056	0	Y		N		 	N	textarea	5		Y	Y	N	 	 	
 AT_domain_protein_list	4	owner_contact_id	Owner Contact ID	int	4	0	N		N	contact	contact_id	N	optionlist			Y	Y	N	Full contact information of the annotator	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
-AT_domain_protein_list	2	project_id	Owner Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
-AT_domain_protein_list	9	original_file	Original File	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of list file to be uploaded via the web interface		
-AT_domain_protein_list	2	N_Proteins	Number of proteins	int	4	0	Y		N	 	 	Y	text			Y	Y	N	 	 	
-AT_domain_protein_list	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-AT_domain_protein_list	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_domain_protein_list	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_domain_protein_list	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_domain_protein_list	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_domain_protein_list	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_domain_protein_list	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_domain_protein_list	5	project_id	Owner Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
+AT_domain_protein_list	6	original_file	Original File	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of list file to be uploaded via the web interface		
+AT_domain_protein_list	7	N_Proteins	Number of proteins	int	4	0	Y		N	 	 	Y	text			Y	Y	N	 	 	
+AT_domain_protein_list	8	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_domain_protein_list	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_domain_protein_list	10	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_domain_protein_list	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_domain_protein_list	12	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_domain_protein_list	13	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_domain_protein_list	14	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_domain_list_protein	1	list_protein_id	Domain list protein ID	int	4	0	N		Y							N	N				pkDEFAULT
-AT_domain_list_protein	1	protein_list_id	Protein List ID	int	4	0	N		N	domain_protein_list	protein_list_id					N	N				pkDEFAULT
-AT_domain_list_protein	4	original_name	Original Name	varchar	255	0	N		N	contact	contact_id	N	optionlist			Y	Y	N	Full contact information of the annotator	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
-AT_domain_list_protein	2	original_accession	Original Accession	varchar	255	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
-AT_domain_list_protein	3	uniprot_accession	UniProt Accession	varchar	255	0	Y		N		 	N	textarea	5		Y	Y	N	 	 	
-AT_domain_list_protein	4	protein_symbol	Protein Symbol	varchar	36	0	N		N	 	 	N	text			Y	Y	N	Full contact information of the annotator	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
-AT_domain_list_protein	2	gene_symbol	Gene Symbol	varchar	36	0	N		N	 	 	Y	text			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
-AT_domain_list_protein	9	protein_full_name	Protein Full Name	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of list file to be uploaded via the web interface		
-AT_domain_list_protein	2	priority	Priority	int	4	0	Y		N	 	 	Y	text			Y	Y	N	 	 	
-AT_domain_list_protein	5	comment	Comment	varchar	1024	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_domain_list_protein	2	protein_list_id	Protein List ID	int	4	0	N		N	domain_protein_list	protein_list_id					N	N				pkDEFAULT
+AT_domain_list_protein	3	original_name	Original Name	varchar	255	0	N		N	contact	contact_id	N	optionlist			Y	Y	N	Full contact information of the annotator	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+AT_domain_list_protein	4	original_accession	Original Accession	varchar	255	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
+AT_domain_list_protein	5	uniprot_accession	UniProt Accession	varchar	255	0	Y		N		 	N	textarea	5		Y	Y	N	 	 	
+AT_domain_list_protein	6	protein_symbol	Protein Symbol	varchar	36	0	N		N	 	 	N	text			Y	Y	N	Full contact information of the annotator	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+AT_domain_list_protein	7	gene_symbol	Gene Symbol	varchar	36	0	N		N	 	 	Y	text			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
+AT_domain_list_protein	8	protein_full_name	Protein Full Name	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of list file to be uploaded via the web interface		
+AT_domain_list_protein	9	priority	Priority	int	4	0	Y		N	 	 	Y	text			Y	Y	N	 	 	
+AT_domain_list_protein	10	comment	Comment	varchar	1024	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 AT_proteases	1	id	id	int	4	0	N		Y							N	Y	Y			pkDEFAULT
 AT_proteases	2	name	Name	varchar	100	0	N		N			Y	text	20		Y	Y	N	Protease Name		
 AT_proteases	3	cleavage_specificity	Cleavage Specificity	varchar	255	0	Y		N			Y	textarea	4		Y	Y	N	Cleavage Specificity		
+AT_dia_library	1	dia_library_id	Consensus Library ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_dia_library	2	dia_library_name	Consensus Library Name	varchar	100	0	N		N							Y	Y		Consensus library name		
+AT_dia_library	3	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	N	Organism for which this default applies.  Leave empty for overall default	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+AT_dia_library	4	project_id	Project	int	4	0	Y		N	project	project_id	N	optionlist			Y	Y	N	Project under which this entity is organized and for which user privileges is controlled	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+AT_dia_library	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_dia_library	6	md5sum	md5 Checksum	varchar	64	0	Y		N				text	32		Y	Y	N	md5 checksum of spectral library file		
+AT_dia_library	7	file_path	File Path	varchar	255	0	y		N				text	50		Y	Y	N	"Path to spectral library file, used to extract spectra"		
+AT_dia_library	8	file_format	File Format	varchar	36	0	y		N				text	50		Y	Y	N	"Path to spectral library file, used to extract spectra"		
+AT_dia_library	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_dia_library	10	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_dia_library	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_dia_library	12	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_dia_library	13	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_dia_library	14	record_status	Record Status	char	1	0	N	N	N							N	N				
