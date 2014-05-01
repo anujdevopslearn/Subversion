@@ -265,6 +265,7 @@ sub handle_request {
   #### and check to see if current user is the owner
   my $datasetIdentifier = $parameters{'identifier'};
   $datasetIdentifier = uc($datasetIdentifier) if ($datasetIdentifier);
+  $datasetIdentifier =~ s/\s//g;
   my $datasetMetadata;
   my $isOwner = 0;
   my $isAccessible = 0;
@@ -939,10 +940,22 @@ sub getPASSMetaData {
     $supportedKeys{$supportedKey} = 1;
   }
 
+  #### Also define some keys to remove. These should not have been here, but due to a past bug, these were written both as
+  #### database table fields as well as here in the DESCRIPTION file. Remove them from the description file when reading.
+  #### WARNING: There is an assumption below that all obsolete keys have spaces, just because they currently do.
+  my @obsoleteKeys = ( 'submitter organization','lab head','lab head email','lab head organization','lab head country' );
+  my %obsoleteKeys;
+  foreach my $obsoleteKey ( @obsoleteKeys ) {
+    $obsoleteKeys{$obsoleteKey} = 1;
+  }
+
+
   my $prevKey = 'none';
   while (my $line = <INFILE>) {
     $line =~ s/[\r\n]//g;
-    if ($line =~ /^\s*(\w+):\s*(.*)$/) {
+
+    #### If the line begins with a non-space-containing key, process it
+    if ( $line =~ /^\s*(\w+):\s*(.*)$/ ) {
       my $key = $1;
       my $value = $2;
       if ( $supportedKeys{$key} ) {
@@ -951,6 +964,17 @@ sub getPASSMetaData {
       } else {
 	$response->{$prevKey} .= "<BR>\n$line";
       }
+
+    #### At the moment, all of the obsolete keys have spaces, so look for them here
+    } elsif ( $line =~ /^\s*([\w\s]+):/ ) {
+      my $key = $1;
+      if ( $obsoleteKeys{$key} ) {
+	#### do nothing
+      } else {
+	$response->{$prevKey} .= "<BR>\n$line";
+      }
+
+    #### If not a parseable key or not an obsolete space-containing key, then append to previous
     } else {
       $response->{$prevKey} .= "<BR>\n$line";
     }
@@ -1782,11 +1806,6 @@ sub updateDataset {
   $metadata .= "title:\t$formParameters->{datasetTitle}\r\n";
   $metadata .= "summary:\t$formParameters->{summary}\r\n";
   $metadata .= "contributors:\t$formParameters->{contributors}\r\n";
-  $metadata .= "submitter organization:\t$formParameters->{submitter_organization}\r\n";
-  $metadata .= "lab head:\t$formParameters->{lab_head_full_name}\r\n";
-  $metadata .= "lab head email:\t$formParameters->{lab_head_email}\r\n";
-  $metadata .= "lab head organization:\t$formParameters->{lab_head_organization}\r\n";
-  $metadata .= "lab head country:\t$formParameters->{lab_head_country}\r\n";
 
   $metadata .= "publication:\t$formParameters->{publication}\r\n";
 
