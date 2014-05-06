@@ -510,7 +510,15 @@
 
         var plot;
     	if(!container.data("zoomRange")) {
-    		plot = $.plot($(getElementSelector(container, elementIds.msmsplot)), datasets,  container.data("plotOptions"));
+		// Set the default X range to be from 50 to the MW of the peptide
+		// This allows easier comparison of different spectra from the same peptide
+    		var selectOpts = {};
+        	var options = container.data("options");
+                var neutralMass = options.peptide.getNeutralMassMono() + Ion.MASS_O + Ion.MASS_H;
+		selectOpts.xaxis = { min: 50, max: neutralMass };
+    		plot = $.plot(getElementSelector(container, elementIds.msmsplot), datasets,
+                      $.extend(true, {}, container.data("plotOptions"), selectOpts));
+    		//plot = $.plot($(getElementSelector(container, elementIds.msmsplot)), datasets,  container.data("plotOptions"));
         }
     	else {
             var zoomRange = container.data("zoomRange");
