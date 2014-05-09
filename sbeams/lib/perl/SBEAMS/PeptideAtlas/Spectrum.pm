@@ -21,6 +21,7 @@ things related to PeptideAtlas spectra
 
 use strict;
 use DB_File ;
+use Data::Dumper;
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK);
 require Exporter;
 @ISA = qw();
@@ -714,7 +715,7 @@ sub getSpectrumPeaks_Lib {
                                                  rec_len => $len, 
                                                 bgzipped => 1,
                                              denormalize => 0, 
-                                          strip_unknowns => 1 );
+                                              %args );
 
       $log->debug( "Compressed fetch failed" ) if !scalar( @{$peaks->{labels}} );
     } else {
@@ -763,10 +764,7 @@ sub getSpectrumPeaks_Lib {
     $peaks = $consensus->get_spectrum_peaks( file_path => $filename, 
                                              entry_idx => $position, 
                                            denormalize => 0, 
-                                        strip_unknowns => 1 );
-#  } else {
-#    use Data::Dumper;
-#    die Dumper( $peaks );
+                                            %args );
   }
 
   #### Read the spectrum data
