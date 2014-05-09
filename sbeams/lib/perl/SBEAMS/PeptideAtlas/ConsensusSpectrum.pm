@@ -223,14 +223,36 @@ sub get_spectrum_peaks {
     }
     my $bgz_out = `/tools/bin/bgzip -b $args{entry_idx} -s $args{rec_len} -c -d $args{file_path} `;
     @lines = split( /\n/, $bgz_out );
-  } else {
-    if ( ! -e $args{file_path} ) {
-      $log->warn( "missing sptxt file $args{file_path}" );
-      if ( -e "$args{file_path}.gz" ) {
-        $log->warn( "sptxt file is seen as gzipped, please inform an administrator $args{file_path}.gz" );
+  } elsif ( ! -e $args{file_path} ) {
+    $log->warn( "missing sptxt file $args{file_path}" );
+    if ( -e "$args{file_path}.gz" ) {
+      $log->warn( "sptxt file is seen as gzipped, please inform an administrator $args{file_path}.gz" );
+
+      my $idx = $args{file_path};
+      $idx =~ s/\.sptxt/.compspecidx/;
+      if ( -e $idx ) {
+        $log->debug( "Using compressed library index $idx" );
+        my $full_seq = $args{modified_sequence} . '/' . $args{charge};
+        my $idx_line = `grep -m1 $full_seq $idx`;
+        chomp $idx_line;
+        if ( $idx_line ) {
+          my @line = split( /\t/, $idx_line );
+          my $off = $line[4];
+          my $len = $line[3];
+          my $gzfile = $idx;
+          $gzfile =~ s/.compspecidx/.sptxt.gz/;
+          my $bgz_out = `/tools/bin/bgzip -b $off -s $len -c -d $gzfile `;
+          @lines = split( /\n/, $bgz_out );
+        } else {
+          return undef;
+        }
+      } else {
+        return undef;
       }
+    } else {
       return undef;
     }
+  } else {
     open FIL, $args{file_path} || die "Unable to open library file $args{file_path}";
     seek ( FIL, $args{entry_idx}, 0 );
     my $cnt = 0;
@@ -335,9 +357,14 @@ sub process_spectrum_record {
     my ( $mass, $intensity, $annot ) = $line =~ /(\S+)\s+(\S+)\s+(\S+)\s.*$/;
     my @annot = split( /\//, $annot );
 
-    if ( $args{strip_unknowns} ) {
-			next if $annot[0] =~ /^\?$/;
-		}
+    if ( $annot[0] =~ /^\?$/ ) {
+      $spectrum{stats} ||= {};
+      $spectrum{stats}->{unknown}++;
+      next if $args{strip_unknowns};
+    } else {
+      $spectrum{stats}->{annot}++;
+    }
+
 
     push @{$spectrum{labels}}, $annot[0];
 
