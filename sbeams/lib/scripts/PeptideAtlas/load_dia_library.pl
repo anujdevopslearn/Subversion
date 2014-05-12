@@ -10,11 +10,12 @@
 use strict;
 use Getopt::Long;
 use FindBin;
+use File::Basename qw( basename );
 use Cwd qw( abs_path );
 
 use lib "$FindBin::Bin/../../perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_username 
-             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
+             $PROG_NAME $USAGE %options $QUIET $VERBOSE $DEBUG $TESTONLY
          );
 $|++;
 
@@ -40,7 +41,7 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 ###############################################################################
 $PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
-Usage: $PROG_NAME [OPTIONS]
+Usage: $PROG_NAME [options]
 Options:
   --verbose n            Set verbosity level.  default is 0
   --quiet                Set flag to print nothing at all except errors
@@ -63,45 +64,63 @@ EOU
 
 
 #### Process options
-unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","test", 'help',
+unless (GetOptions(\%options,"verbose:s","quiet","debug:s","test", 'help',
                    "load", "library_name:s", "organism_name:s", 'list', 'format:s',
-                   "path:s", "delete:s", 'comment=s', "project_id:i"  ) ) {
+                   "path:s", "delete:s", 'comment=s', "project_id:i", 'instrument:s', 
+                   ) ) {
     print "\n$USAGE\n";
     exit;
   }
 
-$VERBOSE = $OPTIONS{"verbose"} || 0;
+$VERBOSE = $options{"verbose"} || 0;
 
-$QUIET = $OPTIONS{"quiet"} || 0;
+$QUIET = $options{"quiet"} || 0;
 
-$DEBUG = $OPTIONS{"debug"} || 0;
+$DEBUG = $options{"debug"} || 0;
 
-$TESTONLY = $OPTIONS{"test"} || 0;
+$TESTONLY = $options{"test"} || 0;
 
-unless ( $OPTIONS{'delete'}  || $OPTIONS{'load'} || $OPTIONS{'test'} || $OPTIONS{list} ) {
+unless ( $options{'delete'}  || $options{'load'} || $options{'test'} || $options{list} ) {
     print "\n$USAGE\n";
     print "Need --load or --test or --delete id\n";
     exit(0);
 }
 
-if ( $OPTIONS{'load'} || $OPTIONS{'test'} ) {
+if ( $options{'load'} || $options{'test'} ) {
   my $err = 0;
-  for my $opt ( qw( path library_name organism_name project_id format ) ) { 
-    $err++ unless defined $OPTIONS{$opt};
+  for my $opt ( qw( path library_name organism_name project_id format instrument ) ) { 
+    $err++ unless defined $options{$opt};
   }
   if ( $err ) {
     print "\n$USAGE\n";
-    print "Need --path, --library_name, --project_id, --format, and --organism_name\n";
+    print "Need --path, --library_name, --project_id, --format, --organism_name, and --instrument\n";
     exit(0);
   }
+
+  my $instrument_id = '';
+  my $sth = $sbeams->get_statement_handle( "SELECT DISTINCT instrument_type_name, instrument_type_id FROM $TBAT_INSTRUMENT_TYPE" );
+  while( my @row = $sth->fetchrow_array() ) {
+    if ( lc( $row[0] ) eq lc( $options{instrument} ) ) {
+      $instrument_id = $row[1];
+      last;
+    }
+  }
+  if ( !$instrument_id ) {
+    print "\nUnable to find an instrument with the name $options{instrument}... exiting\n\n";
+    sleep 2;
+    print $USAGE;
+    exit;
+  }
+  $options{instrument_id} = $instrument_id;
+
 }
 
-if ( $OPTIONS{help} ) {
+if ( $options{help} ) {
     print "\n$USAGE\n";
     exit(0);
 }
 
-if ( $OPTIONS{list} ) {
+if ( $options{list} ) {
   printBuildList();
   exit(0);
 }
@@ -120,16 +139,16 @@ exit(0);
 ###############################################################################
 sub main 
 {
-    #### Do the SBEAMS authentication and exit if a username is not returned
-    exit unless (
-        $current_username = $sbeams->Authenticate(work_group=>'PeptideAtlas_admin')
-    );
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless (
+      $current_username = $sbeams->Authenticate(work_group=>'PeptideAtlas_admin')
+  );
 
-    $sbeams->printPageHeader() unless ($QUIET);
+  $sbeams->printPageHeader() unless ($QUIET);
 
-    handleRequest();
+  handleRequest();
 
-    $sbeams->printPageFooter() unless ($QUIET);
+  $sbeams->printPageFooter() unless ($QUIET);
 
 } # end main
 
@@ -141,32 +160,39 @@ sub handleRequest
 {
     my %args = @_;
 
-    if ($OPTIONS{load} || $OPTIONS{test} )
+    if ($options{load} || $options{test} )
     {
         my $organism_id = getOrganismId(
-            organism_name => $OPTIONS{organism_name} 
+            organism_name => $options{organism_name} 
         );
 
         ## make sure file exists
-        my $file_path = abs_path( $OPTIONS{path} );
+        my $file_path = abs_path( $options{path} );
+        my $file_name = basename( $file_path );
 
         unless (-e $file_path)
         {
-            print "File does not exist: $file_path\n";
-            exit(0);
+          print "File does not exist: $file_path\n";
+          exit(0);
         }
+        my $checksum = `md5sum $file_path`;
+        $checksum =~ /^(\S+)\s+.*$/;
+        $checksum = $1;
 
         populateRecords(organism_id => $organism_id, 
                           file_path => $file_path,
-                             format => $OPTIONS{format},
-							  						verbose => $OPTIONS{verbose},
-             dia_library_name => $OPTIONS{library_name},
-                    library_comment => $OPTIONS{comment}
+                        file_format => $options{format},
+                             md5sum => $checksum,
+                         project_id => $options{project_id},
+                 instrument_type_id => $options{instrument_id},
+                   dia_library_name => $file_name,
+                    dia_library_tag => $options{library_name},
+                            comment => $options{comment}
                        );
     }
 
-    if ($OPTIONS{delete}) {
-        removeConsensusLibrary( dia_library_id => $OPTIONS{delete} );
+    if ($options{delete}) {
+        removeConsensusLibrary( dia_library_id => $options{delete} );
         exit 0;
     }
 
@@ -183,34 +209,13 @@ sub populateRecords
 {
   my %args = @_;
 
-  my $organism_id = $args{organism_id} || die "need organism_id";
-
-  my $infile = $args{file_path} || die "need file_path";
-
-  my $md5sum = system( "md5sum $args{file_path}" );
-
-  my $dia_library_name = $args{dia_library_name} || 
-      die "need dia_library_name";
-
-  my $library_comment = $args{library_comment} || '';
-
-  print "Loading library $dia_library_name\n";
-
-  my %rowdata = (
-     organism_id => $organism_id,
-     comment => $library_comment,
-     file_format => $args{format},
-     dia_library_name => $dia_library_name,
-     md5sum => $args{md5sum},
-     file_path => $args{file_path},
-     project_id => $args{project_id},
-  );
+  print "Loading library $args{dia_library_name}\n";
 
   ## create a dia_library record:
   my $dia_library_id = $sbeams->updateOrInsertRow(
       table_name=>$TBAT_DIA_LIBRARY,
       insert=>1,
-      rowdata_ref=>\%rowdata,
+      rowdata_ref=>\%args,
       PK => 'dia_library_id',
       return_PK=>1,
       add_audit_parameters => 1,
