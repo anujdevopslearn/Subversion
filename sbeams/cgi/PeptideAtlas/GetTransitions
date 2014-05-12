@@ -80,6 +80,8 @@ sub main
   # Authenticate and exit if a username is not returned
   my $current_username = $sbeams->Authenticate( allow_anonymous_access => 1 );
   exit unless $current_username;
+  $sbeams->setSessionAttribute( key => 'PA_resource', value => 'SRMAtlas' );
+
 
   #### Read in the default input parameter_onlys
   $parameters{uploaded_file_not_saved} = 1;
@@ -484,6 +486,7 @@ function get_agreement() {
     $log->debug( "  Done fetching transitions"  . time());
   }
   $atlas->display_page_footer( close_tables => 0 ) if $guest;
+  $sbeams->setSessionAttribute( key => 'PA_resource', value => '' );
 
 } # end main
 
@@ -1892,6 +1895,7 @@ sub fetch_transitions {
       }
 
       my $pep_key = $prot . $row[1];
+      my $pep_seq = $row[1];
       $peps{$pep_key} ||= 0; 
 
       # Do we have enough fragments already?
@@ -2054,6 +2058,7 @@ sub fetch_transitions {
         my $np_img = "<img src='$HTML_BASE_DIR/images/neXtprot_small.png' border=0 />";
         my $pratlas_img = "<img src='$HTML_BASE_DIR/images/ProteinAtlasTiny.gif' border=0 />";
         my $pcommons_img = "<img src='$HTML_BASE_DIR/images/pc2_tiny.png' border=0 />";
+        my $srmc_img = "<img src='$HTML_BASE_DIR/images/SRMC.png' border=0 />";
 
         $q->delete( 'protein_name_constraint', 'n_peptides_per_protein', 'n_highest_intensity_fragment_ions' );
         my $recall_url = $q->self_url();
@@ -2069,10 +2074,15 @@ sub fetch_transitions {
         if ( $gene =~ /^IPI/ || $gene =~ /^ENSP/ ) {
           $gene = $acc2gene{$gene} if $acc2gene{$gene};
         }
-        my $pc_link = '';
-        if ( $acc2symbol->{$prot} ) {
-          $pc_link = qq~
-          <A HREF="http://www.pathwaycommons.org/pcviz/#neighborhood/$acc2symbol->{$prot}" TARGET='_external' title='Look up protein interactions at Pathway Commons' class='popup'>$pcommons_img</A>&nbsp;
+        my $pc_protein = $acc2symbol->{$prot} || $prot; 
+        my $pc_link = qq~
+        <A HREF="http://www.pathwaycommons.org/pcviz/#neighborhood/$pc_protein" TARGET='_external' title='Look up protein interactions for $pc_protein at Pathway Commons' class='popup'>$pcommons_img</A>&nbsp;
+        ~;
+
+        my $srmc_link = '';
+        if ( $parameters{organism} == 2 || $pabst_build_id == 146 ) {
+          $srmc_link = qq~
+          <A HREF="http://www.srmcollider.org/srmcollider/srmcollider.py?peptides=$pep_seq&ssr_window=6&q1_window=1&q3_window=1&low_mass=400&high_mass=1500&genome=human&isotope=1&missed=0&uis=2&bions=true" TARGET='_external' title='Look up peptide UIS at srmcollider.org' class='popup'>$srmc_img</A>&nbsp;
           ~;
         }
 
@@ -2092,7 +2102,7 @@ sub fetch_transitions {
 
 
 
-        $links = "$srm_link$pa_link$pratlas_link$np_link$pc_link";
+        $links = "$srm_link$pa_link$pratlas_link$np_link$pc_link$srmc_link";
         $links =~ s/\n//g;
         $links = "<span class=nowrap_text>$links</span>";
       } else {
