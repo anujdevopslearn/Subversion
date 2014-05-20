@@ -7,7 +7,7 @@
 # Description : Prints summary of a given protein given selection
 #               atlas build and protein name.
 #
-# SBEAMS is Copyright (C) 2000-2011 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2014 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -950,8 +950,7 @@ sub handle_request {
 
     my %syn_types;
     foreach my $synonym ( @synonyms ) {
-      next if ($synonym->[1] =~ /Description/i);
-      #$log->debug( "Syn loop, $synonym->[0], $synonym->[1], $synonym->[2], $synonym->[3]" );
+      next if $synonym->[1] =~ /Description/i;
       $syn_types{$synonym->[1]} ||= [];
       chomp( $synonym->[0] );
       #### Store the synonym information $biosequence for later use
@@ -3934,6 +3933,19 @@ sub displayExternalLinksSection {
       );
     }
   }
+
+  if ( $currentOrganism =~ /Human/i && $uniprotProtein) {
+    if ($sbeams->output_mode() eq 'html') {
+      $external_links .= $sbeamsMOD->encodeSectionItem(
+        key => 'neXtProt knowledgebase',
+        tr_info => $tr,
+        value => "<img src=$HTML_BASE_DIR/images/neXtprot_small.png border=0 />" . '&nbsp; NX_' . $uniprotProtein,
+        url => 'http://www.nextprot.org/db/entry/NX_' . $uniprotProtein
+      );
+    }
+  }
+
+
 
   #### Display a link to Pathway commons 
   if ($entrezGeneID) {
