@@ -249,6 +249,9 @@ my $module_styles =<<"  END_STYLE";
   
   /* Style info below organized by originating module
   /* Peptide Atlas */
+  .cellblock_top { border-top:"1px solid"; border-color:black; border-left:"1px solid"; border-right:"1px solid"}
+  .cellblock_bottom { border-bottom:thin solid; border-color:black; border-left:thin solid; border-right:thin solid}
+  .cellblock { border-color:black; border-left:thin solid; border-right:thin solid}
   .small_form_field {    font-family: Verdana, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_SM}pt; color: #000000; background-color: #FFFFCC; padding: 1px; height: 16px; border: 1px solid #7F9DB9 }  
   .small_form_text {    font-family: Verdana, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_SM}pt; }
   .small_form_caption {    font-family: Verdana, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_SM}pt; font-weight: bold; }
