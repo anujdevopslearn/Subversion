@@ -78,6 +78,9 @@ sub main
         #connect_read_only=>1,
         allow_anonymous_access=>1,
     ));
+    $sbeams->setSessionAttribute( key => 'PA_resource', value => 'SRMAtlas' );
+
+
 
 
     # Read in the default input parameters
@@ -133,6 +136,7 @@ sub main
     print "$content";
 
     $atlas->display_page_footer();
+    $sbeams->setSessionAttribute( key => 'PA_resource', value => '' );
 
 
 } # end main
