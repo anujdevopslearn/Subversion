@@ -1119,17 +1119,27 @@ AT_domain_list_protein	10	comment	Comment	varchar	1024	0	Y		N			N	textarea	4		Y	
 AT_proteases	1	id	id	int	4	0	N		Y							N	Y	Y			pkDEFAULT
 AT_proteases	2	name	Name	varchar	100	0	N		N			Y	text	20		Y	Y	N	Protease Name		
 AT_proteases	3	cleavage_specificity	Cleavage Specificity	varchar	255	0	Y		N			Y	textarea	4		Y	Y	N	Cleavage Specificity		
-AT_dia_library	1	dia_library_id	Consensus Library ID	int	4	0	N		Y							N	N				pkDEFAULT
-AT_dia_library	2	dia_library_name	Consensus Library Name	varchar	100	0	N		N							Y	Y		Consensus library name		
-AT_dia_library	3	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	N	Organism for which this default applies.  Leave empty for overall default	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
-AT_dia_library	4	project_id	Project	int	4	0	Y		N	project	project_id	N	optionlist			Y	Y	N	Project under which this entity is organized and for which user privileges is controlled	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
-AT_dia_library	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-AT_dia_library	6	md5sum	md5 Checksum	varchar	64	0	Y		N				text	32		Y	Y	N	md5 checksum of spectral library file		
-AT_dia_library	7	file_path	File Path	varchar	255	0	y		N				text	50		Y	Y	N	"Path to spectral library file, used to extract spectra"		
-AT_dia_library	8	file_format	File Format	varchar	36	0	y		N				text	50		Y	Y	N	"Path to spectral library file, used to extract spectra"		
-AT_dia_library	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_dia_library	10	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_dia_library	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_dia_library	12	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_dia_library	13	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_dia_library	14	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_dia_library	1	dia_library_id	DIA Library ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_dia_library	2	dia_library_name	DIA Library Name	varchar	100	0	N		N				text			Y	Y		DIA Library Name		
+AT_dia_library	3	dia_library_tag	DIA Library Tag	varchar	36	0	N		N				text			Y	Y		DIA Library Tag		
+AT_dia_library	4	instrument_type_id	Instrument type ID	int	4	0	N		N	AT_instrument_type	instrument_type_id	N	optionlist					Y	Instrument type for this resource	"SELECT instrument_type_id, instrument_type_name FROM $TBAT_INSTRUMENT_TYPE order by instrument_type_name "	
+AT_dia_library	5	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	N	Organism for which this default applies.  Leave empty for overall default	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+AT_dia_library	6	project_id	Project	int	4	0	Y		N	project	project_id	N	optionlist			Y	Y	N	Project under which this entity is organized and for which user privileges is controlled	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+AT_dia_library	7	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_dia_library	8	md5sum	md5 Checksum	varchar	64	0	Y		N				text	32		Y	Y	N	md5 checksum of spectral library file		
+AT_dia_library	9	file_path	File Path	varchar	255	0	y		N				text	50		Y	Y	N	"Path to spectral library file, used to extract spectra"		
+AT_dia_library	10	file_format	File Format	varchar	36	0	y		N				text	50		Y	Y	N	"Path to spectral library file, used to extract spectra"		
+AT_dia_library	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_dia_library	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_dia_library	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_dia_library	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_dia_library	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_dia_library	16	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_GetDIALibs	1	dia_library_id	DIA Library									Y	optionlist	4		Y	Y	N	Select desired DIA library	"SELECT DISTINCT dia_library_id, comment FROM $TBAT_DIA_LIBRARY WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids ) ORDER BY comment"	
+AT_GetDIALibs	2	organism_id	Organism									Y	mulitoptionlist	20		Y	Y	N	Limit by desired organism	"SELECT DISTINCT O.organism_id, organism_name FROM $TB_ORGANISM O JOIN $TBAT_DIA_LIBRARY DL ON O.organism_id = DL.organism_id WHERE O.record_status = 'N' AND project_id IN (  $accessible_project_ids )"	
+AT_GetDIALibs	3	protein_name_constraint	Protein Accession Constraint									N	text	40		Y	Y	N	"Constraint for the Protein Accession (SwissProt, Ensembl, IPI, SGD, etc.). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT."		
+AT_GetDIALibs	4	upload_protein_file	Upload File of Proteins	 	 	 	 		 			N	file	40		Y	Y	N	"Path to file with list of Protein Names, one per line, to be uploaded via the web interface "		
+AT_GetDIALibs	5	peptide_sequence_constraint	Peptide Sequence Constraint									N	text	40		Y	Y	N	Constraint for the Peptide Sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
+AT_GetDIALibs	6	upload_peptide_file	Upload File of Peptides	 	 	 	 		 			N	file	40		Y	Y	N	"Path to file with list of peptide sequences, one per line, to be uploaded via the web interface"		
+AT_GetDIALibs	7	intrument_type	Instrument Type									N	optionlist	20		Y	Y	N	Instrument type 	"SELECT DISTINCT I.instrument_type_id, instrument_type_name FROM $TBAT_INSTRUMENT_TYPE I JOIN $TBAT_DIA_LIBRARY DL ON I.instrument_type_id = DL.instrument_type_id WHERE DL.record_status = 'N' AND project_id IN (  $accessible_project_ids )"	
+AT_GetDIALibs	8	n_peptides_per_protein	Number of peptides per protein constraint									N	text	5		Y	Y	N	"Number of peptides to return per protein, defaults to 3."		

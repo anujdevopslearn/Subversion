@@ -97,3 +97,4 @@ AT_domain_protein_list	Domain Protein List	PeptideAtlas_infrastructure	YES	$TBAT
 AT_domain_list_protein	Domain List Protein	PeptideAtlas_infrastructure	NO	$TBAT_DOMAIN_LIST_PROTEIN	list_protein_id				
 AT_proteases	Proteases	PeptideAtlas_infrastructure	YES	$TBAT_PROTEASES	id		ManageTable.cgi?TABLE_NAME=AT_proteases		
 AT_dia_library	DIA Library	PeptideAtlas_infrastructure	YES	$TBAT_CONSENSUS_LIBRARY	consensus_library_id		ManageTable.cgi?TABLE_NAME=AT_dia_library		
+AT_GetDIALibs	Get DIA Libraries	QUERY	YES				GetDIALibs		
