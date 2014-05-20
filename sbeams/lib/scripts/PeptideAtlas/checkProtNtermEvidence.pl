@@ -118,6 +118,7 @@ if ( $OPTIONS{observed} ) {
   close OBS;
 }
 
+
 my $n_atlases;
 my $data_path;
 $atlas_build_id =~ s/\s//g;  #remove all whitespace
@@ -480,6 +481,7 @@ for my $acc ( sort ( keys( %all_keys ) ) ) {
 
     if ( $OPTIONS{observed} ) {
       for my $mod ( keys( %{$obs{$results{$acc}->{cleaved}}} ) ) {
+        next if $mod eq 'total';
         if ( $mod =~ /^n\[43\]/ ) {
           $results{$acc}->{cleaved_acetyl_obs} += $obs{$results{$acc}->{cleaved}}->{$mod};
         }
@@ -507,6 +509,7 @@ for my $acc ( sort ( keys( %all_keys ) ) ) {
 
     if ( $OPTIONS{observed} ) {
       for my $mod ( keys( %{$obs{$results{$acc}->{not_cleaved}}} ) ) {
+        next if $mod eq 'total';
         if ( $mod =~ /^n\[43\]/ ) {
           $results{$acc}->{not_cleaved_acetyl_obs} += $obs{$results{$acc}->{not_cleaved}}->{$mod};
         }
@@ -530,18 +533,44 @@ for my $acc ( sort ( keys( %all_keys ) ) ) {
 
 
 }
+#   die "acc is $acc, seq is $seqmap{$acc}";
+
+
 print "acc";
 #  for my $key ( qw( type cleaved cleaved_map cleaved_iso_map cleaved_alt_map cleaved_acetyl not_cleaved not_cleaved_map not_cleaved_iso_map not_cleaved_alt_map sp np term_type term_like ) ) {
 for my $key ( qw( type cleaved cleaved_map cleaved_iso_map cleaved_alt_map cleaved_acetyl_obs cleaved_total_obs not_cleaved not_cleaved_map not_cleaved_iso_map not_cleaved_alt_map not_cleaved_acetyl_obs not_cleaved_total_obs sp np term_type term_like ) ) {
   print "\t$key";
 }
+print "\tFollowsRules?";
+print "\tSecond AA";
+print "\tSecond AA Type";
 print "\n";
 
 for my $acc ( sort( keys( %results ) ) ) {
+  my $segundo = substr( $seqmap{$acc}, 1, 1 );
+  my $ptype = '';
+if ( $segundo =~ /[AMPSTGV]/ ) {
+  $ptype = 'cleave';
+} elsif ( $segundo =~ /[FHIKLRWY]/ ) {
+  $ptype = 'primary_stablizing';
+} elsif ( $segundo =~ /[DE]/ ) {
+  $ptype = 'secondary_stablizing';
+} elsif ( $segundo =~ /[NQC]/ ) {
+  $ptype = 'terciary_stablizing';
+} else {
+  $ptype = 'craycray';
+}
   print "$acc";
   for my $key ( qw( type cleaved cleaved_map cleaved_iso_map cleaved_alt_map cleaved_acetyl_obs cleaved_total_obs not_cleaved not_cleaved_map not_cleaved_iso_map not_cleaved_alt_map not_cleaved_acetyl_obs not_cleaved_total_obs sp np term_type term_like ) ) {
     print "\t$results{$acc}->{$key}";
   }
+  my $rules = ( $results{$acc}->{type} =~ /NotCleaved/ && $ptype ne 'cleave' ) ? 'Yes' : 
+              ( $results{$acc}->{type} =~ /Cleaved/ && $ptype eq 'cleave' ) ? 'Yes' : 'No';
+
+
+print "\t$rules";
+print "\t$segundo";
+print "\t$ptype";
   print "\n";
 }
 
