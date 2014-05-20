@@ -493,58 +493,20 @@ sub get_srm_resultset {
   my $params = shift;
 
   my $peptide_sql = qq~
-  SELECT DISTINCT build_name, biosequence_name, BS.biosequence_id, PP.pabst_peptide_id
+  SELECT DISTINCT build_name, PP.pabst_peptide_id, peptide_sequence, PP.pabst_build_id
   FROM $TBAT_PABST_BUILD PB 
   JOIN $TBAT_PABST_PEPTIDE PP 
     ON PB.pabst_build_id = PP.pabst_build_id
-  JOIN $TBAT_PABST_PEPTIDE_MAPPING PM 
-    ON PM.pabst_peptide_id = PP.pabst_peptide_id
-  JOIN $TBAT_BIOSEQUENCE BS
-    ON BS.biosequence_id = PM.biosequence_id    
   WHERE peptide_sequence = '$params->{peptide}'
   AND PB.project_id IN ( $params->{project_string} )
   ~;
   
-  my %id2name;
   my %peptides;
-  my %bioseqs;
   my $sth = $sbeams->get_statement_handle( $peptide_sql );
   while ( my @row = $sth->fetchrow_array() ) {
-    $peptides{$row[2]}++;
-    $bioseqs{$row[1]}++;
-    $id2name{$row[1]} = $row[0];
+    $peptides{$row[1]}++;
   }
   $params->{pabst_peptide_ids} = join( ',', keys( %peptides ) );
-  $params->{bioseq_ids} = join( ',', keys( %bioseqs ) );
-
-  my $sql = qq~
-  SELECT DISTINCT preceding_residue, PI.modified_peptide_sequence, following_residue,
-  synthesis_adjusted_score, instrument_type_name, precursor_ion_mz, 
-  precursor_ion_charge, fragment_ion_mz, fragment_ion_charge,
-  fragment_ion_label, ion_rank, relative_intensity, SSRCalc_relative_hydrophobicity, 
-  biosequence_id,
-  merged_score, PII.n_observations, source_build, PTI.is_predicted,
-    PII.max_precursor_intensity
-    FROM $TBAT_PABST_PEPTIDE PP 
-    JOIN $TBAT_PABST_BUILD PB 
-    ON PP.pabst_build_id = PB.pabst_build_id
-    JOIN $TBAT_PABST_PEPTIDE_ION PI 
-    ON PP.pabst_peptide_id = PI.pabst_peptide_id
-    JOIN $TBAT_PABST_PEPTIDE_ION_INSTANCE PII 
-    ON PI.pabst_peptide_ion_id = PII.pabst_peptide_ion_id
-    JOIN $TBAT_PABST_TRANSITION PT 
-    ON PT.pabst_peptide_ion_id = PI.pabst_peptide_ion_id 
-    JOIN $TBAT_PABST_TRANSITION_INSTANCE PTI 
-    ON PT.pabst_transition_id = PTI.pabst_transition_id 
-    JOIN $TBAT_INSTRUMENT_TYPE IT 
-    ON ( IT.instrument_type_id = PTI.source_instrument_type_id  AND
-         IT.instrument_type_id = PII.source_instrument_type_id ) 
-    JOIN $TBAT_PABST_PEPTIDE_MAPPING PM
-    ON PM.pabst_peptide_id = PP.pabst_peptide_id
-    WHERE PM.pabst_peptide_id IN ( $params->{pabst_peptide_ids} )
-    AND PM.biosequence_id IN ( $params->{bioseq_ids} )
-    AND AB.project_id in ( $params->{project_string} )
-  ~;
 
   $sbeams->collectSTDOUT();
   my $srm_resultset = {};
@@ -566,9 +528,9 @@ sub get_srm_resultset {
      query_name=>"$SBEAMS_SUBDIR/$script_name",
   );
 
-  my %url_cols;
+  my %url_cols = ( build_name => 'GetTransitions?pabst_build_id=%3V;default_search=1;peptide_sequence_constraint=%2V;apply_action=QUERY;n_highest_intensity_fragment_ions=8');
   my %max_widths;
-  my %hidden_cols;
+  my %hidden_cols = ( peptide_sequence => 1 );
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$script_name";
 
   #### Display the resultset
