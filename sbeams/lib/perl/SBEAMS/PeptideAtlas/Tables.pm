@@ -150,6 +150,8 @@ use vars qw(@ISA @EXPORT
     $TBAT_PEPTIDE_INSTANCE_ANNOTATION
     $TBAT_PROTEIN_IDENTIFICATION_ANNOTATION
 
+    $TBAT_DIA_LIBRARY
+
 );
 
 
@@ -294,6 +296,8 @@ require Exporter;
     $TBAT_PUTATIVE_PROTEIN_PEPTIDE
     $TBAT_PEPTIDE_INSTANCE_ANNOTATION
     $TBAT_PROTEIN_IDENTIFICATION_ANNOTATION
+
+    $TBAT_DIA_LIBRARY
 );
 
 
@@ -447,3 +451,5 @@ $TBAT_PUTATIVE_PEPTIDE              = "${mod}putative_peptide";
 $TBAT_PUTATIVE_PROTEIN_PEPTIDE      = "${mod}putative_protein_peptide";
 $TBAT_PEPTIDE_INSTANCE_ANNOTATION   = "${mod}peptide_instance_annotation";
 $TBAT_PROTEIN_IDENTIFICATION_ANNOTATION   = "${mod}protein_identification_annotation";
+
+$TBAT_DIA_LIBRARY                   = "${mod}dia_library";
