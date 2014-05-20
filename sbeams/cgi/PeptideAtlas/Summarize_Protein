@@ -1,0 +1,1028 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : Summarize_Peptide
+#
+# Description : Prints global summary of a given peptide
+#
+# SBEAMS is Copyright (C) 2000-2014 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+
+use strict;
+use Getopt::Long;
+use FindBin;
+use Data::Dumper;
+use POSIX qw(ceil);
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $atlas $q $current_contact_id $current_username
+             $script_name $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+##use CGI::Carp qw(fatalsToBrowser croak);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+use SBEAMS::Connection::GoogleVisualization;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+#use SBEAMS::PeptideAtlas::ConsensusSpectrum;
+use SBEAMS::PeptideAtlas::ModificationHelper;
+
+#use SBEAMS::Proteomics::Tables;
+
+
+# Global vars
+$sbeams = new SBEAMS::Connection;
+$atlas = new SBEAMS::PeptideAtlas;
+$atlas->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+my $modification_helper = new SBEAMS::PeptideAtlas::ModificationHelper();
+my $peptide_clause; 
+
+#$q = new CGI;
+
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+
+$script_name = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $script_name [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $script_name [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+my $is_html = 0;
+my $is_xml = 0;
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+my %parameters;
+main();
+exit(0);
+
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+    die "failure" unless ($current_username = $sbeams->Authenticate(
+                  allow_anonymous_access=>1 )
+                );
+
+    #### Read in the default input parameters
+    my $n_params_found = $sbeams->parse_input_parameters( q=>$q, 
+                                             parameters_ref=>\%parameters );
+
+    $is_html++ if $sbeams->output_mode() =~ /HTML/i;
+    $is_xml++ if $sbeams->output_mode() =~ /XML/i;
+
+    $atlas->display_page_header();
+    handle_request(ref_parameters=>\%parameters);
+    $atlas->display_page_footer();
+
+} # end main
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+
+  my %args = @_;
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+      || die "ref_parameters not passed";
+
+  my %parameters = %{$ref_parameters};
+
+  #### Show current user context information
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $atlas->getTabMenu(
+      parameters_ref => \%parameters,
+      program_name => $script_name,
+  );
+
+  if ( $is_html ) {
+    print '<br>';
+    print $tabMenu->asHTML() 
+  }
+
+  #### Define some generic variables
+  my ($i,$element,$key,$value,$line,$result,$sql, $protein, $acc );
+
+
+  # Get the search keyword
+  $protein = $parameters{'searchForThis'};
+
+  # Getting the last session information for a user, if it exists or setting up a new one
+  # If a new protein_name was supplied, store it
+  if ( $protein ) {
+    $sbeams->setSessionAttribute(
+      key => 'PeptideAtlas_protein',
+      value => $protein,
+    );
+
+  #### Else see if we had one stored
+  } else {
+    $protein = $sbeams->getSessionAttribute(
+      key => 'PeptideAtlas_protein',
+    );
+
+    ## Arbitrary default
+    $protein ||= 'P50750';
+
+  } 
+  $parameters{'apply_action'} = 'GO';
+
+  # At this point we have a protein sequence to query, one way or the other. 
+  $parameters{protein} ||= $protein;
+
+  # Get list of accessible projects
+  my @accessible_project_ids = $sbeams->getAccessibleProjects();
+  $parameters{project_string} = join( ",", @accessible_project_ids );
+  
+  my $form = get_form( \%parameters );
+  print $form if $is_html;
+
+  if ( $is_xml ) {
+    print $sbeams->getXMLEncodingStatement();
+    print "<ProteinSummary>\n";
+  }
+
+  if ( $is_xml ) {
+    print "\t<PeptideAtlasSummary>\n";
+  }
+#  my $physData = get_pa_list( \%parameters );
+#  print $physData;
+#  print "<br>" if $is_html; 
+
+  if ( $is_html ) {
+    print '<table>' . $atlas->encodeSectionHeader( text => "Peptide Atlas Summary" ) . '</table>';
+  }
+
+  my $pa_results = get_pa_resultset( \%parameters );
+  print $pa_results;
+
+  my $peptide_results = get_peptide_resultset( \%parameters );
+  print $peptide_results;
+
+
+  if ( $is_html ) {
+#    my $plot_html = get_abundance_plot( \%parameters );
+#    print $plot_html;
+    print "<br>" 
+  } else {
+    print "\t</PeptideAtlasSummary>\n" if $is_xml;
+  }
+  print "</PeptideSummary>\n" if ( $is_xml );
+
+  exit;
+   
+
+  if ( $is_xml ) {
+    print "\t<SRMAtlasSummary>\n";
+  } else {
+    print '<table>' . $atlas->encodeSectionHeader( text => "SRM Atlas Summary" ) . '</table>';
+  }
+  my $srm_results = get_srm_resultset( \%parameters );
+  print $srm_results;
+  print "\t</SRMAtlasSummary>\n" if ( $is_xml );
+  print "<br>" if $is_html;
+
+
+  if ( $is_xml ) {
+    print "\t<PasselSummary>\n" if ( $is_xml );
+  } else {
+    print '<table>' . $atlas->encodeSectionHeader( text => "PASSEL Summary" ) . '</table>';
+  }
+  my $passel_results = get_passel_resultset( \%parameters );
+  print $passel_results;
+  print "\t</PasselSummary>\n" if ( $is_xml );
+  print "<br>" if $is_html;
+
+  print "</PeptideSummary>\n" if ( $is_xml );
+
+}
+
+
+sub get_form {
+  my $params = shift;
+
+  my @buttons = $sbeams->getFormButtons( types => [ 'Submit', 'Reset' ] );
+  my $buttons = join( "&nbsp;", @buttons );
+
+  $params->{output_mode} ||= 'html';
+  my %selected = ( html => '', xml => '' );
+  if ( $params->{output_mode} =~ /html/i ) {
+    $selected{html} = 'selected';
+  } else {
+    $selected{xml} = 'selected';
+  }
+
+  my $form = qq~
+  <br>
+  <form name=SearchForm>
+  <b>Summary for :</b>&nbsp;
+  <input type=text size=30 maxlength=80 name=searchForThis value="$params->{protein}"></input>
+  &nbsp; <b>as: </b> <select name=output_mode>
+                      <option $selected{html} value=html> HTML </option> 
+                      <option $selected{xml} value=xml> XML </option> 
+                      </select>
+  $buttons
+  </form>
+  ~;
+
+  return $form;
+}
+
+sub get_pa_list {
+  my $params = shift;
+  my $sql = qq~
+  SELECT DISTINCT P.peptide_accession,
+                  P.peptide_sequence, 
+                  STR(P.SSRCalc_relative_hydrophobicity,4,1) AS SSRCalc,
+                  STR(P.molecular_weight,8,4) AS molecular_weight, 
+                  STR(P.peptide_isoelectric_point,3,1) AS pI 
+  FROM $TBAT_PEPTIDE P
+  WHERE peptide_sequence = '$params->{peptide}'
+  ~;
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my @items;
+  my $acc;
+  my $seq;
+  while ( my @row = $sth->fetchrow_array() ) {
+    push @items, { key => 'Peptide Accession', value => $row[0] };
+    push @items, { key => 'Peptide Sequence', value => $row[1] };
+    push @items, { key => 'Avg Molecular Weight', value => $row[3] };
+    push @items, { key => 'pI', value => $row[4] };
+    push @items, { key => 'SSRCalc', value => $row[2] };
+    $acc = $row[0];
+    $seq = $row[1];
+  }
+  my $list = $atlas->encodeFullSectionList ( header_text => "$acc ($seq) Physical Data",
+                                             header_element => "PhysicalPeptideData",
+                                             list_items => \@items 
+                                           );
+  return $list;
+}
+
+
+sub get_peptide_resultset {
+
+  my $params = shift;
+  my $bioseq_str = join( ",", keys( %{$parameters{bioseqs}} ) );
+
+  my $sql = qq~
+  SELECT  P.peptide_sequence,
+          SUM( PIN.n_observations ) AS n_observations,
+          COUNT( PIN.atlas_build_id ) AS n_builds
+  FROM $TBAT_ATLAS_BUILD AB
+  JOIN $TBAT_PEPTIDE_INSTANCE PIN
+    ON AB.atlas_build_id = PIN.atlas_build_id
+  JOIN $TBAT_PEPTIDE P
+    ON P.peptide_id = PIN.peptide_id
+  JOIN $TBAT_PEPTIDE_MAPPING PM 
+    ON PM.peptide_instance_id = PIN.peptide_instance_id
+  WHERE matched_biosequence_id IN ( $bioseq_str ) 
+  AND AB.project_id IN ( $params->{project_string} )
+  GROUP BY peptide_sequence
+  ORDER BY COUNT( PIN.atlas_build_id ) DESC, SUM( PIN.n_observations ) DESC
+  ~;
+
+  my $pa_resultset = {};
+
+  $sbeams->collectSTDOUT();
+  #### Fetch the results from the database server
+  $sbeams->fetchResultSet(
+    sql_query=>$sql,
+    resultset_ref=>$pa_resultset,
+  );
+
+  my %rs_params = ( set_name => 'PeptideAtlasPeptideSummary' );
+
+  #### Store the resultset and parameters to disk resultset cache
+  $sbeams->writeResultSet(
+     resultset_file_ref=>\$rs_params{set_name},
+     resultset_ref=>$pa_resultset,
+     query_parameters_ref=>$params,
+     resultset_params_ref=>\%rs_params,
+     query_name=>"$SBEAMS_SUBDIR/$script_name",
+  );
+
+  my %url_cols = ( peptide_sequence => 'SummarizePeptide?SearchForThis=%0V' );
+  my %max_widths;
+  my %hidden_cols = ( atlas_build_id => 1, 
+                      project_id => 1,
+                     );
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$script_name";
+
+  #### Display the resultset
+  $sbeams->displayResultSet(
+      resultset_ref=>$pa_resultset,
+      query_parameters_ref=>$params,
+      rs_params_ref=>\%rs_params,
+      url_cols_ref=>\%url_cols,
+      hidden_cols_ref=>\%hidden_cols,
+      max_widths=>\%max_widths,
+      column_titles_ref=> $pa_resultset->{column_list_ref},
+      base_url=>$base_url,
+      suppress_header => 1
+  );
+  my $resultset = $sbeams->fetchSTDOUT();
+  return $resultset;
+} # End get_pa_resultset
+
+############################
+
+sub get_pa_resultset {
+  my $params = shift;
+
+  my $sql = qq~
+  SELECT  AB.atlas_build_name, 
+          PIN.atlas_build_id,
+          SUM( PIN.n_observations ) AS n_obs,
+          COUNT( DISTINCT PIN.peptide_instance_id ) AS pep_count,
+          biosequence_id
+  FROM $TBAT_PEPTIDE_INSTANCE PIN
+  JOIN $TBAT_ATLAS_BUILD AB
+    ON (PIN.atlas_build_id = AB.atlas_build_id)
+  JOIN $TBAT_PEPTIDE_MAPPING PM 
+    ON PM.peptide_instance_id = PIN.peptide_instance_id
+  JOIN $TBAT_BIOSEQUENCE B
+    ON (B.biosequence_id = PM.matched_biosequence_id)
+  WHERE biosequence_accession = '$params->{protein}'
+  AND AB.project_id IN ( $params->{project_string} )
+  GROUP BY atlas_build_name, PIN.atlas_build_id, biosequence_id
+  ~;
+
+  my $pa_resultset = {};
+
+  $sbeams->collectSTDOUT();
+  #### Fetch the results from the database server
+  $sbeams->fetchResultSet(
+    sql_query=>$sql,
+    resultset_ref=>$pa_resultset,
+  );
+
+
+  my %rs_params = ( set_name => 'PeptideAtlasSummary' );
+
+  #### Store the resultset and parameters to disk resultset cache
+  $sbeams->writeResultSet(
+     resultset_file_ref=>\$rs_params{set_name},
+     resultset_ref=>$pa_resultset,
+     query_parameters_ref=>$params,
+     resultset_params_ref=>\%rs_params,
+     query_name=>"$SBEAMS_SUBDIR/$script_name",
+  );
+
+  my %url_cols = ( atlas_build_name => 'buildDetails?atlas_build_id=%1V',
+                   n_observations => 'GetPeptide?atlas_build_id=%2V;searchWithinThis=Peptide+Sequence&searchForThis=%5V;action=QUERY' );
+  my %max_widths;
+  my %hidden_cols = ( atlas_build_id => 1, 
+                      project_id => 1,
+                      peptide_sequence => 1 );
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$script_name";
+
+  #### Display the resultset
+  $sbeams->displayResultSet(
+      resultset_ref=>$pa_resultset,
+      query_parameters_ref=>$params,
+      rs_params_ref=>\%rs_params,
+      url_cols_ref=>\%url_cols,
+      hidden_cols_ref=>\%hidden_cols,
+      max_widths=>\%max_widths,
+      column_titles_ref=> $pa_resultset->{column_list_ref},
+      base_url=>$base_url,
+      suppress_header => 1
+  );
+  my $resultset = $sbeams->fetchSTDOUT();
+
+  my $dref = $pa_resultset->{data_ref};
+  my %bioseqs;
+  for my $row ( @{$dref} ) {
+    $bioseqs{$row->[4]}++;
+  }
+  $parameters{bioseqs} = \%bioseqs;
+
+
+  return $resultset;
+} # End get_pa_resultset
+
+
+sub get_passel_resultset {
+  my $params = shift;
+
+
+  my $sql = qq~
+  SELECT distinct  
+  SELPI.modified_peptide_sequence AS "modified_peptide_sequence",
+  SELPI.peptide_charge + '+' AS "peptide_charge",
+  SELPI.stripped_peptide_sequence AS "stripped_peptide_sequence",
+  SELPIP.protein_accession AS "protein_mapping",
+  I.instrument_name AS "instrument",
+  SELTG.q1_mz AS "targeted_q1_mz",
+  SELPI.q1_mz AS "calculated_q1_mz",
+  SELTG.fragment_ions AS "fragment_ions",
+  STR(SELTG.d_score,7,4) AS "d_score",
+  STR(SELTG.m_score,7,4) AS "m_score",
+  STR(SELPG.Tr/60,7,4) AS "best_pg_rt",
+  STR(SELTG.max_apex_intensity,7,4) AS "log10_max_apex_intensity",
+  S.sample_tag AS "sample",
+  O.organism_name AS "organism",
+  S.sample_id AS "sample_id"
+  FROM PeptideAtlas.dbo.SEL_transition_group SELTG
+  LEFT JOIN PeptideAtlas.dbo.SEL_chromatogram SELC
+        ON ( SELC.SEL_transition_group_id = SELTG.SEL_transition_group_id )
+  LEFT JOIN PeptideAtlas.dbo.SEL_peak_group SELPG
+        ON ( SELPG.SEL_chromatogram_id = SELC.SEL_chromatogram_id )
+  LEFT JOIN PeptideAtlas.dbo.SEL_peptide_ion SELPI
+        ON ( SELPI.SEL_peptide_ion_id = SELTG.SEL_peptide_ion_id )
+  LEFT JOIN PeptideAtlas.dbo.SEL_peptide_ion_protein SELPIP
+        ON ( SELPIP.SEL_peptide_ion_id = SELPI.SEL_peptide_ion_id )
+  LEFT JOIN PeptideAtlas.dbo.SEL_transition SELT
+        ON ( SELT.SEL_transition_group_id = SELTG.SEL_transition_group_id )
+  LEFT JOIN PeptideAtlas.dbo.SEL_run SELR
+        ON ( SELR.SEL_run_id = SELTG.SEL_run_id )
+  LEFT JOIN PeptideAtlas.dbo.SEl_experiment SELE
+        ON ( SELE.SEL_experiment_id = SELR.SEL_experiment_id )
+  LEFT JOIN PeptideAtlas.dbo.sample S
+        ON ( S.sample_id = SELE.sample_id )
+  LEFT JOIN sbeams.dbo.organism O
+        ON ( S.organism_id = O.organism_id )
+  LEFT JOIN Proteomics.dbo.instrument I
+        ON ( I.instrument_id = S.instrument_model_id )
+  WHERE 1 = 1
+
+  AND ( SELPI.stripped_peptide_sequence LIKE '$params->{peptide}' )
+  AND SELE.project_id in ( $params->{project_string} )
+  AND SELPI.is_decoy = 'N' 
+  AND SELE.record_status != 'D'
+  AND SELR.record_status != 'D'
+  ~;
+
+  $sbeams->collectSTDOUT();
+  my $passel_resultset = {};
+
+  #### Fetch the results from the database server
+  $sbeams->fetchResultSet(
+    sql_query=>$sql,
+    resultset_ref=>$passel_resultset,
+  );
+
+  my %rs_params = ( set_name => 'SETME' );
+
+  #### Store the resultset and parameters to disk resultset cache
+  $sbeams->writeResultSet(
+     resultset_file_ref=>\$rs_params{set_name},
+     resultset_ref=>$passel_resultset,
+     query_parameters_ref=>$params,
+     resultset_params_ref=>\%rs_params,
+     query_name=>"$SBEAMS_SUBDIR/$script_name",
+  );
+
+  my %url_cols;
+  my %max_widths;
+  my %hidden_cols;
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$script_name";
+
+  #### Display the resultset
+  $sbeams->displayResultSet(
+      resultset_ref=>$passel_resultset,
+      query_parameters_ref=>$params,
+      rs_params_ref=>\%rs_params,
+      url_cols_ref=>\%url_cols,
+      hidden_cols_ref=>\%hidden_cols,
+      max_widths=>\%max_widths,
+      column_titles_ref=> $passel_resultset->{column_list_ref},
+      base_url=>$base_url,
+      suppress_header => 1
+  );
+  my $resultset = $sbeams->fetchSTDOUT();
+  return $resultset;
+} # End get_passel_resultset
+
+
+sub get_srm_resultset {
+  my $params = shift;
+
+  my $peptide_sql = qq~
+  SELECT DISTINCT build_name, PP.pabst_peptide_id, peptide_sequence, PP.pabst_build_id
+  FROM $TBAT_PABST_BUILD PB 
+  JOIN $TBAT_PABST_PEPTIDE PP 
+    ON PB.pabst_build_id = PP.pabst_build_id
+  WHERE peptide_sequence = '$params->{peptide}'
+  AND PB.project_id IN ( $params->{project_string} )
+  ~;
+  
+  my %peptides;
+  my $sth = $sbeams->get_statement_handle( $peptide_sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    $peptides{$row[1]}++;
+  }
+  $params->{pabst_peptide_ids} = join( ',', keys( %peptides ) );
+
+  $sbeams->collectSTDOUT();
+  my $srm_resultset = {};
+
+  #### Fetch the results from the database server
+  $sbeams->fetchResultSet(
+    sql_query=>$peptide_sql,
+    resultset_ref=>$srm_resultset,
+  );
+
+  my %rs_params = ( set_name => 'SRMAtlasSummary_SETME' );
+
+  #### Store the resultset and parameters to disk resultset cache
+  $sbeams->writeResultSet(
+     resultset_file_ref=>\$rs_params{set_name},
+     resultset_ref=>$srm_resultset,
+     query_parameters_ref=>$params,
+     resultset_params_ref=>\%rs_params,
+     query_name=>"$SBEAMS_SUBDIR/$script_name",
+  );
+
+  my %url_cols = ( build_name => 'GetTransitions?pabst_build_id=%3V;default_search=1;peptide_sequence_constraint=%2V;apply_action=QUERY;n_highest_intensity_fragment_ions=8');
+  my %max_widths;
+  my %hidden_cols = ( peptide_sequence => 1 );
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$script_name";
+
+  #### Display the resultset
+  $sbeams->displayResultSet(
+      resultset_ref=>$srm_resultset,
+      query_parameters_ref=>$params,
+      rs_params_ref=>\%rs_params,
+      url_cols_ref=>\%url_cols,
+      hidden_cols_ref=>\%hidden_cols,
+      max_widths=>\%max_widths,
+      column_titles_ref=> $srm_resultset->{column_list_ref},
+      base_url=>$base_url,
+      suppress_header => 1
+  );
+  my $resultset = $sbeams->fetchSTDOUT();
+  return $resultset;
+} # End get_srm_resultset
+
+sub get_abundance_plot {
+
+  my $params = shift;
+  return '' unless $params->{peptide};
+  return '' unless $params->{project_string};
+
+  my $sql = qq~
+    SELECT  distinct 
+    PI.n_observations, AB.atlas_build_name, 
+    ( SELECT SUM (n_searched_spectra) 
+    FROM $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
+    JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id
+    WHERE ABSB.atlas_build_id = AB.atlas_build_id
+    ) AS total_searched 
+    FROM $TBAT_PEPTIDE_INSTANCE PI
+    INNER JOIN $TBAT_PEPTIDE P 
+    ON P.peptide_id = PI.peptide_id
+    INNER JOIN $TBAT_ATLAS_BUILD AB
+    ON (PI.atlas_build_id = AB.atlas_build_id)
+    WHERE peptide_sequence = '$params->{peptide}'
+    AND AB.project_id IN ( $params->{project_string} )
+    ORDER BY AB.atlas_build_name
+  ~;
+
+
+  my @build_plot;
+  while ( my $row = $sbeams->selectSeveralColumnsRow( sql => $sql ) ) {
+    my $hits_per_M = '1';
+    if ( $row->[2] ) {
+      $hits_per_M = sprintf( "%0.1f", $row->[0]/$row->[2] * 1000000);
+    }
+    $row->[1] =~ s/PeptideAtlas/PA/g;
+    push @build_plot, [ $row->[1], $row->[0], $hits_per_M ];
+
+  }
+         
+   my $header = '';
+   my $build_results = '';
+   if ( @build_plot ) {
+     my $GV = SBEAMS::Connection::GoogleVisualization->new();
+     my $chart = $GV->setDrawBarChart(  samples => \@build_plot,
+			                                 data_types => [ 'string', 'number', 'number' ],
+								                         headings => [ 'Build Name', 'Number of Observations', "Obs per Million Spectra" ],
+															    truncate_labels => 30 
+																	     );
+     $header = $GV->getHeaderInfo();
+     $build_results = "$chart\n";
+   }
+
+   return ( "$header <br>\n $build_results <br>\n " );
+  }
+
+
+
+
+__DATA__
+  my $lib_sql = qq~
+    SELECT DISTINCT preceding_residue, PI.modified_peptide_sequence, following_residue,
+    synthesis_adjusted_score, instrument_type_name, precursor_ion_mz, 
+    precursor_ion_charge, fragment_ion_mz, fragment_ion_charge,
+    fragment_ion_label, ion_rank, relative_intensity, SSRCalc_relative_hydrophobicity, 
+    $ssr_field, biosequence_id,
+    merged_score, PII.n_observations, source_build, PSP.priority, PTI.is_predicted,
+    $weight_clause, PII.max_precursor_intensity
+    FROM $TBAT_PABST_PEPTIDE PP 
+    JOIN $TBAT_PABST_PEPTIDE_ION PI 
+    ON PP.pabst_peptide_id = PI.pabst_peptide_id
+    JOIN $TBAT_PABST_PEPTIDE_ION_INSTANCE PII 
+    ON PI.pabst_peptide_ion_id = PII.pabst_peptide_ion_id
+    JOIN $TBAT_PABST_TRANSITION PT 
+    ON PT.pabst_peptide_ion_id = PI.pabst_peptide_ion_id 
+    JOIN $TBAT_PABST_TRANSITION_INSTANCE PTI 
+    ON PT.pabst_transition_id = PTI.pabst_transition_id 
+    JOIN $TBAT_INSTRUMENT_TYPE IT 
+    ON ( IT.instrument_type_id = PTI.source_instrument_type_id  AND
+         IT.instrument_type_id = PII.source_instrument_type_id ) 
+    JOIN $TBAT_PABST_SOURCE_PRIORITY PSP 
+    ON ( PSP.source_instrument_type_id = PTI.source_instrument_type_id )
+
+    JOIN $TBAT_PABST_PEPTIDE_MAPPING PM
+    ON PM.pabst_peptide_id = PP.pabst_peptide_id
+
+    $ssr_join
+    WHERE PP.pabst_peptide_id IN ( $pep_id_string ) 
+    AND PM.biosequence_id IN ( $bioseq_id_string ) 
+      $pabst_build_clause
+      $atlas_build_clause
+      $transition_source_clause
+      $target_instrument_clause
+      $ssr_clause
+      $modifications_constraint
+    ORDER BY 
+    biosequence_id,
+    PTI.is_predicted ASC,
+    SRC_WEIGHT DESC,
+    synthesis_adjusted_score DESC,
+    PI.modified_peptide_sequence,
+    PSP.priority ASC,
+    PII.max_precursor_intensity DESC,
+    PII.n_observations DESC,
+    relative_intensity DESC,
+    ion_rank ASC
+    ~;
+  
+   #### Define some variables for a query and resultset
+    my %resultset = ();
+    my $resultset_ref = \%resultset;
+    my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+    #### Read in the standard form values
+    my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+
+    my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+
+    #### Set some specific settings for this program
+    my $CATEGORY="Summarize_Peptide";
+    my $PROGRAM_FILE_NAME = $PROG_NAME;
+    my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+    my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
+
+    ###### Definfing the constants URL to build dynamic links
+    my $url= "$CGI_BASE_DIR/$SBEAMS_SUBDIR";
+    my $build_link= "/buildDetails?atlas_build_id=";
+    my $pep_link1="/GetPeptide?atlas_build_id=";
+    my $pep_link2="&searchWithinThis=Peptide+Sequence&searchForThis=";
+    my $pep_link3="&action=QUERY";
+
+
+    return unless $project_string;  # Sanity check
+
+
+    #### Build search options for textbox:
+    my $peptide_search_constraint = ( "peptide_sequence_constraint" );
+    my $textbox_option_tags = ("Peptide Sequence" );
+
+
+    #### Apply any parameter adjustment logic
+    $parameters{display_options} = 'ShowSQL';
+
+    my ($selected_atlas_build_name, $selected_key, $selected_key_search);
+
+
+    ## Display HTML FORM to select Atlas and Search constraints:
+    my $searchValue = $parameters{searchForThis};
+
+    unless ( $apply_action eq "QUERY" || $apply_action eq "GO") { ## if receive from link, don't assign null
+      $apply_action = $parameters{"query"};
+    }
+
+
+if ($sbeams->output_mode() eq 'html') {
+
+
+
+#      print $atlas->init_pa_tooltip();
+
+
+       }
+### Implicit Assignment of PEPTIDE SEQ to $parameters with the search constraint 'peptide_sequence_constraint'
+   $parameters{$peptide_search_constraint} = $peptide;
+
+
+
+#########################################################################
+#### Process all the constraints
+
+#### Build Search constraint
+    
+
+  if ($peptide=~/PAp\d+/) {
+
+    
+     
+    $peptide_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"P.peptide_accession",
+        constraint_type=>"plain_text",
+        constraint_name=>"Peptide Accession",
+        constraint_value=>$peptide
+
+      );
+    return if ($peptide_clause eq '-1'); 
+
+    }
+
+    else {
+   
+
+    $peptide_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"P.peptide_sequence",
+        constraint_type=>"plain_text",
+        constraint_name=>"Peptide Sequence",
+        constraint_value=>$peptide
+
+      );
+       $peptide_clause =~s/LIKE/=/gi;
+    return if ($peptide_clause eq '-1'); 
+
+  
+   }
+
+ 
+# Will do project checking after grabbing the peptide info
+# my $atlas_project_clause = "AND AB.project_id IN ( $project_string )";
+    
+
+
+    #### Define the SQL statement
+    $sql = qq~
+    
+     SELECT  distinct P.peptide_accession,P.peptide_sequence, P.SSRCalc_relative_hydrophobicity,
+      P.molecular_weight, P.peptide_isoelectric_point, PI.n_observations, PI.atlas_build_id,
+      AB.atlas_build_name, OZ.organism_name, 
+			( SELECT SUM (n_searched_spectra) 
+      FROM $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
+			JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id
+			WHERE ABSB.atlas_build_id = AB.atlas_build_id
+			) AS total_searched , AB.project_id
+      FROM $TBAT_PEPTIDE_INSTANCE PI
+      INNER JOIN $TBAT_PEPTIDE P
+      ON ( PI.peptide_id = P.peptide_id )
+      INNER JOIN $TBAT_ATLAS_BUILD AB
+      ON (PI.atlas_build_id = AB.atlas_build_id)
+      INNER JOIN $TBAT_BIOSEQUENCE_SET BS
+      ON (AB.biosequence_set_id = BS.biosequence_set_id)
+      INNER JOIN $TB_ORGANISM OZ
+      ON (BS.organism_id= OZ.organism_id)
+      WHERE 1 = 1
+      $peptide_clause
+      ORDER BY P.peptide_sequence, OZ.organism_name, PI.n_observations DESC,AB.atlas_build_name
+
+~;
+
+
+if ($apply_action =~ /QUERY|GO/i ) {
+
+my (@peptide_info,@builds, $dynamic_content, $vocab, @build_plot);
+
+while (my $row = $sbeams->selectSeveralColumnsRow(sql=>$sql))
+
+{
+
+
+        my ($pep_acc,$peptide_seq,$ssr_calc,$mol_wt,$pi,$n_obs,$build_id,$build_name,$org_name,$n_searched,$project_id)= @{$row};
+
+        ##Copying the value of Peptide Accession to global variable $peptide_acc
+        $peptide_acc=$pep_acc;
+        @peptide_info = ($pep_acc,$peptide_seq,$mol_wt,$pi,$ssr_calc);
+
+        next unless ( grep /^$project_id$/, @accessible_project_ids );
+
+        ####### Building the link for No of observations
+        my $peptide_url=qq~$url$pep_link1$build_id$pep_link2$peptide_seq$pep_link3~;
+        my $peptide_html_link=qq~<A HREF ="$peptide_url" target="_blank">$n_obs</A>~;
+
+
+        ##### Building the link for the Atlas Builds
+        my $build_url=qq~ $url$build_link$build_id ~;
+        my $build_html_link=qq~<A HREF="$build_url" target="_blank">$build_name</A>~;
+
+        my @temp_array=($org_name,$peptide_html_link,$build_html_link);
+
+        ##### Passing by reference to the @builds array as per the requirement of the EncodesectionTable Method
+        push (@builds, \@temp_array);
+				my $hits_per_10K = '1';
+				$log->debug( "n searched is $n_searched" );
+				if ( $n_searched ) {
+				  $hits_per_10K = sprintf( "%0.1f", $n_obs/$n_searched * 1000000);
+				}
+				$build_name =~ s/PeptideAtlas/PA/g;
+				push @build_plot, [ $build_name, $n_obs, $hits_per_10K ];
+
+} ## END WHILE LOOP
+         
+
+
+##### Display on the Page if and only if user entered a peptide which was present in the Peptideatals
+if( defined $peptide_acc) {
+   $dynamic_content=DisplayPeptide(view1=>\@peptide_info,
+                                   view2=>\@builds);
+   $vocab=$atlas->vocabHTML();
+
+   my $header = '';
+   my $build_results = '';
+   if ( @build_plot ) {
+     my $GV = SBEAMS::Connection::GoogleVisualization->new();
+     my $chart = $GV->setDrawBarChart(  samples => \@build_plot,
+			                                 data_types => [ 'string', 'number', 'number' ],
+								                         headings => [ 'Build Name', 'Number of Observations', "Obs per Million Spectra" ],
+															    truncate_labels => 30 
+																	     );
+     $header = $GV->getHeaderInfo();
+     $build_results = "$chart\n$vocab\n";
+   } else {
+     $build_results = "Although the peptide $peptide_info[1] was given a Peptide Atlas accession ($peptide_info[0]), it was not found in any builds to which you currently have access, which can happen for a couple of reasons.  First of all, some older builds have been deprecated, the peptide might have appeared in one of these (which typically had a somewhat higher false discovery rate [FDR] than more recent builds).  Secondly, the Peptide Atlas contains many 'private' builds which often contain pre-publication data.  These builds are generally made public once the results are published.";
+   }
+
+   
+   print <<"   END";
+	 $header
+	 $dynamic_content
+	 <BR>
+	 <BR>
+	 $build_results
+   END
+   
+   }
+
+
+else {       
+### if the peptide was not found in the peptide atlas.
+print "The peptide was not found. Please enter again";
+   
+}
+
+
+   } # END if loop
+  
+
+} ### END Handle Request
+
+
+
+sub DisplayPeptide {
+
+my %args =@_;
+
+##
+unless( $args{view1} && $args{view2}  ) {
+
+    $log->error( "No information passed to display" );
+    return;
+  }
+
+
+### Defining global symbols and values here
+ my ($table1, $table2 );
+my $view1 = $args{view1};
+my $view2 = $args{view2};
+
+#### $view2 now contains a reference to an array... derefrencing it.
+
+my @view2=  @{$view2};
+my ($pa,$seq,$mw,$pi,$ssr_calc) = @{$view1};
+
+###### Basic Peptide info table being created using the subroutine encodesection
+
+my $peptide_accession = $pa;
+my $peptide_sequence= $seq;
+my $SSR_Calc = sprintf("%0.2f",$ssr_calc);
+my $mol_wt= sprintf( "%0.2f", $mw);
+my $Pi = sprintf( "%0.1f", $pi );
+
+$table1 = "<BR><TABLE WIDTH=600>\n";
+$table1.=$atlas->encodeSectionHeader(
+                                        text => "$peptide_accession",
+
+                                                    bold => 1,
+                                                    width => 900
+                                            );
+
+  $table1 .= $atlas->encodeSectionItem( key   => 'Peptide Accession',
+                                          value => $peptide_accession,
+                                          key_width => '20%'
+                                         );
+  $table1.= $atlas->encodeSectionItem( key   => 'Peptide Sequence',
+                                          value => $peptide_sequence
+                                         );
+   $table1 .= $atlas->encodeSectionItem( key   => 'Avg Molecular Weight',
+                                           value => "$mol_wt"
+                                         ) if $mol_wt;
+  $table1 .= $atlas->encodeSectionItem( key   => 'pI (approx)',
+                                           value => "$Pi"
+                                         ) if $Pi;
+ $table1.= $atlas->encodeSectionItem( key   => 'SSRCalc Relative Hydrophobicity',
+                                          value => "$SSR_Calc"
+                                         );
+$table1 .= '</TABLE>';
+
+##### Printing the second table with build and no of observation information for each peptide
+
+$table2 = "<BR><TABLE WIDTH=600>";
+
+my @headings = (   'Organism Name',
+                   'No. of Observations',
+                   'Build Names in which Peptide is found',
+                );
+
+$table2 .= $atlas->encodeSectionHeader(
+      text => 'Peptide Found in these builds',
+      width => 900
+  );
+
+########### In the row argument of encodeSectionTable we need to pass referenced arrays
+$table2 .= $atlas->encodeSectionTable(rows => [ \@headings, @view2 ],
+                                        header => 1,
+                                        nowrap => [1..scalar(@headings)],
+                                        align => [ qw(left left left) ],
+                                        bg_color => '#EAEAEA',
+                                        set_download=>0);
+$table2 .= '</TABLE>';
+
+
+
+
+###### Generating a single scalar for each peptide information to be displayed
+my $peptide_info_html = $table1.$table2;
+return($peptide_info_html);
+
+ }  #### End of Display Peptide
+
+
+
+
