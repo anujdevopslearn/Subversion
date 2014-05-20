@@ -791,7 +791,7 @@ sub get_mod_filters {
     }
   }
 
-    my $mods_help = mk_help_link( title => 'Allowed Modifications', text => 'Checking options will allow peptides containing specified modification(s) in SRM list' );
+  my $mods_help = mk_help_link( title => 'Allowed Modifications', text => 'Checking options will allow peptides containing specified modification(s) in SRM list' );
 
   my $checks = qq~
     <DIV class=clear_info_box>
@@ -870,7 +870,25 @@ sub get_namespace_filters {
   return '' unless ( $opts{organism} );
 
   my $help = mk_help_link( title => "Accession Namespace", text => "Select protein accession namespace(s) in which to search. Can help limit redundancies." );
-  my $checks = "$help <TD><DIV class=clear_info_box ID=NamespaceFilters>";
+
+  my $js = qq~
+    <script type=text/javascript>
+    function chk_namespace(species_cb) {
+      if ( species_cb.id == 'neXtProt' ) {
+        if ( species_cb.checked ) {
+          document.getElementById( 'IPI' ).checked = false;
+          document.getElementById( 'SwissProt' ).checked = false;
+          document.getElementById( 'Ensembl' ).checked = false;
+        } else {
+          document.getElementById( 'SwissProt' ).checked = true;
+        }
+      } else {
+        document.getElementById( 'neXtProt' ).checked = false;
+      }
+    }
+    </script>
+  ~;
+  my $checks = "$help $js <TD><DIV class=clear_info_box ID=NamespaceFilters>";
 
   if ( $opts{organism} == 2 || $opts{organism} == 6 ) {
 
@@ -886,8 +904,13 @@ sub get_namespace_filters {
     }
     $names{SwissProt} = 'checked' unless $namespace_set;
     for my $name ( qw( SwissProt Ensembl IPI ) ) {
-      $checks .= "<INPUT TYPE=checkbox NAME=$name $names{$name}> $name </INPUT>";
+      $checks .= "<INPUT TYPE=checkbox NAME=$name $names{$name} id=$name onclick='chk_namespace(this)'> $name </INPUT>";
     }
+    if ( $opts{organism} == 2 ) {
+      my $name = 'neXtProt';
+      $checks .= "<INPUT TYPE=checkbox NAME=$name id=$name onclick='chk_namespace(this)'> $name </INPUT>";
+    }
+
   } elsif ( $opts{organism} == 3 ) {
     $checks .= '<INPUT TYPE=checkbox NAME=SGD checked disabled> SGD </INPUT>';
   } elsif ( $opts{organism} == 40 ) {
@@ -1311,6 +1334,10 @@ sub fetch_transitions {
         constraint_value=>$parameters{protein_name_constraint} );
    return if ($biosequence_name_clause eq '-1');
 
+  if ( $parameters{neXtProt} ) {
+    $biosequence_name_clause =~ s/NX_//g;
+  }
+
   my %protein_hash;
 
   # protein name field supercedes (obviates) file upload
@@ -1425,9 +1452,13 @@ sub fetch_transitions {
   # Filter-based biosequence name clause
   my $namespace_clause = '';
   my $limit_ns = 0;
+  if ( $parameters{neXtProt} ) {
+    $parameters{SwissProt}++;
+  }
   for my $ns ( qw ( SwissProt IPI Ensembl ) ) {
     $limit_ns++ if $parameters{$ns};
   }
+
 
   if ( $limit_ns ) {
     if ( !$parameters{SwissProt} ) {
@@ -2074,7 +2105,11 @@ sub fetch_transitions {
         if ( $gene =~ /^IPI/ || $gene =~ /^ENSP/ ) {
           $gene = $acc2gene{$gene} if $acc2gene{$gene};
         }
-        my $pc_protein = $acc2symbol->{$prot} || $prot; 
+        my $pc_protein = $prot;
+        if ( $acc2symbol->{$prot} && $acc2symbol->{$prot}->{symbol} ) {
+          $pc_protein = $acc2symbol->{$prot}->{symbol};
+        }
+
         my $pc_link = qq~
         <A HREF="http://www.pathwaycommons.org/pcviz/#neighborhood/$pc_protein" TARGET='_external' title='Look up protein interactions for $pc_protein at Pathway Commons' class='popup'>$pcommons_img</A>&nbsp;
         ~;
@@ -2090,13 +2125,14 @@ sub fetch_transitions {
         <A HREF="http://www.proteinatlas.org/search/$gene" TARGET='_external' title='Look up protein in the Human Protein Atlas' class='popup'>$pratlas_img</A>&nbsp;
         ~;
 
-
         my $np_link = '';
         if ( $parameters{organism} == 2 || $pabst_build_id == 146 ) {
-          $gene = 'NX_' . $gene if length( $gene ) == 6;
-          $np_link = qq~
-          <A HREF='http://www.nextprot.org/db/search#{f:"name/identifier",t:$gene}' TARGET='_external' title='Look up protein in neXtprot knowledgebase' class='popup'>$np_img</A>&nbsp;
-          ~;
+          if ( $acc2symbol->{$gene} && $acc2symbol->{$gene}->{nextprot} ) {
+            $gene = 'NX_' . $gene if length( $gene ) == 6;
+            $np_link = qq~
+            <A HREF='http://www.nextprot.org/entry/$gene' TARGET='_external' title='Look up protein in neXtProt knowledgebase' class='popup'>$np_img</A>&nbsp;
+            ~;
+          }
         }
 
 
@@ -2109,10 +2145,15 @@ sub fetch_transitions {
         $prot = "<A HREF='GetProtein?organism_name=$organism_name;protein_name=$prot;apply_action=GO&action=GO#Sequence%20Motifs' TARGET='_peptideatlas' title='Look up protein in the Peptide Atlas'>$prot</A>";
       }
 
+      my $display_prot = $prot;
+      if ( $parameters{neXtProt} ) {
+        $display_prot = 'NX_' . $prot;
+      }
+         
       if ( ( $guest && !$super_guest && $parameters{rt_type} eq 'iRT' ) || $parameters{rt_type} == $ssr_type ) {
         @rowdata = ( $prot, $links, @row[0..12] );
       } else {
-        @rowdata = ( $prot, $links, @row[0..13] );
+        @rowdata = ( $display_prot, $links, @row[0..13] );
       }
 
       if ( $has_mappings ) {
@@ -2522,17 +2563,19 @@ sub get_gene_symbols {
   my $pstr = "'" . join( "','", @{$acc} ) . "'";
   my %acc2symbol;
   my $sql = qq~
-    SELECT DISTINCT entry_accession, gene_symbol 
+    SELECT DISTINCT entry_accession, gene_symbol, nextprot_id 
     FROM $TBAT_UNIPROT_DB_ENTRY
     WHERE entry_accession IN ( $pstr )
-    AND gene_symbol IS NOT NULL
   ~;
   my $sth = $sbeams->get_statement_handle( $sql );
   while ( my @row = $sth->fetchrow_array() ) {
     my $symbol = $row[1];
     $symbol =~ s/://g;
     $symbol =~ s/;//g;
-    $acc2symbol{$row[0]} ||= $symbol;
+    my $np = $row[2];
+    $acc2symbol{$row[0]} ||= {};
+    $acc2symbol{$row[0]}->{symbol} = $symbol;
+    $acc2symbol{$row[0]}->{nextprot} = $np;
   }
   return \%acc2symbol;
 }
