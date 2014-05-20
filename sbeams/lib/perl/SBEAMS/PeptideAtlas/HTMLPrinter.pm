@@ -15,6 +15,10 @@ package SBEAMS::PeptideAtlas::HTMLPrinter;
 
 
 use strict;
+use LWP::UserAgent;
+use HTTP::Request;
+use Data::Dumper;
+
 use vars qw($sbeams $current_contact_id $current_username $q
              $current_work_group_id $current_work_group_name
              $current_project_id $current_project_name $current_user_context_id);
@@ -86,7 +90,7 @@ sub display_page_header {
   #### Obtain main SBEAMS object and use its http_header
   $sbeams = $self->getSBEAMS();
 
-  if( $sbeams->isGuestUser() || $sbeams->getCurrent_username() =~ /^reviewer/ ) {
+  if( $sbeams->isGuestUser() || $sbeams->getCurrent_username() =~ /^reviewer/i ) {
       $self->displayGuestPageHeader( @_ );
       return;
   } elsif ( $CONFIG_SETTING{PA_USER_SKIN} ) {
@@ -199,21 +203,19 @@ sub displayGuestPageHeader {
   my $js =  "<SCRIPT LANGUAGE=javascript SRC=\"/sbeams/usr/javascript/sorttable.js\"></SCRIPT>";
 
 
-  use LWP::UserAgent;
-  use HTTP::Request;
   my $ua = LWP::UserAgent->new();
   my $skinLink = $args{uri} || 'http://www.peptideatlas.org/.index.dbbrowse.php';
   my $resource = $sbeams->getSessionAttribute( key => 'PA_resource' ) || '';
   if ( $resource eq 'SRMAtlas' ) {
     $skinLink = 'http://www.srmatlas.org/.index.dbbrowse-srm.php';
+  } elsif ( $resource eq 'DIAAtlas' ) {
+    $skinLink = 'http://www.swathatlas.org/.index.dbbrowse.php';
   }
   my $response = $ua->request( HTTP::Request->new( GET => "$skinLink" ) );
   my @page = split( "\n", $response->content() );
 	if ( $args{show_doctype} ) {
     my $first = shift @page;
-		if ( $first =~ /doctype/i ) {
-			$log->debug( "Got it!" );
-		} else {
+		if ( $first !~ /doctype/i ) {
 		  unshift @page, $first;
 		}
 		unshift @page, $doctype;
