@@ -181,8 +181,15 @@ sub GetTransitions_NamespaceFilters {
     ~;
     my $sth = $sbeams->get_statement_handle( $sql );
     while ( my @row = $sth->fetchrow_array() ) {
-      if ( $row[0] == 2 || $row[0] == 6 ) {
+      if ( $row[0] == 6 ) {
         $div_text = '<INPUT TYPE=checkbox NAME=SwissProt checked> SwissProt </INPUT><INPUT TYPE=checkbox NAME=Ensembl checked> Ensembl </INPUT><INPUT TYPE=checkbox NAME=IPI checked> IPI </INPUT>';
+
+      } elsif ( $row[0] == 2 ) {
+  
+      for my $name ( qw( SwissProt Ensembl IPI neXtProt ) ) {
+        $div_text .= "<INPUT TYPE=checkbox NAME=$name $names{$name} id=$name onclick='chk_namespace(this)'> $name </INPUT>";
+      }
+
       } elsif ( $row[0] == 3 ) {
         $div_text = '<INPUT TYPE=checkbox NAME=SGD checked  disabled> SGD </INPUT>';
       } elsif ( $row[0] == 40 ) {
