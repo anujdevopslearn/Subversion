@@ -836,7 +836,6 @@ sub selectrow_arrayref {
 sub initiate_transaction {
   my $self = shift || croak("parameter self not passed");
   my %args = @_;
-  $args{no_raise_error} = 0 unless defined $args{no_raise_error};
 
   #### Get the database handle
   $dbh = $self->getDBHandle();
@@ -855,11 +854,12 @@ sub initiate_transaction {
   # Turn RaiseError off, because mssql begin_work is AFU
   $dbh->{RaiseError} = 0;
 
-  # Begin transaction
-  $dbh->begin_work();
+  # from DBI docs, appears that setting AutoCommit off is sufficient to init_transaction.
+# Begin transaction
+#  $dbh->begin_work();
 
-  # Turn RaiseError on unless asked not to
-  $dbh->{RaiseError} = 1 unless $args{no_raise_error};
+  # Turn RaiseError off only if asked to
+  $dbh->{RaiseError} = 1 if $args{reset_raise_error};
 
 }
 
