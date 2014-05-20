@@ -13,7 +13,7 @@ package SBEAMS::Connection;
 
 use strict;
 use vars qw($VERSION @EXPORT @EXPORT_OK $invocation_mode $output_mode 
-            $output_stage $table_nest_level);
+            $output_stage $table_nest_level $q);
 
 require Exporter;
 use SBEAMS::Connection::Log;
@@ -311,6 +311,28 @@ sub writeSBEAMSTempFile {
 	close TMPFIL;
 	return $abs_filename;
 }
+
+
+sub makeSBEAMSTempLink {
+  my $self = shift;
+	my %args = @_;
+
+  # If we don't have content, nothing to do
+	return undef if !$args{path};
+
+  # Generate random filename iff necessary 
+	$args{linkname} ||= $self->getRandomString( num_chars => 20 );
+
+	my $tmp_path = "$PHYSICAL_BASE_DIR/tmp/" . $args{linkname};
+
+	if ( ! -e $tmp_path ) {
+		system( "ln -s $args{path} $tmp_path");
+    print STDERR "linked $args{path} to $tmp_path!\n";
+	} else {
+    print STDERR "$tmp_path already links to $args{path}\n";
+  }
+}
+
 
 sub my_die {
   my $self = shift;
