@@ -67,10 +67,15 @@ if ( $options{min} && $options{max} && $options{width} ) {
   open SWA, $options{swaths};
   while ( my $line = <SWA> ) {
     chomp $line;
+    $line =~ s/\r//g;
+    chomp $line;
+
     my @line = split( /\s+/, $line );
     $swath_bins{$line[0]} = $line[1];
     $options{min} ||= $line[0];
-    $options{max} = $line[1];
+    $options{min} = $line[0] if $line[0] < $options{min};
+    $options{max} ||= $line[1];
+    $options{max} = $line[1] if $line[1] > $options{max};
     $options{width} ||= $line[1] - $line[0];
   }
   close SWA;
