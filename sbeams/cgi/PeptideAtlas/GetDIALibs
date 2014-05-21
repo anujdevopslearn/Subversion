@@ -549,7 +549,7 @@ sub get_subset_form_original {
           close PROTS;
           $exec .= "--protein /tmp/$pfile ";
         }
-
+        $log->info( $exec );
         my $status = system( $exec );
 #        print "<script type=text/javascript> set_status( 'Running script' ); </script>" ;
         if ( -e "/tmp/$fname"  ) {
@@ -557,6 +557,7 @@ sub get_subset_form_original {
           my $result = '';
           my $base_name = basename( $path );
           $base_name =~ s/\.csv/\.tsv/;
+          $base_name =~ s/\.txt/\.tsv/;
 #          print "<script type=text/javascript> set_status( 'File exists: /tmp/$fname' ); </script>" ;
           move( "/tmp/$fname", "$PHYSICAL_BASE_DIR/tmp/$fname" );
 
