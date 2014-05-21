@@ -399,7 +399,6 @@ sub handleRequest {
                                    );             
 						$cnt++;
 						commit_transaction() unless $commit_interval % $cnt;
-
 #					  my $sql = " UPDATE peptide_instance_sample SET n_observations = $inst_obs->{$peptide}->{$sample} WHERE peptide_instance_sample_id = $inst_recs->{$peptide}->{$sample}";
 					}
 				}
@@ -425,15 +424,12 @@ sub handleRequest {
                                    );             
 						$cnt++;
 						commit_transaction() unless $commit_interval % $cnt;
-
-
 #						my $sql = "UPDATE modified_peptide_instance_sample SET n_observations = $inst_obs->{$peptide}->{$sample} WHERE peptide_instance_sample_id = $mod_inst_recs->{$peptide}->{$sample}";
 					}
 				}
 			}
-
      # last commit, then reset to standard autocommit mode
-     commit_transaction();
+     commit_transaction() unless $cnt && $commit_interval % $cnt;
      reset_dbh();
     }
   }
@@ -793,7 +789,7 @@ sub buildAtlas {
         );
         # Commit final inserts (if any) from PAxml load.
         commit_transaction();
-        reset_dbh();
+        reset_dbh(); 
     } else {
         die("ERROR: Unable to find '$PAxmlfile' to load data from.");
     }
@@ -1708,9 +1704,9 @@ sub insert_spectra_description_set
         my @mzXMLFileNames = getSpectrumXMLFileNames( 
                              search_batch_dir_path => $search_batch_dir_path);
         print `date`;
-	    if (1) {
-	      print "Found ".scalar(@mzXMLFileNames)." spectrum XML files in $search_batch_dir_path\n";
-	    } 
+				if (1) {
+					print "Found ".scalar(@mzXMLFileNames)." spectrum XML files in $search_batch_dir_path\n";
+				} 
 
         #### read an mzXML file to get needed attributes... could make a sax content handler for this, 
         #### but only need the first dozen or so lines of file, and the mzXML files are huge...
@@ -2908,8 +2904,11 @@ sub getSpectrumXMLFileNamesFromPepXMLFile
       return @spectrumXMLFileNames;
     }
 
-    open(INFILE, "<$infile") or die "cannot open $infile for reading ($!)";
-
+    if($infile =~ /\.gz$/){
+      open(INFILE, "gunzip -c $infile|") or die "cannot open $infile for reading ($!)";
+    }else{
+      open(INFILE, "<$infile") or die "cannot open $infile for reading ($!)";
+    }
     print "getting spectrum XML filenames from $infile\n";
 
     #### Try to glean an mzML or mzXML filename from each
@@ -2922,10 +2921,14 @@ sub getSpectrumXMLFileNamesFromPepXMLFile
         {
             my $basename = $1;
             my $extension = $2;
-	    #### Attempted workaround for more crazy Qstar files
-	    if ($basename =~ /\.(\d+)\.\d$/) {
-	      next;
-	    }
+
+            if($extension eq 'gz'){
+              $extension = '.mzML.gz';
+            }
+						#### Attempted workaround for more crazy Qstar files
+						if ($basename =~ /\.(\d+)\.\d$/) {
+							next;
+						}
             $spectrumXMLFileName = "$basename$extension";
             #print "got spectrumXMLFileName $spectrumXMLFileName\n";
             push (@spectrumXMLFileNames, $spectrumXMLFileName);
