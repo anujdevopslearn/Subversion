@@ -85,6 +85,8 @@ if ( $options{proteins} ) {
   open PROT, $options{proteins};
   while ( my $line = <PROT> ) {
     chomp $line;
+    $line =~ s/\r//g;
+    chomp $line;
     my $single = '1/' . $line;
     $proteins{$single}++;
     $proteins{$line}++;
@@ -120,14 +122,14 @@ while ( my $line = <INFILE>) {
     next;
   }
   if ( $options{proteins} ) {
-    my $pfield = ( $options{format} eq 'peakview' ) ? $line[13] : $line[4];
+    my $pfield = ( $options{format} eq 'peakview' ) ? $line[13] : $line[14];
 
     my $ok = 0;
     if ( !$proteins{$pfield} ) {
-      $pfield =~ /^(\d+)\/(.*)$/;
-      my $nprot = $1;
-      my $pstr = $2;
-      next unless $nprot && $pstr;
+      $pfield =~ /^(\d*)\/*(.+)$/;
+      my $nprot = $1 || 0;
+      my $pstr = $2 || '';
+      next unless $pstr;
 
       if ( $nprot > 1 ) {
         my @prots = split( /\//, $pstr );
