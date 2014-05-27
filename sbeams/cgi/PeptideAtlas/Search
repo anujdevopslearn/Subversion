@@ -1052,6 +1052,7 @@ sub displayTable{
 							 
 							 $search_key =~ /(.*)($pattern)(.*)/i;
 							 $search_key_str = $2;
+               $search_key_str =~ s/([\[\]\(\)])/\\$1/g;
 
 							 if(length($search_key) > 80){
 								 if(length($2) > 80){
@@ -1073,18 +1074,18 @@ sub displayTable{
 							 if(length($search_key_str) > 80){
 									my $len = 80 - length($firstKey) - length($lastKey);
 									$search_key_str =~ s/^$firstKey(.{$len}).*$lastKey$/$firstKey$1...$lastKey/i;
-							 }
-							 else{
+							 }else{
 								 $search_key =~ /(.*)$search_key_str(.*)/i;
 								 #if($1 ne ''){ $str1 = qq~<font style="BACKGROUND-COLOR: FFFF99">$1</font>~;}
 								 #if($2 ne ''){ $str2 = qq~<font style="BACKGROUND-COLOR: FFFF99">$2</font>~;}
 								 if($1){ $str1 = $1;}
 								 if($2){ $str2 = $2;}
 							 }
-
-							 foreach (@searchKeys){
-								 $search_key_str =~s/$_/<font style="BACKGROUND-COLOR: CCCCCC">$_<\/font>/ig;
-							 }
+               my $patt = join("|", @searchKeys);
+							 #foreach (@searchKeys){
+               $search_key_str =~ s/\\//g;
+							 $search_key_str =~s/($patt)/<font style="BACKGROUND-COLOR: CCCCCC">$1<\/font>/ig;
+							 #}
 							 $search_key_str =~ s/(<font.+<\/font>)(.+)<font/$1<font style="BACKGROUND-COLOR: FFFF99">$2<\/font><font/g;
 							 if($n_resource_name == 1){
 									 $search_key_str = qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/$resultset_ref->{data_ref}->[0]->[$colnameidx_ref->{resource_url}]">$pre_str$str1$search_key_str$str2$aft_str</A>~;
