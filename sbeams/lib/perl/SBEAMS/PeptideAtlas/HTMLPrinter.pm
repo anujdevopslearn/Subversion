@@ -185,13 +185,13 @@ sub displayGuestPageHeader {
   my $message = $sbeams->get_page_message( q => $q );
  	$current_username ||= $sbeams->getCurrent_username();
 
+
 	my $cswitcher = '';
 	if ( -e "$PHYSICAL_BASE_DIR/lib/perl/SBEAMS/PeptideAtlas/ContextWidget.pm" ) {
 		require SBEAMS::PeptideAtlas::ContextWidget;
 		my $cwidget = SBEAMS::PeptideAtlas::ContextWidget->new();
 		$cswitcher = $cwidget->getContextSwitcher( username => $current_username,
 		                                           cookie_path => $HTML_BASE_DIR );
-
 	} else {
 		$log->debug(  "$PHYSICAL_BASE_DIR/lib/perl/SBEAMS/PeptideAtlas/ContextWidget.pm doesn't exist" ) 
 	}
@@ -220,6 +220,7 @@ sub displayGuestPageHeader {
 		}
 		unshift @page, $doctype;
 	}
+
   my $skin = '';
   my $cnt=0;
   my $init = ( $args{init_tooltip} ) ? $self->init_pa_tooltip() : '';
@@ -231,10 +232,20 @@ sub displayGuestPageHeader {
   for ( @page ) {
     $cnt++;
 
-    # This link was moved to PA source php file, which might prove harder to
-    # keep updated, but it makes this one superfluous.
-    next if ( $_ =~ /force_login=yes/ );
-    $_ =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
+    # Login link originates in Peptide/SRM/SWATH Atlas. This section triages link
+    # to work for current dev instance
+    if ( $_ =~ /force_login=yes/ ) {
+      my $url = $q->self_url();
+      my $sep = ( $url =~ /\?/ ) ? ';' : '?';
+      $url = $url . $sep . 'force_login=yes' unless $url =~ /force_login/;
+      my $site_url = $_;
+      $site_url =~ s/^(.*HREF=")[^"]+(".*$)/$1$url$2/g;
+      $skin .= $site_url;
+      next;
+    }
+#   Turned of this mechanism - was working only for Peptide Atlas, and
+#   this was printing a second login link.
+#    $_ =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
 
     $_ =~ s/(\<[^>]*body[^>]*\>)/$1$init$css_info/;
     if($loadscript){
