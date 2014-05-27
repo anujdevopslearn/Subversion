@@ -175,20 +175,28 @@ sub Authenticate {
       $log->debug( "Testing alternate authentication modes" );
 
       # Otherwise use SBEAMSentrycode if defined
-      if ( my $entrycode = $q->param('SBEAMSentrycode') ) {
+      if ( $q->param('SBEAMSentrycode') ) {
+        my $entrycode = $q->param('SBEAMSentrycode');
+        $entrycode =~ s/^\s+//;
+        $entrycode =~ s/\s+$//;
+
         $log->info( "Using entry code" );
-	$current_username=$DBCONFIG->{$DBINSTANCE}->{ENTRYCODE}->{$entrycode};
-	if ( $current_username ) {
-	  $http_header = $self->createAuthHeader(
+        $current_username = $DBCONFIG->{$DBINSTANCE}->{ENTRYCODE}->{$entrycode};
+        if ( $current_username ) {
+          $http_header = $self->createAuthHeader(
             username => $current_username,
             session_cookie => $session_cookie,
-	  );
+          );
         } else {
+          print $self->get_http_header();
+          $self->printAuthErrors( ["Invalid or expired entrycode used, please check and try again"] );
           $log->warn( "Entry code was specified but not in config file" );
+          $log->info( "Entry code was specified but not in config file" );
+          exit;
         }
 
       # Allow anonymous access?
-      } elsif ( $allow_anonymous_access ) {
+      } elsif ( !$current_username && $allow_anonymous_access ) {
         $log->info( "allowing guest authentication" );
         $current_username = 'guest';
         $current_contact_id = $self->getContact_id($current_username);
