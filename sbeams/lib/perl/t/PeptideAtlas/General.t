@@ -3,11 +3,12 @@
 #$Id:  $
 
 use DBI;
-use Test::More tests => 30;
+use Test::More tests => 35;
 use Test::Harness;
 use strict;
 use FindBin qw ( $Bin );
-use lib( "$Bin/../.." );
+#use lib( "/net/dblocal/www/html/devTF/sbeams/lib/perl/" );
+use lib ( "$Bin/../.." );
 
 # Globals
 my $sbeams;
@@ -50,6 +51,11 @@ ok( test_charge_matrix(), 'Test Charge Matrix' );
 ok( test_spectrum_comparator(), 'Test Spectrum comparator' );
 ok( test_antigenic_predictor(), 'Test Antigenic Predictor' );
 ok( test_uniprot_vars(), 'Test Uniprot Vars' );
+ok( test_fetch_build_explicit(), 'Test Explicit build fetch' );
+ok( test_fetch_build_organism(), 'Test build fetch with organism_name' );
+ok( test_fetch_build_organism_id(), 'Test build fetch with organism_id' );
+ok( test_fetch_build_specialized_build(), 'Test build fetch with specialized_build' );
+ok( test_fetch_build_organism_and_specialized_build(), 'Test build fetch with organism_name and specialized build' );
 
 sub test_bad_peptide {
 # A very bad peptide, should hit the following penalties!
@@ -269,13 +275,12 @@ sub authenticate {
 
 
 sub test_uniprot_vars {
-  my $sequence = 'MVGSLNCIVAVSQNMGIGKNGDLPWPPLRNEFRYFQRMTTTSSVEGKQNLVIMGKKTWFSIPEKNRPLKG
-RINLVLSRELKEPPQGAHFLSRSLDDALKLTEQPELANKVDMVWIVGGSSVYKEAMNHPGHLKLFVTRIM
-QDFESDTFFPEIDLEKYKLLPEYPGVLSDVQEEKGIKYKFEVYEKND';
+  my $sequence = 'MKFFVFALILALMLSMTGADSHAKRHHGYKRKFHEKHHSHRGYRSNYLYDN';
   my $html_seq = $atlas->get_html_seq_vars( seq => $sequence,
-                                          accession => 'P00374' );
+                                          accession => 'P15516' );
                                           
   my $var_list = $html_seq->{variant_list};
+  use Data::Dumper;
 
   return $var_list;
 }
@@ -567,9 +572,39 @@ sub test_ECS_calculator {
 }
 
 
+sub test_fetch_build_explicit {
+  my $test_id = 393;
+  my $id = $atlas->getCurrentAtlasBuildID( parameters_ref => { atlas_build_id => $test_id } );
+  return ( $id && $id eq 393 ) ? 1 : 0;
+}
+sub test_fetch_build_organism {
+  my $test_id = 'Human';
+  my $id = $atlas->getCurrentAtlasBuildID( parameters_ref => { organism_name => $test_id } );
+  return ( $id && $id eq 393 ) ? 1 : 0;
+}
+sub test_fetch_build_organism_id {
+  my $test_id = 2;
+  my $id = $atlas->getCurrentAtlasBuildID( parameters_ref => { organism_id => $test_id } );
+  return ( $id && $id eq 393 ) ? 1 : 0;
+}
+sub test_fetch_build_specialized_build {
+  my $test_id = 'Human Liver';
+  my $id = $atlas->getCurrentAtlasBuildID( parameters_ref => { organism_specialized_build => $test_id } );
+  return ( $id && $id eq 395 ) ? 1 : 0;
+}
+sub test_fetch_build_organism_and_specialized_build {
+  my $test_build = 'Human Liver';
+  my $test_name = 'Human';
+  my $id = $atlas->getCurrentAtlasBuildID( parameters_ref => { organism_specialized_build => $test_build, 
+                                                               organism_name => $test_name    } );
+  return ( $id && $id eq 395 ) ? 1 : 0;
+}
+
+
 sub breakdown {
  # Put clean-up code here
 }
 END {
   breakdown();
 } # End END
+
