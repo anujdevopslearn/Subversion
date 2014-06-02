@@ -202,6 +202,7 @@ sub prntVar
 ###  - Was one supplied as a parameter?
 ###  - Was an atlas build name supplied?
 ###  - Was an organism ID or name supplied?
+###  - Was an organism specialized build supplied?
 ###  - Is there a "current" atlas_build_id stored as a session cookie?
 ###  - Is there a "current" organism stored as a session cookie?
 ### Check to see whether user can access selected build.
@@ -373,6 +374,10 @@ sub getCurrentAtlasBuildID {
     my $organism_specialized_build_clause = 
       "  AND organism_specialized_build IS NULL\n";
 
+    if ( $parameters{organism_specialized_build} ) {
+      $organism_specialized_build_clause = "  AND organism_specialized_build = '$parameters{organism_specialized_build}'\n";
+    }
+
     my $sql = qq~
       SELECT atlas_build_id
 	FROM $TBAT_DEFAULT_ATLAS_BUILD
@@ -397,12 +402,42 @@ sub getCurrentAtlasBuildID {
       $this_atlas_build_id = $rows[0];
     }
 
+#
+#
+  #### Possible to use specialized build without organism #CMA
+  } elsif ( $parameters{organism_specialized_build} ) {
+  
+    my $organism_specialized_build_clause = "  AND organism_specialized_build = '$parameters{organism_specialized_build}'\n";
+
+    my $sql = qq~
+    SELECT atlas_build_id
+	  FROM $TBAT_DEFAULT_ATLAS_BUILD
+    WHERE 1=1
+	  $organism_specialized_build_clause
+    AND record_status != 'D'
+    ~;
+    my @rows = $sbeams->selectOneColumn($sql);
+
+    #### Check that we got exactly one result or squawk
+    if (scalar(@rows) == 0) {
+      print "ERROR[$METHOD_NAME]: No non-specialized default atlas builds found for organism ID ".
+	"'$organism_id'<BR>\n";
+      return(-1);
+    } elsif (scalar(@rows) > 1) {
+      print "ERROR[$METHOD_NAME]: Multiple non-specialized default atlas builds found for organism ID ".
+	"'$organism_id'<BR>\n";
+      return(-1);
+
+    } else {
+      $this_atlas_build_id = $rows[0];
+    }
+  }
+
   #### Otherwise try to get it from the session cookie
-  } else {
+  if ( !$this_atlas_build_id ) { 
     $this_atlas_build_id = $sbeams->getSessionAttribute(
       key => $build_key,
     );
-
   }
 
   #### If we still don't have an atlas_build_id, guess!
