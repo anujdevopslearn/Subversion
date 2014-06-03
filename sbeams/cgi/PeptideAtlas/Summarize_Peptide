@@ -93,6 +93,7 @@ if ($DEBUG) {
 
 my $is_html = 0;
 my $is_xml = 0;
+my %global_rs_params;
 
 ###############################################################################
 # Set Global Variables and execute main()
@@ -118,6 +119,8 @@ sub main {
     my %parameters;
     my $n_params_found = $sbeams->parse_input_parameters( q=>$q, 
                                              parameters_ref=>\%parameters );
+
+    %global_rs_params =  $sbeams->parseResultSetParams( q => $q );
 
     $is_html++ if $sbeams->output_mode() =~ /HTML/i;
     $is_xml++ if $sbeams->output_mode() =~ /XML/i;
@@ -359,7 +362,11 @@ sub get_pa_resultset {
     resultset_ref=>$pa_resultset,
   );
 
-  my %rs_params = ( set_name => 'PeptideAtlasSummary' );
+  my $name_base = 'PeptideAtlasSummary';
+  my %rs_params = ( set_name => $name_base . '_' . 'SETME' );
+  if ( $global_rs_params{set_name} =~ /$name_base/ ) {
+    %rs_params = %global_rs_params;
+  }
 
   #### Store the resultset and parameters to disk resultset cache
   $sbeams->writeResultSet(
@@ -456,7 +463,11 @@ sub get_passel_resultset {
     resultset_ref=>$passel_resultset,
   );
 
-  my %rs_params = ( set_name => 'SETME' );
+  my $name_base = 'PasselResultset';
+  my %rs_params = ( set_name => $name_base . '_' . 'SETME' );
+  if ( $global_rs_params{set_name} =~ /$name_base/ ) {
+    %rs_params = %global_rs_params;
+  }
 
   #### Store the resultset and parameters to disk resultset cache
   $sbeams->writeResultSet(
@@ -517,7 +528,11 @@ sub get_srm_resultset {
     resultset_ref=>$srm_resultset,
   );
 
-  my %rs_params = ( set_name => 'SRMAtlasSummary_SETME' );
+  my $name_base = 'SRMAtlasSummary';
+  my %rs_params = ( set_name => $name_base . '_' . 'SETME' );
+  if ( $global_rs_params{set_name} =~ /$name_base/ ) {
+    %rs_params = %global_rs_params;
+  }
 
   #### Store the resultset and parameters to disk resultset cache
   $sbeams->writeResultSet(
