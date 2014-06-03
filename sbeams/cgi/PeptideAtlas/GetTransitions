@@ -1268,7 +1268,7 @@ sub fetch_transitions {
 
   # FIXME, we should handle this more robustly
 	if ( $transition_source_clause && $transition_source_clause !~ /7/  ) {
-#		$transition_source_clause .= "\nAND PTI.is_predicted = 'N'";
+		$transition_source_clause .= "\nAND PII.n_observations > 0";
 	}
 
   my $target_instrument_clause = "AND PSP.target_instrument_type_id = $parameters{target_instrument}";
