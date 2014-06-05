@@ -588,18 +588,25 @@ sub get_abundance_plot {
     ORDER BY AB.atlas_build_name
   ~;
 
-
   my @build_plot;
+  my @obs_per_million_build_plot;
   while ( my $row = $sbeams->selectSeveralColumnsRow( sql => $sql ) ) {
     my $hits_per_M = '1';
     if ( $row->[2] ) {
       $hits_per_M = sprintf( "%0.1f", $row->[0]/$row->[2] * 1000000);
     }
     $row->[1] =~ s/PeptideAtlas/PA/g;
-    push @build_plot, [ $row->[1], $row->[0], $hits_per_M ];
-
+    push @build_plot, [ $row->[1], $row->[0] ];
+    push @obs_per_million_build_plot, [ $row->[1], $hits_per_M ];
   }
          
+  my ($sheader, $sHTML) = $atlas->getSamplePlotDisplay( n_obs => \@build_plot,
+                                                  obs_per_million => \@obs_per_million_build_plot,
+                                                           );
+  
+    ;
+   return ( "<table>$sheader <br>\n $sHTML</table> <br>\n " );
+
    my $header = '';
    my $build_results = '';
    if ( @build_plot ) {
