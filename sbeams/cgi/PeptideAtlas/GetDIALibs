@@ -18,7 +18,7 @@ use strict;
 use lib qw (../../lib/perl);
 use Data::Dumper;
 use File::Basename;
-use File::Copy qw( move);
+use File::Copy qw( move copy );
 
 use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
@@ -112,18 +112,58 @@ my $tabMenu;
 
 sub get_help_links {
 
-  my %title2text = ( 'Library' => "Source library file to customize",
-                     'min_mz' => "Minimum m/z value for ion library entries ",
-                     'max_mz' => "Maximum m/z value for ion library entries ",
-                     'swaths_file' => "File of SWATH bins, format is lower mz bound <tab> upper bound mz <newline> ",
+  my %title2text = ( 'Library' => "Source library file to customize. <br><br> <sup>&dagger;</sup> Note that libraries that have already had SWATHS applied can only be filtered by protein list",
+                     'min_num_frags' => "Minimum number of fragment ions to include an assay. <br><br>Must be less than or equal to Max num fragments ",
+                     'max_num_frags' => "Maximum number of fragment ions to use in an assay for a specific precursor. <br><br> Must be greater than or equal to Min num fragments ",
+                     'basename' => "Base name for exported library files (optional). Default is library name. ",
+                     'prec_min_mz' => "Minimum precursor ion m/z value for library entries ",
+                     'prec_max_mz' => "Maximum precursor ion m/z value for library entries ",
+                     'frag_min_mz' => "Minimum fragment ion m/z value for library entries ",
+                     'frag_max_mz' => "Maximum fragment ion m/z value for library entries ",
+                     'swaths_file' => "File of SWATH bins, format is lower mz bound 'tab' upper bound mz 'newline' ",
                      'swath_size' => "Size of each SWATH bin, default is 25 Th ",
-                     'Proteins' => "File of protein accessions, one per line, with which to filter library. One accession space per organism allowed: Human - Uniprot, Mtb - Tuberculist (Rv)" );
+                     'swath_overlap' => "Overlap between adjacent SWATH bins, on each side - so 1 Th will result in 2 Th overlap ",
+                     'Proteins' => "File of protein accessions, one per line, with which to filter library. One accession space per organism allowed: Human - Uniprot, Mtb - Tuberculist (Rv)",
+                     'domain_protein_list_id' => "Set of protein accessions from one of the Human Proteome Project Biology/Disease lists <br> Note that this will only work with Human libraries" );
   my %title2link;
   for my $title ( keys( %title2text ) ) {
     my $text = $title2text{$title};
     $title2link{$title} = qq~<TD BGCOLOR=E0E0E0><span title='$text' class=popup><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' BORDER=0 ONCLICK="popitup('$CGI_BASE_DIR/help_popup.cgi?title=$title;text=$text;email_link=no');"></SPAN></TD>~;
   }
   return \%title2link;
+}
+
+sub get_protein_list_selector {
+
+  my $sql =<<"  END";
+  SELECT title, protein_list_id
+  FROM $TBAT_DOMAIN_PROTEIN_LIST DPL
+  JOIN $TB_CONTACT C ON DPL.owner_contact_id = C.contact_id
+  WHERE project_id IN ( $project_ids )
+  ORDER BY title
+  END
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+
+  my $select;
+
+  while( my @row = $sth->fetchrow_array() ) {
+    my $selected = ( $row[1] == $params->{domain_protein_list_id} ) ? 'selected' : '';
+    my $title = $row[0];
+    $title =~ s/known to be associated with human/associated with/g;
+    my $option = "<option value=$row[1] $selected>$title </option>\n";
+    $select .= $option;
+  }
+  $select .= "</select>\n";
+  my $blank = ( $select =~ /selected/ ) ? '' : '<option selected value="">&nbsp;</option>';
+
+  $select = qq~
+  <select name=domain_protein_list_id id=domain_protein_list_id>
+  $blank
+  $select
+  ~;
+
+  return $select;
 }
 
 sub get_table_help {
@@ -233,83 +273,6 @@ sub get_table_help {
 } # end get_table_help
 
 
-# General list information
-sub get_list_overview {
-
-  my $build_id = shift;
-  
-  # Get a list of accessible project_ids
-  my @project_ids = $sbeams->getAccessibleProjects();
-  my $project_ids = join( ",", @project_ids ) || '0';
-
-  my $info = $sbeams->selectrow_hashref( <<"  BUILD" );
-  SELECT title, description, n_proteins, original_file, protein_list_id,
-         contributors, url, image_path, abstract, image_caption
-  FROM $TBAT_DOMAIN_PROTEIN_LIST 
-  WHERE protein_list_id = $params->{protein_list_id}
-  AND record_status <> 'D'
-  AND project_id IN ( $project_ids );
-  BUILD
-
-
-  my $table = "<TABLE WIDTH=800>\n";
-
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'build_overview',
-                                                  visible => 1,
-                                                  tooltip => 'Show/Hide Section',
-                                                  imglink => 1,
-                                                  sticky  => 1 );
-
-  $table .= $atlas->encodeSectionHeader(
-      text => ' Protein List Overview',
-      span => 4,
-      link => $link
-  );
-  for my $key ( keys( %{$info} ) ) {
-    $info->{lc($key)} = $info->{$key};
-  }
-
-  my $file_url = "$CGI_BASE_DIR/PeptideAtlas/ManageTable.cgi/$info->{original_file}?TABLE_NAME=AT_Domain_Protein_list;ForceDownload=1;protein_list_id=" . $info->{protein_list_id} . ";GetFile=original_file";
-  my $file_link = "<a href='$file_url'>$info->{original_file}</a>";
-
-  my $spc = $sbeams->getGifSpacer(500);
-  my $tab = $sbeams->getGifSpacer(25);
-
-  my $img = '';
-  my $caption = '';
-  if ( $info->{image_path} ) {
-    my @path = split( /\//, $info->{image_path});
-    my $web_path = "/devDC/sbeams/images/$path[$#path]";
-    $img = "$tab<img src=$web_path height=80 width=80></img>\n";
-    $caption = $info->{image_caption} || '';
-  }
-
-  my $abstract = '';
-  if ( $info->{abstract} ) {
-    $abstract = $info->{abstract};
-    $abstract =~ s/\r//;
-    $abstract =~ s/\n/<br>/g;
-  }
-
-
-  $table .= $atlas->encodeSectionItem( key   => 'List Name', tr_info => $tr,
-                            value => $info->{title} . $spc, vspan => 3 ) . "\n";
-  $table .= $atlas->encodeSectionItem( key   => 'Contributors', tr_info => $tr,
-                            value => $info->{contributors}, vspan => 3 ) . "\n";
-  $table .= $atlas->encodeSectionItem( key   => 'Description', tr_info => $tr,
-                            value => $info->{description}, vspan => 3 ) . "\n";
-  $table .= $atlas->encodeSectionItem( key   => 'Number of Proteins', tr_info => $tr,
-                            value => $info->{n_proteins}, vspan => 3 ) . "\n";
-  $table .= $atlas->encodeSectionItem( key   => 'Original File', tr_info => $tr,
-                            value => $file_link, vspan => 3 ) . "\n";
-
-  $table .= "<tr><td>$img</td><td>$caption</td></tr>";
-  $table .= "<tr><td colspan=2>$abstract</td></tr>";
-  $table .= "</TAB/net/dblocal/wwwspecial/mrmatlas/mtb/Mtb_SRM_Atlas_SWATH_Orbitrap.tsvLE>\n";
-  return $table;
-
-}
-
 sub get_library_table {
 
   my $build_id = shift;
@@ -341,9 +304,11 @@ sub get_library_table {
 # 8 file_format
   my $sth = $sbeams->get_statement_handle( $sql );
   my %libraries; 
+  my %tag2comment;
   while( my @row = $sth->fetchrow_array() ) {
     $libraries{$row[2]} ||= [];
     push @{$libraries{$row[2]}}, \@row;
+    $tag2comment{$row[2]} = $row[5];
   }
   my $content = $help;
 
@@ -399,7 +364,7 @@ sub get_library_table {
 #    die Dumper( $lib_table );
     $content .= qq~
     <br>
-     <span style="font-family:Helvetica, Arial, sans-serif;font-size:110%;font-weight:bold" id=heading> $lib </span>
+     <span style="font-family:Helvetica, Arial, sans-serif;font-size:110%;font-weight:bold" id=heading> $tag2comment{$lib} </span>
      <table><table>$lib_table
     <br>
     ~;
@@ -485,9 +450,13 @@ sub get_subset_form_original {
   print $title;
   print "$tabMenu <br>\n";
 
+  # Needed this sooner
+  my $swath_overlap = $params->{swath_overlap} || 0;
+
   my $custom_link = '';
+  my $wait = "<img src='$HTML_BASE_DIR/images/wait_sm.gif'></img>";
   if ( $custom ) {
-    $custom_link = "<div id='status' class=info_box width: 400px > Generating library, this may take a minute <img src='$HTML_BASE_DIR/images/wait_sm.gif'></img></div><br><br>\n";
+    $custom_link = "<div id='status' class=info_box width: 400px >$wait Generating library, this may take a minute </img></div><br><br>\n";
     print $custom_link;
     print qq~ 
       <script type='text/javascript'> 
@@ -495,6 +464,12 @@ sub get_subset_form_original {
         var status = document.getElementById( 'status' );
         status.innerHTML = new_status;
         return false;
+      }
+      function update_status ( new_status ) {
+        var status = document.getElementById( 'status' );
+        var curr_status = status.innerHTML;
+        status.innerHTML = curr_status + new_status;
+//        return false;
       }
       </script>
     ~;
@@ -518,7 +493,7 @@ sub get_subset_form_original {
         last;
       }
       if ( !$path || ! -e $path ) {
-        print "<script type=text/javascript> set_status( 'Missing library path' ); </script>" ;
+        print "<script type=text/javascript> set_status( 'Missing library path. If you have an access code please enter it at the bottom of <a href=http://www.swathatlas.org>this page</a>' ); </script>" ;
       } else {
         my $fname = $sbeams->getRandomString( num_chars => 20 );
 
@@ -534,39 +509,79 @@ sub get_subset_form_original {
           close SWATHS;
           $exec .= "--swath /tmp/$sfile ";
         } else {
-          $exec .= "--min $params->{min_mz} --max $params->{max_mz} --width $params->{swath_size} ";
+          $exec .= "--prec_min $params->{prec_min_mz} --prec_max $params->{prec_max_mz} --width $params->{swath_size} --overlap $swath_overlap --print_swaths ";
         }
 
+        $exec .= " --frag_min $params->{frag_min_mz} --frag_max $params->{frag_max_mz} ";
 
-
+        my $pfile = $sbeams->getRandomString( num_chars => 20 );
         if ( $params->{protein_file} ) {
           my $file_name = $q->param( 'protein_file' );
-          my $pfile = $sbeams->getRandomString( num_chars => 20 );
           open PROTS, ">/tmp/$pfile";
           while ( my $line = <$file_name> ) {
             print PROTS $line;
           }
           close PROTS;
           $exec .= "--protein /tmp/$pfile ";
+        } elsif ( $params->{domain_protein_list_id} ) {
+
+          my $sql = qq~;
+          SELECT DISTINCT uniprot_accession 
+          FROM $TBAT_DOMAIN_PROTEIN_LIST DPL
+          JOIN $TBAT_DOMAIN_LIST_PROTEIN DLP
+            ON DPL.protein_list_id = DLP.protein_list_id
+          WHERE DLP.protein_list_id = $params->{domain_protein_list_id} 
+            AND project_id IN ( $project_ids )
+          ~;
+          my $sth = $sbeams->get_statement_handle( $sql );
+          open PROTS, ">/tmp/$pfile";
+          while( my @row = $sth->fetchrow_array() ) {
+            print PROTS "$row[0]\n";
+          }
+          $exec .= "--protein /tmp/$pfile ";
+          close PROTS;
+#        } else {
+#          die Dumper( $params );
         }
         $log->info( $exec );
-        my $status = system( $exec );
-#        print "<script type=text/javascript> set_status( 'Running script' ); </script>" ;
+#        print "<script type=text/javascript> update_status( '<br>$exec' ); </script>" ;
+        my @status = `$exec`;
+        my $status = join( ' ', @status );
+        $status =~ s/\n/\<br\>/gm;
+        print "<script type=text/javascript> set_status( 'Finished. <br><br>$status' ); </script>" ;
+
         if ( -e "/tmp/$fname"  ) {
 
           my $result = '';
           my $base_name = basename( $path );
-          $base_name =~ s/\.csv/\.tsv/;
-          $base_name =~ s/\.txt/\.tsv/;
-#          print "<script type=text/javascript> set_status( 'File exists: /tmp/$fname' ); </script>" ;
+          if ( $params->{basename} ) {
+            if ( $params->{basename} =~ /.*(\....)$/ ) {
+              $base_name = $params->{basename};
+            } else {
+              my $suffix = ( $base_name =~ /\.txt$/ ) ? '.txt' :
+                           ( $base_name =~ /\.csv$/ ) ?'.csv' : '.tsv';
+              $base_name = $params->{basename} . $suffix;
+            }
+            
+          }
+
+
+
+#          $base_name =~ s/\.csv/\.tsv/;
+#          $base_name =~ s/\.txt/\.tsv/;
           move( "/tmp/$fname", "$PHYSICAL_BASE_DIR/tmp/$fname" );
+          if ( -e "/tmp/$fname.swaths" ) {
+            move( "/tmp/$fname.swaths", "$PHYSICAL_BASE_DIR/tmp/" );
+            my $swath_file_link = qq~ Download generated <a href=$CGI_BASE_DIR/downloadFile.cgi?name=swath_windows.txt;format=tsv;tmp_file=$fname.swaths>SWATH window file</a>.~;
+            print "<script type=text/javascript> update_status( '<br>$swath_file_link' ); </script>" ;
+          }
 
           if ( -e "$PHYSICAL_BASE_DIR/tmp/$fname" ) {
             $result = qq~ Customized library is ready for download via this <a href=$CGI_BASE_DIR/downloadFile.cgi?name=$base_name;format=tsv;tmp_file=$fname>link</a>~;
           } else {
             $result = "Library customization failed";
           }
-          print "<script type=text/javascript> set_status( '$result' ); </script>" ;
+          print "<script type=text/javascript> update_status( '<br>$result' ); </script>" ;
 
         }
 
@@ -589,10 +604,11 @@ sub get_subset_form_original {
   my %orgs;
   my %inst;
   my $sql = qq~
-  SELECT dia_library_id, dia_library_name, file_path, file_format
+  SELECT dia_library_id, dia_library_name, file_path, file_format, is_master
   FROM $TBAT_DIA_LIBRARY DIL 
   WHERE project_id IN ( $project_ids )
   AND file_format IN ('peakview', 'openswath', 'mprophet' )
+--  AND is_master = 'Y'
   ORDER BY dia_library_name 
   ~;
 # 0 dia_library_id
@@ -608,9 +624,7 @@ sub get_subset_form_original {
     my $selected = '';
     if ( $row[0] == $params->{lib_id} ) {
       $selected = 'selected';
-      $log->debug( "current lib $row[0] matches $params->{lib_id}" );
     }
-    $log->debug( "current lib $row[0] doesn't match $params->{lib_id}" );
     $lib_select .= "<option value=$row[0] $selected > $row[1] </option>\n";
   }
   $lib_select .= "</select>\n";
@@ -628,37 +642,23 @@ sub get_subset_form_original {
   ORDER BY title
   END
 
-  my $list_select = "<select name=protein_list_id>\n";
-  my $sth = $sbeams->get_statement_handle( $sql );
-  while( my @row = $sth->fetchrow_array() ) {
-    $list_select .= "<option value=$row[3]>$row[0] - Dr. $row[1] $row[2]</option>\n";
-  }
-  $list_select .= "</select>\n";
-
-  $log->info( $list_select );
-
-  my $radio = qq~
-  Upload protein list <input type=radio name=input_type id=input_type value=upload_list checked> &nbsp;&nbsp;
-  HPP B/D list <input type=radio name=input_type id=input_type value=bd_list>
-  ~;
-
-  my $upload = "<input type=file name=upload_list></input>";
-
-#  <tr><td><div style="inactive_text"> HPP B/D list: </div></td><td> $list_select  </td></tr>
-#  <tr><td colspan=2><b><i> $radio </i></b></td></tr>
-#  <tr><td><div style="bold_italic_text"> Upload File: </div></td><td> $upload  </td></tr>
-
-#  <tr><td><b><i> Organism:</i></b></td><td>$org_select  </td></tr>
-#  <tr><td><b><i> Instrument:</i></b></td><td>$inst_select  </td></tr>
-#  <tr><td><b><i> Protein List: </i></b> </div></td><td> <input type=text size=25></input>  </td></tr>
-#  <tr><td><b><i> Upload File: </i></b> </div></td><td> $upload  </td></tr>
   my $title2help = get_help_links();
   my $or = '~or~';
 
-  my $min_mz = $params->{min_mz} || 400;
-  my $max_mz = $params->{max_mz} || 1600;
+  my $prec_min_mz = $params->{prec_min_mz} || 400;
+  my $prec_max_mz = $params->{prec_max_mz} || 1200;
+  my $frag_min_mz = $params->{frag_min_mz} || 350;
+  my $frag_max_mz = $params->{frag_max_mz} || 1600;
   my $swath_size = $params->{swath_size} || 25;
-  my $n_bins = 48;
+
+  my $range = $prec_max_mz - $prec_min_mz;
+  my $n_bins = int( $range/$swath_size );
+  $n_bins++ if $range/$swath_size > $n_bins;
+  my $min_num_frags = $params->{min_num_frags} || 6;
+  my $max_num_frags = $params->{max_num_frags} || 6;
+
+  my $domain_protein_list_select = get_protein_list_selector();
+  my $spacer = '&nbsp;' x 30;
 
   my $form = qq~
   $help
@@ -670,21 +670,24 @@ sub get_subset_form_original {
     return false;
   }
   function specify_swath ( mode ) {
-    var min_mz = document.getElementById( 'min_mz' );
-    var max_mz = document.getElementById( 'max_mz' );
+    var prec_min_mz = document.getElementById( 'prec_min_mz' );
+    var prec_max_mz = document.getElementById( 'prec_max_mz' );
     var swath_size = document.getElementById( 'swath_size' );
+    var swath_overlap = document.getElementById( 'swath_size' );
     var swath_cnt = document.getElementById( 'swath_cnt' );
     if ( mode == 'file' ) {
-      min_mz.value = '';
-      max_mz.value = '';
+      prec_min_mz.value = '';
+      prec_max_mz.value = '';
       swath_size.value = '';
+      swath_overlap.value = '';
       swath_cnt.innerHTML = '';
     } else {
       var swaths_file = document.getElementById( 'swaths_file' );
       swaths_file.value = '';
-      var min_val = min_mz.value;
-      var max_val = max_mz.value;
+      var min_val = prec_min_mz.value;
+      var max_val = prec_max_mz.value;
       var swath_size_val = swath_size.value
+      var swath_overlap_val = swath_overlap.value
 
       if ( min_val && max_val && swath_size_val ) {
         var range = max_val - min_val;
@@ -705,20 +708,39 @@ sub get_subset_form_original {
    .cellblock_top { border-top:1px solid; border-color:black; border-left:1px solid; border-right:1px solid}
    .cellblock_bottom { border-bottom:thin solid; border-color:black; border-left:thin solid; border-right:thin solid}
    .cellblock { border-color:black; border-left:thin solid; border-right:thin solid}
+   .cellblock_complete { border-color:black; border-left:thin solid; border-right:thin solid; border-top: thin solid; border-bottom:thin solid }
   </style>
 
   <table style="border-collapse: collapse">
-  <form method=post id=list_selector onSubmit="return check_form()" enctype="multipart/form-data">
+  <form method=post id=cusomize onSubmit="return check_form()" enctype="multipart/form-data">
   <input type=hidden name=mode value=customize_library />
-  <tr>
-    <td align=right><b><i> Library:</i></b></td>
+  <tr class=cellblock_top>
+    <td align=right><b><i> Input library<sup>&dagger;</sup>:</i></b></td>
     $title2help->{Library}
     <td>$lib_select</td>
   </tr>
+  <tr class=cellblock_bottom>
+    <td align=right><b><i> Output file name:</i></b></td>
+    $title2help->{basename}
+    <td><input type=text name=basename id=basename size=36/></td>
+  </tr>
   <tr>
+    <td colspan=3>&nbsp;</td>
+  </tr>
+  <tr class="cellblock_top">
     <td align=right><b><i> Proteins:</i></b></td>
     $title2help->{Proteins}
     <td><input type=file name=protein_file id=protein_file></input></td>
+  </tr>
+  <tr class=cellblock>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td align=left>$or</td>
+  </tr>
+  <tr class="cellblock_bottom">
+    <td align=right><b><i> HPP/BD list:</i></b></td>
+    $title2help->{domain_protein_list_id}
+    <td>$domain_protein_list_select</input></td>
   </tr>
   <tr>
     <td colspan=3>&nbsp;</td>
@@ -734,40 +756,72 @@ sub get_subset_form_original {
     <td align=left>$or</td>
   </tr>
   <tr class=cellblock>
-    <td align=right><b><i> Min mz:</i></b></td>
-    $title2help->{min_mz}
-    <td><input type=text id=min_mz name=min_mz onchange=specify_swath('direct') size=12 value=$min_mz></input></td>
-  </tr>
-  <tr class=cellblock>
-    <td align=right><b><i> Max mz:</i></b></td>
-    $title2help->{max_mz}
-    <td><input type=text id=max_mz name=max_mz onchange=specify_swath('direct') size=12 value=$max_mz></input></td>
-  </tr>
-  <tr class=cellblock_bottom>
-    <td align=right><b><i> SWATH bin size:</i></b></td>
+    <td align=right><b><i> SWATH window size:</i></b></td>
     $title2help->{swath_size}
     <td white-space:nowrap><input type=text name=swath_size id=swath_size onchange=specify_swath('direct') size=12 value=$swath_size></input><span id=swath_cnt>($n_bins total bins)</span></td>
+  </tr>
+  <tr class=cellblock_bottom>
+    <td align=right><b><i> SWATH window overlap:</i></b></td>
+    $title2help->{swath_overlap}
+    <td white-space:nowrap><input type=text name=swath_overlap id=swath_overlap onchange=specify_swath('direct') size=12 value=$swath_overlap></input></td>
+  </tr>
+  <tr>
+    <td colspan=3>&nbsp;</td>
+  </tr>
+  <tr class=cellblock_top>
+    <td align=right><b><i> Min precursor mz:</i></b></td>
+    $title2help->{prec_min_mz}
+    <td><input type=text id=prec_min_mz name=prec_min_mz onchange=specify_swath('direct') size=12 value=$prec_min_mz></input></td>
+  </tr>
+  <tr class=cellblock>
+    <td align=right><b><i> Max precursor mz:</i></b></td>
+    $title2help->{prec_max_mz}
+    <td><input type=text id=prec_max_mz name=prec_max_mz onchange=specify_swath('direct') size=12 value=$prec_max_mz></input></td>
+  </tr>
+  <tr class=cellblock>
+    <td align=right><b><i> Min fragment mz:</i></b></td>
+    $title2help->{frag_min_mz}
+    <td><input type=text id=frag_min_mz name=frag_min_mz onchange=specify_swath('direct') size=12 value=$frag_min_mz></input></td>
+  </tr>
+  <tr class=cellblock_bottom>
+    <td align=right><b><i> Max fragment mz:</i></b></td>
+    $title2help->{frag_max_mz}
+    <td><input type=text id=frag_max_mz name=frag_max_mz onchange=specify_swath('direct') size=12 value=$frag_max_mz></input></td>
+  </tr>
+  <tr>
+    <td colspan=3>&nbsp;</td>
+  </tr>
+  <tr class=cellblock_top>
+    <td align=right><b><i> Min num fragments:</i></b></td>
+    $title2help->{min_num_frags}
+    <td><input type=text id=min_num_frags name=min_num_frags onchange=check_num_frags() size=12 value=$min_num_frags></input></td>
+  </tr>
+  <tr class=cellblock_bottom>
+    <td align=right><b><i> Max num fragments:</i></b></td>
+    $title2help->{max_num_frags}
+    <td><input type=text id=max_num_frags name=max_num_frags onchange=check_num_frags() size=12 value=$max_num_frags></input></td>
   </tr>
   <tr>
     <td colspan=3>&nbsp;</td>
   </tr>
   <tr>
-    <td colspan=3 align=left><input type=submit value='Generate Custom Library'></input></td>
+    <td>&nbsp;</td>
+    <td colspan=2 align=left><input type=submit value='Generate Custom Library'></input></td>
   </tr>
   </table>
   
   </form>
   <script type="text/javascript">
   function check_form() {
-    var min_mz = document.getElementById( 'min_mz' );
-    var max_mz = document.getElementById( 'max_mz' );
+    var prec_min_mz = document.getElementById( 'prec_min_mz' );
+    var prec_max_mz = document.getElementById( 'prec_max_mz' );
     var swath_size = document.getElementById( 'swath_size' );
     var swath_cnt = document.getElementById( 'swath_cnt' );
     var swaths_file = document.getElementById( 'swaths_file' );
     var library = document.getElementById( 'library' );
 
-    var min_val = min_mz.value;
-    var max_val = max_mz.value;
+    var min_val = prec_min_mz.value;
+    var max_val = prec_max_mz.value;
     var swath_size_val = swath_size.value
 
 //    if ( library.selectedIndex  ) {
@@ -784,8 +838,15 @@ sub get_subset_form_original {
       status = true;
     }
     if ( ! status ) {
-      alert( "Must provide either a SWATH file, or all of min, max, and SWATH bin size" );
+      alert( "Must provide either a SWATH file, or all of min, max, and SWATH window size" );
     }
+    var min_frags = document.getElementById( 'min_num_frags' );
+    var max_frags = document.getElementById( 'max_num_frags' );
+    if ( parseInt(min_frags.value) > parseInt(max_frags.value) ) {
+      alert( "Min frags cannot be less than Max frags ");
+      status = false;
+    }
+
     return status;
   }
   </script>
@@ -829,74 +890,4 @@ sub get_draw_chart_function {
 	my $header = $GV->getHeaderInfo();
   return ( $chart, $header );
 }
-
-my $drek = qq~
-mtb	/net/dblocal/wwwspecial/mrmatlas/mtb	Mtb_DirtyPeptides_ORBI_filtered_cons.sptxt.gz
-mtb	/net/dblocal/wwwspecial/mrmatlas/mtb	Mtb_DirtyPeptides_ORBI_filtered_cons.traml
-mtb	/net/dblocal/wwwspecial/mrmatlas/mtb	Mtb_DirtyPeptides_ORBI_filtered_cons_peakview.tsv
-
-mtb	/net/dblocal/wwwspecial/mrmatlas/mtb	Mtb_DirtyPeptides_TripleTOF_filtered_cons.sptxt.gz
-mtb	/net/dblocal/wwwspecial/mrmatlas/mtb	Mtb_DirtyPeptides_TripleTOF_filtered_cons.traml
-mtb	/net/dblocal/wwwspecial/mrmatlas/mtb	Mtb_DirtyPeptides_TripleTOF_filtered_cons_peakview.tsv
-mtb	/net/dblocal/wwwspecial/mrmatlas/mtb	Mtb_DirtyPeptides_TripleTOF_filtered_cons_openswath.tsv
-
-
-yeast	/regis/sbeams/bin/openswath/data/yeast	Yeast_Orbitrap_DP_final_peakview.tsv
-yeast	/regis/sbeams/bin/openswath/data/yeast	Yeast_Orbitrap_DP_final.sptxt
-yeast	/regis/sbeams/bin/openswath/data/yeast	Yeast_Orbitrap_DP_final.traml
-
-yeast	/regis/sbeams/bin/openswath/data/yeast	Yeast_QTrap4000_DP_final_peakview.tsv
-yeast	/regis/sbeams/bin/openswath/data/yeast	Yeast_QTrap4000_DP_final.sptxt
-yeast	/regis/sbeams/bin/openswath/data/yeast	Yeast_QTrap4000_DP_final.traml
-
-
-ecoli	/regis/sbeams/bin/openswath/data/ecoli	ecoli_TripleTOF_peakview.tsv
-ecoli	/regis/sbeams/bin/openswath/data/ecoli	ecoli_TripleTOF.sptxt
-ecoli	/regis/sbeams/bin/openswath/data/ecoli	ecoli_TripleTOF.traml
-ecoli	/regis/sbeams/bin/openswath/data/ecoli	ecoli_TripleTOF_openswath.tsv
-
-
-human	/regis/sbeams/bin/openswath/data/human	human_QTOF_peakview.tsv
-human	/regis/sbeams/bin/openswath/data/human	human_QTOF.sptxt
-human	/regis/sbeams/bin/openswath/data/human	human_QTOF.traml
-
-human	/regis/sbeams/bin/openswath/data/human	human_QTrap5500_peakview.tsv
-human	/regis/sbeams/bin/openswath/data/human	human_QTrap5500.sptxt
-mtb	/net/dblocal/wwwspecial/mrmatlas/mtb	Mtb_DirtyPeptides_ORBI_filtered_cons.sptxt.gz
-mtb	/net/dblocal/wwwspecial/mrmatlas/mtb	Mtb_DirtyPeptides_ORBI_filtered_cons.traml
-mtb	/net/dblocal/wwwspecial/mrmatlas/mtb	Mtb_DirtyPeptides_ORBI_filtered_cons_peakview.tsv
-
-mtb	/net/dblocal/wwwspecial/mrmatlas/mtb	Mtb_DirtyPeptides_TripleTOF_filtered_cons.sptxt.gz
-mtb	/net/dblocal/wwwspecial/mrmatlas/mtb	Mtb_DirtyPeptides_TripleTOF_filtered_cons.traml
-mtb	/net/dblocal/wwwspecial/mrmatlas/mtb	Mtb_DirtyPeptides_TripleTOF_filtered_cons_peakview.tsv
-mtb	/net/dblocal/wwwspecial/mrmatlas/mtb	Mtb_DirtyPeptides_TripleTOF_filtered_cons_openswath.tsv
-
-
-yeast	/regis/sbeams/bin/openswath/data/yeast	Yeast_Orbitrap_DP_final_peakview.tsv
-yeast	/regis/sbeams/bin/openswath/data/yeast	Yeast_Orbitrap_DP_final.sptxt
-yeast	/regis/sbeams/bin/openswath/data/yeast	Yeast_Orbitrap_DP_final.traml
-
-yeast	/regis/sbeams/bin/openswath/data/yeast	Yeast_QTrap4000_DP_final_peakview.tsv
-yeast	/regis/sbeams/bin/openswath/data/yeast	Yeast_QTrap4000_DP_final.sptxt
-yeast	/regis/sbeams/bin/openswath/data/yeast	Yeast_QTrap4000_DP_final.traml
-
-
-ecoli	/regis/sbeams/bin/openswath/data/ecoli	ecoli_TripleTOF_peakview.tsv
-ecoli	/regis/sbeams/bin/openswath/data/ecoli	ecoli_TripleTOF.sptxt
-ecoli	/regis/sbeams/bin/openswath/data/ecoli	ecoli_TripleTOF.traml
-ecoli	/regis/sbeams/bin/openswath/data/ecoli	ecoli_TripleTOF_openswath.tsv
-
-
-human	/regis/sbeams/bin/openswath/data/human	human_QTOF_peakview.tsv
-human	/regis/sbeams/bin/openswath/data/human	human_QTOF.sptxt
-human	/regis/sbeams/bin/openswath/data/human	human_QTOF.traml
-
-human	/regis/sbeams/bin/openswath/data/human	human_QTrap5500_peakview.tsv
-human	/regis/sbeams/bin/openswath/data/human	human_QTrap5500.sptxt
-~;
 __DATA__
-mtb	/net/dblocal/wwwspecial/mrmatlas/mtb	Mtb_DirtyPeptides_ORBI_filtered_cons.sptxt.gz
-mtb	/net/dblocal/wwwspecial/mrmatlas/mtb	Mtb_DirtyPeptides_ORBI_filtered_cons_peakview.tsv
-
-mtb	/net/dblocal/wwwspecial/mrmatlas/mtb	Mtb_DirtyPeptides_TripleTOF_filtered_cons.sptxt.gz
-mtb	/net/dblocal/wwwspecial/mrmatlas/mtb	Mtb_DirtyPeptides_TripleTOF_filtered_cons_peakview.tsv
