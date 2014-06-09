@@ -2774,7 +2774,6 @@ sub fetchResultSet {
 
     return 1;
 
-
 } # end fetchResultSet
 
 
@@ -4358,6 +4357,11 @@ sub writeResultSet {
       my $timestr = strftime("%Y%m%d-%H%M%S",$sec,$min,$hour,$mday,$mon,$year);
       $$resultset_file_ref = $file_prefix . $self->getCurrent_username() .
         "_" . $timestr;
+    } elsif ($$resultset_file_ref =~ /SETME/ ) {
+      $is_new_resultset = 1;
+      my ($sec,$min,$hour,$mday,$mon,$year) = localtime(time);
+      my $timestr = strftime("%Y%m%d-%H%M%S",$sec,$min,$hour,$mday,$mon,$year);
+      $$resultset_file_ref =~ s/SETME/$timestr/g;
     }
     my $resultset_file = $$resultset_file_ref;
 
