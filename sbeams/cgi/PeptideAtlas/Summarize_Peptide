@@ -207,6 +207,7 @@ sub handle_request {
   # Get list of accessible projects
   my @accessible_project_ids = $sbeams->getAccessibleProjects();
   $parameters{project_string} = join( ",", @accessible_project_ids );
+  $log->debug( "Projects are $parameters{project_string}" );
   
   my $form = get_form( \%parameters );
   print $form if $is_html;
@@ -225,6 +226,16 @@ sub handle_request {
 
   if ( $is_html ) {
     print '<table>' . $atlas->encodeSectionHeader( text => "Peptide Atlas Summary" ) . '</table>';
+  }
+
+  if ( $parameters{show_all_builds} ) {
+    $parameters{default_build_clause} = '';
+  } else { 
+    $parameters{default_build_clause} = qq~
+    AND AB.atlas_build_id IN 
+    ( SELECT atlas_build_id FROM $TBAT_DEFAULT_ATLAS_BUILD
+      WHERE record_status = 'N' )
+    ~;
   }
 
   my $pa_results = get_pa_resultset( \%parameters );
@@ -329,7 +340,6 @@ sub get_pa_list {
 
 sub get_pa_resultset {
   my $params = shift;
-  $sbeams->collectSTDOUT();
 
   my $sql = qq~
   SELECT  DISTINCT
@@ -351,9 +361,11 @@ sub get_pa_resultset {
   WHERE 1 = 1
   AND peptide_sequence = '$params->{peptide}'
   AND AB.project_id IN ( $params->{project_string} )
+  $params->{default_build_clause}
   ORDER BY OZ.organism_name, PI.n_observations DESC,AB.atlas_build_name
   ~;
 
+  $sbeams->collectSTDOUT();
   my $pa_resultset = {};
 
   #### Fetch the results from the database server
@@ -408,22 +420,15 @@ sub get_passel_resultset {
 
 
   my $sql = qq~
-  SELECT distinct  
-  SELPI.modified_peptide_sequence AS "modified_peptide_sequence",
-  SELPI.peptide_charge + '+' AS "peptide_charge",
-  SELPI.stripped_peptide_sequence AS "stripped_peptide_sequence",
-  SELPIP.protein_accession AS "protein_mapping",
+  SELECT COUNT(*) AS total,
   I.instrument_name AS "instrument",
-  SELTG.q1_mz AS "targeted_q1_mz",
-  SELPI.q1_mz AS "calculated_q1_mz",
-  SELTG.fragment_ions AS "fragment_ions",
-  STR(SELTG.d_score,7,4) AS "d_score",
-  STR(SELTG.m_score,7,4) AS "m_score",
-  STR(SELPG.Tr/60,7,4) AS "best_pg_rt",
-  STR(SELTG.max_apex_intensity,7,4) AS "log10_max_apex_intensity",
+  SELPI.peptide_charge,
+  SELTG.fragment_ions,
   S.sample_tag AS "sample",
   O.organism_name AS "organism",
-  S.sample_id AS "sample_id"
+  S.sample_id,
+  stripped_peptide_sequence,
+  SELE.SEL_experiment_id
   FROM PeptideAtlas.dbo.SEL_transition_group SELTG
   LEFT JOIN PeptideAtlas.dbo.SEL_chromatogram SELC
         ON ( SELC.SEL_transition_group_id = SELTG.SEL_transition_group_id )
@@ -433,8 +438,6 @@ sub get_passel_resultset {
         ON ( SELPI.SEL_peptide_ion_id = SELTG.SEL_peptide_ion_id )
   LEFT JOIN PeptideAtlas.dbo.SEL_peptide_ion_protein SELPIP
         ON ( SELPIP.SEL_peptide_ion_id = SELPI.SEL_peptide_ion_id )
-  LEFT JOIN PeptideAtlas.dbo.SEL_transition SELT
-        ON ( SELT.SEL_transition_group_id = SELTG.SEL_transition_group_id )
   LEFT JOIN PeptideAtlas.dbo.SEL_run SELR
         ON ( SELR.SEL_run_id = SELTG.SEL_run_id )
   LEFT JOIN PeptideAtlas.dbo.SEl_experiment SELE
@@ -446,12 +449,21 @@ sub get_passel_resultset {
   LEFT JOIN Proteomics.dbo.instrument I
         ON ( I.instrument_id = S.instrument_model_id )
   WHERE 1 = 1
-
-  AND ( SELPI.stripped_peptide_sequence LIKE '$params->{peptide}' )
+  AND ( stripped_peptide_sequence LIKE '$params->{peptide}' )
   AND SELE.project_id in ( $params->{project_string} )
   AND SELPI.is_decoy = 'N' 
   AND SELE.record_status != 'D'
   AND SELR.record_status != 'D'
+  GROUP BY 
+-- SELPIP.protein_accession, 
+  I.instrument_name, 
+  SELPI.peptide_charge, 
+  SELTG.fragment_ions,  
+  S.sample_tag,
+  O.organism_name,
+  S.sample_id,
+  stripped_peptide_sequence,
+  SELE.SEL_experiment_id
   ~;
 
   $sbeams->collectSTDOUT();
@@ -468,6 +480,7 @@ sub get_passel_resultset {
   if ( $global_rs_params{set_name} =~ /$name_base/ ) {
     %rs_params = %global_rs_params;
   }
+  $passel_resultset = post_process_passel_resultset( $passel_resultset );
 
   #### Store the resultset and parameters to disk resultset cache
   $sbeams->writeResultSet(
@@ -478,9 +491,11 @@ sub get_passel_resultset {
      query_name=>"$SBEAMS_SUBDIR/$script_name",
   );
 
-  my %url_cols;
+  # AFU
+  my %url_cols = ( sample => 'GetSELTransitions?stripped_peptide_sequence_constraint=%6V;SEL_experiments=%7V;QUERY_NAME=AT_GetSELTransitions;action=QUERY;apply_action=QUERY' );
+
   my %max_widths;
-  my %hidden_cols;
+  my %hidden_cols = ( sequence => 1, sample_id => 1, SEL_experiment_id => 1);
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$script_name";
 
   #### Display the resultset
@@ -504,10 +519,17 @@ sub get_srm_resultset {
   my $params = shift;
 
   my $peptide_sql = qq~
-  SELECT DISTINCT build_name, PP.pabst_peptide_id, peptide_sequence, PP.pabst_build_id
+  SELECT DISTINCT build_name, PP.pabst_peptide_id, peptide_sequence, PP.pabst_build_id,
+  instrument_type_name, TPII.n_observations
   FROM $TBAT_PABST_BUILD PB 
   JOIN $TBAT_PABST_PEPTIDE PP 
     ON PB.pabst_build_id = PP.pabst_build_id
+  JOIN $TBAT_PABST_PEPTIDE_ION TPI
+    ON TPI.pabst_peptide_id = PP.pabst_peptide_id
+ JOIN $TBAT_PABST_PEPTIDE_ION_INSTANCE TPII
+    ON TPII.pabst_peptide_ion_id = TPI.pabst_peptide_ion_id
+ JOIN $TBAT_INSTRUMENT_TYPE IT
+    ON TPII.source_instrument_type_id = IT.instrument_type_id
   WHERE peptide_sequence = '$params->{peptide}'
   AND PB.project_id IN ( $params->{project_string} )
   ~;
@@ -527,6 +549,7 @@ sub get_srm_resultset {
     sql_query=>$peptide_sql,
     resultset_ref=>$srm_resultset,
   );
+  $srm_resultset = post_process_srm_resultset( $srm_resultset );
 
   my $name_base = 'SRMAtlasSummary';
   my %rs_params = ( set_name => $name_base . '_' . 'SETME' );
@@ -542,10 +565,11 @@ sub get_srm_resultset {
      resultset_params_ref=>\%rs_params,
      query_name=>"$SBEAMS_SUBDIR/$script_name",
   );
+#  die Dumper( $srm_resultset );
 
-  my %url_cols = ( build_name => 'GetTransitions?pabst_build_id=%3V;default_search=1;peptide_sequence_constraint=%2V;apply_action=QUERY;n_highest_intensity_fragment_ions=8');
+  my %url_cols = ( build_name => 'GetTransitions?pabst_build_id=%2V;default_search=1;peptide_sequence_constraint=%1V;apply_action=QUERY;n_highest_intensity_fragment_ions=8');
   my %max_widths;
-  my %hidden_cols = ( peptide_sequence => 1 );
+  my %hidden_cols = ( peptide_sequence => 1, pabst_build_id => 1 );
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$script_name";
 
   #### Display the resultset
@@ -563,6 +587,211 @@ sub get_srm_resultset {
   my $resultset = $sbeams->fetchSTDOUT();
   return $resultset;
 } # End get_srm_resultset
+
+####################
+
+sub post_process_passel_resultset {
+  my $resultset = shift || die;
+
+#                            958,
+#                            'QTRAP 5500',
+#                            3,
+#                            'y6,y7',
+#                            'VerifBruTreatDiag',
+#                            'Human',
+#                            5608
+#                            'YYYYYYYYK'
+#
+#                   0              'total',
+#                   1              'instrument',
+#                   2              'peptide_charge',
+#                   3              'fragment_ions',
+#                   4              'sample',
+#                   5              'organism',
+#                   6              'sample_id'
+#                   7              'sequence'
+#                   8              'SEL_experiment_id'
+
+  my $data = $resultset->{data_ref};
+  my %instr;
+  my %builds;
+  for my $row ( @{$data} ) {
+    $instr{$row->[1]}++;
+    $builds{$row->[4]} ||= {};
+    $builds{$row->[4]}->{organism} ||= $row->[5];
+    $builds{$row->[4]}->{seq} ||= $row->[7];
+    $builds{$row->[4]}->{id} ||= $row->[6];
+    $builds{$row->[4]}->{instrument} ||= $row->[1];
+    $builds{$row->[4]}->{SEL_experiment_id} ||= $row->[8];
+    
+    $builds{$row->[4]}->{count} += $row->[0];
+    $builds{$row->[4]}->{fragments} ||= {};
+    my @frg = split( /,/, $row->[3] );
+    for my $frg ( @frg ) {
+      $builds{$row->[4]}->{fragments}->{$frg}++;
+    }
+    $builds{$row->[4]}->{charges} ||= {};
+    $builds{$row->[4]}->{charges}->{$row->[2]}++;
+
+  }
+  my $prec = [ 255, 255, 4, 255, 255, 4, 255, 4 ]; 
+  my $types = [ qw( varchar varchar int, varchar, varchar, int, varchar, int ) ]; 
+  my $col_list = [ 'sample',
+                   'organism',
+                   'sample_id',
+                   'charges',
+                   'fragments',
+                   'N_Obs',
+                   'sequence',
+                   'SEL_experiment_id',
+                 ];
+
+  my $col_num = {};
+  for ( my $i = 0; $i < scalar( @{$col_list}); $i++ ) {
+    $col_num->{$col_list->[$i]} = $i;
+  }
+
+  my $na = $sbeams->makeInactiveText( 'n/a' );
+
+  my @data;
+  for my $build ( sort( keys( %builds ) ) ) {
+    
+    my $expt = $builds{$build}->{SEL_experiment_id};
+    my $seq = $builds{$build}->{sequence};
+#    my $build_link = "<a href='GetSELTransitions?stripped_peptide_sequence_constraint=$seq;SEL_experiments=$expt;QUERY_NAME=AT_GetSELTransitions;action=QUERY'>$build</a>";
+
+    my @row = ( $build, $builds{$build}->{organism}, $builds{$build}->{id} );
+
+    my $chgs = join( ',', keys( %{$builds{$build}->{charges}} ) );
+    push @row, $chgs;
+    my $frgs = join( ',', keys( %{$builds{$build}->{fragments}} ) );
+    push @row, $frgs;
+    push @row, $builds{$build}->{count};
+    push @row, $builds{$build}->{seq};
+    push @row, $expt;
+
+    push @data, \@row;
+  }
+
+  my $new_rs = {  'page_size' => 100,
+                  'precisions_list_ref' => $prec,
+                  'types_list_ref' => $types,
+                  'row_counter' => 0,
+                  'data_ref' => \@data,
+                  'column_list_ref' => $col_list,
+                  'column_hash_ref' => $col_num
+               };
+  return $new_rs;
+}
+
+
+####################
+
+sub post_process_srm_resultset {
+  my $resultset = shift || die;
+
+
+  my $data = $resultset->{data_ref};
+  my %instr;
+  my %builds;
+  for my $row ( @{$data} ) {
+    $instr{$row->[4]}++;
+    $builds{$row->[0]} ||= {};
+    $builds{$row->[0]}->{$row->[4]} += $row->[5];
+    $builds{$row->[0]}->{seq} ||= $row->[2];
+    $builds{$row->[0]}->{id} ||= $row->[3];
+  }
+  my $prec = [ 255, 255, 4 ]; 
+  my $types = [ qw( varchar varchar int ) ]; 
+  my $col_list = [ 'build_name',
+                   'peptide_sequence',
+                   'pabst_build_id' ];
+
+  my @inst;
+  for my $inst ( sort( keys( %instr ) ) ) {
+    push @inst, $inst;
+    push @{$col_list}, $inst . '_N_obs';
+    push @{$prec}, 4; 
+    push @{$types}, 'int';
+  }
+
+  my $col_num = {};
+  for ( my $i = 0; $i < scalar( @{$col_list}); $i++ ) {
+    $col_num->{$col_list->[$i]} = $i;
+  }
+  my $na = $sbeams->makeInactiveText( 'n/a' );
+
+  my @data;
+  for my $build ( sort( keys( %builds ) ) ) {
+    my @row = ( $build, $builds{$build}->{seq}, $builds{$build}->{id} );
+    for my $inst ( @inst ) {
+      my $cnt = ( defined $builds{$build}->{$inst} ) ? $builds{$build}->{$inst} : $na;
+      push @row, $cnt;
+    }
+    push @data, \@row;
+  }
+
+  my $new_rs = {  'page_size' => 100,
+                  'precisions_list_ref' => $prec,
+                  'types_list_ref' => $types,
+                  'row_counter' => 0,
+                  'data_ref' => \@data,
+                  'column_list_ref' => $col_list,
+                  'column_hash_ref' => $col_num
+               };
+  return $new_rs;
+
+
+  my $foo = qq~
+   'page_size' => 100,
+          'precisions_list_ref' => [
+                                     255,
+                                     4,
+                                     255,
+                                     4,
+                                     255,
+                                     4
+                                   ],
+          'types_list_ref' => [
+                                'varchar',
+                                'int',
+                                'varchar',
+                                'int',
+                                'varchar',
+                                'int'
+                              ],
+          'row_counter' => 0,
+          'data_ref' => [
+                          [
+                            'Anderson_2012-01-22',
+                            632546,
+                            'WFYIASAFR',
+                            115,
+                            'IonTrap',
+                            47
+                          ],
+         'column_list_ref' => [
+                                 'build_name',
+                                 'pabst_peptide_id',
+                                 'peptide_sequence',
+                                 'pabst_build_id',
+                                 'instrument_type_name',
+                                 'n_observations'
+                               ],
+          'row_pointer' => 0,
+          'column_hash_ref' => {
+                                 'peptide_sequence' => 2,
+                                 'pabst_build_id' => 3,
+                                 'instrument_type_name' => 4,
+                                 'build_name' => 0,
+                                 'pabst_peptide_id' => 1,
+                                 'n_observations' => 5
+                               }
+  ~;
+  return $resultset;
+
+}
+
 
 sub get_abundance_plot {
 
@@ -585,6 +814,7 @@ sub get_abundance_plot {
     ON (PI.atlas_build_id = AB.atlas_build_id)
     WHERE peptide_sequence = '$params->{peptide}'
     AND AB.project_id IN ( $params->{project_string} )
+    $params->{default_build_clause}
     ORDER BY AB.atlas_build_name
   ~;
 
