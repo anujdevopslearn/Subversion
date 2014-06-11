@@ -98,6 +98,7 @@ my $is_xml = 0;
 # Set Global Variables and execute main()
 ###############################################################################
 my %parameters;
+my %global_rs_params;
 main();
 exit(0);
 
@@ -111,13 +112,16 @@ exit(0);
 sub main {
 
   #### Do the SBEAMS authentication and exit if a username is not returned
-    die "failure" unless ($current_username = $sbeams->Authenticate(
+    exit unless ($current_username = $sbeams->Authenticate(
                   allow_anonymous_access=>1 )
                 );
 
     #### Read in the default input parameters
     my $n_params_found = $sbeams->parse_input_parameters( q=>$q, 
                                              parameters_ref=>\%parameters );
+
+
+    %global_rs_params = $sbeams->parseResultSetParams( q => $q );
 
     $is_html++ if $sbeams->output_mode() =~ /HTML/i;
     $is_xml++ if $sbeams->output_mode() =~ /XML/i;
@@ -205,12 +209,25 @@ sub handle_request {
 #  print "<br>" if $is_html; 
 
   if ( $is_html ) {
-    print '<table>' . $atlas->encodeSectionHeader( text => "Peptide Atlas Summary" ) . '</table>';
+    print '<table>' . $atlas->encodeSectionHeader( text => "Peptide Atlas Protein Expression Summary" ) . '</table>';
+  }
+
+  if ( $parameters{show_all_builds} ) {
+    $parameters{default_build_clause} = '';
+  } else { 
+    $parameters{default_build_clause} = qq~
+    AND AB.atlas_build_id IN 
+    ( SELECT atlas_build_id FROM $TBAT_DEFAULT_ATLAS_BUILD
+      WHERE record_status = 'N' )
+    ~;
   }
 
   my $pa_results = get_pa_resultset( \%parameters );
   print $pa_results;
 
+  if ( $is_html ) {
+    print '<table>' . $atlas->encodeSectionHeader( text => "Peptide Atlas Peptide Coverage Summary" ) . '</table>';
+  }
   my $peptide_results = get_peptide_resultset( \%parameters );
   print $peptide_results;
 
@@ -319,52 +336,73 @@ sub get_pa_list {
 sub get_peptide_resultset {
 
   my $params = shift;
+  $params->{action} ||= 'QUERY';
   my $bioseq_str = join( ",", keys( %{$parameters{bioseqs}} ) );
-
-  my $sql = qq~
-  SELECT  P.peptide_sequence,
-          SUM( PIN.n_observations ) AS n_observations,
-          COUNT( PIN.atlas_build_id ) AS n_builds
-  FROM $TBAT_ATLAS_BUILD AB
-  JOIN $TBAT_PEPTIDE_INSTANCE PIN
-    ON AB.atlas_build_id = PIN.atlas_build_id
-  JOIN $TBAT_PEPTIDE P
-    ON P.peptide_id = PIN.peptide_id
-  JOIN $TBAT_PEPTIDE_MAPPING PM 
-    ON PM.peptide_instance_id = PIN.peptide_instance_id
-  WHERE matched_biosequence_id IN ( $bioseq_str ) 
-  AND AB.project_id IN ( $params->{project_string} )
-  GROUP BY peptide_sequence
-  ORDER BY COUNT( PIN.atlas_build_id ) DESC, SUM( PIN.n_observations ) DESC
-  ~;
+  my $page_size = $params->{rs_page_size} || 20;
+  my $name_base = 'PeptideAlasPeptideSummary';
+  my %rs_params = ( set_name => $name_base . '_' . 'SETME' );
+  my $read_rs = 0;
+  if ( $global_rs_params{set_name} =~ /$name_base/ ) {
+    %rs_params = %global_rs_params; 
+    $read_rs = 1;
+  }
+  $rs_params{page_size} = $page_size;
 
   my $pa_resultset = {};
-
-  $sbeams->collectSTDOUT();
-  #### Fetch the results from the database server
-  $sbeams->fetchResultSet(
-    sql_query=>$sql,
-    resultset_ref=>$pa_resultset,
-  );
-
-  my %rs_params = ( set_name => 'PeptideAtlasPeptideSummary' );
-
-  #### Store the resultset and parameters to disk resultset cache
-  $sbeams->writeResultSet(
-     resultset_file_ref=>\$rs_params{set_name},
-     resultset_ref=>$pa_resultset,
-     query_parameters_ref=>$params,
-     resultset_params_ref=>\%rs_params,
-     query_name=>"$SBEAMS_SUBDIR/$script_name",
-  );
-
-  my %url_cols = ( peptide_sequence => 'SummarizePeptide?SearchForThis=%0V' );
+  if ( $params->{action} eq 'VIEWRESULTSET' && $read_rs  ) {
+    $sbeams->readResultSet(
+      resultset_file=>$rs_params{set_name},
+      resultset_ref=>$pa_resultset,
+      query_parameters_ref=>$params,
+      resultset_params_ref=>\%rs_params,
+    );
+  } else {
+    my $sql = qq~
+    SELECT  P.peptide_sequence,
+            SUM( PIN.n_observations ) AS n_observations,
+            COUNT( PIN.atlas_build_id ) AS n_builds
+    FROM $TBAT_ATLAS_BUILD AB
+    JOIN $TBAT_PEPTIDE_INSTANCE PIN
+      ON AB.atlas_build_id = PIN.atlas_build_id
+    JOIN $TBAT_PEPTIDE P
+      ON P.peptide_id = PIN.peptide_id
+    JOIN $TBAT_PEPTIDE_MAPPING PM 
+      ON PM.peptide_instance_id = PIN.peptide_instance_id
+    WHERE matched_biosequence_id IN ( $bioseq_str ) 
+    AND AB.project_id IN ( $params->{project_string} )
+    $params->{default_build_clause}
+    GROUP BY peptide_sequence
+    ORDER BY 
+             SUM( PIN.n_observations ) DESC,
+             COUNT( PIN.atlas_build_id ) DESC 
+    ~;
+  
+  
+    $sbeams->collectSTDOUT();
+    #### Fetch the results from the database server
+    $sbeams->fetchResultSet(
+      sql_query=>$sql,
+      resultset_ref=>$pa_resultset,
+    );
+  
+  
+    #### Store the resultset and parameters to disk resultset cache
+    $sbeams->writeResultSet(
+       resultset_file_ref=>\$rs_params{set_name},
+       resultset_ref=>$pa_resultset,
+       query_parameters_ref=>$params,
+       resultset_params_ref=>\%rs_params,
+       query_name=>"$SBEAMS_SUBDIR/$script_name",
+    );
+  }
+  
+  my %url_cols = ( peptide_sequence => 'Summarize_Peptide?searchForThis=%0V' );
   my %max_widths;
   my %hidden_cols = ( atlas_build_id => 1, 
                       project_id => 1,
-                     );
+                    );
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$script_name";
-
+  
   #### Display the resultset
   $sbeams->displayResultSet(
       resultset_ref=>$pa_resultset,
@@ -377,11 +415,21 @@ sub get_peptide_resultset {
       base_url=>$base_url,
       suppress_header => 1
   );
+  
+  $sbeams->displayResultSetControls(
+      resultset_ref=>$pa_resultset,
+      query_parameters_ref=>$params,
+      rs_params_ref=>\%rs_params,
+      use_tabbed_panes => 1,
+      base_url=>$base_url,
+  ) if $is_html;
+
+
+
   my $resultset = $sbeams->fetchSTDOUT();
   return $resultset;
-} # End get_pa_resultset
+} # End get_peptide_resultset
 
-############################
 
 sub get_pa_resultset {
   my $params = shift;
@@ -401,7 +449,9 @@ sub get_pa_resultset {
     ON (B.biosequence_id = PM.matched_biosequence_id)
   WHERE biosequence_accession = '$params->{protein}'
   AND AB.project_id IN ( $params->{project_string} )
+  $params->{default_build_clause}
   GROUP BY atlas_build_name, PIN.atlas_build_id, biosequence_id
+  ORDER BY SUM(PIN.n_observations) DESC, AB.atlas_build_name ASC
   ~;
 
   my $pa_resultset = {};
@@ -413,8 +463,11 @@ sub get_pa_resultset {
     resultset_ref=>$pa_resultset,
   );
 
-
-  my %rs_params = ( set_name => 'PeptideAtlasSummary' );
+  my $name_base = 'PeptideAlasSummary';
+  my %rs_params = ( set_name => $name_base . '_' . 'SETME' );
+  if ( $global_rs_params{set_name} =~ /$name_base/ ) {
+    %rs_params = %global_rs_params; 
+  }
 
   #### Store the resultset and parameters to disk resultset cache
   $sbeams->writeResultSet(
