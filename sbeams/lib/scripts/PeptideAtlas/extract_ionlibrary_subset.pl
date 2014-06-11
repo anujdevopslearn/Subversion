@@ -5,13 +5,10 @@ use strict;
 use Getopt::Long;
 use Data::Dumper;
 
-my %options;
-GetOptions( \%options, 'help', 'format:s', 'output_file:s', 'min:i', 'max:i', 'width:i', 'proteins:s', 'swaths:s', 'input_file:s' );
+my $ts = time();
 
-printUsage() if $options{help};
-
-my $infile = $options{input_file} || printUsage( "input file required" );
-my $outfile = $options{output_file} || printUsage( "outfile required" );
+# Read in and check options (global)
+my %options = process_options();
 
 # peakview 
 # 0    Q1 [ 778.413 ]
@@ -53,37 +50,8 @@ my $outfile = $options{output_file} || printUsage( "outfile required" );
 # 16   FragmentCharge [ 1 ]
 # 17   FragmentSeriesNumber [ 7 ]
 
-my %swath_bins;
-if ( $options{min} && $options{max} && $options{width} ) {
-  my $start = $options{min};
-  my $end = $options{min} + $options{width};
-  while ( $end < $options{max} ) {
-    $swath_bins{$start} = $end;
-    $start = $end;
-    $end += $options{width};
-  }
-  $swath_bins{$start} ||= $options{max};
-} elsif( $options{swaths} ) {
-  open SWA, $options{swaths};
-  while ( my $line = <SWA> ) {
-    chomp $line;
-    $line =~ s/\r//g;
-    chomp $line;
-
-    my @line = split( /\s+/, $line );
-    $swath_bins{$line[0]} = $line[1];
-    $options{min} ||= $line[0];
-    $options{min} = $line[0] if $line[0] < $options{min};
-    $options{max} ||= $line[1];
-    $options{max} = $line[1] if $line[1] > $options{max};
-    $options{width} ||= $line[1] - $line[0];
-  }
-  close SWA;
-}
-
-for my $start ( sort {$a <=> $b } keys( %swath_bins ) ) {
-#  print "$start\t$swath_bins{$start}\n";
-}
+my %stats = ( count => 0, kept => 0, pcount => 0 );
+my %swath_bins = calculate_swath_bins();
 
 my %proteins;
 if ( $options{proteins} ) {
@@ -95,37 +63,59 @@ if ( $options{proteins} ) {
     my $single = '1/' . $line;
     $proteins{$single}++;
     $proteins{$line}++;
+    $stats{pcount}++;
   }
   close PROT;
+  $stats{message} .= "Used $stats{pcount} proteins for filtering\n";
 }
 
-open(OUT,">$outfile") || die("ERROR: Unable to write output file $outfile");
+# hash to store whether a particular ion key ( sequence + q1 )
+# as reached its:
+# max_limit - if so, no more fragments!
+# min_limit - if so, print accumulated fragments
+my %ion_limit = ( ELVISLIVS => { min => 0, max => 0 } );
+
+# Hash to cache frags for an ion_key until it reaches the min_limit
+my %ion_cache;
+
+open(OUT,">$options{output_file}") || die("ERROR: Unable to write output file $options{output_file}");
 open INFILE, $options{input_file} || die "ERROR: Unable to read '$options{input_file}'";
 my $cnt = 0;
-my %sbins;
+my %ion2bin;
 while ( my $line = <INFILE>) {
   unless ( $cnt++ ) {
     print OUT $line;
     next;
   }
+  $stats{count}++;
   chomp $line;
   my @line = split( /\t/, $line );
 
-  my $q1 = int( $line[0] );
-
-  if ( $q1 < $options{min} || $q1 > $options{max} ) {
+  my $q1 = $line[0];
+  if ( $q1 < $options{prec_min_mz} || $q1 > $options{prec_max_mz} ) {
 #    print STDERR "$q1 is out of range!\n";
     next;
   }
-  if ( !$sbins{$q1} ) {
-    $sbins{$q1} = get_bin( $q1 );
-#    print STDERR "bin for $q1 is $sbins{$q1}->[0] to $sbins{$q1}->[1]\n";
+
+  if ( $line[1] < $options{frag_min_mz} || $line[1] > $options{frag_max_mz} ) {
+#    print STDERR "$q1 is out of range!\n";
+    next;
   }
 
-  if ( $line[1] > $sbins{$q1}->[0] && $line[1] < $sbins{$q1}->[1] ) { 
+  # Calculate bin for this q1 value
+  $q1 = sprintf( "%0.1f", $line[0] );
+  if ( !$ion2bin{$q1} ) {
+    $ion2bin{$q1} = get_bin( $q1 );
+#    print STDERR "bin for $q1 is $ion2bin{$q1}->[0] to $ion2bin{$q1}->[1]\n";
+  }
+
+  # Strip q3 that fall into the bin
+  if ( $line[1] >= $ion2bin{$q1}->[0] && $line[1] <= $ion2bin{$q1}->[1] ) { 
 #    print STDERR "q3 $line[1] is in target bin for $q1 !\n";
     next;
   }
+
+  # Filter vs pre-defined list of proteins
   if ( $options{proteins} ) {
     my $pfield = ( $options{format} eq 'peakview' ) ? $line[13] : $line[14];
 
@@ -151,13 +141,148 @@ while ( my $line = <INFILE>) {
     }
     next unless $ok;
   }
+
+  # We may limit based on min/max number of fragments per precursor (seq + mz)
+  if ( $options{max_num_frags} || $options{min_num_frags} ) {
+
+    my $ion_key = ( $options{format} eq 'peakview' ) ? $line[6] . $line[0] : $line[8] . $line[0];
+    $ion_limit{$ion_key} ||= { min => 0, max => 0 };
+
+    if ( $options{max_num_frags} ) {
+ 
+      # First check list of keys known to be over max
+      if ( $ion_limit{$ion_key}->{max} >= $options{max_num_frags} ) {
+        next;
+      }
+      # Record the fact that we're (potentially) using this ion
+      $ion_limit{$ion_key}->{max}++;
+    }
+
+    if ( $options{min_num_frags} ) {
+
+      # First check list of keys known to be over min
+      if ( !$ion_limit{$ion_key}->{min} ) {
+        $ion_cache{$ion_key} ||= [];
+        push @{$ion_cache{$ion_key}}, \@line;
+
+        if ( scalar @{$ion_cache{$ion_key}} >= $options{min_num_frags} ) {
+          # Record the fact that we're (potentially) using this ion
+          $ion_limit{$ion_key}->{min}++;
+          for my $row ( @{$ion_cache{$ion_key}} ) {
+            print OUT join( "\t", @{$row} ) . "\n";
+            $stats{kept}++;
+          }
+          undef $ion_cache{$ion_key};
+        }
+        next;
+      }
+    } 
+  }
+
+
+
+
+  $stats{kept}++;
+
   print OUT join( "\t", @line ) . "\n";
 }
 close INFILE;
 close OUT;
 
+my $tf = time();
+my $tdelta = $tf - $ts;
+
+$stats{message} .= "Kept $stats{kept} ions out of $stats{count} in the library\n";
+
+print "Finished run in $tdelta seconds\n";
+print $stats{message};
+
+sub process_options {
+  my %options;
+  GetOptions( \%options, 'help', 
+                         'format:s', 
+                         'output_file:s', 
+                         'prec_min_mz:i', 
+                         'prec_max_mz:i', 
+                         'frag_min_mz:i', 
+                         'frag_max_mz:i', 
+                         'min_num_frags:i', 
+                         'max_num_frags:i', 
+                         'width:i', 
+                         'overlap:i',
+                         'proteins:s', 
+                         'print_swaths', 
+                         'swaths_file:s', 
+                         'input_file:s' );
+
+  printUsage() if $options{help};
+
+  my $infile = $options{input_file} || printUsage( "input file required" );
+  my $outfile = $options{output_file} || printUsage( "outfile required" );
+
+  unless ( ( $options{prec_min_mz} && $options{prec_max_mz} && $options{width} ) || $options{swaths_file} ) {
+    printUsage( "Must provide either a swaths_file or prec_min_mz, prec_max_mz, and width" );
+  }
+  $options{frag_min_mz} ||= $options{prec_min_mz};
+  $options{frag_max_mz} ||= $options{prec_max_mz};
+  $options{overlap} ||= 0;
+  return %options;
+}
+
+sub calculate_swath_bins {
+
+  my %swath_bins;
+
+  # Manually set min, max, and width take precedence
+  if ( $options{prec_min_mz} && $options{prec_max_mz} && $options{width} ) {
+    my $start = $options{prec_min_mz};
+    my $end = $options{prec_min_mz} + $options{width};
+    my $bin_cnt = 0;
+    while ( $end < $options{prec_max_mz} ) {
+      my $over = ( $bin_cnt++ ) ? $options{overlap} : 0;
+#     print "Over is $over, $options{overlap}, bin_cnt is $bin_cnt\n";
+      $swath_bins{$start - $over} = $end + $options{overlap};
+      $start = $end;
+      $end += $options{width};
+    }
+    $swath_bins{$start - $options{overlap}}  ||= $options{prec_max_mz};
+    my $swath_file = $options{output_file} . '.swaths';
+    open SWA, ">$swath_file";
+    for my $bin ( sort {$a <=> $b} keys( %swath_bins ) ) {
+      print SWA "$bin\t$swath_bins{$bin}\n";
+    }
+    close SWA;
+
+  # Else use user-supplied SWATHS file
+  } elsif( $options{swaths_file} ) {
+    open SWA, $options{swaths_file};
+    while ( my $line = <SWA> ) {
+      chomp $line;
+      $line =~ s/\r//g;
+      chomp $line;
+      my @line = split( /\s+/, $line );
+      $swath_bins{$line[0]} = $line[1];
+      $options{prec_min_mz} ||= $line[0];
+      $options{prec_min_mz} = $line[0] if $line[0] < $options{prec_min_mz};
+      $options{prec_max_mz} ||= $line[1];
+      $options{prec_max_mz} = $line[1] if $line[1] > $options{prec_max_mz};
+      $options{width} ||= $line[1] - $line[0];
+    }
+    close SWA;
+    $options{frag_min_mz} ||= $options{prec_min_mz};
+    $options{frag_max_mz} ||= $options{prec_max_mz};
+  }
+  unless ( scalar( keys( %swath_bins ) ) ) {
+    print STDERR "No valid SWATHS found, exiting.\n";
+    exit;
+  }
+  return( %swath_bins );
+}
+
 sub get_bin {
   my $q = shift;
+  my $min;
+  my $max;
   my $prev;
   for my $start ( sort {$a <=> $b } keys( %swath_bins ) ) {
     if ( $start > $q ) {
@@ -192,15 +317,21 @@ sub printUsage {
 
 Usage:  $0 [ OPTIONS ]
 
-  -h, --help          Print this usage information and exit
-  -f, --format        Format of input file, one of peakview or openswath 
-  -o, --output_file   Output TSV file
-  -i, --input_file    Input TSV file to subset
-      --min           Minimum m/z value for SWATH bins 
-      --max           Maximum m/z value for SWATH bins 
-  -w, --width         Width of swath bins
-  -s, --swaths        File of user-defined swath bins
-  -p, --proteins      File of user-defined proteins to include
+  -h, --help           Print this usage information and exit
+  -f, --format         Format of input file, one of peakview or openswath 
+      --output_file    Output TSV file
+  -i, --input_file     Input TSV file to subset
+      --prec_min_mz    Minimum m/z value for SWATH bins (q1)
+      --prec_max_mz    Maximum m/z value for SWATH bins (q1)
+  -w, --width          Width of swath bins
+      --overlap        Amount of overlap between adjacent SWATH bins
+      --frag_min_mz    Minimum m/z value for fragment ions
+      --frag_max_mz    Maximum m/z value for fragment ions 
+      --min_num_frags  Minimum number of fragments per q1
+      --max_num_frags  Maximum number of fragments per q1
+  -s, --swaths_file    File of user-defined swath bins
+      --proteins       File of user-defined proteins to include
+      --print_swaths   Print SWATHS file generated by pre min/max/width/overlap 
 
   END
   exit;
