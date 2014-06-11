@@ -111,7 +111,7 @@ exit(0);
 sub main {
 
   #### Do the SBEAMS authentication and exit if a username is not returned
-    die "failure" unless ($current_username = $sbeams->Authenticate(
+    exit unless ($current_username = $sbeams->Authenticate(
                   allow_anonymous_access=>1 )
                 );
 
