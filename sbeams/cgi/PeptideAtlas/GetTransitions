@@ -98,10 +98,22 @@ sub main
   $guest = $sbeams->isGuestUser();
   $parameters{apply_action_hidden} ||= '';
   my $referrer = $q->referer();
-  if ( $referrer =~ /MapSearch|proteinList/ || ( $parameters{apply_action_hidden} =~ /HPPBD/ ) ) {
+  if ( $referrer =~ /https*:\/\/db\.systemsbiology\./ &&
+     ( $referrer =~ /MapSearch|proteinList/ || ( $q->request_method() eq 'POST' && $parameters{apply_action_hidden} =~ /HPPBD/ ) ) ) {
     if ( $guest ) {
       $super_guest = 1;
       $parameters{apply_action_hidden} ||= '<INPUT TYPE="hidden" NAME="apply_action_hidden" VALUE="HPPBD"\>';
+      if ( !$parameters{pabst_build_id} && ( $parameters{organism_name} && $parameters{organism_name} =~ /Human/i ) ) {
+        $parameters{pabst_build_id} = 146;
+      }
+    }
+  } elsif ( $referrer =~ /^\$http:\/\/www\.nextprot\.org\// ) {
+    if ( $guest ) {
+      $super_guest = 1;
+      $parameters{apply_action_hidden} ||= '<INPUT TYPE="hidden" NAME="apply_action_hidden" VALUE="NEXTPROT"\>';
+      if ( !$parameters{pabst_build_id} && ( $parameters{organism_name} && $parameters{organism_name} =~ /Human/i ) ) {
+        $parameters{pabst_build_id} = 146;
+      }
     }
   }
 
