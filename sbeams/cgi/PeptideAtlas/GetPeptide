@@ -1282,7 +1282,9 @@ if ($apply_action =~ /QUERY|GO/i ) {
     }
      #### Display table
     print "<TABLE WIDTH=600><BR>$modHTML</TABLE>\n";
+
     }
+
 
   $log->debug( "End modified peptides " . time() );
 
@@ -1401,7 +1403,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
 # Encode section header
 #   'link' => $link,
 # encodeSectionTable(
-#                                               tr_info => $tr,
+# tr_info => $tr,
   my $modHTML .= $sbeamsMOD->encodeSectionHeader(
     text => "Individual Spectra",
    'link' => $link,
@@ -1413,7 +1415,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
 	 AVG(SAL.level_probability),
          SI.spectrum_identification_id, SMP.sample_tag, precursor_intensity, scan_time,
          collision_energy, SPI.ptm_sequence,
-	 COUNT(SAL.level_probability)
+	 COUNT(SAL.level_probability),
+         FRG.FRAGMENTATION_TYPE
     FROM $TBAT_PEPTIDE_INSTANCE PI
    INNER JOIN $TBAT_PEPTIDE P
          ON ( PI.peptide_id = P.peptide_id )
@@ -1431,6 +1434,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
          ON ( SI.spectrum_identification_id = SPI.spectrum_identification_id)
     LEFT JOIN $TBAT_SPECTRUM S
          ON ( SI.spectrum_id = S.spectrum_id )
+    LEFT JOIN $TBAT_FRAGMENTATION_TYPE FRG
+         ON (FRG.FRAGMENTATION_TYPE_ID = S.FRAGMENTATION_TYPE_ID)
     LEFT JOIN $TBAT_SAMPLE SMP
          ON ( S.sample_id = SMP.sample_id )
     LEFT JOIN $TBPR_INSTRUMENT I
@@ -1448,7 +1453,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
   GROUP BY modified_peptide_sequence, MPI.peptide_charge,
          SMP.sample_id,I.instrument_name, SI.probability, S.spectrum_name,
          SI.spectrum_identification_id, SMP.sample_tag, precursor_intensity, scan_time,
-         collision_energy, SPI.ptm_sequence
+         collision_energy, SPI.ptm_sequence, FRG.FRAGMENTATION_TYPE
   ORDER BY modified_peptide_sequence, MPI.peptide_charge, S.spectrum_name ASC
   ~;
 
@@ -1457,6 +1462,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
   my @mod_peps;
   my $sth = $sbeams->get_statement_handle( $modSQL );
   my $has_header_info = 0;
+  my $has_ptm_score = 0;
   my $is_origene = 0;
   $is_origene = 1 if ($atlas_build_name =~ /Origene/i);
 
@@ -1480,6 +1486,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
 # 11 collision_energy
 # 12 SPI.ptm_sequence,
 # 13 COUNT(SAL.level_probability)
+# 14 FRAGMENTATION_TYPE
 #-------------------------------------------------- 
 
 
@@ -1496,8 +1503,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
   # The following three don't correspond to any query result, only
   # to results table
-  $spec_idx = 7;         # link to spectrum display
-  my $frag_idx = 8;      # 
+  $spec_idx = 8;         # link to spectrum display
+  my $frag_idx = 7;      # 
   my $chrm_idx = 9;      # chromatogram.
 
   # The remaining $blah_idx variables refer to optional columns
@@ -1514,8 +1521,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
   # This variable doesn't refer to any results table column.
   my $ann_count_idx = 14;      # n user annotations
 
-  my $align = [qw(left center right right left center center center center)];
-  push @$align , 'center' if ($is_origene);
+  my $align = [qw(left center right right left center center center center center)];
    
   while ( my @row = $sth->fetchrow_array() ) {
     # We only want to display PI and RT cols if we have data!
@@ -1530,7 +1536,6 @@ if ($apply_action =~ /QUERY|GO/i ) {
   #### If a result is returned
   if ( scalar @mod_peps ) {
     $modHTML .= $sbeams->getPopupDHTML();
-
     #### Loops through resultset and do formatting
 
     my @display_peps;
@@ -1669,8 +1674,10 @@ if ($apply_action =~ /QUERY|GO/i ) {
 				}
 
 				@elms = split(/\)/, $ptm_sequence);
+        if (@elms > 1){ $has_ptm_score = 1;}
         $pos = -1;
         foreach my $str (@elms){
+         
           if ($str =~ /(.*)\((.*)/){
             $pos += length ($1);
             $ptm_score{$pos} = $2;
@@ -1694,16 +1701,18 @@ if ($apply_action =~ /QUERY|GO/i ) {
         }
 				$modified_pepseq = $newseq;
       }
-      $pep->[$mseq_idx] = $sbeamsMOD->formatMassMods($modified_pepseq);
-
-      $pep->[$mseq_idx] =~ s/"aa_mod">(\[[\d\.]+\])(\([\d\.]+\))/"supsub"><sup class="superscript">$1<\/sup><sub class="subscript">$2<\/sub>/g;
-      $pep->[$mseq_idx] =~ s/([A-Z])(\([\d\.]+\))/$1<scan class="supsub"><sup class="superscript">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/sup><sub class="subscript">$2<\/sub><\/scan>/g;
-
-      if ($is_origene){
-         $pep->[$frag_idx] =~ s/.*_//;
+			if ($modified_pepseq  !~/\(/){
+        $pep->[$mseq_idx] = $sbeamsMOD->formatMassMods($modified_pepseq);
       }else{
-         delete $pep->[$frag_idx];
+        $pep->[$mseq_idx] = $modified_pepseq;
       }
+         
+      #$pep->[$mseq_idx] =~ s/"aa_mod">(\[[\d\.]+\])(\([\d\.]+\))/"supsub"><sup class="superscript">$1<\/sup><sub class="subscript">$2<\/sub>/g;
+      #$pep->[$mseq_idx] =~ s/([A-Z])(\([\d\.]+\))/$1<scan class="supsub"><sup class="superscript">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/sup><sub class="subscript">$2<\/sub><\/scan>/g;
+
+      $pep->[$frag_idx] = $pep->[14];
+      delete $pep->[14];
+
       if ( !$has_header_info ) {
         delete $pep->[$ce_idx];
         delete $pep->[$rt_idx];
@@ -1726,44 +1735,102 @@ if ($apply_action =~ /QUERY|GO/i ) {
     }
     print qq~ 
      <style>
-			.supsub {
-        font-size: 9px;
-        color: darkslategray;
-				vertical-align: baseline;
-				position: relative;
-      }
-			.superscript {	
-        left 0;
-			  top: -0.5em; 
-				}
-
-			.subscript {
-        color: darkslategray;	
-        margin-left:-2.2em;
-        top: 0.5em;
-			}
-    </style>
+      .ptm_low {background:#F8DBF2;}
+			.ptm_mlow {background:yellow;}
+			.ptm_mhigh {background:#46F0D6;}
+			.ptm_high {background:#ABF99C;}
+     </style>
     ~;
 
-    my @headings = ( 'Modified Sequence', 'Chg', 'Smpl', 'Instr', 'Prob', 'Spectrum Name', 'Avg Eval', 'Spectrum');
-    push @headings, 'Fragmentation Type' if ($is_origene); 
+    my @headings = ( 'Modified Sequence', 'Chg', 'Smpl', 'Instr', 'Prob', 'Spectrum Name', 'Avg Eval', 'Fragmentation Type', 'Spectrum');
     push @headings, 'Chromatogram' if $at_least_one_chromatogram;
     push @headings, ( 'Precursor Intensity', 'RT', 'CE' ) if $has_header_info;
     #### Add table column headings
     unshift @display_peps, [ @headings ];
-
+    if ($has_ptm_score){
+       sort_ptm_peps(\@display_peps);
+    }
+ 
     #### Format table
     $modHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
                                                  width => '600',
-                                               tr_info => $tr,
+                                               tr_info => $tr, 
                                                 align  => $align,
                                                   rows => \@display_peps,
                                           rows_to_show => 10,
                                               max_rows => 500,
                                               nowrap => [1],
                                               );
+    if ($has_ptm_score){
+			my $PTM_color = qq~
+			 <table>
+				<tr align="CENTER" bgcolor="#CCCCCC">
+				<td>PTM Probability Score: </td> 
+				<td> 0 - 0.5 </td>
+				<td class="ptm_low" style="width: 10px; height: 5px;"></td>
+				<td> 0.5 - 0.75 </td>
+				<td class="ptm_mlow" style="width: 10px; height: 5px;"></td>
+				<td> 0.75 - 0.9 </td>
+				<td class="ptm_mhigh" style="width: 10px; height: 5px;"></td>
+				<td> 0.9 - 1.0 </td> 
+				<td class="ptm_high" style="width: 10px; height: 5px;"></td>
+				</tr>
+			 </table>
+			~;
+			$modHTML =~ s/<table/\n$PTM_color\n<table/i;
+    }
     #### Display table
     print "<TABLE WIDTH=600><BR>$modHTML</TABLE>\n";
+    if ($has_ptm_score){
+			print( <<"		END" );
+			<script LANGUAGE="JavaScript" TYPE="text/javascript">
+			var indiv_spec = document.getElementsByName("getprot_indiv_spec"); 
+			var rows = indiv_spec[1].getElementsByTagName('TR');	
+			var j=1;
+			while (j<=rows.length) {
+				var aas = rows[j].cells[0].innerHTML.split('\\)'); ;
+				var newInnerHTML = '';
+				var re;
+				for (var i=0; i < aas.length; i++){
+					if (aas[i].match(/\\(/g)){ 
+						var aa = aas[i].split('\\(');
+						var prob = parseFloat(aa[1]);
+						if (aas[i].match(/\\[...\\]\\(/g)){ 
+							re =  new RegExp('(\\\\w)(\\\\[...\\\\])\\\\('+aa[1], "g"); 
+							if (prob < 0.5 ){   
+								 aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_low">\$1</span>\$2');
+							}else if (prob >=0.5 && prob < 0.75){
+								 aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_mlow">\$1</span>\$2'); 
+							}else if (prob >= 0.75 && prob < 0.9 ){
+								 aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_mhigh">\$1</span>\$2'); 
+							}else{
+								aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_high">\$1</span>\$2'); 
+							}
+						}else{
+							 re =  new RegExp('(\\\\w)\\\\('+aa[1], "g"); 
+							if (prob < 0.5 ){   
+								 aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_low">\$1</span>'); 
+							}else if (prob >=0.5 && prob < 0.75){
+								 aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_mlow">\$1</span>'); 
+							}else if (prob >= 0.75 && prob < 0.9 ){
+								 aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_migh">\$1</span>'); 
+							}else{
+								aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_high">\$1</span>'); 
+							}
+						 }
+						 newInnerHTML += aas[i] ;
+					 }else{
+						 newInnerHTML += aas[i];
+						}
+					}
+					re = new RegExp('(\\\\[...\\\\])', "g");  
+					newInnerHTML = newInnerHTML.replace (re, "<span class='aa_mod'>\$1</span>");
+					rows[j].cells[0].innerHTML = newInnerHTML;
+					j++;
+				}
+				</script>
+		END
+    }
   }
 
   $log->debug( "End spectra " . time() );
@@ -1896,6 +1963,52 @@ if ($apply_action =~ /QUERY|GO/i ) {
   $log->debug( "End samples, handlerequest " . time() );
 
 } # end handle_request
+
+sub sort_ptm_peps {
+  my $rows = shift;
+  my $heading = shift @$rows;
+  my %peptide = ();
+  my $idx = 0;
+
+  foreach my $row (@$rows){
+    my $pos = '';
+    my $entry = $row->[0];
+    my @matches = ($entry =~ /\[\d+\]\(([\d\.]+)\)/g);
+    my $total_ptm_score =0;
+    foreach my $m (@matches){
+      $total_ptm_score += $m;
+    } 
+    my $modified_pep= $entry;
+    $modified_pep =~ s/\([\d\.]+\)//g;
+    if ($peptide{scalar @matches}{$modified_pep}{max_score} < $total_ptm_score){
+      $peptide{scalar @matches}{$modified_pep}{max_score}  = $total_ptm_score;
+    }
+    push @{$peptide{scalar @matches}{$modified_pep}{entry}}, [$total_ptm_score, $idx];
+    ## for testing
+    #my $ptm_sequence = $entry;
+    #$ptm_sequence =~ s/\[[\d\.]+\]//g;
+    #push @{$rows->[$idx]}, $ptm_sequence;
+
+    $idx++;
+  }
+  my @sorted_rows = ();
+  push @sorted_rows, $heading ;
+  foreach my $n_ptm_site (sort {$b <=> $a} keys %peptide){
+    foreach my $modified_pep (sort {$peptide{$n_ptm_site}{$b}{max_score} <=> 
+                                    $peptide{$n_ptm_site}{$a}{max_score}} keys %{$peptide{$n_ptm_site}}){
+      my @entries = @{$peptide{$n_ptm_site}{$modified_pep}{entry}};
+      my @sorted_entries = sort {$b->[0] <=> $a->[0]} @entries;
+      foreach my $entry (@sorted_entries){
+          #print "$n_ptm_site $modified_pep ". join(",", @$entry) ."\n";
+          my $idx = $entry -> [1];
+          push @sorted_rows, $rows->[$idx];
+        
+      }
+    }
+  }
+  @$rows = @sorted_rows;
+}
+
 
 sub format_refpep {
   my $annot = shift || return '';
