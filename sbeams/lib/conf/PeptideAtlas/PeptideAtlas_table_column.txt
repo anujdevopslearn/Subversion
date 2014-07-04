@@ -782,15 +782,18 @@ AT_pabst_tmp_peptide_ion	5	peptide_mz	Peptide MZ	float	8	0	Y		N			N						N	mz of
 AT_pabst_tmp_peptide_ion	6	n_observations	N Observations	int	4	0	Y		N			N						N	number of observations		
 AT_pabst_tmp_peptide_ion_instance	1	pabst_peptide_ion_instance_id	PABST Peptide Ion Instance Id	int	4	0	N		Y			N						Y	Primary Key		
 AT_pabst_tmp_peptide_ion_instance	2	pabst_peptide_ion_id	PABST Peptide Ion Id	int	4	0	Y		N	AT_pabst_tmp_peptide_ion	pabst_peptide_ion_id	N						N	Pabst peptide of which this is an instance		
-AT_pabst_tmp_peptide_ion_instance	6	source_instrument_type_id	Source Instrument Type Id	int	4	0	Y		N	AT_instrument_type	instrument_type_id	N						N			
-AT_pabst_tmp_peptide_ion_instance	6	n_observations	N Observations	int	4	0	Y		N			N						N	number of observations		
-AT_pabst_tmp_transition	1	pabst_transition_id	PABST Transition Id	int	4	0	N		Y			N						Y			
-AT_pabst_tmp_transition	2	pabst_peptide_ion_id	PABST Peptide Ion Id	int	4	0	Y		N	AT_pabst_tmp_peptide_ion	pabst_peptide_ion_id	N						N			
-AT_pabst_tmp_transition	4	precursor_ion_mz	Precursor Ion Mz	float	8	0	Y		N			N						N			
-AT_pabst_tmp_transition	5	precursor_ion_charge	Precursor Ion Charge	int	4	0	Y		N			N						N			
-AT_pabst_tmp_transition	6	fragment_ion_mz	Fragment Ion Mz	float	8	0	Y		N			N						N			
-AT_pabst_tmp_transition	7	fragment_ion_charge	Fragment Ion Charge	int	4	0	Y		N			N						N			
-AT_pabst_tmp_transition	8	fragment_ion_label	Fragment Ion Label	varchar	36	0	Y		N			N						N			
+AT_pabst_tmp_peptide_ion_instance	3	source_instrument_type_id	Source Instrument Type Id	int	4	0	Y		N	AT_instrument_type	instrument_type_id	N						N			
+AT_pabst_tmp_peptide_ion_instance	4	n_observations	N Observations	int	4	0	Y		N			N						N	number of observations		
+AT_pabst_tmp_peptide_ion_instance	5	max_precursor_intensity	Max Precursor Intensity	real	4	0	Y		N			N						N	Maximum recorded intensity for precursor		
+AT_pabst_tmp_transition	1	pabst_transition_id	PABST Transition Id	int	4	0	N		Y			N						Y	Primary key		
+AT_pabst_tmp_transition	2	pabst_peptide_ion_id	PABST Peptide Ion Id	int	4	0	Y		N	AT_pabst_tmp_peptide_ion	pabst_peptide_ion_id	N						N	Key to pabst_peptide_ion table		
+AT_pabst_tmp_transition	3	precursor_ion_mz	Precursor Ion Mz	float	8	0	Y		N			N						N	m/z of precursor ion		
+AT_pabst_tmp_transition	4	precursor_ion_charge	Precursor Ion Charge	int	4	0	Y		N			N						N	charge of precursor ion		
+AT_pabst_tmp_transition	5	fragment_ion_mz	Fragment Ion Mz	float	8	0	Y		N			N						N	m/z of product ion		
+AT_pabst_tmp_transition	6	fragment_ion_charge	Fragment Ion Charge	int	4	0	Y		N			N						N	charge of product ion		
+AT_pabst_tmp_transition	7	fragment_ion_label	Fragment Ion Label	varchar	36	0	Y		N			N						N	"Ion label (e.g. y2, b5)"		
+AT_pabst_tmp_transition	8	precursor_ion_mz_crude	Precursor Ion Mz	int	4	0	Y		N			N						N	crude m/z of precursor ion	 	
+AT_pabst_tmp_transition	9	fragment_ion_mz_crude	Fragment Ion Mz	int	4	0	Y		N			N						N	crude m/z of product ion		
 AT_pabst_tmp_transition_instance	1	pabst_transition_instance_id	PABST Transition Instance Id	int	4	0	N		Y			N						Y			
 AT_pabst_tmp_transition_instance	2	pabst_transition_id	PABST Transition ID	int	4	0	Y		N	AT_pabst_tmp_transition	pabst_transition_id	N						N			
 AT_pabst_tmp_transition_instance	3	precursor_ion_mass	Precursor Ion Mass	float	8	0	Y		N			N						N			
@@ -806,12 +809,13 @@ AT_instrument_type	3	instrument_type_comment	instrument_type_comment	varchar	255
 AT_instrument_type	4	is_source_instrument	is_source_instrument	char	1	0	Y		N			N	optionlist			Y	Y	N	Is this a source instrument type	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 AT_instrument_type	5	is_target_instrument	is_target_instrument	char	1	0	Y		N			N	optionlist			Y	Y	N	Is this a target instrument type	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 AT_instrument_type	6	sort_order	sort_order	int	4	0	Y		N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
-AT_instrument_type	7	date_created	date_created	datetime	8	0	Y		N			N						N			
-AT_instrument_type	8	created_by_id	created_by_id	int	4	0	Y		N			N						Y			
-AT_instrument_type	9	date_modified	date_modified	datetime	8	0	Y		N			N						N			
-AT_instrument_type	10	modified_by_id	modified_by_id	int	4	0	Y		N			N						Y			
-AT_instrument_type	11	owner_group_id	owner_group_id	int	4	0	Y		N			N						Y			
-AT_instrument_type	12	record_status	record_status	char	1	0	Y		N			N						N			
+AT_instrument_type	7	model_number	Model Number	varchare	36	0	Y		N			N	text	20		Y	Y	N	Model number of instrument		
+AT_instrument_type	8	date_created	date_created	datetime	8	0	Y		N			N						N			
+AT_instrument_type	9	created_by_id	created_by_id	int	4	0	Y		N			N						Y			
+AT_instrument_type	10	date_modified	date_modified	datetime	8	0	Y		N			N						N			
+AT_instrument_type	11	modified_by_id	modified_by_id	int	4	0	Y		N			N						Y			
+AT_instrument_type	12	owner_group_id	owner_group_id	int	4	0	Y		N			N						Y			
+AT_instrument_type	13	record_status	record_status	char	1	0	Y		N			N						N			
 AT_pabst_tmp_source_priority	1	pabst_source_priority_id	pabst_source_priority_id	int	4	0	N		Y			N						Y			
 AT_pabst_tmp_source_priority	2	source_instrument_type_id	Source instrument_type_id	int	4	0	Y		N			N						Y			
 AT_pabst_tmp_source_priority	3	target_instrument_type_id	Target instrument_type_id	int	4	0	Y		N			N						Y			
@@ -930,6 +934,7 @@ AT_elution_time	3	elution_time	Elution Time	float	4	0	Y		N			N						N	Elution ti
 AT_elution_time	4	peptide_sequence	Peptide Sequence	varchar	255	0	Y		N			N						N	Stripped peptide sequence		
 AT_elution_time	5	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	Y		N			N						N	Charge/Mass modified peptide sequence		
 AT_elution_time	6	elution_time_set	Elution Time Set	int	4	0	Y		N			N						N	"Individual Elution set, e.g. RT Catalog"		
+AT_elution_time	7	SIQR	SIQR	int	4	0	Y		N			N						N	Semi-interquartile range value (SIQR)		
 AT_GetTransitions	1	pabst_build_id	PABST Build									Y	optionlist	4		Y	Y	N	"Select desired PABST Build to search, required."	"SELECT pabst_build_id, build_name FROM $TBAT_PABST_BUILD PB JOIN $TB_ORGANISM O ON O.organism_id = PB.organism_id WHERE is_default = 'T' AND project_id IN ( $accessible_project_ids ) order by build_name "	
 AT_GetTransitions	2	protein_name_constraint	Protein Accession 									N	text	40		Y	Y	N	"Constraint for the Protein Accession (SwissProt, Ensembl, IPI, SGD, etc.). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.  supersedes protein file upload input."		
 AT_GetTransitions	3	protein_file	Upload File Of Proteins	varchar	255	0	Y		N			N	file	40		Y	Y	N	"Upload text file with list of Protein names, one per line, limit 1000.  superseded by Protein Accession text box."		
@@ -1100,12 +1105,17 @@ AT_domain_protein_list	5	project_id	Owner Project	int	4	0	N		N	project	project_i
 AT_domain_protein_list	6	original_file	Original File	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of list file to be uploaded via the web interface		
 AT_domain_protein_list	7	N_Proteins	Number of proteins	int	4	0	Y		N	 	 	Y	text			Y	Y	N	 	 	
 AT_domain_protein_list	8	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-AT_domain_protein_list	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_domain_protein_list	10	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_domain_protein_list	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_domain_protein_list	12	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_domain_protein_list	13	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_domain_protein_list	14	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_domain_protein_list	9	abstract	Abstract	text	16	0	Y		N			N	textarea	4		Y	Y		Abstract describing list		
+AT_domain_protein_list	10	contributors	Contributors	varchar	256	0	Y		N			N	text	40		Y	Y		Contributors to the creation and/or maintenance of the list		
+AT_domain_protein_list	11	Image_caption	Image Caption	varchar	2000	0	Y		N			N	text	40		Y	Y		Caption for image representing list		
+AT_domain_protein_list	12	image_path	Image Path	varchar	2000	0	Y		N			N	text	40		Y	Y		Path to image representing list		
+AT_domain_protein_list	13	url	URL	varchar	256	0	Y		N			N	text	40		Y	Y		URL associated with project		
+AT_domain_protein_list	14	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			Y	 	 		N	N				
+AT_domain_protein_list	15	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_domain_protein_list	16	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_domain_protein_list	17	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_domain_protein_list	18	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_domain_protein_list	19	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_domain_list_protein	1	list_protein_id	Domain list protein ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_domain_list_protein	2	protein_list_id	Protein List ID	int	4	0	N		N	domain_protein_list	protein_list_id					N	N				pkDEFAULT
 AT_domain_list_protein	3	original_name	Original Name	varchar	255	0	N		N	contact	contact_id	N	optionlist			Y	Y	N	Full contact information of the annotator	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
@@ -1128,13 +1138,15 @@ AT_dia_library	6	project_id	Project	int	4	0	Y		N	project	project_id	N	optionlist
 AT_dia_library	7	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 AT_dia_library	8	md5sum	md5 Checksum	varchar	64	0	Y		N				text	32		Y	Y	N	md5 checksum of spectral library file		
 AT_dia_library	9	file_path	File Path	varchar	255	0	y		N				text	50		Y	Y	N	"Path to spectral library file, used to extract spectra"		
-AT_dia_library	10	file_format	File Format	varchar	36	0	y		N				text	50		Y	Y	N	"Path to spectral library file, used to extract spectra"		
-AT_dia_library	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_dia_library	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_dia_library	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_dia_library	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_dia_library	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_dia_library	16	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_dia_library	10	file_format	File Format	varchar	36	0	y		N				text	50		Y	Y	N	"Format of DIA library file, one of sptxt, TraML, openswath, or Peakview"		
+AT_dia_library	11	is_master	Is Master	char	1	0	y		N				text	1		Y	Y	N	"Is master library, able to be subsetted"		
+AT_dia_library	12	consensus_library_id	Consensus library id	int	4	0	y		N	AT_consensus_library	consensus_library_id		optionlist	 		Y	Y	N	"Consensus library id, pertains only to sptxt files that are loaded into sbeams"		
+AT_dia_library	13	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_dia_library	14	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_dia_library	15	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_dia_library	16	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_dia_library	17	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_dia_library	18	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_GetDIALibs	1	dia_library_id	DIA Library									Y	optionlist	4		Y	Y	N	Select desired DIA library	"SELECT DISTINCT dia_library_id, comment FROM $TBAT_DIA_LIBRARY WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids ) ORDER BY comment"	
 AT_GetDIALibs	2	organism_id	Organism									Y	mulitoptionlist	20		Y	Y	N	Limit by desired organism	"SELECT DISTINCT O.organism_id, organism_name FROM $TB_ORGANISM O JOIN $TBAT_DIA_LIBRARY DL ON O.organism_id = DL.organism_id WHERE O.record_status = 'N' AND project_id IN (  $accessible_project_ids )"	
 AT_GetDIALibs	3	protein_name_constraint	Protein Accession Constraint									N	text	40		Y	Y	N	"Constraint for the Protein Accession (SwissProt, Ensembl, IPI, SGD, etc.). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT."		
