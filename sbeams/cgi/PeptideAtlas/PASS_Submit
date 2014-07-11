@@ -510,7 +510,7 @@ sub handle_request {
      print "<BR>\n";
 
      print "<B><font color=\"red\">Instrument(s) used</B></font> (Enter the model name of the instrument(s) used for this dataset)<BR>\n";
-     print "(Please use the format: Thermo Scientific LTQ Orbitrap, AB Sciex QTRAP 5600, etc.) (You may enter more than one if applicable)<BR>\n";
+     print "(Please use the format: Thermo Scientific LTQ Orbitrap Elite, AB SCIEX TripleTOF 5600, etc.) (You may enter more than one if applicable)<BR>\n";
      print $q->textarea( "instruments", $parameters{'instruments'}, 2, 40);
      print "<BR>\n";
 
