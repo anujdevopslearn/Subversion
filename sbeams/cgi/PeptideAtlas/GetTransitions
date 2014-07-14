@@ -107,10 +107,10 @@ sub main
         $parameters{pabst_build_id} = 146;
       }
     }
-  } elsif ( $referrer =~ /^\$http:\/\/www\.nextprot\.org\// ) {
+  } elsif ( is_srma_preview_site( $referrer ) ) {
     if ( $guest ) {
       $super_guest = 1;
-      $parameters{apply_action_hidden} ||= '<INPUT TYPE="hidden" NAME="apply_action_hidden" VALUE="NEXTPROT"\>';
+      $parameters{apply_action_hidden} ||= "<INPUT TYPE='hidden' NAME='apply_action_hidden' VALUE='$referrer'\>";
       if ( !$parameters{pabst_build_id} && ( $parameters{organism_name} && $parameters{organism_name} =~ /Human/i ) ) {
         $parameters{pabst_build_id} = 146;
       }
@@ -155,6 +155,7 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
   # 3 - cached pabst_build_id cookie
   # 4 - global default
   $pabst_build_id = $best_peptide->get_pabst_build( %parameters );
+
   $parameters{organism} ||= $best_peptide->getBuildOrganism( pabst_build_id => $pabst_build_id );
 	$parameters{build_bss_id} = $best_peptide->get_pabst_bss_id( pabst_build_id => $pabst_build_id );  
   $sbeams->time_stmt( "Go build, organism, etc." );
@@ -194,12 +195,13 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
   # This might have gotten overridden due to permissions.
   my $restricted_proteins = '';
   my $bad_build_specified = 0;
-  if ( $protein_list_info->{build_ok} ) {
+  if ( $protein_list_info->{build_ok} && $pabst_build_id == 146 && !is_srma_preview_site() ) {
 
     # Could be allowed via a protein list
     $restricted_proteins = " AND biosequence_name IN ( '" . join( "','", keys( %{$protein_list_info->{proteins}} ) ) . " ' ) \n";
 #    $log->info( "Allowed access for $current_username to build $pabst_build_id proteins $restricted_proteins" );
   }
+
   # Decide what action to take based on information so far
   my $project_id = $atlas->getProjectID(
     atlas_build_id => $parameters{atlas_build_id}
@@ -474,7 +476,6 @@ function get_agreement() {
       ~
     }
     my $dhtml = $sbeams->getTabbedPanesDHTML();
-    $log->debug( Dumper( $dhtml ) );
     print $dhtml;
   }
 
@@ -1514,9 +1515,12 @@ sub fetch_transitions {
   my %bioseq2peptides;
 
   # We will limit the total number of proteins queried to 50 for 'superuser' 
-  my $max_query_proteins = 50;
+  my $max_query_proteins = 100;
+
+  my $rcount = 0;
 
   while ( my @row = $sth->fetchrow_array() ) {
+    $rcount++;
     if ( $super_guest && keys( %bioseq2name ) >= $max_query_proteins ) {
       next unless $bioseq2name{$row[1]};
     }
@@ -1549,7 +1553,7 @@ sub fetch_transitions {
 
   my $nprots = scalar( keys( %bioseq_ids ) );
   my $npeps = scalar( keys( %pep_ids ) );
-  
+
   my $status_txt = "Running query with $nprots proteins and $npeps peptides ";
   if ( $nprots > 7 && $nprots < 16 ) {
     $status_txt = "Querying with $nprots proteins and $npeps peptides, could take up to a minute ";
@@ -1564,8 +1568,7 @@ sub fetch_transitions {
   info_txt.innerHTML="<BR><DIV class=clear_warning_box><IMG SRC=$HTML_BASE_DIR/images/wait_sm.gif>&nbsp;$status_txt</DIV>";
   </script>
   ~;
-
-
+  
   my $organism = $parameters{organism} || $best_peptide->getBuildOrganism( pabst_build_id => $parameters{pabst_build_id} );
   my $scan_clause = $pep_id_string;
 
@@ -1731,7 +1734,7 @@ sub fetch_transitions {
   my $headings_ref = ( $sbeams->output_mode() =~ /html/i ) ? 
            $best_peptide->make_sort_headings( headings => $headings, default => 'adj_SS' ) :
            \@headings;
-           
+
   my @peptides = ( $headings_ref );
 
   my $naa = $sbeams->makeInactiveText( 'n/a' );
@@ -2939,4 +2942,26 @@ sub calculateCE {
     $ce = ( 0.051 * $args{mz} ) + 0.55
   }
   return sprintf( "%0.1f", $ce);
+}
+
+sub is_srma_preview_site {
+
+  my $referrer = shift || $q->referer();
+  my $is_allowed = 0;
+
+  if ( !$referrer ) {
+    $log->error( "No referrer sent to srmatlas_preview, aborting" );
+    return $is_allowed;
+  }
+
+  $CONFIG_SETTING{SRMATLAS_PREVIEW_SITES} ||= '';
+  my @sites = split( /\s+/, $CONFIG_SETTING{SRMATLAS_PREVIEW_SITES} );
+
+  for my $site ( @sites ) {
+    if ( $referrer =~ /$site/ ) {
+      $is_allowed++;
+      last;
+    }
+  }
+  return ( $is_allowed );
 }
