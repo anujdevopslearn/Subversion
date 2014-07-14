@@ -3873,8 +3873,14 @@ sub displayExternalLinksSection {
       link => $link,
   );
 
+  $biosequence->{synonyms}->{'Entrez Gene Symbol'} ||= $biosequence->{synonyms}->{'Gene Symbol'}; 
+  if ( !$biosequence->{synonyms}->{'UniProt'} ) {
+    if ( $biosequence->{biosequence_name} =~ /[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}/ ) {
+      $biosequence->{synonyms}->{'UniProt'} = $biosequence->{biosequence_name};
+    }
+  }
   #### Debug
-  if ( 0 == 1 ) {
+  if ( 1 == 0 ) {
     use Data::Dumper;
     my $tmp = Dumper( $biosequence->{synonyms} );
     if ($sbeams->output_mode() eq 'html') {
@@ -3886,6 +3892,7 @@ sub displayExternalLinksSection {
       );
     }
   }
+
 
 
   #### Display a link to Human Protein Atlas (hpr)
@@ -3918,7 +3925,6 @@ sub displayExternalLinksSection {
       );
     }
   }
-
 
   #### Display a link to Protter by Bernd Wollscheid
   my $uniprotProtein = $biosequence->{synonyms}->{'UniProt'};
