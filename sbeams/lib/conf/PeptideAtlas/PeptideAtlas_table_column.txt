@@ -949,7 +949,7 @@ AT_PASS_submitter	1	submitter_id	Submitter	int	4	0	N		Y							N	N				pkDEFAULT
 AT_PASS_submitter	2	firstName	First Name	varchar	50	0	N		N			Y	text	50		Y	Y	N	First name of the submitter		
 AT_PASS_submitter	3	lastName	Last Name	varchar	50	0	N		N			Y	text	50		Y	Y	N	Last name of the submitter		
 AT_PASS_submitter	4	emailAddress	Email Address	varchar	100	0	N		N			Y	text	50		Y	Y	Y	Email address of the submitter		
-AT_PASS_submitter	5	password	Password	varchar	100	0	N		N			Y	text	30		Y	Y	N	Password of the submitter		
+AT_PASS_submitter	5	password	Password	varchar	100	0	N		N			Y	password	30		N	N	N	Password of the submitter		
 AT_PASS_submitter	6	emailReminders	Email Reminders?	varchar	10	0	N		N			Y	text	10		Y	Y	N	Send the submitter email notifications of submissions?		
 AT_PASS_submitter	7	emailPasswords	Email Passwords?	varchar	10	0	N		N			Y	text	10		Y	Y	N	Include passwords in the email notifications?		
 AT_PASS_submitter	8	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
