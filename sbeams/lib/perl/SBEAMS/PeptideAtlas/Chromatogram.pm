@@ -26,14 +26,17 @@ require Exporter;
 $VERSION = q[$Id$];
 @EXPORT_OK = qw();
 
-use lib "/users/tfarrah/perl/lib";
+#use lib "/users/tfarrah/perl/lib";
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw( $log );
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 #use IO::Uncompress;  # supercedes Compress::Zlib, but we don't have it.
+use XML::TreeBuilder;   # a DOM parser
+use XML::Writer; 
 use Compress::Zlib;
+use Data::Dumper;
 use JSON;
 
 
@@ -280,7 +283,7 @@ sub specfile2json {
   my $top_html = $args{top_html};
 
   my $rt = $param_href->{rt} || $param_href->{Tr} || 0;
-  my $target_q1 = $param_href->{q1};
+  my $target_q1 = $param_href->{q1} || $param_href->{precursor_mz};
   my $tx_info = $param_href->{transition_info};
 
   my $count = 0;
@@ -312,6 +315,7 @@ sub specfile2json {
     q3_tolerance => $q3_tolerance,
     tx_info => $tx_info,    #optional
     ms2_scan => $ms2_scan,
+    param_href => $param_href
   );
   
   # If we have a second Q1, add that to the hash
@@ -349,6 +353,7 @@ sub specfile2json {
 
   # Create and return .json string.
   return traces2json(
+    %args,
     traces_href => $traces_href,
     tx_info => $tx_info,
     rt => $rt,
@@ -438,72 +443,156 @@ sub mzML2traces {
   my @q3_found_array;
   my %traces;
 
-  # Initialize parser and parse the file.
-  use XML::TreeBuilder;   # a DOM parser
-  use XML::Writer; 
-  my $mzMLtree = XML::TreeBuilder->new();
-  $mzMLtree->parse_file($spectrum_pathname) || die
-  "Couldn't parse $spectrum_pathname";
-  my @allcgrams = $mzMLtree->find_by_tag_name('chromatogram');
-  my @alloffsets = $mzMLtree->find_by_tag_name('offset');
-  my $ncgrams = scalar (@allcgrams);
-  my $noffsets = scalar (@alloffsets);
-
-  # If ms2_scan provided, get MS2 retention time
+  # Process each chromatogram
+  my @target_cgrams;
   my $ms2_rt;
-  if ($ms2_scan) {
-    my @allspectra = $mzMLtree->find_by_tag_name('spectrum');
-    for my $spectrum (@allspectra) {
-      my $index = $spectrum->attr('index');
-      if ($index == $ms2_scan) {
-	my @cvParams = $spectrum->find_by_tag_name('cvParam');
-	for my $cvParam (@cvParams) {
-	  my $name = $cvParam->attr('name');
-	  if ($name eq 'scan start time') {
-	    $ms2_rt = $cvParam->attr('value');
-	  }
-	}
+
+  my $parse_entire_file = 1;
+  my $stime = time();
+  if ( $args{param_href}->{use_pepname} ) {
+    $parse_entire_file = 0;
+    my $offset = `tail -10 $spectrum_pathname | grep indexListOffset `;
+    my @offsets;
+    if ( $offset =~ /<indexListOffset>(\d+)\<\/indexListOffset>/i ) {
+      my $off = $1;
+      open MZML, $spectrum_pathname;
+      seek( MZML, $off, 0 );
+      while ( my $line = <MZML> ) {
+#        $line =~ s/[<>]//g;
+        if ( $line =~ /$args{param_href}->{peptide}/ ) {
+#          <offset idRef="AQUA4SWATH_HumanEbhardt_EASGLSADSLAR(UniMod:267)/2_y4">13468467</offset>
+          if ( $line =~ /\<offset\s+idRef[^>]+\>(\d+)\<\/offset\>/ ) {
+            my $offset = $1;
+            push @offsets, $offset;
+          } else {
+            $log->warn( "Didn't find offset in $line" );
+          }
+        } else {
+        }
+#        last unless $line =~ /offset/;
       }
-    }
+
+      for my $off ( @offsets ) {
+        seek( MZML, $off, 0 );
+        my $scan = '';
+        while ( my $line = <MZML> ) {
+          $scan .= $line;
+          if ( $line =~ /<\/chromatogram/ ) {
+            last;
+          }
+        }
+        my $mzMLtree = XML::TreeBuilder->new();
+        $mzMLtree->parse($scan) || die "No parse for you!";
+        my @allcgrams = $mzMLtree->find_by_tag_name('chromatogram');
+        for my $cgram ( @allcgrams ) {
+          my $id = $cgram->attr('id');
+          my @id = split( /_/, $id );
+  
+          if ( $id[0] =~ /DECOY/ ) {
+            push @target_cgrams, [ $id[0] . '_' . $id[3], $id[4], $cgram ];
+          } elsif ( $args{param_href}->{peptide} eq 'TIC' ) {
+            push @target_cgrams, [ '' , 'Total Ion Current', $cgram ];
+          } else {
+            push @target_cgrams, [ $id[2] , $id[3], $cgram ];
+          }
+        }
+      }
+      $parse_entire_file = 0;
+    } 
   }
 
-  # Process each chromatogram
-  for my $cgram (@allcgrams) {
-    my $id = $cgram->attr('id');
-    my ($q1, $q3, $sample, $period, $experiment, $transition,);
-    # If this is a parsable chromatogram ID, get its infos
-    if (($id =~
-	/.*SRM.*\s+Q1=(\S+)\s+Q3=(\S+)\s+sample=(\S+)\s+period=(\S+)\s+experiment=(\S+)\s+transition=(\S+)/) #QTRAP data from Cima and Ralph Schiess
-      ||
-      ($id =~ /SRM SIC Q1=(\S+) Q3=(\S+)/) #QQQ data from SRMAtlas
-      ||
-      ($id =~ /SRM SIC (\S+),(\S+)/) )   #TSQ data from Nathalie
-    {
-      $q1 = $1;
-      $q3 = $2;
-      $sample = $3;
-      $period = $4;
-      $experiment = $5;
-      $transition = $6;
+  if ( $parse_entire_file ) {
 
-      # If this is close to our target Q1 ...
-      if (($q1 <= $target_q1+$q1_tolerance) &&
-	($q1 >= $target_q1-$q1_tolerance)) {
+    # Initialize parser and parse the file.
+    my $mzMLtree = XML::TreeBuilder->new();
+    $mzMLtree->parse_file($spectrum_pathname) || die
+    "Couldn't parse $spectrum_pathname";
+    my @allcgrams = $mzMLtree->find_by_tag_name('chromatogram');
+    my @alloffsets = $mzMLtree->find_by_tag_name('offset');
+  
+    my $ncgrams = scalar (@allcgrams);
+    my $noffsets = scalar (@alloffsets);
+  
+    # If ms2_scan provided, get MS2 retention time
+    if ($ms2_scan) {
+      my @allspectra = $mzMLtree->find_by_tag_name('spectrum');
+      for my $spectrum (@allspectra) {
+        my $index = $spectrum->attr('index');
+        if ($index == $ms2_scan) {
+  	my @cvParams = $spectrum->find_by_tag_name('cvParam');
+  	for my $cvParam (@cvParams) {
+  	  my $name = $cvParam->attr('name');
+  	  if ($name eq 'scan start time') {
+  	    $ms2_rt = $cvParam->attr('value');
+  	  }
+  	}
+        }
+      }
+    }
+  
+    for my $cgram (@allcgrams) {
+      my $id = $cgram->attr('id');
+      my ($q1, $q3, $sample, $period, $experiment, $transition,);
+      # If this is a parsable chromatogram ID, get its infos
+      if ( ($id =~
+  	/.*SRM.*\s+Q1=(\S+)\s+Q3=(\S+)\s+sample=(\S+)\s+period=(\S+)\s+experiment=(\S+)\s+transition=(\S+)/) #QTRAP data from Cima and Ralph Schiess
+        ||
+        ($id =~ /SRM SIC Q1=(\S+) Q3=(\S+)/) #QQQ data from SRMAtlas
+        ||
+        ($id =~ /SRM SIC (\S+),(\S+)/) #TSQ data from Nathalie
+         ) {
+        $q1 = $1;
+        $q3 = $2;
+        $sample = $3;
+        $period = $4;
+        $experiment = $5;
+        $transition = $6;
+  
+        # If this is close to our target Q1 ...
+        if (($q1 <= $target_q1+$q1_tolerance) && ($q1 >= $target_q1-$q1_tolerance)) {
+  
+  	      # If tx_info provided, check to see if this is one of the Q3s we want
+        	if ($tx_info) {
+        	  my $q3_match = check_q3_against_list ( q3 => $q3,
+                                              q3_aref => \@q3_array,
+                                         q3_tolerance => $q3_tolerance,
+                                        q3_found_aref => \@q3_found_array,
+                                                 );
+              
+            next unless $q3_match;
+            if ($q3_match > 1) {
+              print "<p>WARNING: mzML Q3 $q3 matched >1 target Q3 for target Q1=${target_q1}.<br>Q1 tolerance = $q1_tolerance  Q3 tolerance = $q3_tolerance</p>\n";
+            }
+          }
+          push @target_cgrams, [ $q1, $q3, $cgram ];
+        } else {
+          next;
+        }
+      } elsif ( $args{param_href}->{use_pepname} ) {
+        if ( $id =~ /$args{param_href}->{peptide}/ ) {
+          my @id = split( /_/, $id );
+  
+          if ( $id[0] =~ /DECOY/ ) {
+  #          print "decoy, " . join( ':::', @id ) . "<br>\n";
+            push @target_cgrams, [ $id[0] . '_' . $id[3], $id[4], $cgram ];
+          } else {
+#            print "fwd, " . join( ':::', @id ) . "<br>\n";
+            push @target_cgrams, [ $id[2] , $id[3], $cgram ];
+          }
+        }
+      }# end if parsable chromatogram ID
+    } # end all cgrams
+  } # End if index elsif loop
+  my $etime = time();
+  my $tdelta = $etime - $stime;
+  print "Took $tdelta seconds to read chromatogram<br>\n";
 
-	# If tx_info provided, check to see if this is one of the Q3s we want
-	if ($tx_info) {
-	  my $q3_match = check_q3_against_list (
-	    q3 => $q3,
-	    q3_aref => \@q3_array,
-	    q3_tolerance => $q3_tolerance,
-	    q3_found_aref => \@q3_found_array,
-	  );
-	  next unless $q3_match;
-	  if ($q3_match > 1) {
-	    print "<p>WARNING: mzML Q3 $q3 matched >1 target Q3 for target Q1=${target_q1}.<br>Q1 tolerance = $q1_tolerance  Q3 tolerance = $q3_tolerance</p>\n";
-	  }
-	}
 
+  for my $cgram_row ( @target_cgrams ) {
+    my $q1 = $cgram_row->[0];
+    my $q3 = $cgram_row->[1];
+    my $cgram = $cgram_row->[2];
+#    print "q1 is $q1, q3 is $q3<br>\n";
 	#### The code below should duplicate code in
 	#### mMap.pl (of the mProphet suite). Updates, fixes to one
 	#### should be copied to the other.
@@ -583,6 +672,7 @@ sub mzML2traces {
 	  }
 	}
 
+
 	#--------------------------------------------------
 	# print "<br>Times:&nbsp;";
 	# for (my $i=0; $i<$n_time; $i++) {
@@ -600,6 +690,17 @@ sub mzML2traces {
 	#### End of duplicated code
 	####
 
+  # This was an attempt to sample the data, but for the TIC plots it seems
+  # that this always skews the data
+  if ( $args{param_href}->{peptide} eq 'TIC' ) {
+#	  print "$n_time timepoints, $n_int intensities!<br>\n";
+#   print "Thinning the herd!<br>\n";
+#    ( $int_aref, $time_aref ) = thin_the_herd( 2, $int_aref, $time_aref );
+#    $n_time = scalar( @{$time_aref} );
+#    $n_int = scalar( @{$int_aref} );
+#	  print "$n_time timepoints, $n_int intensities!<br>\n";
+  }
+
 	# Store info in traces hash
 	for (my $i=0; $i<$n_time; $i++) {
 	  my $time = $time_aref->[$i];
@@ -609,11 +710,56 @@ sub mzML2traces {
 	}
 	$traces{'ms2_rt'} = $ms2_rt;
 
-      } # end if target Q1
-    } # end if parsable chromatogram ID
-  } # end for each chromatogram
+  } # end for each target chromatogram
 
   return (\%traces);
+}
+
+# Sample data for large datasets
+sub thin_the_herd_random {
+  my $srate = shift;
+  my $aref_1 = shift;
+  my $aref_2 = shift;
+  my @array_1;
+  my @array_2;
+  my $lim = scalar( @{$aref_1} );
+  my $idx = 0;
+  while ( $idx < $lim ) {
+    $idx += int(rand( $srate ) ); 
+    push @array_1, $aref_1->[$idx];
+    push @array_2, $aref_2->[$idx];
+  }
+#  print "array 1 has " . scalar( @array_1 ) . " total entries <br>\n";
+  $aref_1 = \@array_1;
+#  print "arrayref 1 has " . scalar( @{$aref_1} ) . " total entries <br>\n";
+  $aref_2 = \@array_2;
+  return ( $aref_1, $aref_2 );
+}
+
+# Sample data for large datasets
+sub thin_the_herd {
+  my $srate = shift;
+  my $aref_1 = shift;
+  my $aref_2 = shift;
+  my @array_1;
+  my @array_2;
+  my $lim = scalar( @{$aref_1} );
+#  print "Lim $lim, rate $srate <br>\n";
+  for ( my $idx = 0; $idx <= $lim; $idx++ ) {
+    if ( $idx % $srate ) {
+#      print "$idx mod $srate is TRUE <br>\n" if $idx < 100;
+      next;
+    } else {
+#      print "$idx mod $srate is FALSE <br>\n" if $idx < 100;
+    }
+    push @array_1, $aref_1->[$idx];
+    push @array_2, $aref_2->[$idx];
+  }
+#  print "array 1 has " . scalar( @array_1 ) . " total entries <br>\n";
+  $aref_1 = \@array_1;
+#  print "arrayref 1 has " . scalar( @{$aref_1} ) . " total entries <br>\n";
+  $aref_2 = \@array_2;
+  return ( $aref_1, $aref_2 );
 }
 
 ###############################################################################
@@ -925,6 +1071,7 @@ sub traces2json_old {
 sub traces2json {
   my %args = @_;
   my $traces_href = $args{traces_href};
+  $args{traces_href} = {};
 
 #--------------------------------------------------
 #   my $pepseq = $args{	pepseq};
@@ -1019,8 +1166,12 @@ sub traces2json {
 
 
     $label .=  sprintf "%7.3f / %7.3f",  $traces{'tx'}->{$q1}->{$q3}->{'q1'}, $q3;
-    $label .= sprintf (" ERI: %0.1f", $traces{'tx'}->{$q1}->{$q3}->{'eri'} )
-    if ($traces{'tx'}->{$q1}->{$q3}->{'eri'});
+    if ( $traces{'tx'}->{$q1}->{$q3}->{'eri'} ) {
+      $label .= sprintf (" ERI: %0.1f", $traces{'tx'}->{$q1}->{$q3}->{'eri'} )
+    }
+    if ( $args{param_href}->{use_pepname} ) {
+      $label = ( $q1 =~ /DECOY/ ) ? 'DECOY ' . $q3 : $q3;
+    }
     $data_element{'label'} = $label;
     $data_element{'eri'} = $traces{'tx'}->{$q1}->{$q3}->{'eri'} +0 #force to int
     if ($traces{'tx'}->{$q1}->{$q3}->{'eri'});
@@ -1424,7 +1575,7 @@ sub getTopHTMLforChromatogramViewer {
      if $param_href->{precursor_charge};
   $top_html .= "<b><big>, $param_href->{isotype}</big></b>\n"
      if $param_href->{isotype};
-  $top_html .= "<br><b>Peptide: </b> $param_href->{peptide}\n"
+  $top_html .= "<br><b>Peptide: </b> $param_href->{pepseq}\n"
      if $param_href->{peptide};
   $top_html .= "<br><b>Instrument: </b> $param_href->{instrument_name}\n"
      if $param_href->{instrument_name};
