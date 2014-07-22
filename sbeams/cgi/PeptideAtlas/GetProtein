@@ -789,6 +789,29 @@ sub handle_request {
   }
 
 
+  #### Build the full identification status
+  my $presence_level = $biosequence->{level_name};
+  my $redundancy_rel = $biosequence->{relationship_name};
+  my $identification_status = 'unknown';
+  my %prepositions = ( subsumed=>"by", "ntt-subsumed"=>"by", identical=>"to", indistinguishable=>"from" );
+  if (defined $presence_level) {
+    $identification_status = $presence_level;
+  } elsif (defined $redundancy_rel) {
+    $identification_status = $redundancy_rel;
+  }
+  if ($prepositions{$identification_status}) { 
+    $identification_status .= " $prepositions{$identification_status} $biosequence->{reference_biosequence_name}";
+  }
+
+
+  #### Display a large title, status, and status description
+  renderProteinAccessionAndStatus(
+    identification_status => $identification_status,
+    biosequence => $biosequence,
+    base_url => $base_url,
+  );
+
+
   #############################################################################
   # Widget to allow show/hide of overview section
   my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_overview',
@@ -849,25 +872,6 @@ sub handle_request {
         value=>$origene_accession,
         url => "http://www.origene.com/protein/$origene_accession/GOT1.aspx"
       );
-    }
-    my $presence_level = $biosequence->{level_name};
-    my $redundancy_rel = $biosequence->{relationship_name};
-    my $identification_status;
-    if (defined $presence_level) {
-      $identification_status = $presence_level;
-      if ($presence_level =~ 'subsumed') {
-        $identification_status .=
-            " by $biosequence->{reference_biosequence_name}";
-      }
-    } elsif (defined $redundancy_rel) {
-      $identification_status = $redundancy_rel;
-      if ($redundancy_rel eq 'identical') {
-        $identification_status .=
-             " to $biosequence->{reference_biosequence_name}";
-      } elsif ($redundancy_rel eq 'indistinguishable') {
-        $identification_status .=
-             " from $biosequence->{reference_biosequence_name}";
-      }
     }
 
     my $presence_level_string = "";
@@ -3986,3 +3990,73 @@ sub displayExternalLinksSection {
   return 1;
 
 } # end displayExternalLinksSection
+
+
+###############################################################################
+# renderProteinAccessionAndStatus
+#
+# Display the protein accession, its status, and then meaning of its status
+###############################################################################
+sub renderProteinAccessionAndStatus {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $biosequence = $args{biosequence} || die("ERROR: No biosequence passed");
+  my $identification_status = $args{identification_status} || die("ERROR: No identification_status passed");
+  my $base_url = $args{base_url} || die("ERROR: No base_url passed");
+
+  if ($sbeams->output_mode() eq 'html') {
+    my $statusColor = "yellow";
+    my $statusMessage = "This status has not been properly documented. Please report this error.";
+    if ($identification_status eq 'canonical') {
+      $statusColor = "green";
+      $statusMessage = "The status '$identification_status' means that this protein counts toward the total parsimonious protein count for this build. In many cases there are several highly similar proteins that can explain the observed peptides, but only one is labeled as canonical. It is possible that our algorithm selected the wrong one, or even that several of the similar proteins are present, but PeptideAtlas has no independent evidence that this is so.";
+
+    } elsif ($identification_status =~ /ntt-subsumed by (.*)$/) {
+      my $specificProteinMessage = "one or more other canonical proteins, which themselves have";
+      $specificProteinMessage = "<a href=\"$base_url?protein_name=$1\">$1</a>, which itself has" if ($1);
+      $statusColor = "red";
+      $statusMessage = "The status '$identification_status' means that although there are peptides that map to this protein $biosequence->{biosequence_name}, all peptides can be explained by $specificProteinMessage some independent evidence. Moreover, at least one peptide would be semi-tryptic in this protein sequence, but would actually be fully tryptic in its subsumer, giving evidence against this protein being the detected one. This protein is not part of our overall parsimonious protein count. Still, peptides from this protein may have been measured, but PeptideAtlas has no independent evidence that this is so.";
+
+    } elsif ($identification_status =~ /subsumed by (.*)$/) {
+      my $relatedAccession = $1;
+      my $specificProteinMessage = "one or more other canonical proteins, which themselves have";
+      $specificProteinMessage = "$1, which itself has" if ($1);
+      $statusColor = "red";
+      $statusMessage = "The status '$identification_status' means that although there are peptides that map to this protein $biosequence->{biosequence_name}, all peptides can be explained by $specificProteinMessage some independent evidence. This protein is not part of our overall parsimonious protein count. Still, peptides from this protein may have been measured, but PeptideAtlas has no independent evidence that this is so.";
+      $identification_status =~ s/$relatedAccession/<a href="$base_url?action=QUERY&protein_name=$relatedAccession">$relatedAccession<\/a>/ if ($1);
+
+    } elsif ($identification_status =~ /indistinguishable from (.*)$/) {
+      my $specificProteinMessage = "another protein entry with a different sequence, to which PeptideAtlas has assigned these peptides";
+      $specificProteinMessage = "$1, which has a different sequence than this one, and to which PeptideAtlas has assigned these peptides" if ($1);
+      $statusColor = "red";
+      $statusMessage = "The status '$identification_status' means that although there are peptides that map to this protein $biosequence->{biosequence_name}, all peptides also map to $specificProteinMessage. This protein is not part of our overall parsimonious protein count. Still, peptides from this protein may have been measured, but PeptideAtlas has no independent evidence that this is so.";
+
+    } elsif ($identification_status =~ /identical to (.*)$/) {
+      my $specificProteinMessage = "another protein entry with exactly the same sequence";
+      $specificProteinMessage = "$1 because it has exactly the same sequence as this one" if ($1);
+      $statusColor = "red";
+      $statusMessage = "The status '$identification_status' means that although there are peptides that map to this protein $biosequence->{biosequence_name}, all peptides also map to $specificProteinMessage. PeptideAtlas has selected the other protein as the representative. Thus this protein is not part of our overall parsimonious protein count. It is merely another accession number for the same sequence.";
+
+    } elsif ($identification_status =~ /possibly_distinguished/) {
+      $statusColor = "orange";
+      $statusMessage = "The status '$identification_status' means that this protein has peptides that are shared with a canonical peptide, but it also has a small number of peptides that appear to distinguish it from the canonical identification. However, since there are some false positives in PeptideAtlas and the reference sequences may not be annotated completely or correctly, we conservatively call this similar protein possibly distinguished from the canonical entry. Because of the shared peptides with another protein, this protein is not part of our overall parsimonious protein count.";
+
+    } elsif ($identification_status eq '') {
+      $statusColor = "black";
+      $identification_status = 'not detected';
+      $statusMessage = "The status '$identification_status' means that no peptide spectrum matches with sufficiently high quality map to this protein sequence.";
+    }
+
+    my $statusWidget = $sbeamsMOD->make_pa_tooltip(
+      tip_text => $statusMessage,
+      link_text => "<font size=\"5\" color=\"$statusColor\"><B>Status: $identification_status</B></font>&nbsp;&nbsp;<img src=\"../../images/greyqmark.gif\"><BR>" );
+    print "<font size=\"5\" color=\"blue\"><B>$biosequence->{biosequence_name}</B></font>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\n";
+    print "$statusWidget<BR>\n";
+  }
+
+  return(1);
+}
+
+
+
