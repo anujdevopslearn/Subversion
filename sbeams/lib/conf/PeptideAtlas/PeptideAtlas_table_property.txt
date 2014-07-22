@@ -99,3 +99,4 @@ AT_proteases	Proteases	PeptideAtlas_infrastructure	YES	$TBAT_PROTEASES	id		Manag
 AT_dia_library	DIA Library	PeptideAtlas_infrastructure	YES	$TBAT_DIA_LIBRARY	consensus_library_id		ManageTable.cgi?TABLE_NAME=AT_dia_library		
 AT_GetDIALibs	Get DIA Libraries	QUERY	YES				GetDIALibs		
 AT_ExploreIonLibrary	Explore Ion Library	QUERY	YES				ExploreIonLibrary		
+AT_sample_category	Sample Category	PeptideAtlas_infrastructure	YES	$TBAT_SAMPLE_CATEGORY	sample_category_id		ManageTable.cgi?TABLE_NAME=AT_sample_category		

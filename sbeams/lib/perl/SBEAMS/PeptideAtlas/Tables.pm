@@ -30,6 +30,8 @@ use vars qw(@ISA @EXPORT
     $TBAT_DEFAULT_ATLAS_BUILD
     $TBAT_ATLAS_SEARCH_BATCH
     $TBAT_SAMPLE
+    $TBAT_SAMPLE_CATEGORY 
+    $TBAT_SAMPLE_PUBLICATION
     $TBAT_ATLAS_BUILD_SAMPLE
     $TBAT_ATLAS_BUILD_SEARCH_BATCH
     $TBAT_PEPTIDE
@@ -45,7 +47,6 @@ use vars qw(@ISA @EXPORT
     $TBAT_BIOSEQUENCE_ANNOTATED_GENE
     $TBAT_BIOSEQUENCE_ANNOTATION
     $TBAT_SWISS_PROT_ANNOTATION
-    $TBAT_SAMPLE_PUBLICATION
     $TBAT_PROTEASES
     $TBAT_IPI_VERSION
     $TBAT_IPI_XREFS
@@ -172,6 +173,8 @@ require Exporter;
     $TBAT_DEFAULT_ATLAS_BUILD
     $TBAT_ATLAS_SEARCH_BATCH
     $TBAT_SAMPLE
+    $TBAT_SAMPLE_CATEGORY
+    $TBAT_SAMPLE_PUBLICATION
     $TBAT_ATLAS_BUILD_SAMPLE
     $TBAT_ATLAS_BUILD_SEARCH_BATCH
     $TBAT_PEPTIDE
@@ -180,7 +183,6 @@ require Exporter;
     $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH
     $TBAT_MODIFIED_PEPTIDE_INSTANCE
     $TBAT_ATLAS_SEARCH_BATCH
-    $TBAT_SAMPLE
     $TBAT_ATLAS_BUILD_SAMPLE
     $TBAT_ATLAS_BUILD_SEARCH_BATCH
     $TBAT_PEPTIDE
@@ -196,7 +198,6 @@ require Exporter;
     $TBAT_BIOSEQUENCE_ANNOTATED_GENE
     $TBAT_BIOSEQUENCE_ANNOTATION
     $TBAT_SWISS_PROT_ANNOTATION
-    $TBAT_SAMPLE_PUBLICATION
 
     $TBAT_IPI_VERSION
     $TBAT_IPI_XREFS
@@ -322,6 +323,8 @@ $TBAT_ATLAS_BUILD           = "${mod}atlas_build";
 $TBAT_DEFAULT_ATLAS_BUILD   = "${mod}default_atlas_build";
 $TBAT_ATLAS_SEARCH_BATCH    = "${mod}atlas_search_batch";
 $TBAT_SAMPLE                = "${mod}sample";
+$TBAT_SAMPLE_CATEGORY       = "${mod}sample_category";
+$TBAT_SAMPLE_PUBLICATION    = "${mod}sample_publication";
 $TBAT_ATLAS_BUILD_SAMPLE    = "${mod}atlas_build_sample";
 $TBAT_ATLAS_BUILD_SEARCH_BATCH  = "${mod}atlas_build_search_batch";
 $TBAT_PEPTIDE               = "${mod}peptide";
@@ -337,8 +340,6 @@ $TBAT_PUBLICATION           = "${mod}publication";
 $TBAT_BIOSEQUENCE_ANNOTATED_GENE = "${mod}biosequence_annotated_gene";
 $TBAT_BIOSEQUENCE_ANNOTATION = "${mod}biosequence_annotation";
 $TBAT_SWISS_PROT_ANNOTATION = "${mod}swiss_prot_annotation";
-$TBAT_SAMPLE                = "${mod}sample";
-$TBAT_SAMPLE_PUBLICATION    = "${mod}sample_publication";
 $TBAT_PROTEASES             = "${mod}proteases";
 $TBAT_IPI_VERSION	    	= "PeptideAtlas_test.dbo.ipi_version";
 $TBAT_IPI_XREFS	    	= "PeptideAtlas_test.dbo.ipi_xrefs";
