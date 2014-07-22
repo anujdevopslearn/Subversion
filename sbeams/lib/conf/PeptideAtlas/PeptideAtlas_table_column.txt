@@ -1160,8 +1160,8 @@ AT_ExploreIonLibrary	1	consensus_library_id	Ion Library									Y	optionlist	4		
 AT_ExploreIonLibrary	2	protein_name_constraint	Protein Accession Constraint									N	text	40		Y	Y	N	"Constraint for the Protein Accession (SwissProt, Ensembl, IPI, SGD, etc.). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT."		
 AT_ExploreIonLibrary	3	upload_file	Upload File Of Proteins	varchar	255	0	Y		N			N	file	40		Y	Y	N	"Path to file with list of Protein Names, one per line, to be uploaded via the web interface (NOTE: if proteins are not found, search defaults to printing all proteins of the selected Atlas build)"		
 AT_ExploreIonLibrary	4	peptide_sequence_constraint	Peptide Sequence Constraint									N	text	40		Y	Y	N	Constraint for the Peptide Sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
-AT_sample_category	1	sample_category_id	Sample Category ID	int	4	0	Y		Y			Y					N	Y	Primary Key		pkDEFAULT
-AT_sample_category	2	sample_category	Sample Category	varchar	255	0	N		N			Y	text	20		Y	Y	N	Sample Category		
+AT_sample_category	1	id	Sample Category ID	int	4	0	Y		Y			Y					N	Y	Primary Key		pkDEFAULT
+AT_sample_category	2	name	Sample Category Name	varchar	255	0	N		N			Y	text	20		Y	Y	N	Sample Category		
 AT_sample_category	3	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 AT_sample_category	4	date_created	date_created	datetime	8	0	Y		N			N					Y	N			
 AT_sample_category	5	created_by_id	created_by_id	int	4	0	Y		N			N					Y	N			
