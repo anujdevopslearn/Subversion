@@ -8,7 +8,8 @@ use Data::Dumper;
 my $ts = time();
 
 # Read in and check options (global)
-my %options = process_options();
+my %options;
+process_options();
 
 # peakview 
 # 0    Q1 [ 778.413 ]
@@ -52,6 +53,8 @@ my %options = process_options();
 
 my %stats = ( count => 0, kept => 0, pcount => 0 );
 my %swath_bins = calculate_swath_bins();
+
+my %doppler;
 
 my %proteins;
 if ( $options{proteins} ) {
@@ -142,6 +145,13 @@ while ( my $line = <INFILE>) {
     next unless $ok;
   }
 
+  if ( $options{nodups} ) {
+    # openswath 11,12,15,16,17 ( modpep, pre_z, f_type, f_z, f_series )
+    # peakview 7, 8, 9, 10, 11
+    my $dupkey = ( $options{format} eq 'peakview' ) ? join( ':', @line[7..11] ) : join( ':', @line[11,12,15,16,17] );
+    next if $doppler{$dupkey}++;
+ }
+
   # We may limit based on min/max number of fragments per precursor (seq + mz)
   if ( $options{max_num_frags} || $options{min_num_frags} ) {
 
@@ -198,7 +208,7 @@ print "Finished run in $tdelta seconds\n";
 print $stats{message};
 
 sub process_options {
-  my %options;
+
   GetOptions( \%options, 'help', 
                          'format:s', 
                          'output_file:s', 
@@ -209,16 +219,14 @@ sub process_options {
                          'min_num_frags:i', 
                          'max_num_frags:i', 
                          'width:i', 
-                         'overlap:i',
+                         'overlap:f',
                          'proteins:s', 
+                         'nodups',
                          'print_swaths', 
                          'swaths_file:s', 
                          'input_file:s' );
 
   printUsage() if $options{help};
-
-  my $infile = $options{input_file} || printUsage( "input file required" );
-  my $outfile = $options{output_file} || printUsage( "outfile required" );
 
   unless ( ( $options{prec_min_mz} && $options{prec_max_mz} && $options{width} ) || $options{swaths_file} ) {
     printUsage( "Must provide either a swaths_file or prec_min_mz, prec_max_mz, and width" );
@@ -226,7 +234,16 @@ sub process_options {
   $options{frag_min_mz} ||= $options{prec_min_mz};
   $options{frag_max_mz} ||= $options{prec_max_mz};
   $options{overlap} ||= 0;
-  return %options;
+
+  if ( $options{print_swaths} && !$options{input_file} && $options{output_file} ) {
+    calculate_swath_bins();
+    exit;
+  }
+
+
+  my $infile = $options{input_file} || printUsage( "input file required" );
+  my $outfile = $options{output_file} || printUsage( "outfile required" );
+
 }
 
 sub calculate_swath_bins {
@@ -246,12 +263,10 @@ sub calculate_swath_bins {
       $end += $options{width};
     }
     $swath_bins{$start - $options{overlap}}  ||= $options{prec_max_mz};
-    my $swath_file = $options{output_file} . '.swaths';
-    open SWA, ">$swath_file";
-    for my $bin ( sort {$a <=> $b} keys( %swath_bins ) ) {
-      print SWA "$bin\t$swath_bins{$bin}\n";
+
+    if ( $options{print_swaths} ) {
+      print_swaths( %swath_bins );
     }
-    close SWA;
 
   # Else use user-supplied SWATHS file
   } elsif( $options{swaths_file} ) {
@@ -277,6 +292,16 @@ sub calculate_swath_bins {
     exit;
   }
   return( %swath_bins );
+}
+
+sub print_swaths {
+  my %swath_bins = @_;
+  my $swath_file = $options{output_file} . '.swaths';
+  open SWA, ">$swath_file";
+  for my $bin ( sort {$a <=> $b} keys( %swath_bins ) ) {
+    print SWA "$bin\t$swath_bins{$bin}\n";
+  }
+  close SWA;
 }
 
 sub get_bin {
