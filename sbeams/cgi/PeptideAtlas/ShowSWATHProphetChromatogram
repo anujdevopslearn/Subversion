@@ -1,0 +1,406 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : ShowSWATHProphetChromatogram
+#
+# Description : This CGI program displays a single chromatogram in PeptideAtlas
+#
+#
+###############################################################################
+
+
+###############################################################################
+# Basic SBEAMS setup
+###############################################################################
+use strict;
+use FindBin;
+use File::Basename;
+use Data::Dumper;
+use Carp;
+use JSON;
+$SIG{__DIE__} = sub { &Carp::confess };
+use CGI::Carp qw (fatalsToBrowser);
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($q $sbeams $sbeamsMOD $PROG_NAME
+             $current_username $massCalculator );
+
+use SBEAMS::Connection qw($q);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::DataTable;
+
+use SBEAMS::Proteomics::ChromatogramViewer;
+use SBEAMS::Proteomics::PeptideMassCalculator;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::Chromatogram;
+
+
+#$q = new CGI;
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+
+
+$PROG_NAME="ShowChromatogram";
+
+# Allowable neutral losses
+my @neutral_loss_masses = ();
+
+###############################################################################
+# Define global variables if any and execute main()
+###############################################################################
+main();
+
+
+###############################################################################
+# Main Program:
+#
+# If $sbeams->Authenticate() succeeds, print header, process the CGI request,
+# print the footer, and end.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
+      'PeptideAtlas_readonly', 'PeptideAtlas_exec'],
+    #connect_read_only=>1,
+    allow_anonymous_access=>1,
+  ));
+
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = 
+  $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
+
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+  my $apply_action  = $q->param('apply_action');
+
+
+  #### Process certain actions, then print the header, figure and do what the user wants, and print footer
+  $sbeamsMOD->display_page_header( show_doctype => 1 );
+  #processRequest();
+  processRequest(ref_parameters=>\%parameters);
+  $sbeamsMOD->display_page_footer();
+
+  $sbeams->display_page_footer(close_tables=>'YES',
+    separator_bar=>'YES',display_footer=>'NO');
+
+} # end main
+
+
+
+###############################################################################
+# processRequest
+###############################################################################
+sub processRequest {
+
+  #### Process the arguments list
+  my %args = @_;
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+
+  $ref_parameters->{show_sptxt_info} = 1 if !defined $ref_parameters->{show_sptxt_info};
+
+
+  my $linkage = qq~
+<a href="ShowSWATHProphetChromatogram?file=/proteomics/sbader/forAndy/input/Mcf7/Norm-3/ALTSWATHS/20140415_MCF7_SW_norm_3-p_SW10m_mrml.xml&pep=lgs[+87]VQAPSYGAR2:10&rank=1&times=1391.8-1470.5&frags=y8_1,y6_1,y7_1,b6_1,b4_1,b5_1&fragtimes=1397.5-1453.7,1397.5-1464.9,1397.5-1453.7,1391.8-1456.5,1397.5-1470.5,1394.6-1470.5&prob=1">lgs[+87]VQAPSYGAR2</a><br>
+<a href="ShowSWATHProphetChromatogram?file=/proteomics/sbader/forAndy/input/Mcf7/Norm-3/ALTSWATHS/20140415_MCF7_SW_norm_3-p_SW10m_mrml.xml&pep=le[+87]AAIADAEQR2:10&rank=1&times=1833-1908.8&frags=y6_1,y7_1,y8_1,y5_1,y9_1,b4_1&fragtimes=1844.2-1897.6,1844.2-1900.4,1844.2-1903.2,1841.4-1903.2,1844.2-1900.4,1833.0-1908.8&prob=1">le[+87]AAIADAEQR2</a><br>
+<a href="ShowSWATHProphetChromatogram?file=/proteomics/sbader/forAndy/input/Mcf7/Norm-3/ALTSWATHS/20140415_MCF7_SW_norm_3-p_SW10m_mrml.xml&pep=anlet[-128.1]AIADAEQR2:10&rank=1&times=1833-1914.5&frags=y6_1,y7_1,y8_1,b6_1,y4_1,b5_1&fragtimes=1844.2-1897.6,1844.2-1900.4,1844.2-1903.2,1833.0-1908.8,1838.6-1914.5,1838.6-1903.2&prob=1">anlet[-128.1]AIADAEQR2</a><br>
+<a href="ShowSWATHProphetChromatogram?file=/proteomics/sbader/forAndy/input/Mcf7/Norm-3/ALTSWATHS/20140415_MCF7_SW_norm_3-p_SW10m_mrml.xml&pep=avl[-71]EYLTAEILELAGNAAR3:10&rank=1&times=3592-3659.4&frags=y5_1,y6_1,y7_1,y8_1,b9_1,y9_1&fragtimes=3594.8-3651.0,3594.8-3651.0,3594.8-3653.8,3594.8-3656.6,3594.8-3659.4,3592.0-3656.6&prob=1">avl[-71]EYLTAEILELAGNAAR3</a><br>
+<a href="ShowSWATHProphetChromatogram?file=/proteomics/sbader/forAndy/input/Mcf7/Norm-3/ALTSWATHS/20140415_MCF7_SW_norm_3-p_SW11m_mrml.xml&pep=VTIAQGGVLPNIqa[-71]2:11&rank=1&times=2254.6-2319.2&frags=y5_1,y6_1,b9_1,b8_1,b11_1,b12_1&fragtimes=2257.4-2310.8,2254.6-2313.6,2257.4-2313.6,2254.6-2319.2,2254.6-2319.2,2257.4-2307.9&prob=1">VTIAQGGVLPNIqa[-71]2</a><br>
+<a href="ShowSWATHProphetChromatogram?file=/proteomics/sbader/forAndy/input/Mcf7/Norm-3/ALTSWATHS/20140415_MCF7_SW_norm_3-p_SW12m_mrml.xml&pep=LVl[-113.1]EVDPNIQAVR2:12&rank=1&times=1847.2-1895&frags=y7_1,y8_1,y10_1,b4_1,y9_1,y11_1&fragtimes=1847.2-1892.2,1847.2-1895.0,1847.2-1892.2,1847.2-1895.0,1847.2-1895.0,1847.2-1895.0&prob=1">LVl[-113.1]EVDPNIQAVR2</a><br>
+<a href="ShowSWATHProphetChromatogram?file=/proteomics/sbader/forAndy/input/Mcf7/Norm-3/ALTSWATHS/20140415_MCF7_SW_norm_3-p_SW12m_mrml.xml&pep=VTIAQGGVLPNIqav[-99.1]2:12&rank=1&times=2341.7-2414.8&frags=y6_1,b9_1,y7_1,b11_1,b12_1,b4_1&fragtimes=2350.2-2412.0,2353.0-2409.2,2350.2-2409.2,2350.2-2414.8,2353.0-2406.4,2341.7-2395.1&prob=1">VTIAQGGVLPNIqav[-99.1]2:</a><br>
+<a href="ShowSWATHProphetChromatogram?file=/proteomics/sbader/forAndy/input/Mcf7/Norm-3/ALTSWATHS/20140415_MCF7_SW_norm_3-p_SW12m_mrml.xml&pep=VTIAQGGVLPNIq[+71]2:12&rank=1&times=2350.2-2414.8&frags=y4_1,b9_1,y5_1,b8_1,b11_1,b12_1&fragtimes=2350.2-2412.0,2353.0-2409.2,2350.2-2400.8,2350.2-2403.6,2350.2-2414.8,2353.0-2406.4&prob=1">VTIAQGGVLPNIq[+71]2</a><br>
+<a href="ShowSWATHProphetChromatogram?file=/proteomics/sbader/forAndy/input/Mcf7/Norm-3/ALTSWATHS/20140415_MCF7_SW_norm_3-p_SW14m_mrml.xml&pep=VTIAQGGVLPNIqa[+99.1]2:14&rank=1&times=2544.2-2614.5&frags=y5_1,b9_1,b8_1,y6_1,b11_1,b12_1&fragtimes=2549.8-2614.5,2549.8-2614.5,2544.2-2586.4,2549.8-2594.8,2549.8-2608.8,2549.8-2606.0&prob=1">VTIAQGGVLPNIqa[+99.1]2</a><br>
+<a href="ShowSWATHProphetChromatogram?file=/proteomics/sbader/forAndy/input/Mcf7/Norm-3/ALTSWATHS/20140415_MCF7_SW_norm_3-p_SW14m_mrml.xml&pep=VTIAQGGVLPNIq[+170.1]2:14&rank=1&times=2544.2-2620.1&frags=y4_1,b9_1,b8_1,y5_1,b11_1,b12_1&fragtimes=2549.8-2611.7,2549.8-2614.5,2544.2-2586.4,2549.8-2620.1,2549.8-2608.8,2549.8-2606.0&prob=1">VTIAQGGVLPNIq[+170.1]2</a><br>
+<a href="ShowSWATHProphetChromatogram?file=/proteomics/sbader/forAndy/input/Mcf7/Norm-3/ALTSWATHS/20140415_MCF7_SW_norm_3-p_SW15m_mrml.xml&pep=gill[-57]HLESELAQTR2:15&rank=1&times=2007.6-2097.5&frags=y8_1,y9_1,y10_2,y7_1,y10_1,b5_1&fragtimes=2016.0-2044.1,2016.0-2094.7,2010.4-2052.6,2010.4-2097.5,2007.6-2075.1,2016.0-2080.7&prob=1">gill[-57]HLESELAQTR2</a><br>
+<a href="ShowSWATHProphetChromatogram?file=/proteomics/sbader/forAndy/input/Mcf7/Norm-3/ALTSWATHS/20140415_MCF7_SW_norm_3-p_SW15m_mrml.xml&pep=EGNASGVSLLEALDt[+61]ILPPTRPTDKPLR4:15&rank=1&times=2968.6-3052.9&frags=y11_2,y4_1,y12_2,y15_2,y13_2,y14_2&fragtimes=2985.5-3050.1,2985.5-3047.3,2985.5-3044.5,2985.5-3041.7,2968.6-3024.8,2971.4-3052.9&prob=1">EGNASGVSLLEALDt[+61]ILPPTRPTDKPLR4</a><br>
+<a href="ShowSWATHProphetChromatogram?file=/proteomics/sbader/forAndy/input/Mcf7/Norm-3/ALTSWATHS/20140415_MCF7_SW_norm_3-p_SW16m_mrml.xml&pep=lv[+97.1]LEVDPNIQAVR2:16&rank=1&times=2305.6-2389.8&frags=y7_1,y8_1,y9_1,y10_1,y11_1,b4_1&fragtimes=2305.6-2373.0,2311.2-2373.0,2316.8-2361.8,2316.8-2364.6,2308.4-2389.8,2319.6-2373.0&prob=1">lv[+97.1]LEVDPNIQAVR2</a><br>
+<a href="ShowSWATHProphetChromatogram?file=/proteomics/sbader/forAndy/input/Mcf7/Norm-3/ALTSWATHS/20140415_MCF7_SW_norm_3-p_SW16m_mrml.xml&pep=gill[-14]HLESELAQTR2:16&rank=1&times=3317.1-3407&frags=y8_1,y9_1,y10_1,y7_1,y10_2,b5_1&fragtimes=3331.2-3407.0,3328.3-3404.2,3328.3-3404.2,3331.2-3390.2,3317.1-3407.0,3339.6-3384.6&prob=1">gill[-14]HLESELAQTR2</a><br>
+<a href="ShowSWATHProphetChromatogram?file=/proteomics/sbader/forAndy/input/Mcf7/Norm-3/ALTSWATHS/20140415_MCF7_SW_norm_3-p_SW18m_mrml.xml&pep=gill[+114]HLESELAQTR2:18&rank=1&times=2485.6-2564.2&frags=y10_1,y9_1,y8_1,y7_1,b5_1,y10_2&fragtimes=2491.2-2561.4,2488.4-2561.4,2485.6-2564.2,2488.4-2564.2,2488.4-2550.2,2485.6-2536.1&prob=1">gill[+114]HLESELAQTR2</a><br>
+   ~;
+
+  #### Define param usage and print if parameter "help=1" defined.
+  my $usage = qq~
+   file - MRML file to pull from
+   pep - peptide sequence with odd mod nomenclature, with charge and something else appended (lgs[+87]VQAPSYGAR2:10)
+   rank - peak group rank (optional) 1
+   times - range of times 1391.8-1470.5
+   frags - fragments expected, with charge y8_1,y6_1,y7_1,b6_1,b4_1,b5_1
+   fragtimes - fragment elution times, for caption 1397.5-1453.7,1397.5-1464.9,1397.5-1453.7,1391.8-1456.5,1397.5-1470.5,1394.6-1470.5
+   prob - peak group probability (optional) 1
+~;
+
+  $sbeams->show_help_if_requested(
+    usage_string   => $usage,
+    ref_parameters => $ref_parameters,
+  );
+
+  my @frags = split( /,/, $ref_parameters->{frags} );
+  my @fragtimes = split( /,/, $ref_parameters->{fragtimes} );
+  my %frag_annot;
+  if ( @frags && @fragtimes ) {
+    for ( my $i = 0; $i <= $#frags; $i++ ) {
+      $frag_annot{$frags[$i]} = $fragtimes[$i];
+    }
+  }
+
+  # Create a chromatogram object so we can use its methods
+  my $cgram = new SBEAMS::PeptideAtlas::Chromatogram;
+  $cgram->setSBEAMS($sbeams);
+
+  # Fixme
+  my $extract_exe = '/net/dblocal/wwwSSL/html/devDC/sbeams/lib/scripts/PeptideAtlas/extractFromMRML.pl';
+  my $spectrum_pathname = $ref_parameters->{'spectrum_pathname'} || $ref_parameters->{file} || die "missing param spectrum pathname";
+
+  my $parent = 'PARENT';
+
+  my $seqstr = $ref_parameters->{'pep'};
+  my ( $seqchg, $sbin ) = split( /:/, $seqstr );
+  $seqchg =~ /^(.*)(\d)$/;
+  my $pepseq = $1;
+  my $chg = $2;
+
+  die "missing or improper parameter pep" if ( !$pepseq || !$chg || !$sbin ); 
+
+  my $time_range = $ref_parameters->{'times'};
+
+#  my $tdelta = abs(eval( "$time_range" ));
+  $time_range =~ s/-/,/;
+
+  my $command = "$extract_exe $spectrum_pathname $pepseq $chg RANGE=$time_range $parent";
+  my @results = `$command`;
+
+  my $rank = ( $ref_parameters->{rank} ) ? "Rank: $ref_parameters->{rank}" : '';
+  my $prob = ( $ref_parameters->{prob} ) ? "[Probability: $ref_parameters->{prob}]" : '';
+
+  print $linkage;
+  if ( !scalar( @results ) ) {
+    die "No results returned from given parameters <br>" . Dumper( $ref_parameters ); 
+  }
+
+  my @headings;
+  my %results;
+  my $extra;
+  my $rtable = SBEAMS::Connection::DataTable->new( BORDER => 1 );
+
+  for my $line ( @results ) {
+    chomp $line;
+    $line =~ s/\r//g;
+    chomp $line;
+
+    my @line = split( /\t/, $line, -1 );
+    $rtable->addRow( \@line ) unless $line =~ /PRED_INTS/;
+    if ( !scalar( @headings ) ) {
+      @headings = @line;
+      $headings[0] =~ s/^#//g;
+      next;
+    }
+    if ( $line =~ /PRED_INTS/ ) {
+      $extra = $line;
+      next;
+    }
+    for ( my $idx = 0; $idx <= $#line; $idx++ ) {
+      $results{$headings[$idx]} ||= [];
+      push @{$results{$headings[$idx]}}, $line[$idx];
+    }
+  }
+
+
+  my %maxint;
+  if ( $extra ) {
+    if ( $extra =~ /PRED_INTS:\s*(.*)$/ ) {
+    my $pred_ints = $1;
+    my @maxima = split( /,/, $pred_ints );
+    for my $pair ( @maxima ) {
+      my ( $ion, $max ) = split( /:/, $pair );
+      $maxint{$ion} = $max;
+    }
+    } else {
+      die "Regex failed for $extra";
+    }
+    #$VAR1 = '# MAXINT: 3518.00,5193.00	PRED_INTS: b6_1:990.6,y4_1:900.4,y7_1:3773.2,b9_1:674.5,b7_1:706.2,y5_1:1216.4';
+  }
+  my @ion_order;
+  if ( scalar( keys( %maxint ) ) ) {
+    @ion_order = sort { $maxint{$b} <=> $maxint{$a} } ( keys( %maxint ) );
+    unshift @ion_order, 'parent';
+  } else {
+    @ion_order = sort ( @headings ); 
+  }
+
+  my $spacer = '&nbsp;' x 36;
+  my $to_json = { info => [ { top_html => "<p>$spacer<b>$pepseq:$chg</b> $prob $rank SWATH bin:$sbin</p>" } ],
+                  data_json => [] };
+
+  my ( $start, $stop ) = split( /,/, $time_range ); 
+  my $median_in_minutes = ($start+$stop)/120;
+  my @time = @{$results{'time'}};
+
+  my $json = JSON->new();
+  for my $label ( @ion_order ) {
+    next if $label eq 'time';
+    my @time = @{$results{'time'}};
+    if ( $results{$label} ) {
+    } else {
+      next;
+    }
+    my @inten = @{$results{$label}};
+    my @data;
+    if ( $ref_parameters->{expand_time_range} ) {
+#      push @data, { 'time' => $median_in_minutes - $ref_parameters->{expand_time_range}, intensity => 0 };
+#      push @data, { 'time' => $time[0] - 0.01, intensity => 0 };
+    }
+#      my $time_in_minutes = ( $time[$i] ) ? $time[$i]/60 : 0;
+#      push @data, { 'time' => $time_in_minutes, intensity => $inten[$i] + 0 };
+    for ( my $i = 0; $i <= $#time; $i++ ) {
+      my $time_in_minutes = ( $time[$i] ) ? $time[$i]/60 : 0;
+      push @data, { 'time' => $time_in_minutes, intensity => $inten[$i] + 0 };
+    }
+#    if ( $ref_parameters->{expand_time_range} ) {
+#      push @data, { 'time' => $time[$#time] + 0.01, intensity => 0 };
+#      push @data, { 'time' => $median_in_minutes + $ref_parameters->{expand_time_range}, intensity => 0 };
+#    }
+    my $full_label = $label;
+    if ( scalar( keys( %maxint ) ) ) {
+      if ( $maxint{$label} ) {
+        $full_label .= "($maxint{$label})" 
+      }
+      if ( $frag_annot{$label} ) {
+        $full_label .= " ET:$frag_annot{$label})" 
+      }
+    }
+    if ( $label eq 'parent' ) {
+      unshift @{$to_json->{data_json}}, { label => $full_label, data => \@data, full => 'COUNT: 01 Q1:0.000 Q3:0.000' }
+    } else {
+      push @{$to_json->{data_json}}, { label => $full_label, data => \@data, full => 'COUNT: 01 Q1:0.000 Q3:0.000' }
+    }
+  }
+
+  my $json_string = $json->encode( $to_json );
+
+#   "info" : [
+#      {
+#         "top_html" : "<p><big> <b></b></big> (1315.675 Daltons) </b> <br><b>Peptide: </b> ILDETLYENAK[136] <br><b>Instrument: </b> ABI SCIEX QTRAP 5500 "
+#      }
+#   ],
+
+# /proteomics/sbader/forAndy/input/URINE/20130522_neat_1-1/UR_LIB/FULLMODS/TEST/REDO/20130522_neat_1-1_SW16_mrml.xml 'ASDC[CAM]GAGPIGFAGTVR[HvR]' 2 RANGE=4177.1,4257.2 PARENT | cut -f1
+
+# https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/ShowSWATHProphetChromatogram?pepseq=ILDETLYENAK[136];use_pepname=1;limit_smoothing_options=1;default_smoothing_factor=5;spectrum_pathname=/proteomics/dcampbel/OpenSwath/test/OpenSWATH_Tutorial/split_napedro_L120420_010_SW-400AQUA_combined.chrom.idx.mzML;peptide=ILDETLYENAK;no_specfile=1;no_mquest=1;instrument_name=ABI%20SCIEX%20QTRAP%205500
+
+  my $sptxt_fulltext = '';
+
+  # Fetch some of the parameters into scalar variables and do some processing.
+  my $precursor_charge = $ref_parameters->{'precursor_charge'};
+  my $pepseq = $ref_parameters->{'pepseq'};
+  my $modified_pepseq = $ref_parameters->{'modified_pepseq'} || $pepseq;
+  my $spectrum_pathname = $ref_parameters->{'file'} ||
+    die 'ShowChromatogram; Need parameter spectrum_pathname';
+  my $spectrum_basename = $ref_parameters->{'spectrum_basename'};
+  $spectrum_pathname =~ /.*(\..*)/; my $filename_extension = $1;
+  if (! $spectrum_basename ) {
+    $spectrum_pathname =~ /.*\/(\S+?)\.${filename_extension}/;
+    $spectrum_basename = $1;
+  }
+  my $precursor_neutral_mass = $ref_parameters->{'precursor_neutral_mass'};
+  if ($ref_parameters->{'isotype'} =~ /heavy/i) {
+    $precursor_neutral_mass += $ref_parameters->{'isotype_delta_mass'};
+  }
+  my $machine = $ref_parameters->{'machine'};  #unused 12/06/11
+
+
+  #### Display the Chromatogram Viewer page.
+
+  # Print the HTML for the top of the chromatogram viewer page
+#--------------------------------------------------
+#   my $top_html = $cgram->getTopHTMLforChromatogramViewer (
+#     param_href => $ref_parameters,
+#     seq => $modified_pepseq,
+#     precursor_neutral_mass => $precursor_neutral_mass,
+#     precursor_charge => $precursor_charge,
+#     spectrum_pathname => $spectrum_pathname,
+#   );
+#-------------------------------------------------- 
+  my $json_string_no_newlines = $json_string;
+  $json_string_no_newlines =~ s/\n/ /g;
+  $json_string_no_newlines =~ s/'/"/g;
+  my $top_html = $cgram->getTopHTMLfromJson (
+    json_string => $json_string_no_newlines,
+  );
+
+  print $top_html;
+	my %smoothing;
+	if ( $ref_parameters->{default_smoothing_factor} ) {
+		$smoothing{default_smoothing_factor} = $ref_parameters->{default_smoothing_factor};
+	}
+	if ( $ref_parameters->{limit_smoothing_options} ) {
+		$smoothing{limit_smoothing_options} = $ref_parameters->{limit_smoothing_options};
+	}
+	if ( $ref_parameters->{expand_timeframe} ) {
+		$smoothing{expand_timeframe} = $ref_parameters->{expand_timeframe};
+	}
+
+  # Generate the Chromavis javascript chromatogram viewer
+  my $chromavis = new SBEAMS::Proteomics::ChromatogramViewer;
+  print $chromavis->generateChromatogram(
+    chromatogram_id => $ref_parameters->{'SEL_chromatogram_id'},
+    spectrum_pathname         => $spectrum_pathname,
+    precursor_neutral_mass=> $precursor_neutral_mass,
+    precursor_charge      => $precursor_charge,
+    seq                   => $modified_pepseq,
+    precursor_rt          => $ref_parameters->{rt},
+    best_peak_group_rt    => $ref_parameters->{Tr},
+    m_score               => $ref_parameters->{m_score},
+    json_string           => $json_string,
+		%smoothing
+  );
+
+  # Read the data from the JSON object into a hash of the
+  # format required by writeResultSet
+  my $cgram_href = $cgram->readJsonChromatogramIntoResultsetHash (
+    param_href => $ref_parameters,
+    json_string => $json_string,
+    #json_physical_pathname => $json_physical_pathname,
+  );
+
+  # Store chromatogram data as a recallable resultset
+  my $rs_set_name = "SETME";
+  $sbeams->writeResultSet(
+    resultset_file_ref=>\$rs_set_name,
+    resultset_ref=>$cgram_href,
+    file_prefix=>'chromgram_',
+    query_parameters_ref=>$ref_parameters,
+  );
+
+# Temp, print ref_params;
+  my $ptable;
+  for my $p ( keys( %{$ref_parameters} ) ){
+    $ptable .= "$p => $ref_parameters->{$p} <br>\n";
+  }
+  print "$ptable<br>";
+  print "Data from MRML extraction<br>\n";
+  print "$extra<br><br>";
+  print "$rtable<br>";
+
+  # Print sptxt info, if provided.
+  my ($SRMProb) = ($sptxt_fulltext =~ /SRMProb=(\S*)\s*/);
+	if ( $ref_parameters->{show_sptxt_info} ) {
+    print "<p>SRM Probability: $SRMProb</p>\n" if $SRMProb;
+    print "<pre>$sptxt_fulltext</pre>\n";
+	}
+
+  # Print the HTML that allows user to recall and download resultset
+  print $cgram->getBottomHTMLforChromatogramViewer(
+    param_href => $ref_parameters,
+    rs_set_name => $rs_set_name,
+  );
+
+} # end processRequest
