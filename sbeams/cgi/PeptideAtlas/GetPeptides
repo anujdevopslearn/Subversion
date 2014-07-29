@@ -169,7 +169,6 @@ sub handle_request {
   }
   $parameters{atlas_build_id} = $atlas_build_id;
 
-
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
 
@@ -334,13 +333,33 @@ sub handle_request {
 
 
   #### Build SAMPLE_ID constraint
-  my $samples_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"ASB.sample_id",
+  #### Build SAMPLE_CATEGORY_ID constraint
+  my ($peptide_instance_in, $samples_clause, $sample_category_clause);
+  if ($parameters{sample_ids} || $parameters{sample_category_id} ){
+   $samples_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"S.sample_id",
     constraint_type=>"int_list",
     constraint_name=>"Samples ",
     constraint_value=>$parameters{sample_ids} );
-  return if ($samples_clause eq '-1');
-
+    return if ($samples_clause eq '-1');
+   $sample_category_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"S.sample_category_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Sample Category",
+    constraint_value=>$parameters{sample_category_id} );
+    return if ($sample_category_clause eq '-1');
+   $peptide_instance_in = qq~
+     SELECT PI2.PEPTIDE_INSTANCE_ID
+     FROM $TBAT_PEPTIDE_INSTANCE PI2 
+     JOIN $TBAT_PEPTIDE_INSTANCE_SAMPLE PIS ON ( PIS.PEPTIDE_INSTANCE_ID = PI2.PEPTIDE_INSTANCE_ID )
+     JOIN $TBAT_SAMPLE S  ON (PIS.SAMPLE_ID = S.SAMPLE_ID)
+     where 1=1 
+     and PI2.atlas_build_id = $atlas_build_id
+     $samples_clause 
+     $sample_category_clause
+    ~;
+    $atlas_build_clause = '';
+  }
 
   #### Build N_OBSERVATIONS constraint
   my $n_observations_clause = $sbeams->parseConstraint2SQL(
@@ -349,7 +368,6 @@ sub handle_request {
     constraint_name=>"Number of Observations",
     constraint_value=>$parameters{n_observations_constraint} );
   return if ($n_observations_clause eq '-1');
-
 
   #### Build N_SAMPLES constraint
   my $n_samples_clause = $sbeams->parseConstraint2SQL(
@@ -544,12 +562,13 @@ sub handle_request {
 
 
   #### Build ROWCOUNT constraint
-  $parameters{row_limit} = 5000
-    unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
-  my $limit_clause = "TOP $parameters{row_limit}";
+  $parameters{row_limit} = 100000
+    unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=700001);
+  $parameters{row_limit} = 100000 if ($parameters{row_limit} eq '');
+  #my $limit_clause = "TOP $parameters{row_limit}";
   #### Disable row limits
-  $limit_clause = "";
-
+  my $MAX_ROW_NUMBER = $parameters{row_limit};
+  my $limit_clause = '';
 
   #### Define some variables needed to build the query
   my @column_array;
@@ -566,12 +585,13 @@ sub handle_request {
         $end_in_chromosome_clause
         $strand_clause
   ~;
-  my $mapping_sort = ',PM.chromosome,PM.start_in_chromosome';
+  my $mapping_sort = 'ORDER BY A.peptide_accession,A.chromosome,A.start_in_chromosome';
 
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
 
   #### If the DASFormat view was selected (excludes other options)
+  my $modification_join = '';
   if ($parameters{display_options} =~ /DASFormat/) {
     @column_array = (
       ["label","DISTINCT 'Similarity'","Label"],
@@ -590,7 +610,7 @@ sub handle_request {
   } else {
     # Set up base column defs
     @column_array = (
-      ["peptide_accession","DISTINCT P.peptide_accession","Peptide Accession"],
+      ["peptide_accession","P.peptide_accession","Peptide Accession"],
       ["peptide_sequence","P.peptide_sequence","Peptide Sequence"],
 
       ["best_probability","STR(PI.best_probability,7,3)","Best Prob"],
@@ -620,7 +640,7 @@ sub handle_request {
                         @column_array[6..$#column_array],
                         );
 
-      $mapping_join .= qq~
+      $modification_join = qq~
          LEFT JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI
               ON ( PI.peptide_instance_id = MPI.peptide_instance_id )
       ~;
@@ -643,6 +663,8 @@ sub handle_request {
 
     } else {
       $mapping_sort = '';
+      $mapping_constraints = '';
+      $mapping_join = '';
     }
 
   }
@@ -652,7 +674,9 @@ sub handle_request {
     $show_sql = 1;
   }
 
-
+  @column_array = ( @column_array , 
+                    ["row_number" , "row_number() over (order by P.peptide_accession)", "row_number"]
+                  );
   #### Build the columns part of the SQL statement
   my %colnameidx = ();
   my @column_titles = ();
@@ -667,36 +691,38 @@ sub handle_request {
     column_titles_ref=>\@column_titles
   );
 
+  my $peptide_instance_id_contraint = '';
+
+  if ($peptide_instance_in ne ''){
+    $peptide_instance_id_contraint = "and PI.peptide_instance_id in ( $peptide_instance_in ) ";
+  }    
+
   #### Define the SQL statement
   $sql = qq~
      SELECT $limit_clause $columns_clause
        FROM $TBAT_PEPTIDE_INSTANCE PI
       INNER JOIN $TBAT_PEPTIDE P
             ON ( PI.peptide_id = P.peptide_id )
-      INNER JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PIS
-            ON ( PI.peptide_instance_id = PIS.peptide_instance_id )
       INNER JOIN $TBAT_ATLAS_BUILD AB
             ON ( PI.atlas_build_id = AB.atlas_build_id )
        LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
             ON ( AB.biosequence_set_id = BSS.biosequence_set_id )
        LEFT JOIN $TB_ORGANISM O
             ON ( BSS.organism_id = O.organism_id )
-       JOIN $TBAT_ATLAS_SEARCH_BATCH ASB
-            ON ( ASB.atlas_search_batch_id = PIS.atlas_search_batch_id )
-
-     $mapping_join
+       $modification_join
+       $mapping_join
      WHERE 1 = 1
+        $peptide_instance_id_contraint  
         $atlas_build_clause
-	$biosequence_name_clause
-	$biosequence_names_clause
-	$biosequence_gene_name_clause
+				$biosequence_name_clause
+				$biosequence_names_clause
+				$biosequence_gene_name_clause
         $biosequence_desc_clause
-	$peptide_name_clause
-	$peptide_sequence_clause
+				$peptide_name_clause
+				$peptide_sequence_clause
         $best_probability_clause
         $n_observations_clause
         $n_samples_clause
-        $samples_clause
         $empirical_proteotypic_clause
         $n_protein_mappings_clause
         $n_genome_locations_clause
@@ -704,7 +730,6 @@ sub handle_request {
         $allow_low_ntt_clause
         $allow_missed_cleavages_clause
         $peptide_ids_clause
-        $mapping_constraints
    ~;
   if ($parameters{display_options} =~ /ShowModifications/) {
     if($modified_peptide_sequence_clause ne ''){
@@ -713,7 +738,6 @@ sub handle_request {
     }
   }
   
-  $sql .="ORDER BY P.peptide_accession$mapping_sort";
 
   #### Certain types of actions should be passed to links
   my $pass_action = "QUERY";
@@ -778,8 +802,9 @@ sub handle_request {
 		  'biosequence_accessor' => 1,
 		  'biosequence_accessor_suffix' => 1,
 #		  'peptide_accession' => 1, not sure why this was here but it was causing "DAS Format" TSC resultsets to be bad. Deutsch
-                  'Organism' => 1,
-                  'PeptideAtlas Name' => 1,
+      'Organism' => 1,
+      'PeptideAtlas Name' => 1,
+      'row_number' => 1,
   );
 
 
@@ -794,6 +819,13 @@ sub handle_request {
     if ($apply_action =~ /QUERY/i) {
 
       #### Show the SQL that will be or was executed
+      $sql = qq~
+          SELECT * 
+          FROM 
+          ($sql) A 
+          WHERE row_number BETWEEN 1 and $MAX_ROW_NUMBER
+          $mapping_sort
+      ~;
       $sbeams->display_sql( sql => $sql,
                             use_tabbed_panes => 1 ) if ($show_sql);
 
@@ -802,6 +834,9 @@ sub handle_request {
         sql_query=>$sql,
         resultset_ref=>$resultset_ref,
       );
+      if (scalar @{$resultset_ref->{data_ref}} < $MAX_ROW_NUMBER){
+        $parameters{row_limit} = '';
+      }
 
       #### Post process the resultset
       postProcessResultset(
