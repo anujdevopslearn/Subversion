@@ -413,9 +413,31 @@ sub handle_request {
   return if ($is_exon_spanning_clause eq '-1');
 
   #### Build allow_missed_cleavages constraint
-  my $allow_missed_cleavages_clause = '';
+  # my $allow_missed_cleavages_clause = '';
 	if ( $parameters{allow_missed_cleavages} && $parameters{allow_missed_cleavages} =~ /N/ ) {
-    $allow_missed_cleavages_clause = "AND P.peptide_sequence NOT LIKE '%[KR][^P]%'";
+    my $allow_missed_cleavages_clause = "AND P2.peptide_sequence NOT LIKE '%[KR][^P]%'";
+    if ($peptide_instance_in ne ''){
+     $peptide_instance_in = qq~
+			 SELECT PI2.PEPTIDE_INSTANCE_ID
+			 FROM $TBAT_PEPTIDE P2 
+       JOIN $TBAT_PEPTIDE_INSTANCE PI2 ON (P2.PEPTIDE_ID = PI2.PEPTIDE_ID)
+			 JOIN $TBAT_PEPTIDE_INSTANCE_SAMPLE PIS ON ( PIS.PEPTIDE_INSTANCE_ID = PI2.PEPTIDE_INSTANCE_ID )
+			 JOIN $TBAT_SAMPLE S  ON (PIS.SAMPLE_ID = S.SAMPLE_ID)
+			 WHERE 1=1
+       $allow_missed_cleavages_clause
+			 and PI2.atlas_build_id = $atlas_build_id
+			 $samples_clause
+			 $sample_category_clause
+			~;
+    }else{
+      $peptide_instance_in = qq~
+        SELECT PI2.PEPTIDE_INSTANCE_ID
+        FROM $TBAT_PEPTIDE P2
+        JOIN $TBAT_PEPTIDE_INSTANCE PI2 ON (P2.PEPTIDE_ID = PI2.PEPTIDE_ID)
+        WHERE 1=1
+       $allow_missed_cleavages_clause
+      ~;
+    }
 	}
 
   #### Build allow_low_ntt constraint
@@ -733,7 +755,6 @@ sub handle_request {
         $n_genome_locations_clause
         $is_exon_spanning_clause
         $allow_low_ntt_clause
-        $allow_missed_cleavages_clause
         $peptide_ids_clause
    ~;
   if ($parameters{display_options} =~ /ShowModifications/) {
