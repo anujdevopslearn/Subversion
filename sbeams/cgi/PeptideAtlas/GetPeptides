@@ -664,7 +664,12 @@ sub handle_request {
     } else {
       $mapping_sort = '';
       $mapping_constraints = '';
-      $mapping_join = '';
+      if ( ! ($parameters{biosequence_name_constraint} || 
+						 $parameters{biosequence_gene_name_constraint} || 
+						 $parameters{biosequence_desc_constraint}) 
+         ){
+					$mapping_join = '';
+        }
     }
 
   }
