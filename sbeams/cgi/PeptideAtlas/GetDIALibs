@@ -367,7 +367,7 @@ sub get_library_table {
 #    die Dumper( $lib_table );
     $content .= qq~
     <br>
-     <span style="font-family:Helvetica, Arial, sans-serif;font-size:110%;font-weight:bold" id=heading> $tag2comment{$lib} </span>
+     <span style="font-family:Helvetica, Arial, sans-serif;font-size:110%;font-weight:bold" id=heading> $lib </span>
      <table><table>$lib_table
     <br>
     ~;
