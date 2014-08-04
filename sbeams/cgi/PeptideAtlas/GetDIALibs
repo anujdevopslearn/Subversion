@@ -291,7 +291,8 @@ sub get_library_table {
   JOIN $TBAT_INSTRUMENT_TYPE IT ON IT.instrument_type_id = DIL.instrument_type_id
   JOIN $TB_ORGANISM O ON O.organism_id = DIL.organism_id
   WHERE project_id IN ( $project_ids )
-  ORDER BY dia_library_tag, file_format, instrument_type_name
+  AND DIL.record_status = 'N'
+  ORDER BY dia_library_tag, instrument_type_name, dia_library_id
   ~;
 # 0 dia_library_id
 # 1 dia_library_name
@@ -331,7 +332,7 @@ sub get_library_table {
   for my $lib ( sort( keys( %libraries ) ) ) {
 #    my $lib_table = SBEAMS::Connection::DataTable->new( HEADER => 1 );
 #    $lib_table->addRow( [ qw( Name Description Instrument Format MD5Sum ), 'Get Libraries' ] );
-    my @lib_data = ( [ qw( Name Instrument Format Size ), 'Get Libraries' ] );
+    my @lib_data = ( [ qw( Name Accession Instrument Format Size ), 'Get Libraries' ] );
     for my $lib_file ( @{$libraries{$lib}} ) {
       my $fname = basename( $lib_file->[7] ); 
 
@@ -346,13 +347,15 @@ sub get_library_table {
            $lib_file->[8] =~ /mprophet/i ) { 
         $cust = "<a href=GetDIALibs?mode=subset_libs;lib_id=$lib_file->[0]>Customize</a>";
       }
+      my $accession = 'SAL' . sprintf( "%05i", $lib_file->[0] );
+      $lib_file->[0] = $accession;
 #      $lib_table->addRow( [ @{$lib_file}[1,5,3,8,6], $dwn . '&nbsp;&nbsp;' . $cust ] );
-      push @lib_data, [ @{$lib_file}[1,3,8], $size, $dwn . '&nbsp;&nbsp;' . $cust ];
+      push @lib_data, [ @{$lib_file}[1,0,3,8], $size, $dwn . '&nbsp;&nbsp;' . $cust ];
     }
 
     my $lib_table = $atlas->encodeSectionTable( header => 1, 
                                                  width => '800',
-                                                align  => [ qw(left left left left left center) ],
+                                                align  => [ qw(left left left left left left center) ],
                                                   rows => \@lib_data,
                                            chg_bkg_idx => 3, 
                                               bg_color => '#EAEAEA',
