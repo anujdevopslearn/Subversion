@@ -286,7 +286,7 @@ sub get_library_table {
 
   my $sql = qq~
   SELECT dia_library_id, dia_library_name, dia_library_tag, instrument_type_name,
-  organism_name, DIL.comment, md5sum, file_path, file_format
+  organism_name, DIL.comment, md5sum, file_path, file_format, is_master
   FROM $TBAT_DIA_LIBRARY DIL 
   JOIN $TBAT_INSTRUMENT_TYPE IT ON IT.instrument_type_id = DIL.instrument_type_id
   JOIN $TB_ORGANISM O ON O.organism_id = DIL.organism_id
@@ -306,32 +306,20 @@ sub get_library_table {
   my $sth = $sbeams->get_statement_handle( $sql );
   my %libraries; 
   my %tag2comment;
+  my %display_format = ( peakview => 'Peakview',
+                         openswath => 'OpenSWATH',
+                         TraML => 'TraML',
+                         sptxt => 'Speclib' );
+
   while( my @row = $sth->fetchrow_array() ) {
     $libraries{$row[2]} ||= [];
+    $row[8] = $display_format{$row[8]} || $row[8]; 
     push @{$libraries{$row[2]}}, \@row;
     $tag2comment{$row[2]} = $row[5];
   }
   my $content = $help;
 
-#    $table->addRow( ['Pathway ID', 'View Data','Pathway Definition' ] );
-#  $table->setRowAttr( ROWS => [1], BGCOLOR => '#bbbbbb', ALIGN=>'CENTER', NOWRAP => 0, HEIGHT => 35 );
-#  $table->setHeaderAttr(BOLD=>1);   # this actually has effect via sub formatHeader
-#    $table->addRow( [$path->{entry_id},$links,$path->{definition} ] );
-#  $table->alternateColors(PERIOD => 1, FIRSTROW=> 2, BGCOLOR => '#e0e0e0');
-#  my $nrows = $table->getRowNum();
-#  $table->setColAttr(  COLS => [2], ROWS => [2..$nrows], ALIGN => 'CENTER' );
-#  $page .= "$table<BR>\n";
-#  my $table = SBEAMS::Connection::DataTable->new( BORDER => 0 );
-#  $table->addRow( [ '&nbsp;', 'Protein', 'Peptides Observed' ] );
-#  $table->setHeaderAttr( BOLD => 1 );
-#    $table->addRow( [ $chk_box, $gene, $cnt ] );
-#  $table->alternateColors( FIRSTROW => 2, PERIOD => 1, BGCOLOR => '#DDDDDD', DEF_BGCOLOR => '#FFFFFF' );
-#  $table->setColAttr( ALIGN => 'RIGHT', COLS => [3], ROWS => [2..$table->getRowNum()] );
-
-
   for my $lib ( sort( keys( %libraries ) ) ) {
-#    my $lib_table = SBEAMS::Connection::DataTable->new( HEADER => 1 );
-#    $lib_table->addRow( [ qw( Name Description Instrument Format MD5Sum ), 'Get Libraries' ] );
     my @lib_data = ( [ qw( Name Accession Instrument Format Size ), 'Get Libraries' ] );
     for my $lib_file ( @{$libraries{$lib}} ) {
       my $fname = basename( $lib_file->[7] ); 
@@ -345,7 +333,9 @@ sub get_library_table {
       if ( $lib_file->[8] =~ /peakview/i ||
            $lib_file->[8] =~ /openswath/i ||
            $lib_file->[8] =~ /mprophet/i ) { 
-        $cust = "<a href=GetDIALibs?mode=subset_libs;lib_id=$lib_file->[0]>Customize</a>";
+        if ( $lib_file->[9] eq 'Y' ) {
+          $cust = "<a href=GetDIALibs?mode=subset_libs;lib_id=$lib_file->[0]>Customize</a>" 
+        }
       }
       my $accession = 'SAL' . sprintf( "%05i", $lib_file->[0] );
       $lib_file->[0] = $accession;
@@ -611,8 +601,8 @@ sub get_subset_form_original {
   FROM $TBAT_DIA_LIBRARY DIL 
   WHERE project_id IN ( $project_ids )
   AND file_format IN ('peakview', 'openswath', 'mprophet' )
---  AND is_master = 'Y'
-  ORDER BY dia_library_name 
+  AND is_master = 'Y'
+  ORDER BY dia_library_tag, dia_library_name 
   ~;
 # 0 dia_library_id
 # 1 dia_library_name
