@@ -171,6 +171,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
 	 "organism_id:i", "instrument_id:i", "contributors:s",
 	 "source_type:s", "is_public",
 	 "sample_id:i","no_create_login","pass_identifier:s",
+   "pass_dir:s"
     )) {
 
     die "\n$USAGE";
@@ -1195,7 +1196,7 @@ if ( -e "${expdir}/*.d") {
   $raw_extension = "wiff";
   print "We have .wiff files!\n";
 } else {
-  print "Unknown raw file type; not one of .d, .raw, or .wiff\n";
+  print "Unknown raw file type in $expdir; not one of .d, .raw, or .wiff\n";
   #exit;
 }
 
@@ -1209,7 +1210,7 @@ if ( -e "${expdir}/*.d") {
 if ($VERBOSE) {
   print "Done.\n" if $VERBOSE;
   print "Execute these commands in shell, and copy into recipe:\n";
-  print "export PASS=$pass_identifer\n";
+  print "export PASS=$pass_identifier\n";
   print "export TITLE=$datasetTitle\n";
   print "export PROJECT_ID=$project_id\n";
   print "export SAMPLE_ID=$sample_id\n";
