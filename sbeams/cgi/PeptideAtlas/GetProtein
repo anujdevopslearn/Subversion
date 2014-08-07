@@ -792,13 +792,14 @@ sub handle_request {
   #### Build the full identification status
   my $presence_level = $biosequence->{level_name};
   my $redundancy_rel = $biosequence->{relationship_name};
-  my $identification_status = 'unknown';
+  my $identification_status = '';
   my %prepositions = ( subsumed=>"by", "ntt-subsumed"=>"by", identical=>"to", indistinguishable=>"from" );
   if (defined $presence_level) {
     $identification_status = $presence_level;
   } elsif (defined $redundancy_rel) {
     $identification_status = $redundancy_rel;
   }
+
   if ($prepositions{$identification_status}) { 
     $identification_status .= " $prepositions{$identification_status} $biosequence->{reference_biosequence_name}";
   }
@@ -4002,7 +4003,7 @@ sub renderProteinAccessionAndStatus {
 
   #### Process the arguments list
   my $biosequence = $args{biosequence} || die("ERROR: No biosequence passed");
-  my $identification_status = $args{identification_status} || die("ERROR: No identification_status passed");
+  my $identification_status = $args{identification_status} || '';
   my $base_url = $args{base_url} || die("ERROR: No base_url passed");
 
   if ($sbeams->output_mode() eq 'html') {
