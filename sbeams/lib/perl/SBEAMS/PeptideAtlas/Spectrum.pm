@@ -1166,92 +1166,109 @@ sub loadSpectrum_Fragmentation_Type {
     or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
 
   my $sql = qq~
-		SELECT SP.SPECTRUM_ID,
-           SP.SPECTRUM_NAME, 
-           ASB.DATA_LOCATION, 
-           ASB.SEARCH_BATCH_SUBDIR, 
-           IT.INSTRUMENT_TYPE_NAME
-		FROM $TBAT_SPECTRUM SP
-		JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON (SP.SAMPLE_ID = ASB.SAMPLE_ID)
-		JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON (ABSB.ATLAS_SEARCH_BATCH_ID  = ASB.ATLAS_SEARCH_BATCH_ID )
-		JOIN $TBAT_SAMPLE  S ON (ABSB.SAMPLE_ID = S.SAMPLE_ID)
-		JOIN $TBPR_INSTRUMENT I ON (I.INSTRUMENT_ID = S.INSTRUMENT_MODEL_ID)
-		JOIN $TBPR_INSTRUMENT_TYPE IT ON (I.INSTRUMENT_TYPE_ID = IT.INSTRUMENT_TYPE_ID)
-		WHERE ABSB.ATLAS_BUILD_ID = $atlas_build_id 
-		AND SP.FRAGMENTATION_TYPE_ID IS NULL 
-		ORDER BY SP.SPECTRUM_NAME, DATA_LOCATION
+    SELECT DISTINCT ASB.DATA_LOCATION
+    FROM $TBAT_SPECTRUM SP
+    JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON (SP.SAMPLE_ID = ASB.SAMPLE_ID)
+    JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON (ABSB.ATLAS_SEARCH_BATCH_ID  = ASB.ATLAS_SEARCH_BATCH_ID )
+    JOIN $TBAT_SAMPLE  S ON (ABSB.SAMPLE_ID = S.SAMPLE_ID)
+    JOIN $TBPR_INSTRUMENT I ON (I.INSTRUMENT_ID = S.INSTRUMENT_MODEL_ID)
+    JOIN $TBPR_INSTRUMENT_TYPE IT ON (I.INSTRUMENT_TYPE_ID = IT.INSTRUMENT_TYPE_ID)
+    WHERE ABSB.ATLAS_BUILD_ID = $atlas_build_id
+    AND SP.FRAGMENTATION_TYPE_ID IS NULL
   ~;
+  my @directories = $sbeams->selectOneColumn($sql);
+  
+  foreach my $dir (@directories){
+		my $sql = qq~
+			SELECT SP.SPECTRUM_ID,
+						 SP.SPECTRUM_NAME + ',' +
+						 ASB.DATA_LOCATION + ',' + 
+						 ASB.SEARCH_BATCH_SUBDIR + ','+
+						 IT.INSTRUMENT_TYPE_NAME
+			FROM $TBAT_SPECTRUM SP
+			JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON (SP.SAMPLE_ID = ASB.SAMPLE_ID)
+			JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON (ABSB.ATLAS_SEARCH_BATCH_ID  = ASB.ATLAS_SEARCH_BATCH_ID )
+			JOIN $TBAT_SAMPLE  S ON (ABSB.SAMPLE_ID = S.SAMPLE_ID)
+			JOIN $TBPR_INSTRUMENT I ON (I.INSTRUMENT_ID = S.INSTRUMENT_MODEL_ID)
+			JOIN $TBPR_INSTRUMENT_TYPE IT ON (I.INSTRUMENT_TYPE_ID = IT.INSTRUMENT_TYPE_ID)
+			WHERE ABSB.ATLAS_BUILD_ID = $atlas_build_id 
+			AND SP.FRAGMENTATION_TYPE_ID IS NULL
+      AND ASB.DATA_LOCATION = '$dir' 
+			ORDER BY SP.SPECTRUM_NAME, DATA_LOCATION
+		~;
 
-  print "Loading SPECTRUM_ID ";
-  my @rows = $sbeams->selectSeveralColumns($sql);
-  print scalar @rows ." loaded\n";
-  my %spectrum=();
-  my %fragmentation_type=();
-  my $pre_file='';
-  my $cnt = 0;
-  my $cnt_update = 0;
+		print "Loading SPECTRUM_ID in $dir";
+		my %results = $sbeams->selectTwoColumnHash($sql);
+		my %spectrum=();
+		my %fragmentation_type=();
+		my $pre_file='';
+		my $cnt = 0;
+		my $cnt_update = 0;
 
-  foreach my $row (@rows){
-    my ($spectrum_id, $spectrum_name,$data_location,$subdir, $instrument_type_name)= @$row;
-    $spectrum_name=~ /^(.*)\.(\d+)\.(\d+)\.\d+$/;
-    my $filename = $1;
-    my $scan = $2;
-    $scan =~ s/^0+//g;
-
-    my $file ="/regis/sbeams/archive/$data_location/$subdir/$filename.mzML";
-    chomp $file;
-    if(! -e $file){
-      $file ="/regis/sbeams/archive/$data_location/$subdir/$filename.mzXML";
-      if(! -e $file){
-        $file ="/regis/sbeams/archive/$data_location/$subdir/$filename.mzML.gz";
-        if(! -e $file){
-           $file ="/regis/sbeams/archive/$data_location/$subdir/$filename.mzXML.gz";
-        }else{
-          die "cannot found mzXML/mzML file: /regis/sbeams/archive/$data_location/$subdir/$filename\n";
-        }
-      }
-    }
-
-    my $type = 0;
-    ## decide type 4 
-    if ($instrument_type_name  =~ /tof/i){$type= 4;};
-    ## if not type 4, read file
-    if ($pre_file ne $file && ! $type ){ 
-      %fragmentation_type = ();
-      print "$file\n";
-      get_fragmentation_type( file => $file,
-                            fragmentation_type => \%fragmentation_type);
-      print scalar keys %fragmentation_type , "\n";
-      if(scalar keys %fragmentation_type == 0){
-        print "no update: $file\n";
-      }
-    }
-    $pre_file = $file;
-    if( $type == 4 || defined $fragmentation_type{$scan}){ 
-      if(defined $fragmentation_type{$scan}){
-        $type = $fragmentation_type{$scan};
-      }
-			my %rowdata = (
-				 fragmentation_type_id => $type,
-			);
-			my $response = $sbeams->updateOrInsertRow(
-				 update=>1,
-				 table_name=>$TBAT_SPECTRUM,
-				 rowdata_ref=>\%rowdata,
-				 PK => 'spectrum_id',
-				 PK_value=> $spectrum_id,
-				 return_PK => 1,
-				 verbose=>$VERBOSE,
-				 testonly=> $TESTONLY
-			);
-			if($cnt_update % 1000 == 0){
-				print "$cnt_update...";
+		foreach my $spectrum_id (keys %results){
+			my ( $spectrum_name,$data_location,$subdir, $instrument_type_name)= split(",", $results{$spectrum_id});
+			$spectrum_name=~ /^(.*)\.\d+\.(\d+)\.\d+$/;
+			my $filename = $1;
+			my $scan = $2;
+			$scan =~ s/^0+//g;
+			#next if ($data_location =~ /small_intestine_ileum_6w_m1_SCX_QstarElit/);
+			#next if ($filename =~ /fraction1_20051215/);
+			my $file ="/regis/sbeams/archive/$data_location/$subdir/$filename.mzML";
+			chomp $file;
+			if(! -e $file){
+				$file ="/regis/sbeams/archive/$data_location/$subdir/$filename.mzXML";
+				if(! -e $file){
+					$file ="/regis/sbeams/archive/$data_location/$subdir/$filename.mzML.gz";
+					if(! -e $file){
+						 $file ="/regis/sbeams/archive/$data_location/$subdir/$filename.mzXML.gz";
+						 if ( ! -e $file){
+							 die "cannot find mzXML/mzML file: /regis/sbeams/archive/$data_location/$subdir/$filename\n";
+						 }
+					}
+				}
 			}
-			$cnt_update++;
-    }
-    $cnt++;
-  }  
-  print "\n$cnt_update of $cnt updated\n";
+
+			my $type = 0;
+			## decide type 4 
+			if ($instrument_type_name  =~ /tof/i){$type= 4;};
+			## if not type 4, read file
+			if ($pre_file ne $file && ! $type ){ 
+				%fragmentation_type = ();
+				print "$file\n";
+				get_fragmentation_type( file => $file,
+															fragmentation_type => \%fragmentation_type);
+				print scalar keys %fragmentation_type , "\n";
+				if(scalar keys %fragmentation_type == 0){
+					print "no update: $file\n";
+				}
+			}
+			$pre_file = $file;
+			if( $type == 4 || defined $fragmentation_type{$scan}){ 
+				if(defined $fragmentation_type{$scan} and $type != 4){
+					$type = $fragmentation_type{$scan};
+				}
+				my %rowdata = (
+					 fragmentation_type_id => $type,
+				);
+				my $response = $sbeams->updateOrInsertRow(
+					 update=>1,
+					 table_name=>$TBAT_SPECTRUM,
+					 rowdata_ref=>\%rowdata,
+					 PK => 'spectrum_id',
+					 PK_value=> $spectrum_id,
+					 return_PK => 1,
+					 verbose=>$VERBOSE,
+					 testonly=> $TESTONLY
+				);
+				if($cnt_update % 1000 == 0){
+					print "$cnt_update...";
+				}
+				$cnt_update++;
+			}
+			$cnt++;
+		}  
+    print "\n$cnt_update of $cnt updated\n";
+  }
 }
 
 sub get_fragmentation_type {
@@ -1315,6 +1332,9 @@ sub get_fragmentation_type {
 		if($line =~ /<spectrum index="(\d+)".*/){ ## mzML 
 	    my ($ms1,$scan, $insconf, $insid,$analyzer, $activation);
 			$scan = $1 + 1;
+      if($line =~ /scan=(\d+)/){
+        $scan = $1;
+      }
       while ($line !~/<\/spectrum/){
         $line = <$fh>;
         if($line =~ /ms level" value="1"/){
