@@ -63,6 +63,14 @@ my $tabMenu;
     ## get current settings
     my $project_id = $sbeams->getCurrent_project_id();
 
+
+    if ( $params->{mode} eq 'get_public_libsets' ) {
+      print $sbeams->get_http_header();
+      get_public_libsets();
+      exit;
+    }
+
+
     my $page = $sbeams->getGifSpacer( 700 ) . "<BR>\n";
 
     # Get the HTML to display the tabs
@@ -279,30 +287,37 @@ sub get_library_table {
 
   my $help = qq~
    <div style="font-family:Helvetica, Arial, sans-serif;font-size:150%;font-weight:bold" id=heading> Library Download </div>
+   <br>
    <div id=help style="width:800px"> Download SWATH/DIA libraries in any of the supported formats. 
    <br><br>
   </div>
   ~;
 
   my $sql = qq~
-  SELECT dia_library_id, dia_library_name, dia_library_tag, instrument_type_name,
-  organism_name, DIL.comment, md5sum, file_path, file_format, is_master
+  SELECT dia_library_id, dia_library_name, set_tag, instrument_type_name,
+  organism_name, DIL.comment, md5sum, file_path, file_format, is_master,
+  px_identifier, contributors, coverage_statement
   FROM $TBAT_DIA_LIBRARY DIL 
+  JOIN $TBAT_DIA_LIBRARY_SET DILS ON DILS.dia_library_set_id = DIL.dia_library_set_id
   JOIN $TBAT_INSTRUMENT_TYPE IT ON IT.instrument_type_id = DIL.instrument_type_id
   JOIN $TB_ORGANISM O ON O.organism_id = DIL.organism_id
   WHERE project_id IN ( $project_ids )
   AND DIL.record_status = 'N'
-  ORDER BY dia_library_tag, instrument_type_name, dia_library_id
+  ORDER BY set_tag, instrument_type_name, dia_library_id
   ~;
 # 0 dia_library_id
 # 1 dia_library_name
-# 2 dia_library_tag
+# 2 set_tag
 # 3 instrument_type_name
 # 4 organism_name
 # 5 DIL.comment
 # 6 md5sum
 # 7 file_path
 # 8 file_format
+# 9 is_master
+# 10 px_identifier
+# 11 contributors
+# 12 converage_statement
   my $sth = $sbeams->get_statement_handle( $sql );
   my %libraries; 
   my %tag2comment;
@@ -355,10 +370,34 @@ sub get_library_table {
                                             );
 
 #    die Dumper( $lib_table );
+#    die Dumper( $libraries{$lib} );
+
+# 0 dia_library_id
+# 1 dia_library_name
+# 2 set_tag
+# 3 instrument_type_name
+# 4 organism_name
+# 5 DIL.comment
+# 6 md5sum
+# 7 file_path
+# 8 file_format
+# 9 is_master
+# 10 px_identifier
+# 11 contributors
+# 12 converage_statement
+
+    my $px_link = '';
+    my $lib_zero = $libraries{$lib}->[0];
+    if ( $lib_zero->[10] ) {
+      $px_link = "(<a href='http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=$lib_zero->[10]' target=_px title='View dataset $lib_zero->[10] at Proteome Exchange'>$lib_zero->[10]</a>)";
+    }
+
     $content .= qq~
     <br>
-     <span style="font-family:Helvetica, Arial, sans-serif;font-size:110%;font-weight:bold" id=heading> $lib </span>
-     <table><table>$lib_table
+     <span style="font-family:Helvetica, Arial, sans-serif;font-size:110%;font-weight:bold" id=heading> $lib </span><br>
+     $lib_zero->[11] $px_link <br>
+     $lib_zero->[12] <br>
+     <table>$lib_table
     <br>
     ~;
   }
@@ -883,4 +922,85 @@ sub get_draw_chart_function {
 	my $header = $GV->getHeaderInfo();
   return ( $chart, $header );
 }
+
+
+sub get_public_libsets {
+
+  my $sql = qq~
+  SELECT set_tag, instrument_type_name,
+  organism_name, px_identifier, contributors, coverage_statement,
+  COUNT(*) AS cnt
+  FROM $TBAT_DIA_LIBRARY DIL 
+  JOIN $TBAT_DIA_LIBRARY_SET DILS ON DILS.dia_library_set_id = DIL.dia_library_set_id
+  JOIN $TBAT_INSTRUMENT_TYPE IT ON IT.instrument_type_id = DIL.instrument_type_id
+  JOIN $TB_ORGANISM O ON O.organism_id = DIL.organism_id
+  WHERE project_id IN ( $project_ids )
+  AND DIL.record_status = 'N'
+  GROUP BY set_tag, instrument_type_name,
+  organism_name, px_identifier, contributors, coverage_statement
+  ORDER BY set_tag, instrument_type_name
+  ~;
+# 0 set_tag
+# 1 instrument_type_name
+# 2 organism_name
+# 3 px_identifier
+# 4 contributors
+# 5 coverage_statement
+# 6 cnt
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my %sets;
+  while ( my @row = $sth->fetchrow_array() ) {
+    if ( $sets{$row[0]} ) {
+      $sets{$row[0]}->{inst} = $row[1] if $row[1] =~ /TripleTOF/;
+      $sets{$row[0]}->{lib_cnt} += $row[6];
+    } else {
+      my $px = ( $row[3] ) ? "<a href='http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=$row[3]' target=_px>$row[3]</a>" : $sbeams->makeInactiveText( 'na' );
+      $row[5] =~ s/Proteome Coverage//gi;
+      $sets{$row[0]} = { inst => $row[1],
+                         lib_cnt => $row[6],
+                         px => $px,
+                         org => $row[2],
+                         cov => $row[5],
+                         cont => $row[4] };
+    }
+  }
+  use JSON;
+  my $json = new JSON;
+  my $jstr = $json->encode( \%sets );
+
+#  my @lib_data = ( [ qw( Library Organism Instrument Contributors Coverage ProteomeExchange NumFiles ) ] );
+#  my @lib_data = ( [ qw( Library Instrument Contributors Coverage ) ] );
+  my @lib_data = ( [ 'Library', 'Proteome Coverage', 'Contributors' ] );
+  for my $lib ( sort( keys( %sets ) ) ) {
+#    push @lib_data, [ $lib, $sets{$lib}->{org}, $sets{$lib}->{inst}, $sets{$lib}->{cont}, $sets{$lib}->{cov}, $sets{$lib}->{px}, $sets{$lib}->{lib_cnt} ];
+#    push @lib_data, [ $lib, $sets{$lib}->{inst}, $sets{$lib}->{cont}, $sets{$lib}->{cov} ];
+    push @lib_data, [ $lib, $sets{$lib}->{cov}, $sets{$lib}->{cont} ];
+  }
+
+  my $lib_table = $atlas->encodeSectionTable( header => 1, 
+                                               width => '800',
+                                              align  => [ qw(left left left left ) ],
+                                                rows => \@lib_data,
+                                         chg_bkg_idx => 1, 
+                                            bg_color => '#EAEAEA',
+                                            sortable => 0,
+                                            table_id => 'libraries',
+                                          table_only => 1,
+                                         close_table => 1,
+                                            );
+
+  print qq~
+    <html>
+    <head></head>
+    <body>
+    $lib_table
+    </body>
+    </html>
+  ~;
+  
+
+
+}
+
 __DATA__
