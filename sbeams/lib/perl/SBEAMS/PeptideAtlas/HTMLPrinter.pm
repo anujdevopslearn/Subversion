@@ -782,6 +782,8 @@ sub encodeSectionTable {
   my $bgcolor = '#C0D0C0';
   my $chg_idx;
   my $rcnt = ( $args{header} ) ? 1 : 0;
+  # Message regarding truncated rows.
+  my $msg = '';
   for my $row ( @{$args{rows}} ) {
     $num_cols = scalar( @$row ) unless $num_cols;
     $tab->addRow( $row );
@@ -811,11 +813,13 @@ sub encodeSectionTable {
     }
     if ( $args{max_rows} && $args{max_rows} <= $num_rows ) {
       my $span = scalar( @$row );
-      my $msg = "Table truncated at $args{max_rows} rows";
+      $msg = "Table truncated at $args{max_rows} rows";
       if  ( $args{set_download} ) {
         $msg .= "(won't affect download, " . scalar( @{$args{rows}} ) . ' total rows)';
       }
-      $tab->addRow( [$sbeams->makeInfoText("<I>$msg</I>")] );
+      if ( !$args{truncate_msg_as_text} ) {
+        $tab->addRow( [$sbeams->makeInfoText("<I>$msg</I>")] );
+      }
       $tab->setColAttr( ROWS => [$tab->getRowNum()], 
                      COLSPAN => $span, 
                         COLS => [ 1 ], 
@@ -864,6 +868,9 @@ sub encodeSectionTable {
     }
   }
 #  $tab->addRow( [$closelink] );
+  if ( $args{table_only} ) {
+    return "$tab";
+  }
 
   my $html = "$pre_text\n";
   my $help = $args{help_text} || '';
@@ -888,7 +895,15 @@ sub encodeSectionTable {
   $html .= '</TABLE>' if $args{close_table};
   $html .= $closelink;
 
-  return ( wantarray ) ? ($html, $rs_name) : $html;
+  if ( wantarray ) {
+    if ( $args{truncate_msg_as_text} ) {
+      return ($html, $rs_name, $msg);
+    } else {
+      return ($html, $rs_name);
+    }
+  } else {
+    return $html;
+  }
 }
 
 ###############################################################################
