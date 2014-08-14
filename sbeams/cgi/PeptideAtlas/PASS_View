@@ -928,7 +928,9 @@ sub getPASSMetaData {
 
   my $infile = "$PASS_ACCOUNTS_BASE/${identifier}/${identifier}_DESCRIPTION.txt";
   unless (open(INFILE,$infile)) {
-    print "ERROR: Unable to read description file for this submission: '$infile'";
+    #EWD: Maybe there's no point in blaring the error at the user. We really should be alerting admins
+    #     Would be good to sweeping all datasets for this problem and resolving it somehow so there isn't this problem
+    #print "ERROR: Unable to read description file for this submission: '$infile'<BR><BR>\n";
     $response->{result} = 'Success';
     return $response;
   }
