@@ -1,0 +1,278 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# table show all PA data set that have PXD identifier
+#
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($atlas $sbeams $sbeamsMOD $q $current_contact_id $current_username 
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+use SBEAMS::Connection::Permissions;
+
+use SBEAMS::Proteomics;
+use SBEAMS::Proteomics::Tables;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main{
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    #permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin'],
+    # connect_read_only=>1,
+    allow_anonymous_access=>1,
+  ));
+
+
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+  #### Decide what action to take based on information so far
+    $sbeamsMOD->display_page_header(use_tabbed_panes => 1);
+    processRequest();
+    $sbeamsMOD->display_page_footer( use_tabbed_panes => 1 );
+
+}
+
+exit(0);
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub processRequest {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    #permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin'],
+    # connect_read_only=>1,
+    allow_anonymous_access=>1,
+  ));
+
+  #### Read in the default input parameters
+  my %parameters;
+  my @results;  
+  my $sql = qq~
+	 SELECT SE.PX_IDENTIFIER, 
+          SE.SEL_EXPERIMENT_ID, 
+          SE.EXPERIMENT_TITLE, 
+          SE.DATASETIDENTIFIER, 
+	        S.IS_PUBLIC, 
+	        O.FULL_NAME, 
+          PD.LAB_HEAD_EMAIL , 
+          PD.LAB_HEAD_COUNTRY , 
+          PUB.PUBLICATION_NAME,
+          SE.PX_IDENTIFIER
+	FROM $TBAT_SEL_EXPERIMENT SE
+	JOIN $TBAT_SAMPLE S ON (S.SAMPLE_ID = SE.SAMPLE_ID)
+	JOIN $TBAT_PASS_DATASET PD ON ( PD.DATASETIDENTIFIER = SE.DATASETIDENTIFIER)
+	JOIN $TB_PROJECT P ON (P.PROJECT_ID = SE.PROJECT_ID)
+	LEFT JOIN $TBAT_PUBLICATION PUB ON (PUB.PUBLICATION_ID = S.Sample_PUBLICATION_IDs)
+  LEFT JOIN $TB_ORGANISM O ON ( S.ORGANISM_ID = O.ORGANISM_ID)
+	WHERE SE.RECORD_STATUS != 'D' AND SE.PX_IDENTIFIER IS NOT NULL
+  ORDER BY SE.PX_IDENTIFIER
+ ~;
+
+  my @rows = $sbeams->selectSeveralColumns($sql);
+  my $pre_id = '';
+  my $pre_row ;
+  my @sid ;
+  foreach my $row(@rows){
+    my $id = $row->[0];
+    if($pre_id  and $pre_id ne $id){
+       $pre_row->[1] = join(",", @sid);
+       push @results , $pre_row;
+       @sid = ();
+       push @sid, $row->[1];
+    }else{
+      push @sid, $row->[1];
+    }
+    $pre_row = $row;
+    $pre_id = $id;
+  }
+  $pre_row->[1] = join(",", @sid);
+  push @results , $pre_row;
+
+  $sql = qq~
+		SELECT DISTINCT 
+           PDR.RELATED_DATABASE_ENTRIES,
+           S.SAMPLE_ID,
+           'Reprocessed: '+PDR.DATASETTITLE, 
+           S.SAMPLE_ACCESSION,
+		       S.IS_PUBLIC,
+           O.FULL_NAME,
+           'edeutsch\@systemsbiology.org', 
+           'USA', 
+           PB.PUBLICATION_NAME, 
+           PDR.DATASET_IDENTIFIER
+		FROM $TBAT_PUBLIC_DATA_REPOSITORY PDR 
+		JOIN $TB_PROJECT P ON (PDR.PROJECT_ID = P.PROJECT_ID AND PDR.SOURCE_REPOSITORY = 'PRIDE') 
+		JOIN $TBPR_PROTEOMICS_EXPERIMENT E ON (E.PROJECT_ID = P.PROJECT_ID)
+		JOIN $TBPR_SEARCH_BATCH SB ON (E.EXPERIMENT_ID = SB.EXPERIMENT_ID)
+		JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON (SB.SEARCH_BATCH_ID = ASB.PROTEOMICS_SEARCH_BATCH_ID)
+		JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON (ASB.SAMPLE_ID = ABSB.SAMPLE_ID)
+		JOIN $TBAT_SAMPLE S ON (ASB.SAMPLE_ID = S.SAMPLE_ID)
+    LEFT JOIN $TB_ORGANISM O ON ( E.ORGANISM_ID = O.ORGANISM_ID)
+		LEFT JOIN $TBAT_PUBLICATION PB ON (PB.PUBLICATION_ID = P.PUBLICATION_ID)
+    WHERE PDR.RELATED_DATABASE_ENTRIES is not NULL
+    order by PDR.RELATED_DATABASE_ENTRIES
+  ~;
+
+  @rows = $sbeams->selectSeveralColumns($sql);
+  $pre_id = '';
+  $pre_row = '';
+  my @accession;
+  my @sid =();
+  foreach my $row(@rows){
+    my $id = $row->[2];
+    if($pre_id ne '' and $pre_id ne $id){
+       $pre_row->[1] = join(",", @sid);
+       $pre_row->[3] = join(",", @accession);
+       push @results , $pre_row;
+       @sid = ();
+       @accession=();
+      push @accession, $row->[3];
+      push @sid, $row->[1];
+    }else{
+      push @accession, $row->[3];
+      push @sid, $row->[1];
+    }
+    $pre_row = $row;
+    $pre_id = $id;
+  }
+  $pre_row->[1] = join(",", @sid);
+  $pre_row->[3] = join(",", @accession);
+  push @results , $pre_row;
+
+  ## creat table 
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/PA2PXD_mapping";
+  my @column_titles =( 'PX identifier',
+                       'PASSEL expt ID/PeptideAtlas Sample ID',
+                       'TITLE',
+                       'PASS ID/PA Sample Accession',
+                       'is_public',
+                       'Organism',
+                       'primary_contact_email',
+                       'Country',
+                       'Publication',
+                       'Original PX identifier',
+                    );
+   my %column_hash;
+   my $idx=0;
+   foreach (@column_titles){
+     $column_hash{$_} = $idx;
+     $idx++;
+   }
+   my @column_types_list = qw(varchar varchar varchar varchar varchar varchar varchar varchar varchar); 
+   my @precisions = qw(12 10 20 20 1 30 30 30 100 12);
+
+   my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+
+   for (my $i=0; $i<=$#results; $i++) {
+     push @{$resultset_ref->{data_ref}} , $results[$i];
+   }
+  $resultset_ref->{column_hash_ref} = \%column_hash;
+  $resultset_ref->{column_list_ref} = \@column_titles;
+  $resultset_ref->{types_list_ref} = \@column_types_list;
+  $resultset_ref->{precisions_list_ref} = \@precisions;
+  $rs_params{page_size} = @results; 
+	$rs_params{set_name} = "SETME";
+
+	$sbeams->writeResultSet(
+		resultset_file_ref=>\$rs_params{set_name},
+		resultset_ref=>$resultset_ref,
+		query_parameters_ref=>\%parameters,
+		resultset_params_ref=>\%rs_params,
+		query_name=>"$SBEAMS_SUBDIR/PA2PXD_mapping",
+		column_titles_ref=>\@column_titles,
+	);
+
+  $sbeams->displayResultSet(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      base_url=>$base_url,
+  );
+
+		#### Display the resultset controls
+	$sbeams->displayResultSetControls(
+		resultset_ref=>$resultset_ref,
+		query_parameters_ref=>\%parameters,
+		rs_params_ref=>\%rs_params,
+		base_url=>$base_url,
+		row_count => scalar @{$resultset_ref->{data_ref}},
+		search_page => 1,
+
+	);
+
+
+
+}
+  
