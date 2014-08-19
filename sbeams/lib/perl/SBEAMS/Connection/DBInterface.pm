@@ -2916,7 +2916,7 @@ sub displayResultSet {
       print $header if $self->invocation_mode() eq 'http';
 
       #### Set a very high page size if using defaults
-      $resultset_ref->{page_size} = 1000000
+      $resultset_ref->{page_size} = 1100000
         if ($rs_params_ref->{default_values} eq 'YES');
 
       #### Get the hidden column hash
