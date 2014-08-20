@@ -62,7 +62,7 @@ sub printOptions {
     #### Loop over all the menu options, printing them
     for (my $option=0; $option<$#MENU_OPTIONS; $option+=2) {
       my $optionLink = '';
-
+      
       if ( $option == 0 && !$sbeams->isTableWritable(table_name => $parameters{TABLE_NAME}) ) {
         $optionLink = $sbeams->makeInactiveText( $MENU_OPTIONS[$option] );
       } else {
@@ -107,12 +107,10 @@ sub printEntryForm {
   my ($i,$element,$key,$value,$line,$result,$sql);
   my ($username,$row);
 
-
   #### Get the columns for this table
   my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
   my %input_types = $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
-
 
   #### Read the input parameters for each column
   my %parameters;
@@ -619,15 +617,14 @@ sub printEntryForm {
         if ($optionlist_queries{$element}) {
 
           my $selected_id = $parameters{$element};
-
+          
           # Special handling if optionlist is being built for a project_id field
-          $selected_id ||= $current_project_id if $element eq 'project_id'; 
+          #$selected_id ||= $current_project_id if $element eq 'project_id'; 
 
           $optionlists{$element}=$sbeams->buildOptionList(
              $optionlist_queries{$element},
              $selected_id,
              $method_options);
-
 	  #### If the user sent some invalid options, reset the list to the
 	  #### valid list.  This is hacky because buildOptionList() API is poor
 	  if ($optionlists{$element} =~ /\<\!\-\-(.*)\-\-\>/) {
@@ -795,7 +792,32 @@ sub printEntryForm {
         # Handle text fields
         # 'block' long strings into 80-char chunks
         $text = $parameters{$column_name};
-        $text = wrapText( $text ) if length($text) > 60;
+        if ($column_name =~ /sample_publication_ids/){
+          my $sql = qq~
+              SELECT PUBMED_ID, author_list, TITLE, ABSTRACT,
+                     journal_name,published_year,volume_number,
+                     issue_number,page_numbers
+              FROM $TBAT_PUBLICATION 
+							WHERE PUBLICATION_ID IN ($text)
+          ~;
+          my @rows =  $sbeams->selectSeveralColumns ($sql);
+          $text = '';
+          foreach my $row (@rows){
+            my ($id,$author,$title,$abstract,$jname,$year,$vol,$issue,$page) = @$row;
+            my $publication_name = '';
+            my $pubmed_link='';
+            if ($id){ 
+              $pubmed_link = "<a href='http://www.ncbi.nlm.nih.gov/pubmed/?term=$id'>$id</a>";
+              $publication_name = "$jname. $year;$vol($issue):$page";
+            }
+            
+            $text .= wrapText( "$title") if ($title);
+            $text .= wrapText( "$author $publication_name. $pubmed_link" ) if($author); 
+            $text .= wrapText("<h1>Abstract</h1>$abstract" ) if ($abstract);
+          }
+        }else{
+          $text = wrapText( $text ) if length($text) > 60;
+        }
         $text = '&nbsp;' if !defined $text || $text eq '';
       }
 
@@ -1702,8 +1724,7 @@ sub processEntryForm {
     #### Get the columns for this table
     my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
     my %input_types = $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
-
-
+ 
     # Check to see if there is a column which will allow a range of numbers
     # over which a multi-insert could be performed
     my ($multi_insert_column) = 
