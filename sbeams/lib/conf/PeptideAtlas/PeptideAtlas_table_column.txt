@@ -45,7 +45,7 @@ AT_sample	14	sample_publication_ids	Sample Publications	varchar	255	0	Y		N	AT_sa
 AT_sample	15	data_contributors	Data Contributors	text	16	0	Y		N			Y	textarea	10		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
 AT_sample	16	peptide_source_type	Peptide Source Type	varchar	255	0	Y	Natural	N			Y	optionlist	20		Y	Y	N	"Source of peptides in this sample, one of Natural (default), Synthetic, or ArtificialProtein"	"SELECT 'Natural',' Natural' UNION SELECT 'SyntheticPeptide', 'SyntheticPeptide' UNION SELECT 'RecombinantProtein', 'RecombinantProtein'"	   
 AT_sample	17	primary_contact_email	Primary Email Contact	text	16	0	Y		N			Y	text	40		Y	P	N	Email address of primary contact for data		
-AT_sample	18	sample_category_id	Sample Category	int	4	0	Y		N	AT_sample_category	sample_category_id	N	optionlist			Y	Y	N	"Select sample category (tissue, cell line, plasma ...)"	"SELECT C.category_id,C.cagegory_name FROM $TBAT_SAMPLE_CATEGORY C WHERE C.record_status != 'D' ORDER BY C.cagegory_name"	
+AT_sample	18	sample_category_id	Sample Category	int	4	0	Y		N	AT_sample_category	sample_category_id	N	optionlist			Y	Y	N	"Select sample category (tissue, cell line, plasma ...)"	"SELECT C.id,C.name FROM $TBAT_SAMPLE_CATEGORY C WHERE C.record_status != 'D' ORDER BY C.name"	
 AT_sample	19	is_public	Is the dataset publicly available?	char	1	0	Y		N			Y	optionlist			Y	Y	N	Indicates whether the dataset is public	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 AT_sample	20	anatomical_site_term	Anatomical Site (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Anatomical site from which this sample was obtained	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"	
 AT_sample	21	developmental_stage_term	Developmental Stage (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Developmental stage of the sample donor individual	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"	
@@ -58,6 +58,7 @@ AT_sample	27	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP
 AT_sample	27	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 AT_sample	29	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 AT_sample	30	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_sample	31	repository_identifiers	Repository Identifiers	varchar	255	0	Y		N			N	textarea	3		Y	Y	N	Related database entries		
 AT_atlas_build_sample	1	atlas_build_sample_id	Atlas Build Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_atlas_build_sample	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id					N	N		Associated Atlas Build		
 AT_atlas_build_sample	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
@@ -199,7 +200,7 @@ AT_modified_peptide_instance_search_batch	8	modified_by_id	Record Modified By	in
 AT_modified_peptide_instance_search_batch	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 AT_modified_peptide_instance_search_batch	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_proteotypic_peptide_mapping	1	proteotypic_peptide_mapping_id	Proteotypic Peptide Mapping ID	int	4	0	N		Y												pkDEFAULT
-AT_proteotypic_peptide_mapping	2	proteotypic_peptide_id	Proteotypic Peptide ID	int	4	0	N		N	AT_proteotypic_peptide	proteotypic_peptide_id										pkDEFAULT
+AT_proteotypic_peptide_mapping	2	proteotypic_peptide_id	Proteotypic Peptide ID	int	4	0	N		N	AT_proteotypic_peptide	proteotypic_peptide_id										
 AT_proteotypic_peptide_mapping	3	source_biosequence_id	Source Biosequence ID	int	4	0	N		N	AT_biosequence	biosequence_id								Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
 AT_proteotypic_peptide_mapping	4	n_genome_locations	Number of Genome Locations Mapped to	int	4	0	Y		N										Number of Genome locations for this peptide 		
 AT_proteotypic_peptide_mapping	5	n_protein_mappings	Number of Proteins for this Peptide 	int	4	0	Y		N										Number of distinct accession numbers (proteins) for peptide in Genome		
@@ -664,12 +665,6 @@ AT_proteotypic_peptide	13	peptide_isoelectric_point	Isoelectric Point	real	4	0	Y
 AT_proteotypic_peptide	14	molecular_weight	Molecular Weight	real	4	0	Y		N										Calculated molecular weight of the peptide		
 AT_proteotypic_peptide	15	SSRCalc_relative_hydrophobicity	SSRCalc Relative Hydrophobicity	real	4	0	Y		N										Calculated hydrophobicity of the peptide using SSRCalc algorithm		
 AT_proteotypic_peptide	16	stepp_score	stepp_score	float	8	0	Y		N										Peptide score from STEPP  predictor		
-AT_proteotypic_peptide_mapping	1	proteotypic_peptide_mapping_id	Proteotypic Peptide Mapping ID	int	4	0	N		Y												pkDEFAULT
-AT_proteotypic_peptide_mapping	2	proteotypic_peptide_id	Proteotypic Peptide ID	int	4	0	N		N	AT_proteotypic_peptide	proteotypic_peptide_id										pkDEFAULT
-AT_proteotypic_peptide_mapping	3	source_biosequence_id	Source Biosequence ID	int	4	0	N		N	AT_biosequence	biosequence_id								Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
-AT_proteotypic_peptide_mapping	4	n_genome_locations	Number of Genome Locations Mapped to	int	4	0	Y		N										Number of Genome locations for this peptide 		
-AT_proteotypic_peptide_mapping	5	n_protein_mappings	Number of Proteins for this Peptide 	int	4	0	Y		N										Number of distinct accession numbers (proteins) for peptide in Genome		
-AT_proteotypic_peptide_mapping	6	n_exact_protein_mappings	Number of Proteins for this peptide including flanking residues 	int	4	0	Y		N										Number of distinct accession numbers (proteins) for peptide in Genome		
 AT_protein_presence_level	1	protein_presence_level_id	Protein Presence Level	int	4	0	N		Y							N	N				pkDEFAULT
 AT_protein_presence_level	2	level_name	Level Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Full name of the level		
 AT_protein_presence_level	3	level_phrase	Level Phrase	varchar	255	0	N		N			Y	text	50		Y	Y	N	Natural language phrase to present this level to user		
@@ -807,11 +802,11 @@ AT_pabst_tmp_transition_instance	8	collision_energy	Collision Energy	float	8	0	Y
 AT_pabst_tmp_transition_instance	9	is_predicted	Is Predicted	char	1	0	Y		N			N									
 AT_instrument_type	1	instrument_type_id	instrument_type_id	int	4	0	N		Y			N						Y			pkDEFAULT
 AT_instrument_type	2	instrument_type_name	instrument_type_name	varchar	255	0	N		N			Y	text	24		Y	Y	N			
-AT_instrument_type	3	instrument_type_comment	instrument_type_comment	varchar	255	0	Y		N			Y	text	24		Y	Y	N			
+AT_instrument_type	3	instrument_type_description	instrument_type_description	varchar	255	0	Y		N			Y	text	24		Y	Y	N			
 AT_instrument_type	4	is_source_instrument	is_source_instrument	char	1	0	Y		N			N	optionlist			Y	Y	N	Is this a source instrument type	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 AT_instrument_type	5	is_target_instrument	is_target_instrument	char	1	0	Y		N			N	optionlist			Y	Y	N	Is this a target instrument type	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 AT_instrument_type	6	sort_order	sort_order	int	4	0	Y		N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
-AT_instrument_type	7	model_number	Model Number	varchare	36	0	Y		N			N	text	20		Y	Y	N	Model number of instrument		
+AT_instrument_type	7	model_number	Model Number	varchar	36	0	Y		N			N	text	20		Y	Y	N	Model number of instrument		
 AT_instrument_type	8	date_created	date_created	datetime	8	0	Y		N			N						N			
 AT_instrument_type	9	created_by_id	created_by_id	int	4	0	Y		N			N						Y			
 AT_instrument_type	10	date_modified	date_modified	datetime	8	0	Y		N			N						N			
@@ -1064,7 +1059,7 @@ AT_public_data_repository	2	dataset_identifier	Dataset Identifier	varchar	20	0	N
 AT_public_data_repository	3	source_repository	Source	varchar	100	0	N		N			Y	text			Y	Y	N	source repository		
 AT_public_data_repository	4	species	Species	varchar	100	0	N		N			Y	text	40		Y	Y	N	Species		
 AT_public_data_repository	5	classfication	Classfication	char	1	0	N	N	N				optionlist			Y	Y	N		"select '1' ,  'Should process' union  select '2' ,  'Not interesting' union  select '3' , 'Has been processed' union select '4', 'Unclassified'"	
-AT_public_data_repository	6	pa_sample_accession	Peptide Atlas Sample Accession	varchar	255	0	Y		N			N	text	20		Y	Y	N	stable accession identifier for the sample (e.g. PAe000001)		
+AT_public_data_repository	6	pa_sample_accession	Peptide Atlas Sample Accession	text	16	0	Y		N			N	textarea	3		Y	Y	N	stable accession identifier for the sample (e.g. PAe000001)		
 AT_public_data_repository	7	local_data_location	dataset location	varchar	255	0	N		N			N	text	50		Y	Y	N	Absolute or relative location of the data		
 AT_public_data_repository	8	datasetTitle	Dataset Title	varchar	255	0	N		N			Y	text	40		Y	Y	N	Title for this dataset		
 AT_public_data_repository	9	datasetType	Dataset Type	varchar	20	0	N		N			Y	text	3		Y	Y	N	Dataset type		
@@ -1080,7 +1075,7 @@ AT_public_data_repository	18	created_by_id	created_by_id	int	4	0	Y		N			N					N	
 AT_public_data_repository	19	date_modified	date_modified	datetime	8	0	Y		N			N					N	N			
 AT_public_data_repository	20	modified_by_id	modified_by_id	int	4	0	Y		N			N					N	N			
 AT_public_data_repository	21	owner_group_id	owner_group_id	int	4	0	Y		N			N					N	N			
-AT_public_data_repository	22	related_database_entries	related_database_entries	varchar	4000	0	N		N			N	text	400		Y	Y	N	"Comma-separated identifiers from, e.g., ProteomeExchange"		
+AT_public_data_repository	22	related_database_entries	related_database_entries	text	16	0	N		N			N	textarea	3		Y	Y	N	"Comma-separated identifiers from, e.g., ProteomeExchange"		
 AT_fragmentation_type	1	fragmentation_type_id	Fragmentation Type ID	int	4	0	Y		Y			Y					N	Y	Primary Key		pkDEFAULT
 AT_fragmentation_type	2	fragmentation_type	Fragmentation Type	varchar	255	0	N		N			Y	text	20		Y	Y	N	Type of Fragmentation		
 AT_fragmentation_type	3	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
@@ -1131,6 +1126,12 @@ AT_domain_list_protein	10	comment	Comment	varchar	1024	0	Y		N			N	textarea	4		Y	
 AT_proteases	1	id	id	int	4	0	N		Y							N	Y	Y			pkDEFAULT
 AT_proteases	2	name	Name	varchar	100	0	N		N			Y	text	20		Y	Y	N	Protease Name		
 AT_proteases	3	cleavage_specificity	Cleavage Specificity	varchar	255	0	Y		N			Y	textarea	4		Y	Y	N	Cleavage Specificity		
+AT_proteases	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_proteases	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_proteases	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_proteases	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_proteases	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_proteases	9	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_dia_library	1	dia_library_id	DIA Library ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_dia_library	2	dia_library_name	DIA Library Name	varchar	100	0	N		N				text			Y	Y		DIA Library Name		
 AT_dia_library	3	dia_library_tag	DIA Library Tag	varchar	36	0	N		N				text			Y	Y		DIA Library Tag		
