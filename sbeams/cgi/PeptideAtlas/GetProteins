@@ -1235,8 +1235,12 @@ sub handle_request {
       $sbeams->fetchResultSet(
         sql_query=>$sql,
         resultset_ref=>$resultset_ref,
+        use_caching => 1
       );
-      if ($atlas_build_name =~ /Origene/i){
+       
+      if ( $resultset_ref->{from_cache} ) {
+        $log->info( "Skipping post processing with cached RS" );
+      } elsif ($atlas_build_name =~ /Origene/i){
 				 postProcessResultset_Origene(
 					rs_params_ref=>\%rs_params,
 					resultset_ref=>$resultset_ref,
@@ -1721,6 +1725,12 @@ sub handle_request {
 
     #### Store the resultset and parameters to disk resultset cache
     $rs_params{set_name} = "SETME";
+ 
+    my %write_params = ( rs_table => $TBAT_ATLAS_BUILD,
+                        key_field => 'atlas_build_id',
+                        key_value => $atlas_build_id );
+
+
     $sbeams->writeResultSet(
       resultset_file_ref=>\$rs_params{set_name},
       resultset_ref=>$resultset_ref,
@@ -1728,6 +1738,7 @@ sub handle_request {
       resultset_params_ref=>\%rs_params,
       query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
       column_titles_ref=>\@column_titles,
+      %write_params
     );
 
 
