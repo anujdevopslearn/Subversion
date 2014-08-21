@@ -125,13 +125,12 @@ sub processRequest {
 	        O.FULL_NAME, 
           PD.LAB_HEAD_EMAIL , 
           PD.LAB_HEAD_COUNTRY , 
-          PUB.PUBLICATION_NAME,
+          P.publication_id, 
           SE.PX_IDENTIFIER
 	FROM $TBAT_SEL_EXPERIMENT SE
 	JOIN $TBAT_SAMPLE S ON (S.SAMPLE_ID = SE.SAMPLE_ID)
 	JOIN $TBAT_PASS_DATASET PD ON ( PD.DATASETIDENTIFIER = SE.DATASETIDENTIFIER)
 	JOIN $TB_PROJECT P ON (P.PROJECT_ID = SE.PROJECT_ID)
-	LEFT JOIN $TBAT_PUBLICATION PUB ON (PUB.PUBLICATION_ID = S.Sample_PUBLICATION_IDs)
   LEFT JOIN $TB_ORGANISM O ON ( S.ORGANISM_ID = O.ORGANISM_ID)
 	WHERE SE.RECORD_STATUS != 'D' AND SE.PX_IDENTIFIER IS NOT NULL
   ORDER BY SE.PX_IDENTIFIER
@@ -145,6 +144,9 @@ sub processRequest {
     my $id = $row->[0];
     if($pre_id  and $pre_id ne $id){
        $pre_row->[1] = join(",", @sid);
+		   if ($pre_row->[8]){
+         $pre_row->[8] = get_publication_name ($pre_row->[8]);
+       }
        push @results , $pre_row;
        @sid = ();
        push @sid, $row->[1];
@@ -155,11 +157,14 @@ sub processRequest {
     $pre_id = $id;
   }
   $pre_row->[1] = join(",", @sid);
+  if ($pre_row->[8]){
+    $pre_row->[8] = get_publication_name ($pre_row->[8]);
+  }
   push @results , $pre_row;
 
   $sql = qq~
 		SELECT DISTINCT 
-           PDR.RELATED_DATABASE_ENTRIES,
+           cast (PDR.RELATED_DATABASE_ENTRIES as varchar (255)) as RDE,
            S.SAMPLE_ID,
            'Reprocessed: '+PDR.DATASETTITLE, 
            S.SAMPLE_ACCESSION,
@@ -167,8 +172,8 @@ sub processRequest {
            O.FULL_NAME,
            'edeutsch\@systemsbiology.org', 
            'USA', 
-           PB.PUBLICATION_NAME, 
-           PDR.DATASET_IDENTIFIER
+           P.PUBLICATION_ID, 
+           cast (PDR.DATASET_IDENTIFIER as varchar (255)) as ID
 		FROM $TBAT_PUBLIC_DATA_REPOSITORY PDR 
 		JOIN $TB_PROJECT P ON (PDR.PROJECT_ID = P.PROJECT_ID AND PDR.SOURCE_REPOSITORY = 'PRIDE') 
 		JOIN $TBPR_PROTEOMICS_EXPERIMENT E ON (E.PROJECT_ID = P.PROJECT_ID)
@@ -177,9 +182,8 @@ sub processRequest {
 		JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON (ASB.SAMPLE_ID = ABSB.SAMPLE_ID)
 		JOIN $TBAT_SAMPLE S ON (ASB.SAMPLE_ID = S.SAMPLE_ID)
     LEFT JOIN $TB_ORGANISM O ON ( E.ORGANISM_ID = O.ORGANISM_ID)
-		LEFT JOIN $TBAT_PUBLICATION PB ON (PB.PUBLICATION_ID = P.PUBLICATION_ID)
     WHERE PDR.RELATED_DATABASE_ENTRIES is not NULL
-    order by PDR.RELATED_DATABASE_ENTRIES
+    ORDER BY RDE 
   ~;
 
   @rows = $sbeams->selectSeveralColumns($sql);
@@ -192,6 +196,9 @@ sub processRequest {
     if($pre_id ne '' and $pre_id ne $id){
        $pre_row->[1] = join(",", @sid);
        $pre_row->[3] = join(",", @accession);
+       if ($pre_row->[8]){
+         $pre_row->[8] = get_publication_name ($pre_row->[8]);
+       }
        push @results , $pre_row;
        @sid = ();
        @accession=();
@@ -206,6 +213,10 @@ sub processRequest {
   }
   $pre_row->[1] = join(",", @sid);
   $pre_row->[3] = join(",", @accession);
+  if ($pre_row->[8]){
+    $pre_row->[8] = get_publication_name ($pre_row->[8]);
+  }
+
   push @results , $pre_row;
 
   ## creat table 
@@ -272,7 +283,17 @@ sub processRequest {
 
 	);
 
-
-
 }
-  
+ 
+sub get_publication_name{
+  my $ids = shift; 
+  my	$sql = qq~
+		SELECT PUBLICATION_NAME 
+		FROM $TBAT_PUBLICATION 
+		WHERE PUBLICATION_ID IN ($ids)
+	~;
+
+	my @publications_names = $sbeams->selectOneColumn($sql);
+  return  join(", ", @publications_names);
+}
+
