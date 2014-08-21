@@ -855,25 +855,34 @@ sub handle_request {
       $sbeams->display_sql( sql => $sql,
                             use_tabbed_panes => 1 ) if ($show_sql);
 
+
       #### Fetch the results from the database server
       $sbeams->fetchResultSet(
         sql_query=>$sql,
         resultset_ref=>$resultset_ref,
+        use_caching => 1
       );
       if (scalar @{$resultset_ref->{data_ref}} < $MAX_ROW_NUMBER){
         $parameters{row_limit} = '';
       }
 
       #### Post process the resultset
-      postProcessResultset(
-        rs_params_ref=>\%rs_params,
-        resultset_ref=>$resultset_ref,
-        query_parameters_ref=>\%parameters,
-        column_titles_ref=>\@column_titles,
-      ) if ($parameters{display_options} =~ /DASFormat/i);
+      if ( $resultset_ref->{from_cache} ) {
+        $log->info( "Skipping post-processing with cached RS" );
+      } else { 
+        postProcessResultset(
+          rs_params_ref=>\%rs_params,
+          resultset_ref=>$resultset_ref,
+          query_parameters_ref=>\%parameters,
+          column_titles_ref=>\@column_titles,
+        ) if ($parameters{display_options} =~ /DASFormat/i);
+      }
 
       #### Store the resultset and parameters to disk resultset cache
       $rs_params{set_name} = "SETME";
+      my %write_params = ( rs_table => $TBAT_ATLAS_BUILD,
+                           key_field => 'atlas_build_id',
+                           key_value => $parameters{atlas_build_id} );
       $sbeams->writeResultSet(
         resultset_file_ref=>\$rs_params{set_name},
         resultset_ref=>$resultset_ref,
@@ -881,6 +890,7 @@ sub handle_request {
         resultset_params_ref=>\%rs_params,
         query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
         column_titles_ref=>\@column_titles,
+        %write_params
       );
     }
 
