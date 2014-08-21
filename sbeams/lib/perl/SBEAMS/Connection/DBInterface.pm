@@ -2697,22 +2697,56 @@ sub fetchResultSet {
     my $self = shift;
     my %args = @_;
     $log->debug( "fetching resultset" );
+    my $t0 = time();
 
     #### Process the arguments list
     my $sql_query = $args{'sql_query'} || croak "parameter sql_query missing";
     $resultset_ref = $args{'resultset_ref'};
 
+    #### Update timing info
+    $timing_info->{send_query} = [gettimeofday()];
+
+    #### Convert the SQL dialect if necessary
+    $sql_query = $self->translateSQL(sql=>$sql_query);
+
+      my $uc_sql = uc( $sql_query );
+      use Digest::MD5 qw( md5_hex );
+      my $sql_mdsum = md5_hex( $uc_sql );
+      $resultset_ref->{sql_mdsum} = $sql_mdsum;
+
+    if ( $args{use_caching} ) {
+
+      my $rs_sql = qq~
+      SELECT cache_descriptor 
+      FROM $TB_CACHED_RESULTSET
+      WHERE sql_checksum = '$sql_mdsum'
+      ~;
+
+      my $cache_descriptor;
+      my $stmt_handle = $self->get_statement_handle( $rs_sql );
+      while ( my @row = $stmt_handle->fetchrow_array() ) {
+        $cache_descriptor = $row[0];
+        last;
+      }
+      if ( $cache_descriptor ) {
+        my %params;
+        $log->info( "using cached resultset $cache_descriptor" );
+        $self->readResultSet( resultset_file=>$cache_descriptor,
+                              resultset_ref => $resultset_ref,
+                              query_parameters_ref => \%params );
+
+        $resultset_ref->{from_cache}++;
+        $resultset_ref->{cache_descriptor} = $cache_descriptor;
+        my $t1 = time();
+        my $tdelta = $t1 - $t0;
+        $log->info( "Took $tdelta seconds to read cached RS" );
+        return 1;
+      }
+    }
 
     #### Get the database handle
     $dbh = $self->getDBHandle();
 
-
-    #### Update timing info
-    $timing_info->{send_query} = [gettimeofday()];
-
-
-    #### Convert the SQL dialect if necessary
-    $sql_query = $self->translateSQL(sql=>$sql_query);
 
     #### Execute the query
     $sth = $dbh->prepare("$sql_query") ||
@@ -2771,6 +2805,10 @@ sub fetchResultSet {
 
     #### finish up
     $sth->finish;
+
+    my $t1 = time();
+    my $tdelta = $t1 - $t0;
+    $log->info( "Took $tdelta seconds to fetch from DB" );
 
     return 1;
 
@@ -4336,7 +4374,6 @@ sub readResultSet {
 sub writeResultSet {
     my $self = shift;
     my %args = @_;
-    $log->debug( "Writing rs" );
 
     #### Process the arguments list
     my $resultset_file_ref = $args{'resultset_file_ref'};
@@ -4348,6 +4385,10 @@ sub writeResultSet {
     my $column_titles_ref = $args{'column_titles_ref'};
     my $colnameidx_ref = $args{'colnameidx_ref'};
 
+    if ( $resultset_ref->{from_cache} ) {
+      $log->info( "Skipping write, rs $resultset_ref->{cache_descriptor} already in cache" );
+      return 1;
+    }
 
     #### If a filename was not provided, create one
     my $is_new_resultset = 0;
@@ -4397,18 +4438,35 @@ sub writeResultSet {
     open(OUTFILE,">$outfile") || die "Cannot open $outfile\n";
     printf OUTFILE Data::Dumper->Dump( [$temp_hash_ref] );
     close(OUTFILE);
+    my $mdsum_out = `md5sum $outfile`;
+    my @mdsum_out = split( /\s/, $mdsum_out );
+    my $param_mdsum = $mdsum_out[0];
 
     #### Write out the resultset
     $outfile = "$RESULTSET_DIR/${resultset_file}.resultset";
     nstore($resultset_ref,$outfile);
+    $mdsum_out = `md5sum $outfile`;
+    @mdsum_out = split( /\s/, $mdsum_out );
+    my $rs_mdsum = $mdsum_out[0];
+
+    my $sql_mdsum = $resultset_ref->{sql_mdsum};
+    my $table = $args{rs_table} || '';
+    my $key_field = $args{key_field} || '';
+    my $key_value = $args{key_value} || undef;
 
     #### If this is a new resultset and we were provided a query_name,
     #### write a record for it in cached_resultset
     if ($is_new_resultset && $query_name) {
       my %rowdata = (
-	contact_id=>$self->getCurrent_contact_id(),
+      	contact_id=>$self->getCurrent_contact_id(),
         query_name=>$query_name,
         cache_descriptor=>$resultset_file,
+        param_checksum=>$param_mdsum,
+        rs_checksum=>$rs_mdsum,
+        sql_checksum=>$sql_mdsum,
+        table_name=>$table,
+        key_field=>$key_field,
+        key_value=>$key_value
       );
       my $cached_resultset_id = $self->updateOrInsertRow(
         insert=>1,
