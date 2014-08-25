@@ -1872,6 +1872,8 @@ sub handle_request {
 
     my $sampleDisplay = $sbeamsMOD->getSampleDisplay( sample_ids => $sample_ids,
 				                                                  'link' => $link,
+                                                     rows_to_show => 10, 
+                                                         max_rows => 500,
 																												 tr_info => $tr );
     print "<TABLE width='600'>$sampleDisplay</TABLE>" if $htmlmode;
 

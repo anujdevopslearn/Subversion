@@ -1097,8 +1097,6 @@ sub getSampleMapDisplay {
 
   $args{header_text}
 	<TR $trinfo><TD> <DIV ID="heatmapContainer"></DIV>  </TD></TR>
-	
-
 	~;
 
   return ( wantarray() ) ? ($header, $content) : $header . "\n" . $content;
@@ -1131,30 +1129,45 @@ sub getDetailedSampleDisplay {
   return unless $in;
 
   my $sql = qq~
-  	SELECT DISTINCT S.sample_id, sample_title, PISB.n_observations,
-           instrument_name, CASE WHEN ENZ.name IS NULL THEN 'Trypsin' ELSE ENZ.name END AS Enzyme
+  	SELECT S.sample_id, sample_title, PISB.n_observations,
+           instrument_name, CASE WHEN ENZ.name IS NULL THEN 'Trypsin' ELSE ENZ.name END AS Enzyme,
+           PUB.publication_name, PUB.abstract , PUB.uri
 		FROM $TBAT_ATLAS_SEARCH_BATCH SB 
 	  JOIN $TBAT_SAMPLE S ON s.sample_id = SB.sample_id
 	  JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB ON PISB.atlas_search_batch_id = SB.atlas_search_batch_id
 	  JOIN $TBAT_PEPTIDE_INSTANCE PI ON PI.peptide_instance_id = PISB.peptide_instance_id
 	  JOIN $TBAT_PEPTIDE P ON P.peptide_id = PI.peptide_id
 	  LEFT JOIN $TBPR_INSTRUMENT I ON S.instrument_model_id = I.instrument_id 
-	  LEFT JOIN $TBAT_PROTEASES ENZ ON ENZ.id = S.protease_id 
+	  LEFT JOIN $TBAT_PROTEASES ENZ ON ENZ.id = S.protease_id
+    LEFT JOIN $TBAT_SAMPLE_PUBLICATION SP ON SP.sample_id = S.sample_id  
+    LEFT JOIN $TBAT_PUBLICATION PUB ON PUB.publication_id = SP.publication_id  
     WHERE S.sample_id IN ( $in )
     $args{build_clause}
     $args{peptide_clause}
     AND S.record_status != 'D'
     ORDER BY sample_title
   ~;
-  my @samples = $sbeams->selectSeveralColumns($sql);
-  unshift @samples, [qw( SampleID SampleName NObs Instrument Enzyme )];
-  my $table = $self->encodeSectionTable( header => 1, 
-                                          width => '600',
-                                        tr_info => $args{tr_info},
-                                         align  => [qw(center left right left left)],
-                                           rows => \@samples );
-  return $table;
 
+  my @rows = $sbeams->selectSeveralColumns($sql);
+  my @samples = ();
+  my $pre_id = '';
+  foreach my $row (@rows){
+     my ($id, $title, $nobs,$ins,$enzyme,$pub_name, $abstract, $link) = @$row;
+     if ($pre_id eq $id){next;$pre_id = $id;}  ## keep one publication only
+     $pub_name = $self->make_pa_tooltip( tip_text => $abstract, link_text => "<a href='$link'>$pub_name</a>" );
+     push @samples, [$id, $title, $nobs,$ins,$enzyme,$pub_name];
+     $pre_id = $id;
+  }
+  unshift @samples, [qw( SampleID SampleName NObs Instrument Enzyme Publication)];
+  my $table = $self->encodeSectionTable( header => 1, 
+                                         width => '600',
+                                         tr_info => $args{tr_info},
+                                         align  => [qw(center left right left left left)],
+                                         nowrap => [qw(4 6)],
+                                         rows_to_show => $args{rows_to_show},
+                                         max_rows => $args{max_rows},
+                                         rows => \@samples );
+  return $table;
 }
 
 
@@ -1177,48 +1190,57 @@ sub getSampleDisplay {
   return unless $in;
 
   my $sql = qq~
-    SELECT sample_id,sample_title, sample_description
-      FROM $TBAT_SAMPLE
-     WHERE sample_id IN ( $in )
-     AND record_status != 'D'
-     ORDER BY sample_title ASC
+    SELECT S.SAMPLE_ID,S.SAMPLE_TITLE, S.SAMPLE_DESCRIPTION, 
+           PUB.PUBLICATION_NAME, PUB.ABSTRACT , PUB.URI
+    FROM $TBAT_SAMPLE S
+    LEFT JOIN $TBAT_SAMPLE_PUBLICATION SP ON SP.SAMPLE_ID = S.SAMPLE_ID
+    LEFT JOIN $TBAT_PUBLICATION PUB ON PUB.PUBLICATION_ID = SP.PUBLICATION_ID
+    WHERE S.SAMPLE_ID IN ( $in )
+    AND S.RECORD_STATUS != 'D'
+    ORDER BY SAMPLE_TITLE ASC
   ~;
+ print "$sql<BR>";
 
-  my @samples = $sbeams->selectSeveralColumns($sql);
-
+  my @rows = $sbeams->selectSeveralColumns($sql);
   my $header = '';
-
   if ( $args{link} ) {
     $header .= $self->encodeSectionHeader( text => 'Observed in Samples:',
                                           link => $args{link} );
   } else {
-    $header .= $self->encodeSectionHeader( text => 'Observed in Samples:',
-                                         );
+    $header .= $self->encodeSectionHeader( text => 'Observed in Samples:',);
   }
   $header = '' if $args{no_header};
 
   my $html = '';
   my $trinfo = $args{tr_info} || '';
+  my $pre_id = '';
+  my @samples = ();
+  foreach my $row (@rows) {
+    my ($sample_id,$sample_title,$sample_description,$pub_name,$abstract,$link ) = @{$row};
+    if ($pre_id eq $sample_id){next;$pre_id = $sample_id;}  ## keep one publication only
 
-  foreach my $sample (@samples) {
-    my ($sample_id,$sample_title,$sample_description) = @{$sample};
+    $pub_name = $self->make_pa_tooltip( tip_text => $abstract, link_text => "<a href='$link'>$pub_name</a>" );
     ## truncate sample desc
     if(length($sample_description) > 200){
       $sample_description =~ s/(.{200}).*/$1/;
     }
-    $sample_title = $self->make_pa_tooltip( tip_text => $sample_description, link_text => $sample_title );
-
-    $html .= $self->encodeSectionItem(
-      key=>$sample_id,
-      value=>$sample_title,
-      key_width => '5%',
-      val_width => '95%',
-      tr_info => $trinfo,
-      url=>"$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=AT_SAMPLE&sample_id=$sample_id",
-    );
+    $sample_title = $self->make_pa_tooltip( tip_text => $sample_description, 
+          link_text => "<a href='$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=AT_SAMPLE&sample_id=$sample_id'>$sample_title</a>" );
+    push @samples , [$sample_id ,$sample_title, $pub_name];
+    $pre_id = $sample_id;
   }
+  unshift @samples, [('Sample ID', 'Sample Title', 'Publication')];
+  my $table = $self->encodeSectionTable( header => 1,
+                                         width => '600',
+                                         tr_info => $args{tr_info},
+                                         align  => [qw(center left left)],
+                                         nowrap => [qw(1 3)],
+                                         rows_to_show => $args{rows_to_show},
+                                         max_rows => $args{max_rows},
+                                         rows => \@samples );
 
-  return ( wantarray() ) ? ($header, $html) : $header . "\n" . $html;
+  #return ( wantarray() ) ? ($header, $html) : $header . "\n" . $html;
+  return $table;
 } # end getSampleDisplay
 
 sub add_tabletoggle_js {

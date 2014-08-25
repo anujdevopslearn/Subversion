@@ -1926,17 +1926,18 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
   my ($theader, $tHTML) = $sbeamsMOD->getDetailedSampleDisplay( sample_ids => $table_samples,
                                                            'link' => $link,
-                                                          tr_info => $tr,
                                                            'no_header' => 1,
                                                            build_clause => $atlas_build_clause,
                                                            peptide_clause => $peptide_clause,
+																													 rows_to_show => 10,
+																													 max_rows => 500,
                                                            tr_info => $tr );
 
   print qq~
-	<TABLE WIDTH=600><TR><TD COLSPAN=2>&nbsp;</TD></TR>
+  <TR><TD COLSPAN=2>&nbsp;</TD></TR>
+	<TABLE WIDTH=600>
   $sheader
   $sHTML
-  <TR><TD>&nbsp;</TD><TD>&nbsp;</TD></TR>
   $theader
   $tHTML
   <TR><TD>&nbsp;</TD><TD>&nbsp;</TD></TR>
