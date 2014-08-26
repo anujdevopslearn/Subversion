@@ -2108,7 +2108,8 @@ sub fetch_transitions {
 
         $q->delete( 'protein_name_constraint', 'n_peptides_per_protein', 'n_highest_intensity_fragment_ions' );
         my $recall_url = $q->self_url();
-        $recall_url .= ";protein_name_constraint=$prot;n_peptides_per_protein=50;n_highest_intensity_fragment_ions=1;omit_predicted=1;protein_context=1";
+        $recall_url =~ s/peptide_sequence_constraint=[^;&]+[;&]*//;
+        $recall_url .= ";protein_name_constraint=$prot;n_peptides_per_protein=100;n_highest_intensity_fragment_ions=1;omit_predicted=1;protein_context=1";
         $pa_link = qq~
         <A HREF='GetProtein?organism_name=$organism_name;protein_name=$prot;apply_action=GO&action=GO#Sequence%20Motifs' TARGET='_peptideatlas' title='Look up protein in the Peptide Atlas' class='popup'>$pa_img</A>
         ~;
