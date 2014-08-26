@@ -295,11 +295,14 @@ sub specfile2json {
   if (! defined $target_q1) {
     if ( defined $mass) {
       if ( defined $charge) {
-	$target_q1 = $mass / $charge + $proton_mass;
+	      $target_q1 = $mass / $charge + $proton_mass;
       } else {
-	# If neither Q1 nor charge given, get +2 and +3 traces.
-	$target_q1 = $mass / 3 + $proton_mass;
-	$target_q1_2 = $mass / 2 + $proton_mass;
+	    # If neither Q1 nor charge given, get +2 and +3 traces.
+  
+        unless( $param_href->{use_pepname} ) {
+          $target_q1 = $mass / 3 + $proton_mass;
+          $target_q1_2 = $mass / 2 + $proton_mass;
+        }
       }
     } else {
       # 12/02/11: this is currently caught in ShowChromatogram.
@@ -456,6 +459,8 @@ sub mzML2traces {
     if ( $offset =~ /<indexListOffset>(\d+)\<\/indexListOffset>/i ) {
       my $off = $1;
       open MZML, $spectrum_pathname;
+      print "opening $spectrum_pathname, looking for $offset<br>\n";
+
       seek( MZML, $off, 0 );
       while ( my $line = <MZML> ) {
 #        $line =~ s/[<>]//g;
@@ -487,22 +492,32 @@ sub mzML2traces {
         for my $cgram ( @allcgrams ) {
           my $id = $cgram->attr('id');
           my @id = split( /_/, $id );
-  
           if ( $id[0] =~ /DECOY/ ) {
-            push @target_cgrams, [ $id[0] . '_' . $id[3], $id[4], $cgram ];
+            if ( $id[4] ) {
+              push @target_cgrams, [ $id[0] . '_' . $id[3], $id[4], $cgram ];
+            } else {
+              push @target_cgrams, [ $id[0] . '_' . $id[2], $id[3], $cgram ];
+            }
           } elsif ( $args{param_href}->{peptide} eq 'TIC' ) {
             push @target_cgrams, [ '' , 'Total Ion Current', $cgram ];
           } else {
-            push @target_cgrams, [ $id[2] , $id[3], $cgram ];
+            if ( $id[3] ) {
+              push @target_cgrams, [ $id[2] , $id[3], $cgram ];
+            } else {
+              push @target_cgrams, [ $id[1] , $id[2], $cgram ];
+            }
           }
         }
       }
       $parse_entire_file = 0;
-    } 
+    } else {
+      print STDERR "tail -10 $spectrum_pathname | grep indexListOffset <br>\n";
+    }
+
   }
 
-  if ( $parse_entire_file ) {
 
+  if ( $parse_entire_file ) {
     # Initialize parser and parse the file.
     my $mzMLtree = XML::TreeBuilder->new();
     $mzMLtree->parse_file($spectrum_pathname) || die
@@ -1750,7 +1765,14 @@ sub getTransitionGroupInfo_from_sptxt {
       }
 
       # Check stripped pepseq, also. ?
-      $is_match = ($peptideIon eq $target_peptideIon);
+#      $is_match = ($peptideIon eq $target_peptideIon);
+      $is_match = ( $peptideIon eq $target_peptideIon ) ? 1 : 0;
+
+      if ( !$is_match && $pepseq =~ /N\[115\]/ ) {
+        $target_peptideIon =~ s/N\[115\]/D/g;
+        $is_match = ( $peptideIon eq $target_peptideIon ) ? 1 : 0;
+      }
+
       print "<!-- target $target_peptideIon -->\n" if $is_match;
 
     }
