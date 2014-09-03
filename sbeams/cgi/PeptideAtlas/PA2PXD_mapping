@@ -123,7 +123,7 @@ sub processRequest {
           SE.DATASETIDENTIFIER, 
 	        S.IS_PUBLIC, 
 	        O.FULL_NAME, 
-          PD.LAB_HEAD_EMAIL , 
+          ISNULL (NULLIF(PD.LAB_HEAD_EMAIL, ''), PS.EMAILADDRESS ), 
           PD.LAB_HEAD_COUNTRY , 
           P.publication_id, 
           SE.PX_IDENTIFIER
@@ -132,6 +132,7 @@ sub processRequest {
 	JOIN $TBAT_PASS_DATASET PD ON ( PD.DATASETIDENTIFIER = SE.DATASETIDENTIFIER)
 	JOIN $TB_PROJECT P ON (P.PROJECT_ID = SE.PROJECT_ID)
   LEFT JOIN $TB_ORGANISM O ON ( S.ORGANISM_ID = O.ORGANISM_ID)
+  JOIN $TBAT_PASS_SUBMITTER PS ON (PS.SUBMITTER_ID = PD.SUBMITTER_ID)
 	WHERE SE.RECORD_STATUS != 'D' AND SE.PX_IDENTIFIER IS NOT NULL
   ORDER BY SE.PX_IDENTIFIER
  ~;
@@ -194,8 +195,8 @@ sub processRequest {
   foreach my $row(@rows){
     my $id = $row->[2];
     if($pre_id ne '' and $pre_id ne $id){
-       $pre_row->[1] = join(",", @sid);
-       $pre_row->[3] = join(",", @accession);
+       $pre_row->[1] = join(", ", @sid);
+       $pre_row->[3] = join(", ", @accession);
        if ($pre_row->[8]){
          $pre_row->[8] = get_publication_name ($pre_row->[8]);
        }
@@ -211,8 +212,8 @@ sub processRequest {
     $pre_row = $row;
     $pre_id = $id;
   }
-  $pre_row->[1] = join(",", @sid);
-  $pre_row->[3] = join(",", @accession);
+  $pre_row->[1] = join(", ", @sid);
+  $pre_row->[3] = join(", ", @accession);
   if ($pre_row->[8]){
     $pre_row->[8] = get_publication_name ($pre_row->[8]);
   }
@@ -253,7 +254,7 @@ sub processRequest {
   $resultset_ref->{column_list_ref} = \@column_titles;
   $resultset_ref->{types_list_ref} = \@column_types_list;
   $resultset_ref->{precisions_list_ref} = \@precisions;
-  $rs_params{page_size} = @results; 
+  $rs_params{page_size} = 50; 
 	$rs_params{set_name} = "SETME";
 
 	$sbeams->writeResultSet(
