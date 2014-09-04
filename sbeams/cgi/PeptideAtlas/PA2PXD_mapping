@@ -125,7 +125,7 @@ sub processRequest {
 	        O.FULL_NAME, 
           ISNULL (NULLIF(PD.LAB_HEAD_EMAIL, ''), PS.EMAILADDRESS ), 
           PD.LAB_HEAD_COUNTRY , 
-          P.publication_id, 
+          S.sample_publication_ids, 
           SE.PX_IDENTIFIER
 	FROM $TBAT_SEL_EXPERIMENT SE
 	JOIN $TBAT_SAMPLE S ON (S.SAMPLE_ID = SE.SAMPLE_ID)
@@ -159,7 +159,12 @@ sub processRequest {
   }
   $pre_row->[1] = join(",", @sid);
   if ($pre_row->[8]){
-    $pre_row->[8] = get_publication_name ($pre_row->[8]);
+    my @pids = split(",", $pre_row->[8]);
+    my @pnames = ();
+    foreach my $pid (@pids){
+      push @pnames, get_publication_name ($pid);
+    }
+    $pre_row->[8] = join(", ", @pnames);
   }
   push @results , $pre_row;
 
