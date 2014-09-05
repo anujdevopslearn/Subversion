@@ -493,6 +493,7 @@ sub handle_request {
     ["resource_url","SKL.resource_url","resource_url"],
     ["organism_id","O.organism_id","organism_id"],
     ["organism_name","O.organism_name","organism_name"],
+    ["presence_level","PROTLEVEL.presence_level", "Protein Level"]
   );
 
   push @column_array, ["match_string","'exact_match'", "match_string"];
@@ -508,20 +509,138 @@ sub handle_request {
 
 
   #### Define the SQL statement to find the biosequence(s)
-  $sql = qq~
+  my $proteinlevel_sql = qq~
+		(SELECT  AB.atlas_build_id as "atlas_build_id",
+						 BS_REF.biosequence_name AS "biosequence_name",
+						 PPL.level_phrase AS "presence_level"
+		 FROM PeptideAtlas.dbo.protein_identification PID
+		 INNER JOIN PeptideAtlas.dbo.atlas_build AB
+					ON ( AB.atlas_build_id = PID.atlas_build_id )
+		 INNER JOIN PeptideAtlas.dbo.biosequence_set BSS
+					ON ( BSS.biosequence_set_id = AB.biosequence_set_id )
+		 INNER JOIN sbeams.dbo.organism O
+					ON ( O.organism_id = BSS.organism_id )
+		 INNER JOIN PeptideAtlas.dbo.biosequence BS_REF
+					ON ( BS_REF.biosequence_id = PID.biosequence_id )
+								AND ( BS_REF.biosequence_set_id = BSS.biosequence_set_id)
+		 INNER JOIN PeptideAtlas.dbo.biosequence BS_REP
+					ON ( BS_REP.biosequence_id = PID.represented_by_biosequence_id )
+								AND ( BS_REP.biosequence_set_id = BSS.biosequence_set_id)
+		 INNER JOIN PeptideAtlas.dbo.protein_presence_level PPL
+					ON ( PPL.protein_presence_level_id = PID.presence_level_id )
+		 LEFT JOIN PeptideAtlas.dbo.biosequence BS_SUBSUMED_BY
+					ON ( BS_SUBSUMED_BY.biosequence_id = PID.subsumed_by_biosequence_id )
+					AND ( BS_SUBSUMED_BY.biosequence_set_id = BSS.biosequence_set_id)
+		 LEFT JOIN PeptideAtlas.dbo.biosequence_property_set BPS
+				  ON ( BPS.biosequence_id = PID.biosequence_id )
+		 WHERE 1 = 1
+					 AND AB.atlas_build_id IN ( $atlas_build_ids )
+					 AND PPL.protein_presence_level_id IN ( 1,2,6,3 )
+			)
+			UNION
+		 ( SELECT  AB.atlas_build_id as "atlas_build_id",
+					 BS_REL.biosequence_name AS "biosequence_name", 
+					 BRT.relationship_phrase  + ' ' + 
+					 BS_REF.biosequence_name AS "presence_level" 
+			 FROM PeptideAtlas.dbo.protein_identification PID
+			 INNER JOIN PeptideAtlas.dbo.biosequence_relationship BR
+						ON ( BR.reference_biosequence_id = PID.biosequence_id AND
+								 BR.atlas_build_id = PID.atlas_build_id )
+			 INNER JOIN PeptideAtlas.dbo.atlas_build AB
+						ON ( AB.atlas_build_id = PID.atlas_build_id )
+			 INNER JOIN PeptideAtlas.dbo.biosequence_set BSS
+						ON ( BSS.biosequence_set_id = AB.biosequence_set_id )
+			 INNER JOIN sbeams.dbo.organism O
+						ON ( O.organism_id = BSS.organism_id )
+			 INNER JOIN PeptideAtlas.dbo.biosequence BS_REF
+						ON ( BS_REF.biosequence_id = PID.biosequence_id )
+									AND ( BS_REF.biosequence_set_id = BSS.biosequence_set_id)
+			 INNER JOIN PeptideAtlas.dbo.biosequence BS_REP
+						ON ( BS_REP.biosequence_id = PID.represented_by_biosequence_id )
+									AND ( BS_REP.biosequence_set_id = BSS.biosequence_set_id)
+			 LEFT JOIN PeptideAtlas.dbo.biosequence_property_set BPP
+									ON ( BPP.biosequence_id = PID.biosequence_id )
+			 INNER JOIN PeptideAtlas.dbo.protein_presence_level PPL
+						ON ( PPL.protein_presence_level_id = PID.presence_level_id )
+			 INNER JOIN PeptideAtlas.dbo.biosequence_relationship_type BRT
+						ON ( BRT.biosequence_relationship_type_id =
+												BR.relationship_type_id )
+			 LEFT JOIN PeptideAtlas.dbo.biosequence BS_REL
+						ON ( BS_REL.biosequence_id = BR.related_biosequence_id )
+						AND ( BS_REL.biosequence_set_id = BSS.biosequence_set_id )
+			 LEFT JOIN PeptideAtlas.dbo.biosequence_property_set BPS
+						ON ( BPS.biosequence_id = BS_REL.biosequence_id )
+			 WHERE 1 = 1
+								AND AB.atlas_build_id IN ( $atlas_build_ids )
+								AND PPL.protein_presence_level_id IN ( 1,2,6,3 )
+								AND BRT.biosequence_relationship_type_id IN ( 1,2 )
+			)
+			UNION
+		 ( SELECT  
+					 AB.atlas_build_id as "atlas_build_id",
+					 BS_INDIS.biosequence_name AS "biosequence_name",
+					 BRT.relationship_phrase   + ' ' +
+					 BS_REL.biosequence_name AS "presence_level"  
+			 FROM PeptideAtlas.dbo.protein_identification PID
+			 INNER JOIN PeptideAtlas.dbo.biosequence_relationship BR
+						ON ( BR.reference_biosequence_id = PID.biosequence_id AND
+								 BR.atlas_build_id = PID.atlas_build_id )
+			 INNER JOIN PeptideAtlas.dbo.biosequence_relationship BR_INDIS
+						ON ( BR_INDIS.reference_biosequence_id = BR.related_biosequence_id 
+									 AND
+								 BR_INDIS.atlas_build_id = PID.atlas_build_id )
+			 INNER JOIN PeptideAtlas.dbo.atlas_build AB
+						ON ( AB.atlas_build_id = PID.atlas_build_id )
+			 INNER JOIN PeptideAtlas.dbo.biosequence_set BSS
+						ON ( BSS.biosequence_set_id = AB.biosequence_set_id )
+			 INNER JOIN sbeams.dbo.organism O
+						ON ( O.organism_id = BSS.organism_id )
+			 INNER JOIN PeptideAtlas.dbo.biosequence BS_REF
+						ON ( BS_REF.biosequence_id = PID.biosequence_id )
+									AND ( BS_REF.biosequence_set_id = BSS.biosequence_set_id)
+			 INNER JOIN PeptideAtlas.dbo.biosequence BS_REP
+						ON ( BS_REP.biosequence_id = PID.represented_by_biosequence_id )
+									AND ( BS_REP.biosequence_set_id = BSS.biosequence_set_id)
+			 LEFT JOIN BioLink.dbo.dbxref DBX ON ( DBX.dbxref_id = BS_REF.dbxref_id )
+			 INNER JOIN PeptideAtlas.dbo.protein_presence_level PPL
+						ON ( PPL.protein_presence_level_id = PID.presence_level_id )
+			 INNER JOIN PeptideAtlas.dbo.biosequence_relationship_type BRT
+						ON ( BRT.biosequence_relationship_type_id =
+										BR_INDIS.relationship_type_id )
+			 LEFT JOIN PeptideAtlas.dbo.biosequence BS_INDIS
+						ON ( BR_INDIS.related_biosequence_id = BS_INDIS.biosequence_id )
+							AND ( BS_INDIS.biosequence_set_id = BSS.biosequence_set_id)
+			 LEFT JOIN PeptideAtlas.dbo.biosequence BS_REL
+						ON ( BS_REL.biosequence_id = BR_INDIS.reference_biosequence_id  )
+					 AND ( BS_REL.biosequence_set_id = BSS.biosequence_set_id)
+			 LEFT JOIN PeptideAtlas.dbo.biosequence_property_set BPS
+						ON ( BPS.biosequence_id = BS_INDIS.biosequence_id )
+					 WHERE 1 = 1
+								AND AB.atlas_build_id IN ( $atlas_build_ids )
+								AND PPL.protein_presence_level_id IN ( 1,2,6,3 )
+								AND BRT.biosequence_relationship_type_id IN ( 1,2 )
+			 )
+			 ~;
+
+  my $select_sql = qq~
        SELECT DISTINCT TOP 5000 $columns_clause
          FROM $TBAT_SEARCH_KEY_LINK SKL
          LEFT JOIN  $TBAT_SEARCH_KEY_ENTITY SKE 
               ON (SKL.RESOURCE_NAME = SKE.RESOURCE_NAME) 
          JOIN $TB_ORGANISM O ON (O.ORGANISM_ID = SKL.ORGANISM_ID)
                   $atlas_build_clause
+         JOIN $TBAT_ATLAS_BUILD AB ON (AB.ATLAS_BUILD_ID = DAB.ATLAS_BUILD_ID)
+         LEFT JOIN ($proteinlevel_sql) AS PROTLEVEL
+          ON (PROTLEVEL.BIOSEQUENCE_NAME = SKL.RESOURCE_NAME and SKL.atlas_build_id = PROTLEVEL.atlas_build_id)
+     ~;
+   my $where_clause = qq~
         WHERE 1 = 1
           $search_key_clause
           $search_types_clause
           AND SKL.atlas_build_id IN ( $atlas_build_ids )
        ORDER BY search_key_name
-  ~;
-
+   ~;
+   $sql = $select_sql.$where_clause; 
 
   #### Define the hypertext links for columns that need them
   %url_cols = (
@@ -647,12 +766,7 @@ sub handle_request {
 					);
 
 					$sql = qq~
-							 SELECT DISTINCT TOP 50000 $columns_clause
-							 FROM $TBAT_SEARCH_KEY_LINK SKL
-							 LEFT JOIN  $TBAT_SEARCH_KEY_ENTITY SKE
-										ON (SKL.RESOURCE_NAME = SKE.RESOURCE_NAME)
-							 JOIN $TB_ORGANISM O ON (O.ORGANISM_ID = SKL.ORGANISM_ID)
-												$atlas_build_clause
+              $select_sql
 							WHERE 1 = 1
 								$search_types_clause
 								AND SKE.search_key_name like '$search_key_clause'
@@ -926,7 +1040,7 @@ sub displayTable{
    else{
      $lastKey = $searchKeys[scalar @searchKeys -1];
    }
-
+   
 	 for my $row ( @{$resultset_ref->{data_ref}} ) {
 			 my $search_key = uc($row->[0]);
 			 my $build_type = $row->[1];
@@ -934,6 +1048,13 @@ sub displayTable{
 			 my $organism_name = $row->[7];
        my $resource_n_matches = $row->[4];
        my $resource_type = 'Protein';
+       if ($row->[8] =~ /sumed/){
+         $row->[8] =~ s/sumed/sumed by/;
+       }elsif($row->[8] =~ /identical/){
+         $row->[8] =~ s/identical/identical to/;
+       }elsif($row->[8] =~ /indistinguishable/){
+         $row->[8] =~ s/indistinguishable/indistinguishable from/;
+       }
 			 next if($rescource_name =~ /NO_ENS/);
        $resource_type = 'Peptide' if($row->[3] eq 'PeptideAtlas peptide');
 
