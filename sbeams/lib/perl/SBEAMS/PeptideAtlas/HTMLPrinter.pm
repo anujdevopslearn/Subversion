@@ -297,7 +297,6 @@ sub displayStandardPageHeader {
 	<TITLE>$DBTITLE - $SBEAMS_PART</TITLE>
   ~;
 
-
   $self->printJavascriptFunctions();
   $self->printStyleSheet();
 
@@ -1154,7 +1153,7 @@ sub getDetailedSampleDisplay {
   foreach my $row (@rows){
      my ($id, $title, $nobs,$ins,$enzyme,$pub_name, $abstract, $link) = @$row;
      if ($pre_id eq $id){next;$pre_id = $id;}  ## keep one publication only
-     $pub_name = $self->make_pa_tooltip( tip_text => $abstract, link_text => "<a href='$link'>$pub_name</a>" );
+     $pub_name = $self->make_pa_tooltip( tip_text => "Abstract: $abstract", link_text => "<a href='$link'>$pub_name</a>" );
      push @samples, [$id, $title, $nobs,$ins,$enzyme,$pub_name];
      $pre_id = $id;
   }
@@ -1199,7 +1198,6 @@ sub getSampleDisplay {
     AND S.RECORD_STATUS != 'D'
     ORDER BY SAMPLE_TITLE ASC
   ~;
- print "$sql<BR>";
 
   my @rows = $sbeams->selectSeveralColumns($sql);
   my $header = '';
@@ -1219,7 +1217,7 @@ sub getSampleDisplay {
     my ($sample_id,$sample_title,$sample_description,$pub_name,$abstract,$link ) = @{$row};
     if ($pre_id eq $sample_id){next;$pre_id = $sample_id;}  ## keep one publication only
 
-    $pub_name = $self->make_pa_tooltip( tip_text => $abstract, link_text => "<a href='$link'>$pub_name</a>" );
+    $pub_name = $self->make_pa_tooltip( tip_text => "Abstract: $abstract", link_text => "<a href='$link'>$pub_name</a>" );
     ## truncate sample desc
     if(length($sample_description) > 200){
       $sample_description =~ s/(.{200}).*/$1/;
@@ -1305,7 +1303,7 @@ sub init_pa_tooltip {
                   solid #FF8C00; 
                   padding:4px; 
                   line-height:1.5; 
-                  width:200px; 
+                  width:auto; 
                   font-family: Helvetica, Arial, sans-serif;
                   font-size:12px; 
                   font-weight: normal; 
