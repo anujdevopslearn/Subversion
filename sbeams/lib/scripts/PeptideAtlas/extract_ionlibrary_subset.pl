@@ -107,15 +107,17 @@ while ( my $line = <INFILE>) {
 
   # Calculate bin for this q1 value
   $q1 = sprintf( "%0.1f", $line[0] );
-  if ( !$ion2bin{$q1} ) {
-    $ion2bin{$q1} = get_bin( $q1 );
-#    print STDERR "bin for $q1 is $ion2bin{$q1}->[0] to $ion2bin{$q1}->[1]\n";
-  }
 
-  # Strip q3 that fall into the bin
-  if ( $line[1] >= $ion2bin{$q1}->[0] && $line[1] <= $ion2bin{$q1}->[1] ) { 
-#    print STDERR "q3 $line[1] is in target bin for $q1 !\n";
-    next;
+  unless ( $options{no_swaths} ) {
+    if ( !$ion2bin{$q1} ) {
+      $ion2bin{$q1} = get_bin( $q1 );
+#    print STDERR "bin for $q1 is $ion2bin{$q1}->[0] to $ion2bin{$q1}->[1]\n";
+    }
+    # Strip q3 that fall into the bin
+    if ( $line[1] >= $ion2bin{$q1}->[0] && $line[1] <= $ion2bin{$q1}->[1] ) { 
+#      print STDERR "q3 $line[1] is in target bin for $q1 !\n";
+      next 
+    }
   }
 
   # Filter vs pre-defined list of proteins
@@ -224,13 +226,16 @@ sub process_options {
                          'nodups',
                          'print_swaths', 
                          'swaths_file:s', 
+                         'no_swaths', 
                          'input_file:s' );
 
   printUsage() if $options{help};
 
-  unless ( ( $options{prec_min_mz} && $options{prec_max_mz} && $options{width} ) || $options{swaths_file} ) {
-    printUsage( "Must provide either a swaths_file or prec_min_mz, prec_max_mz, and width" );
+  unless ( ( $options{prec_min_mz} && $options{prec_max_mz} && $options{width} ) || $options{swaths_file} || $options{no_swaths} ) {
+    printUsage( "Must provide either a swaths_file, specify no_swaths, or provide prec_min_mz, prec_max_mz, and width" );
   }
+  $options{prec_min_mz} ||= 0;
+  $options{prec_max_mz} ||= 1800;
   $options{frag_min_mz} ||= $options{prec_min_mz};
   $options{frag_max_mz} ||= $options{prec_max_mz};
   $options{overlap} ||= 0;
@@ -249,6 +254,7 @@ sub process_options {
 sub calculate_swath_bins {
 
   my %swath_bins;
+  return %swath_bins if $options{no_swaths};
 
   # Manually set min, max, and width take precedence
   if ( $options{prec_min_mz} && $options{prec_max_mz} && $options{width} ) {
