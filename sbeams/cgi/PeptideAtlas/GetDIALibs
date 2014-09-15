@@ -19,6 +19,9 @@ use lib qw (../../lib/perl);
 use Data::Dumper;
 use File::Basename;
 use File::Copy qw( move copy );
+use LWP::UserAgent;
+use HTTP::Request;
+use JSON;
 
 use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
@@ -40,6 +43,8 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 my $atlas = new SBEAMS::PeptideAtlas;
 $atlas->setSBEAMS($sbeams);
 
+my $json = new JSON;
+  
 # Read input parameters
 my $params = process_params();
 
@@ -53,12 +58,12 @@ my $project_ids = join( ",", @project_ids ) || '0';
 my $show_image = 0;
 my $tabMenu;
 
+my %basespace = ( basespace_params => '' );
 
 { # Main 
 
     # Authenticate or exit
 
-    my $program_name = ( $params->{mode} =~ /download/ ) ? 'DIA_library_download' : 'DIA_library_subset';
 
     ## get current settings
     my $project_id = $sbeams->getCurrent_project_id();
@@ -70,7 +75,28 @@ my $tabMenu;
       exit;
     }
 
+    $params->{action} ||= 'trigger';
+    if ( $params->{appsessionuri} && $params->{authorization_code} ) {
+      $basespace{basespace_params} = qq~
+      <input type=hidden name=appsessionuri value=$params->{appsessionuri}></input>
+      <input type=hidden name=authorization_code value='$params->{authorization_code}' />
+      <input type=hidden name=upload_to_basespace value=yes />
+      ~;
+      $basespace{appsessionuri} = $params->{appsessionuri};
+      $basespace{authorization_code} = $params->{authorization_code};
+      $basespace{url_params} = ";authorization_code=$params->{authorization_code};appsessionuri=$params->{appsessionuri}";
 
+
+      authenticate_to_basespace();
+      get_appsession_properties();
+      $log->info( "mode is $params->{mode}" );
+      $params->{mode} ||= $basespace{mode};
+      $params->{format} ||= 'peakview';
+      $log->info( "mode is $params->{mode}" );
+    }
+    $params->{mode} ||= 'download_libs';
+
+    my $program_name = ( $params->{mode} =~ /download/ ) ? 'DIA_library_download' : 'DIA_library_subset';
     my $page = $sbeams->getGifSpacer( 700 ) . "<BR>\n";
 
     # Get the HTML to display the tabs
@@ -85,27 +111,34 @@ my $tabMenu;
      <br>
     END
 
-
-    # Add general section 
-#  die Dumper( $params );
-
-    my $load_script = "set_toggle_box( 'protein_list_table' );sortables_init()";
-    $load_script = '';
+#    my $load_script = "set_toggle_box( 'protein_list_table' );sortables_init()";
     if ( $params->{lib_id} ) {
       $params->{mode} = 'subset_libs';
     }
     $params->{mode} ||= 'download_libs';
-    $atlas->display_page_header( onload => $load_script, sortable => 1 );
+#    die "header coming";
+    $atlas->display_page_header();
 
     if ( $params->{mode} eq 'subset_libs' ) {
-      $page .= get_subset_form_original( $params );
-      $load_script = '';
-    } elsif ( $params->{mode} eq 'customize_library' ) {
-      $page .= get_subset_form_original( $params, 'customize' );
-    } elsif ( $params->{name} ) {
-      $page .= get_subset_form_original( $params );
-    } else { 
+      my $title = qq~
+      <div style="font-family:Helvetica, Arial, sans-serif;font-size:150%;font-weight:bold" id=heading>Custom Library Download </div>
+      <br>
+      ~;
+      $page .= $title;
       $page .= $tabMenu;
+      $page .= get_status_box("Generating library, may take several minutes") unless $params->{action} eq 'trigger';
+      print $page;
+      $page = get_subset_form();
+
+    } elsif ( $params->{mode} eq 'download_libs' ) {
+      $page .= $tabMenu;
+      if ( $params->{action} eq 'download' ) {
+        $page .= get_status_box( "Uploading file to BaseSpace, make take several minutes" );
+        print $page;
+        upload_to_basespace();
+
+        $page = '';
+      }
       $page .= get_library_table();
     }
     $page .= "<BR>";
@@ -118,6 +151,28 @@ my $tabMenu;
 
 } # end main
 
+sub get_status_box {
+
+  my $msg = shift || '';
+  my $wait = "<img src='$HTML_BASE_DIR/images/wait_sm.gif'></img>";
+
+  return qq~ 
+      <div id='status' class=info_box width: 400px >$wait $msg</div><br><br>
+      <script type='text/javascript'> 
+      function set_status ( new_status ) {
+        var status = document.getElementById( 'status' );
+        status.innerHTML = new_status;
+        return false;
+      }
+      function update_status ( new_status ) {
+        var status = document.getElementById( 'status' );
+        var curr_status = status.innerHTML;
+        status.innerHTML = curr_status + new_status;
+      }
+      </script>
+    ~;
+}
+
 sub get_help_links {
 
   my %title2text = ( 'Library' => "Source library file to customize. <br><br> <sup>&dagger;</sup> Note that libraries that have already had SWATHS applied can only be filtered by protein list",
@@ -129,6 +184,7 @@ sub get_help_links {
                      'frag_min_mz' => "Minimum fragment ion m/z value for library entries ",
                      'frag_max_mz' => "Maximum fragment ion m/z value for library entries ",
                      'swaths_file' => "File of SWATH bins, format is lower mz bound 'tab' upper bound mz 'newline' ",
+                     'no_swaths_file' => "SWATH file not needed, ion library filtered at analysis time (Peakview) ",
                      'swath_size' => "Size of each SWATH bin, default is 25 Th ",
                      'swath_overlap' => "Overlap between adjacent SWATH bins, on each side - so 1 Th will result in 2 Th overlap ",
                      'Proteins' => "File of protein accessions, one per line, with which to filter library. One accession space per organism allowed: Human - Uniprot, Mtb - Tuberculist (Rv)",
@@ -293,6 +349,11 @@ sub get_library_table {
   </div>
   ~;
 
+  my $format_constraint = '';
+  if ( $params->{format} ) {
+    $format_constraint = "AND file_format = '$params->{format}'";
+  }
+
   my $sql = qq~
   SELECT dia_library_id, dia_library_name, set_tag, instrument_type_name,
   organism_name, DIL.comment, md5sum, file_path, file_format, is_master,
@@ -303,6 +364,7 @@ sub get_library_table {
   JOIN $TB_ORGANISM O ON O.organism_id = DIL.organism_id
   WHERE project_id IN ( $project_ids )
   AND DIL.record_status = 'N'
+  $format_constraint
   ORDER BY set_tag, instrument_type_name, dia_library_id
   ~;
 # 0 dia_library_id
@@ -342,6 +404,9 @@ sub get_library_table {
       $sbeams->makeSBEAMSTempLink( path => $lib_file->[7], linkname => $lib_file->[6] );
 
       my $dwn = "<a href=$CGI_BASE_DIR/downloadFile.cgi?name=$fname;format=tsv;tmp_file=$lib_file->[6]>Download</a>";
+      if ( $basespace{url_params} ) {
+        $dwn = "<a href=GetDIALibs?mode=download_libs;action=download;name=$fname;tmp_file=$lib_file->[6];$basespace{url_params}>Download</a>";
+      }
       my $size = -s $lib_file->[7];
       $size = hr_size( $size );
       my $cust = '';
@@ -349,7 +414,8 @@ sub get_library_table {
            $lib_file->[8] =~ /openswath/i ||
            $lib_file->[8] =~ /mprophet/i ) { 
         if ( $lib_file->[9] eq 'Y' ) {
-          $cust = "<a href=GetDIALibs?mode=subset_libs;lib_id=$lib_file->[0]>Customize</a>" 
+          my $basespace_url_params = ";$basespace{url_params}" || '';
+          $cust = "<a href=GetDIALibs?mode=subset_libs;lib_id=$lib_file->[0]$basespace_url_params>Customize</a>" 
         }
       }
       my $accession = 'SAL' . sprintf( "%05i", $lib_file->[0] );
@@ -442,79 +508,29 @@ sub get_btxt {
 
 sub get_subset_form {
 
-  my $params = shift;
-
-  my $query_name = 'AT_GetDIALibs';
-
-  my $category = $query_name;
-  my $program_name = $atlas->returnTableInfo( $query_name , "PROGRAM_FILE_NAME" );
-
-  #### Get the columns and input types for this table/query
-  my @columns = $atlas->returnTableInfo( $query_name, "ordered_columns");
-  my %input_types = $atlas->returnTableInfo($query_name,"input_types");
-
-  $sbeams->collectSTDOUT();
-  #### Display the user-interaction input form
-  $sbeams->display_input_form(
-    TABLE_NAME=>$query_name,
-    CATEGORY=>$category,
-    apply_action=>'Go',
-    PROGRAM_FILE_NAME=>$program_name,
-    parameters_ref=>$params,
-    input_types_ref=>\%input_types,
-    mask_user_context=> '1',
-    use_tabbed_panes=> '1',
-  );
-  my $form = $sbeams->fetchSTDOUT();
-  return $form;
-}
-
-
-sub get_subset_form_original {
-
-  my $params = shift || {};
-  my $custom = shift || '';
-
-  my $title = qq~
-  <div style="font-family:Helvetica, Arial, sans-serif;font-size:150%;font-weight:bold" id=heading>Custom Library Download </div>
-  <br>
-  ~;
-  print $title;
-  print "$tabMenu <br>\n";
+  # Set this to true if we are in the process of downloading a library
+  my $custom = ( $params->{action} =~ /trigger/i ) ? '0' : 1;
 
   # Needed this sooner
   my $swath_overlap = $params->{swath_overlap} || 0;
 
   my $custom_link = '';
-  my $wait = "<img src='$HTML_BASE_DIR/images/wait_sm.gif'></img>";
   if ( $custom ) {
-    $custom_link = "<div id='status' class=info_box width: 400px >$wait Generating library, this may take a minute </img></div><br><br>\n";
-    print $custom_link;
-    print qq~ 
-      <script type='text/javascript'> 
-      function set_status ( new_status ) {
-        var status = document.getElementById( 'status' );
-        status.innerHTML = new_status;
-        return false;
-      }
-      function update_status ( new_status ) {
-        var status = document.getElementById( 'status' );
-        var curr_status = status.innerHTML;
-        status.innerHTML = curr_status + new_status;
-//        return false;
-      }
-      </script>
-    ~;
 
     if ( !$params->{library} || $params->{library} !~ /^\d+$/ ) {
      print "<script type='text/javascript'> set_status( 'Missing or illegal library ID' ); </script>" ;
     } else {
 
+      my $format_constraint = '';
+      if ( $params->{format} ) {
+        $format_constraint = "AND file_format = '$params->{format}'";
+      }
       my $sql = qq~
       SELECT file_path, file_format 
       FROM $TBAT_DIA_LIBRARY 
       WHERE dia_library_id = $params->{library}
-      AND project_id IN ( $project_ids );
+      AND project_id IN ( $project_ids )
+      AND record_status = 'N'
       ~;
       my $sth = $sbeams->get_statement_handle( $sql );
       my $path = '';
@@ -575,6 +591,11 @@ sub get_subset_form_original {
 #        } else {
 #          die Dumper( $params );
         }
+        $exec .= "--min_num $params->{min_num_frags} ";
+        $exec .= "--max_num $params->{max_num_frags} ";
+
+
+
         $log->info( $exec );
 #        print "<script type=text/javascript> update_status( '<br>$exec' ); </script>" ;
         my @status = `$exec`;
@@ -583,6 +604,9 @@ sub get_subset_form_original {
         print "<script type=text/javascript> set_status( 'Finished. <br><br>$status' ); </script>" ;
 
         if ( -e "/tmp/$fname"  ) {
+
+
+          # Command finished successfully. 
 
           my $result = '';
           my $base_name = basename( $path );
@@ -597,18 +621,23 @@ sub get_subset_form_original {
             
           }
 
+          my $bs = {};
+          move( "/tmp/$fname", "$PHYSICAL_BASE_DIR/tmp/$fname" );
+          $fname = "$PHYSICAL_BASE_DIR/tmp/$fname";
 
+          if ( $params->{upload_to_basespace} ) {
+            $bs = upload_to_basespace( basename => $base_name, tmpfile_name => $fname );
+          }
 
 #          $base_name =~ s/\.csv/\.tsv/;
 #          $base_name =~ s/\.txt/\.tsv/;
-          move( "/tmp/$fname", "$PHYSICAL_BASE_DIR/tmp/$fname" );
           if ( -e "/tmp/$fname.swaths" ) {
             move( "/tmp/$fname.swaths", "$PHYSICAL_BASE_DIR/tmp/" );
             my $swath_file_link = qq~ Download generated <a href=$CGI_BASE_DIR/downloadFile.cgi?name=swath_windows.txt;format=tsv;tmp_file=$fname.swaths>SWATH window file</a>.~;
             print "<script type=text/javascript> update_status( '<br>$swath_file_link' ); </script>" ;
           }
 
-          if ( -e "$PHYSICAL_BASE_DIR/tmp/$fname" ) {
+          if ( -e "$fname" ) {
             $result = qq~ Customized library is ready for download via this <a href=$CGI_BASE_DIR/downloadFile.cgi?name=$base_name;format=tsv;tmp_file=$fname>link</a>~;
           } else {
             $result = "Library customization failed";
@@ -635,12 +664,19 @@ sub get_subset_form_original {
 
   my %orgs;
   my %inst;
+  my $format_constraint =  " AND file_format IN ('peakview', 'openswath', 'mprophet' ) ";
+  if ( $params->{format} ) {
+    $format_constraint = "AND file_format = '$params->{format}'";
+  }
   my $sql = qq~
-  SELECT dia_library_id, dia_library_name, file_path, file_format, is_master
+  SELECT dia_library_id, dia_library_name, file_path, file_format, is_master,
+         instrument_type_name
   FROM $TBAT_DIA_LIBRARY DIL 
+  JOIN $TBAT_INSTRUMENT_TYPE IT ON IT.instrument_type_id = DIL.instrument_type_id
   WHERE project_id IN ( $project_ids )
-  AND file_format IN ('peakview', 'openswath', 'mprophet' )
+  $format_constraint
   AND is_master = 'Y'
+  AND DIL.record_status = 'N' 
   ORDER BY dia_library_tag, dia_library_name 
   ~;
 # 0 dia_library_id
@@ -650,16 +686,24 @@ sub get_subset_form_original {
 # 4 file_format
   my $sth = $sbeams->get_statement_handle( $sql );
   my %libraries; 
-  my $lib_select = "<select size=4 name=library id=library>\n";
 
+  my $lib_select;
+  my $lib_size = 0;
   while ( my @row = $sth->fetchrow_array() ) {
+    if ( $params->{format} ) {
+      next unless $params->{format} =~ /$row[3]/i;
+      next if ( $params->{format} =~ /peakview/i && $row[5] =~ /orbi/i );
+    }
+    $lib_size++;
     my $selected = '';
     if ( $row[0] == $params->{lib_id} ) {
       $selected = 'selected';
     }
     $lib_select .= "<option value=$row[0] $selected > $row[1] </option>\n";
   }
+  $lib_size = 4 if $lib_size > 4;
   $lib_select .= "</select>\n";
+  $lib_select = "<select size=$lib_size name=library id=library>\n" . $lib_select;
 
   my $inst_select = "<select name=instrument><option value=''>---</option>";
   for my $inst ( sort( keys( %inst ) ) ) {
@@ -691,6 +735,12 @@ sub get_subset_form_original {
 
   my $domain_protein_list_select = get_protein_list_selector();
   my $spacer = '&nbsp;' x 30;
+
+  my $no_swaths = '';
+  if ( $params->{format} && $params->{format} =~ /peakview/i ) {
+    $no_swaths = 'checked';
+  }
+
 
   my $form = qq~
   $help
@@ -744,8 +794,10 @@ sub get_subset_form_original {
   </style>
 
   <table style="border-collapse: collapse">
-  <form method=post id=cusomize onSubmit="return check_form()" enctype="multipart/form-data">
-  <input type=hidden name=mode value=customize_library />
+  <form method=post id=customize onSubmit="return check_form()" enctype="multipart/form-data">
+  <input type=hidden name=mode value=subset_libs />
+  <input type=hidden name=action value=download />
+  $basespace{basespace_params}
   <tr class=cellblock_top>
     <td align=right><b><i> Input library<sup>&dagger;</sup>:</i></b></td>
     $title2help->{Library}
@@ -778,9 +830,19 @@ sub get_subset_form_original {
     <td colspan=3>&nbsp;</td>
   </tr>
   <tr class="cellblock_top">
-    <td align=right><b><i> SWATHs file:</i></b></td>
+    <td align=right><b><i>Upload SWATHs file:</i></b></td>
     $title2help->{swaths_file}
     <td><input type=file name=swaths_file id=swaths_file onchange=specify_swath('file')></input></td>
+  </tr>
+  <tr class=cellblock>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td align=left>$or</td>
+  </tr>
+  <tr class=cellblock>
+    <td align=right><b>No SWATHs file:</b></td>
+    $title2help->{no_swaths_file}
+    <td align=left><input type=checkbox $no_swaths /></td>
   </tr>
   <tr class=cellblock>
     <td>&nbsp;</td>
@@ -893,9 +955,217 @@ sub process_params {
   my $params = {};
   $sbeams->parse_input_parameters( q => $q, parameters_ref => $params );
   $sbeams->processStandardParameters( parameters_ref => $params );
-  $params->{mode} ||= 'download_libs';
   return( $params );
 }
+
+
+sub authenticate_to_basespace {
+
+  my $uri = $basespace{appsessionuri};
+  my @appsession = split( /\//, $uri );
+  my $appsession_id = $appsession[$#appsession];
+  $basespace{appsession_id} = $appsession_id;
+
+  # Have we been through authentication in this page?
+  if ( $basespace{access_token} ) {
+    $log->info( "Already authenticated, returning" );
+    return;
+  }
+
+  # Will need a new user agent for subsequent transactions
+  my $ua = LWP::UserAgent->new();
+  $ua->cookie_jar( {} );
+
+  # Is there a cached value?
+  my $token = $sbeams->getSessionAttribute( key => $basespace{appsessionuri} );
+
+  if ( $token ) {   # Yes, will use to set header
+    $log->info( "Fetched token from Session Cookie" );
+
+  } else { # No, fetch from bs using client ids and auth_code
+
+    my $client = $CONFIG_SETTING{BASESPACE_IONLIBRARY_CLIENT_ID} || '';
+    my $client_secret = $CONFIG_SETTING{BASESPACE_IONLIBRARY_CLIENT_SECRET_ID} || '';
+    my $redirect = "https://db.systemsbiology.net" . $HTML_BASE_DIR . '/cgi/PeptideAtlas/GetDIALibs';
+
+    my $auth_code = $basespace{authorization_code};
+
+    my $auth_url = 'https://api.basespace.illumina.com/v1pre3/oauthv2/token';
+    my $post_param_ref = { client_id => $client,
+                       client_secret => $client_secret, 
+                                code => $auth_code, 
+                        redirect_uri => $redirect, 
+                          grant_type => 'authorization_code' };
+
+    my $response = $ua->post( $auth_url, $post_param_ref );
+
+    for my $line ( split( "\n", $response->content() ) ) {
+      if ( $line =~ /"access_token":"([^"]+)"/ ) {
+        $token = $1;
+        last;
+      }
+    }
+  }
+
+  if ( !$token ) {
+    $log->info( "Unable to get authorization from Base Space" );
+  } else {
+
+    # Place access token in default header for user agent
+    # for all subsequent transactions.
+    $ua->default_header( 'x-access-token' => $token );
+    $basespace{ua} = $ua;
+    $basespace{token} = $token;
+
+    # Cache token for subsequent cgi calls with this appsession
+    $sbeams->setSessionAttribute( key => $basespace{appsessionuri}, value => $token );
+  }
+
+} # End authenticate_to_basespace
+
+# Fetch appsession info, includes project name and ID to write to
+sub get_appsession_properties {
+
+  if ( !$basespace{access_token} ) {
+    authenticate_to_basespace();
+  } 
+
+  # User Agent created during authentication
+  my $ua = $basespace{ua} || return;
+
+  my $appsession_url = $basespace{appsession_url} || 'https://api.basespace.illumina.com/' . $basespace{appsessionuri};
+  $basespace{appsession_url} ||= $appsession_url;
+
+  my $response = $ua->get( $appsession_url );
+  my @content = $response->content();
+  my $appsession = $json->decode( $content[0] );
+  $basespace{appsession} = $appsession;
+
+  # Fetch project_id from Response->Properties, as per Illumina. 
+  # Response->References also contains info, but is deprecated.
+  if ( $appsession->{Response} ) {
+    if ( $appsession->{Response}->{Properties} ) {
+      for my $ref ( @{$appsession->{Response}->{Properties}->{Items}} ) {
+        my $name = $ref->{Name};
+        $name =~ s/Input\.//;
+        if ( $ref->{Name} eq 'Input.project-id' ) {
+          $basespace{project} = $ref->{Content}->{Name};
+          $basespace{project_id} = $ref->{Content}->{Id};
+        } else {
+          $basespace{$name} = $ref->{Content};
+        }
+      }
+    }
+  }
+#  $basespace{ua} = '';
+#  $basespace{appsession} = '';
+#  die Dumper( %basespace );
+
+} # End get_appsession_properties
+
+
+sub upload_to_basespace {
+
+  my %args = @_;
+
+  my $tmp_file = $args{tmpfile_name} || "$PHYSICAL_BASE_DIR/tmp/$params->{tmp_file}";
+  my $basename = $args{basename} || $params->{name};
+
+  if ( ! -e $tmp_file ) {
+    die "No tmp file $tmp_file";
+    $log->warn( "Missing file $tmp_file" );
+    return;
+  }
+
+  if ( !$basespace{appsession} ) {
+    get_appsession_properties();
+  }
+#  set_appsession_status( 'Running' );
+
+  my $project = $basespace{project};
+  my $project_id = $basespace{project_id};
+  my $appsessionuri = $basespace{appsessionuri};
+  my $appsession_id = $basespace{appsession_id};
+  my $ua = $basespace{ua};
+  my $token = $basespace{token};
+  if ( !$token ) {
+    $basespace{ua} = '';
+    $basespace{appsession} = '';
+    die Dumper( %basespace );
+  }
+
+  if ( $project_id && $project ) {
+
+    # We will assume that no App Results called 'SWATHIonLibraries' exists
+    # for this project. Try to create.
+    # Required info: Project.Id, AppResult.Name, .Desc, AppSession.ID 
+    $basespace{ua} = '';
+    $basespace{appsession} = '';
+
+    my $appresult_url = "https://api.basespace.illumina.com/v1pre3/projects/$project_id/appresults";
+    my $appresult_param_ref = { Name => 'SWATHAtlasIonLibraries',
+                                Description => "Ion Libraries from SWATH Atlas for SWATH Analysis",
+                                HrefAppSession => $appsessionuri
+                              };
+
+    my $ar_result = $ua->post( $appresult_url, $appresult_param_ref );
+    my @content = $ar_result->content();
+    my $ar_object = $json->decode( $content[0] );
+    my $HrefFiles = $ar_object->{Response}->{HrefFiles} || die Dumper( $ar_object );
+
+    # TODO validate ar_result?
+    # We have a project, and have created an AppResult. Now upload file
+
+#    $log->info( join( "\t", qw( Auth_code URI Token AppResult Project Project_name basename tmp_file client client_secret ) ) );
+#    $log->info( join( "\t", $auth_code, $appsession_id, $token, 'AppResultId', $project_id, $project, $basename, $tmp_file, $client, $client_secret  ) );
+
+    my $exe = "curl -v -H 'x-access-token: $token' -d '\@$tmp_file' -H 'Content-Type: text/tab-separated-values' 'https://api.basespace.illumina.com/" . $HrefFiles . "?name=$basename'";
+    my @result = `$exe`;
+
+    $log->info( $exe );
+    $log->info( join( "\n", @result ) );
+
+    # Set analysis Status to Complete
+    set_appsession_status( 'Complete' );
+
+    if ( $params->{mode} eq 'download_libs' ) {
+      print_js_status( "Finished upload <br><br>", 1 );
+    }
+    print_js_status( "File $basename uploaded to Base Space, check project named $project, or follow <a href=https://basespace.illumina.com/analyses/$appsession_id/files target=basespace> this link </a><br>" );
+
+  } else {
+    print_js_status( "<br>Failure: no Base Space projects to write to" );
+    return;
+  }
+
+}  # End upload_to_basespace
+
+sub set_appsession_status {
+
+  my $new_status = shift || return;
+
+  if ( !$basespace{ua} ) {
+    authenticate_to_basespace();
+  } 
+
+  my $ua = $basespace{ua};
+
+  my $appsession_url = $basespace{appsession_url};
+  $ua->post( $appsession_url, [ Status => $new_status ] );
+
+}
+
+sub print_js_status {
+  my $msg = shift or return;
+  my $replace = shift || 0;
+
+  if ( $replace ) {
+    print "<script type=text/javascript> set_status( '$msg' ); </script>" ;
+  } else {
+    print "<script type=text/javascript> update_status( '<br>$msg' ); </script>" ;
+  }
+}
+
 
 sub get_build_path {
   my %args = @_;
