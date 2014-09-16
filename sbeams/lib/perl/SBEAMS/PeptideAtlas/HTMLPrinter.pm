@@ -1153,7 +1153,9 @@ sub getDetailedSampleDisplay {
   foreach my $row (@rows){
      my ($id, $title, $nobs,$ins,$enzyme,$pub_name, $abstract, $link) = @$row;
      if ($pre_id eq $id){next;$pre_id = $id;}  ## keep one publication only
-     $pub_name = $self->make_pa_tooltip( tip_text => "Abstract: $abstract", link_text => "<a href='$link'>$pub_name</a>" );
+     if ($abstract){
+       $pub_name = $self->make_pa_tooltip( tip_text => "Abstract: $abstract", link_text => "<a href='$link'>$pub_name</a>" );
+     }
      push @samples, [$id, $title, $nobs,$ins,$enzyme,$pub_name];
      $pre_id = $id;
   }
@@ -1216,8 +1218,9 @@ sub getSampleDisplay {
   foreach my $row (@rows) {
     my ($sample_id,$sample_title,$sample_description,$pub_name,$abstract,$link ) = @{$row};
     if ($pre_id eq $sample_id){next;$pre_id = $sample_id;}  ## keep one publication only
-
-    $pub_name = $self->make_pa_tooltip( tip_text => "Abstract: $abstract", link_text => "<a href='$link'>$pub_name</a>" );
+    if ($abstract){
+      $pub_name = $self->make_pa_tooltip( tip_text => "Abstract: $abstract", link_text => "<a href='$link'>$pub_name</a>" );
+    }
     ## truncate sample desc
     if(length($sample_description) > 200){
       $sample_description =~ s/(.{200}).*/$1/;
