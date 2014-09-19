@@ -912,7 +912,7 @@ sub getSamplePlotDisplay {
   my $self = shift;
   my $sbeams = $self->getSBEAMS();
   my %args = @_;
-  my $SUB_NAME = 'getSampleDisplay';
+  my $SUB_NAME = 'getSamplePlotDisplay';
 
   for my $arg ( qw( n_obs obs_per_million ) ) {
 		unless ( defined ($args{$arg} ) ) {
@@ -1181,6 +1181,12 @@ sub getSampleDisplay {
   my $sbeams = $self->getSBEAMS();
   my %args = @_;
   my $SUB_NAME = 'getSampleDisplay';
+  my $bg_color = $args{bg_color} || '';
+  my $sortable = 1;
+  if ( $args{sortable} ne ''){
+    $sortable = $args{sortable};
+  }
+
 
   unless( $args{sample_ids} ) {
     $log->error( "No samples passed to display samples" );
@@ -1230,7 +1236,16 @@ sub getSampleDisplay {
     push @samples , [$sample_id ,$sample_title, $pub_name];
     $pre_id = $sample_id;
   }
-  unshift @samples, [('Sample ID', 'Sample Title', 'Publication')];
+  if ($sortable){
+    my @headings = ();
+    push @headings, 'Sample ID','';
+    push @headings, 'Sample Title','';
+    push @headings, 'Publication','';
+    my $headings = $self->make_sort_headings( headings => \@headings, default => 'Sample ID');
+    unshift @samples, ($headings);
+  }else{
+		unshift @samples, [('Sample ID', 'Sample Title', 'Publication')];
+  }
   my $table = $self->encodeSectionTable( header => 1,
                                          width => '600',
                                          tr_info => $args{tr_info},
@@ -1238,6 +1253,8 @@ sub getSampleDisplay {
                                          nowrap => [qw(1 3)],
                                          rows_to_show => $args{rows_to_show},
                                          max_rows => $args{max_rows},
+                                         bg_color => $bg_color, 
+                                         sortable => $sortable,
                                          rows => \@samples );
 
   #return ( wantarray() ) ? ($header, $html) : $header . "\n" . $html;
@@ -1597,7 +1614,7 @@ sub get_proteome_coverage {
     }
     push @return, [ $db, $row->[0], $obs, $pct ];
   }
-
+  return '' if ( @return == 1);
   my $table = '<table width=600>';
 
   $table .= $self->encodeSectionHeader(
@@ -1618,6 +1635,140 @@ sub get_proteome_coverage {
   return $table;
 }
 
+sub get_what_is_new {
+  my $self = shift;
+  my $build_id = shift || return [];
+  my $sbeams = $self->getSBEAMS();
+  # check if it default build 
+  my $sql = qq~
+    SELECT  DEFAULT_ATLAS_BUILD_ID
+    FROM $TBAT_DEFAULT_ATLAS_BUILD 
+    WHERE ATLAS_BUILD_ID = $build_id
+  ~;
+  my @row = $sbeams->selectOneColumn($sql); 
+  return if(! @row);
+    
+  # compare biosequence set version
+  $sql = qq~
+    SELECT AB.ATLAS_BUILD_NAME, BS.SET_DESCRIPTION    
+    FROM $TBAT_ATLAS_BUILD AB
+    JOIN $TBAT_BIOSEQUENCE_SET BS ON (BS.BIOSEQUENCE_SET_ID = AB.BIOSEQUENCE_SET_ID ) 
+    WHERE AB.ATLAS_BUILD_ID = $build_id     
+  ~;
+  @row = $sbeams->selectSeveralColumns($sql);
+  my ($default_build_name, $default_bsset_desc) = @{$row[0]};
+  my $build_name_pat = $default_build_name;
+  $build_name_pat =~ s/\s+\d.*//;
+  $sql = qq~
+    SELECT AB.atlas_build_id, AB.ATLAS_BUILD_NAME, BS.SET_DESCRIPTION
+    FROM $TBAT_ATLAS_BUILD AB
+    JOIN $TBAT_BIOSEQUENCE_SET BS ON (BS.BIOSEQUENCE_SET_ID = AB.BIOSEQUENCE_SET_ID )
+    WHERE AB.ATLAS_BUILD_NAME like '$build_name_pat [0-9]%' and AB.project_id = 475 
+    AND AB.ATLAS_BUILD_ID != $build_id
+  ~;
+  @row = $sbeams->selectSeveralColumns($sql);
+  return if (! @row);
+  my ($previous_build_id, $previous_build_name, $previous_bsset_desc) = @{$row[0]};
+
+  my @headings;
+  push @headings, '', '';
+  push @headings, $default_build_name, '';
+  push @headings ,  $previous_build_name, '';
+
+  my $headings = $self->make_sort_headings( headings => \@headings, default => $default_build_name );
+  my @return = ( $headings );
+  push @return , ['Reference_Database', $default_bsset_desc, $previous_bsset_desc];
+
+  ## get sample number
+  $sql = qq~ 
+      SELECT ATLAS_BUILD_ID , COUNT(SAMPLE_ID)  
+      FROM $TBAT_ATLAS_BUILD_SAMPLE 
+      WHERE atlas_build_id in ($build_id, $previous_build_id)
+      GROUP BY ATLAS_BUILD_ID
+  ~;
+  my %sample_cnt = $sbeams->selectTwoColumnHash($sql);
+
+  $sql = qq~
+  SELECT  atlas_build_id,  COUNT(peptide_instance_id) cnt
+  FROM $TBAT_PEPTIDE_INSTANCE
+  WHERE atlas_build_id in ($build_id, $previous_build_id)
+  GROUP BY atlas_build_id
+  ~;
+  my %pep_count = $sbeams->selectTwoColumnHash($sql);
+
+  $sql = qq~ 
+  SELECT PID.atlas_build_id, COUNT(BS.biosequence_name) cnt
+  FROM $TBAT_PROTEIN_IDENTIFICATION PID
+  JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL
+  ON PPL.protein_presence_level_id = PID.presence_level_id
+  JOIN $TBAT_BIOSEQUENCE BS
+  ON BS.biosequence_id = PID.biosequence_id
+  WHERE PID.atlas_build_id in ($build_id, $previous_build_id)
+  AND PPL.level_name = 'canonical'
+  AND BS.biosequence_name NOT LIKE 'DECOY%'
+  AND BS.biosequence_name NOT LIKE '%UNMAPPED%'
+  AND BS.biosequence_desc NOT LIKE '%common contaminant%'
+  GROUP BY PID.atlas_build_id
+  ~;
+  my %prot_count = $sbeams->selectTwoColumnHash($sql);
+
+  push @return , ['# Samples', $sample_cnt{$build_id}, $sample_cnt{$previous_build_id}];
+  push @return , ['Distinct_Peptides', $pep_count{$build_id}, $pep_count{$previous_build_id}];
+  push @return , ['Canonical_Proteins', $prot_count{$build_id}, $prot_count{$previous_build_id}];
+
+  my $table = '<table width=600>';
+  $table .= $self->encodeSectionHeader(
+      text => 'What\'s new',
+      mouseover => "This shows the differences between this build and the previous build, and the new sample talbe.",
+      width => 600
+  );
+
+  $table .= $self->encodeSectionTable( rows => \@return,
+                                        header => 1,
+                                        table_id => 'what_is_new',
+                                        align => [ qw(left right right right ) ],
+                                        bg_color => '#EAEAEA',
+                                        rows_to_show => 25,
+                                        sortable => 1 );
+  $table .= '</TABLE>';
+  ## new sample table:
+  $sql = qq~
+    SELECT SAMPLE_ID
+    FROM $TBAT_SAMPLE 
+    WHERE SAMPLE_ID 
+    IN ( 
+      SELECT A.SAMPLE_ID FROM $TBAT_ATLAS_BUILD_SAMPLE A 
+      WHERE A.ATLAS_BUILD_ID IN ($build_id)
+    ) 
+    AND SAMPLE_ID 
+    NOT IN ( 
+      SELECT B.SAMPLE_ID 
+      FROM $TBAT_ATLAS_BUILD_SAMPLE B 
+      WHERE B.ATLAS_BUILD_ID IN ($previous_build_id)
+    )  
+  ~;
+  my @sample_ids = $sbeams->selectOneColumn($sql);
+  if(@sample_ids){
+    my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_samplemap',
+                                                  visible => 1,
+                                                tooltip => 'Show/Hide Section',
+                                                 imglink => 1,
+                                                  sticky => 1 );
+
+    my $sampleDisplay = $self->getSampleDisplay( sample_ids => \@sample_ids,
+                                                          'link' => $link,
+                                                     rows_to_show => 5,
+                                                         max_rows => 500,
+                                                         bg_color  => '#EAEAEA',
+                                                         sortable => 1,
+                                                         tr_info => $tr );
+
+    $table .= "<TABLE width='600'>$sampleDisplay</TABLE>";
+  }
+  
+  return $table;
+
+}
 
 1;
 

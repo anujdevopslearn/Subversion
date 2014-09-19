@@ -100,12 +100,20 @@ my $show_image = 0;
 #  print STDERR 'build overV ' . time() . "\n";
     $page .= get_build_overview ( $build_id );
 #  print STDERR 'sample info ' . time() . "\n";
+    my $what_is_new = $atlas->get_what_is_new ($build_id);
+    if($what_is_new){
+			$page .= "<BR>\n";
+			$page .= $what_is_new;
+			$page .= "<BR>\n";
+    }
+
 
     my $proteome_cover = $atlas->get_proteome_coverage( $build_id );
-    $page .= "<BR>\n";
-    $page .= $proteome_cover;
-    $page .= "<BR>\n";
-
+    if($proteome_cover){
+			$page .= "<BR>\n";
+			$page .= $proteome_cover;
+			$page .= "<BR>\n";
+    }
     my ( $sample_table, $sample_arrayref ) = get_sample_info( $build_id );
     my ( $chart_div, $header ) = get_draw_chart_function( $sample_arrayref );
 
