@@ -1920,7 +1920,6 @@ if ($apply_action =~ /QUERY|GO/i ) {
                                                   obs_per_million => $obs_per_million,
                                                            'link' => $link,
                                                            tr_info => $tr );
-
   my $peptide_clause = $peptide_name_clause || $peptide_sequence_clause || '';
   $atlas_build_clause =~ s/AB/PI/g;
 
@@ -1934,10 +1933,10 @@ if ($apply_action =~ /QUERY|GO/i ) {
                                                            tr_info => $tr );
 
   print qq~
-  <TR><TD COLSPAN=2>&nbsp;</TD></TR>
-	<TABLE WIDTH=600>
+  <TABLE WIDTH=600><TR><TD COLSPAN=2>&nbsp;</TD></TR>
   $sheader
   $sHTML
+  <TR><TD>&nbsp;</TD><TD>&nbsp;</TD></TR>
   $theader
   $tHTML
   <TR><TD>&nbsp;</TD><TD>&nbsp;</TD></TR>
