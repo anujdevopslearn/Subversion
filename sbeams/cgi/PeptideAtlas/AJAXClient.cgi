@@ -168,7 +168,8 @@ sub GetTransitions_SourceSelect {
 
 sub GetTransitions_NamespaceFilters {
 
-  my $div_text = '&nbsp;' x 4 . $sbeams->makeInactiveText( 'N/A' );
+  my %names;
+  my $div_text = '&nbsp;' x 4; #  . $sbeams->makeInactiveText( 'N/A' );
 #  my $json_text = $json->encode( [$div_text] );
 #  return $json_text;
 
