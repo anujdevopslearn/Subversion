@@ -2673,6 +2673,7 @@ sub get_peptide_mappings {
   WHERE biosequence_set_id = $parameters{build_bss_id}   
   AND peptide_sequence IN ( $pep_string )
   ~;
+  $log->info( $sql );
 
   my %bioseqs;
   my $sth = $sbeams->get_statement_handle($sql);
