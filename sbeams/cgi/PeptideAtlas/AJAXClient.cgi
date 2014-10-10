@@ -63,6 +63,12 @@ sub main
     my $n_params_found = $sbeams->parse_input_parameters( q => $q, 
                                              parameters_ref => \%params
                                                         );
+
+
+    if ( $params{pabst_build_id} eq 'specialaccess' ) {
+      $params{pabst_build_id} = 146;
+    }
+
   print $sbeams->get_http_header();
   print process_query();
 
@@ -172,7 +178,7 @@ sub GetTransitions_NamespaceFilters {
   my $div_text = '&nbsp;' x 4; #  . $sbeams->makeInactiveText( 'N/A' );
 #  my $json_text = $json->encode( [$div_text] );
 #  return $json_text;
-
+  
   if ( $params{pabst_build_id} && $params{pabst_build_id} =~ /^\d+$/ ) {
 
     my $sql = qq~
