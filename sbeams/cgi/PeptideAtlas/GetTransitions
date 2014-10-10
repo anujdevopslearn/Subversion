@@ -156,8 +156,54 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
   # 4 - global default
   $pabst_build_id = $best_peptide->get_pabst_build( %parameters );
 
+  my $project_id = $atlas->getProjectID(
+    atlas_build_id => $parameters{atlas_build_id}
+  );
+  $atlas->display_page_header(project_id => $project_id);
+
+  my $restricted_proteins = '';
+  my $bad_build_specified = 0;
+
+  if ( $parameters{pabst_build_id} && $parameters{pabst_build_id} != $pabst_build_id ) {
+    my $auth_path = get_auth_path();
+
+    # Remove any expired auth files
+    clear_auth( $auth_path );
+
+    $SRMAuth = $q->cookie( 'SRMAtlasAuthorized' );
+    if ( $guest && $SRMAuth && $parameters{pabst_build_id} == 146 ) {
+
+      # This mechanism supercedes the restricted proteins mechanism
+      $restricted_proteins = '';
+
+      if ( -e "$auth_path/$SRMAuth" ) {
+        $isAuthorized++;
+        unlink( "$auth_path/$SRMAuth" );
+        $super_guest++;
+        $pabst_build_id = $parameters{pabst_build_id};
+        print qq~
+        <p>
+        <br>
+        <span class=info_box>You are being allowed access to the Complete Human SRM Atlas subject to the provisional license agreement</span>
+        <br>
+        </p>
+        ~
+      } else {
+        $bad_build_specified++;
+      }
+    } else {
+      $bad_build_specified++;
+    }
+  }
+
+
+  if ( $super_guest ) {
+    $pabst_build_id = ( $parameters{pabst_build_id} == 146 ) ? 146 : $pabst_build_id;
+  }
+
   $parameters{organism} ||= $best_peptide->getBuildOrganism( pabst_build_id => $pabst_build_id );
 	$parameters{build_bss_id} = $best_peptide->get_pabst_bss_id( pabst_build_id => $pabst_build_id );  
+
   $sbeams->time_stmt( "Go build, organism, etc." );
 
   # Some users have access to a subset of certain builds
@@ -193,8 +239,6 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
 
 
   # This might have gotten overridden due to permissions.
-  my $restricted_proteins = '';
-  my $bad_build_specified = 0;
   if ( $protein_list_info->{build_ok} && $pabst_build_id == 146 && !is_srma_preview_site() ) {
 
     # Could be allowed via a protein list
@@ -203,43 +247,6 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
   }
 
   # Decide what action to take based on information so far
-  my $project_id = $atlas->getProjectID(
-    atlas_build_id => $parameters{atlas_build_id}
-  );
-  #$sbeams->printUserContext();
-  $atlas->display_page_header(project_id => $project_id);
-
-  if ( $parameters{pabst_build_id} && $parameters{pabst_build_id} != $pabst_build_id ) {
-    my $auth_path = get_auth_path();
-
-    # Remove any expired auth files
-    clear_auth( $auth_path );
-
-    $SRMAuth = $q->cookie( 'SRMAtlasAuthorized' );
-    if ( $guest && $SRMAuth && $parameters{pabst_build_id} == 146 ) {
-
-      # This mechanism supercedes the restricted proteins mechanism
-      $restricted_proteins = '';
-
-      if ( -e "$auth_path/$SRMAuth" ) {
-        $isAuthorized++;
-        unlink( "$auth_path/$SRMAuth" );
-        $super_guest++;
-        $pabst_build_id = $parameters{pabst_build_id};
-        print qq~
-        <p>
-        <br>
-        <span class=info_box>You are being allowed access to the Complete Human SRM Atlas subject to the provisional license agreement</span>
-        <br>
-        </p>
-        ~
-      } else {
-        $bad_build_specified++;
-      }
-    } else {
-      $bad_build_specified++;
-    }
-  }
 
   # set up some defaults, only in command-line mode, to time queries/operations
   if ( !$parameters{action} && !$is_html ) {
@@ -2167,6 +2174,7 @@ sub fetch_transitions {
       }
          
       if ( ( $guest && !$super_guest && $parameters{rt_type} eq 'iRT' ) || $parameters{rt_type} == $ssr_type ) {
+
         @rowdata = ( $prot, $links, @row[0..12] );
       } else {
         @rowdata = ( $display_prot, $links, @row[0..13] );
@@ -2673,7 +2681,6 @@ sub get_peptide_mappings {
   WHERE biosequence_set_id = $parameters{build_bss_id}   
   AND peptide_sequence IN ( $pep_string )
   ~;
-  $log->info( $sql );
 
   my %bioseqs;
   my $sth = $sbeams->get_statement_handle($sql);
