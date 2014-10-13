@@ -171,7 +171,7 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
     clear_auth( $auth_path );
 
     $SRMAuth = $q->cookie( 'SRMAtlasAuthorized' );
-    if ( $guest && $SRMAuth && $parameters{pabst_build_id} == 146 ) {
+    if ( $guest && !$super_guest && $SRMAuth && $parameters{pabst_build_id} == 146 ) {
 
       # This mechanism supercedes the restricted proteins mechanism
       $restricted_proteins = '';
@@ -189,10 +189,10 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
         </p>
         ~
       } else {
-        $bad_build_specified++;
+        $bad_build_specified++ unless $super_guest;
       }
     } else {
-      $bad_build_specified++;
+      $bad_build_specified++ unless $super_guest;
     }
   }
 
