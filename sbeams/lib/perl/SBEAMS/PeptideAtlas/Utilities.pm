@@ -1542,7 +1542,8 @@ sub get_html_seq_vars {
                        PEPTIDE => 'Chain',
                       CONFLICT => 'SeqConflict' );
 
-  for my $type ( qw( INIT_MET SIGNAL PROPEP PEPTIDE CHAIN VARIANT CONFLICT ) ) {
+  # Removed CONFLICT peptides.
+  for my $type ( qw( INIT_MET SIGNAL PROPEP PEPTIDE CHAIN VARIANT ) ) {
     my $pepcnt = 1;
     for my $entry ( @{$swiss->{$type}} ) {
       my $alt = $entry->{seq};
