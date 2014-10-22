@@ -38,6 +38,9 @@ use SBEAMS::Connection::Tables;
 
 $sbeams = new SBEAMS::Connection;
 
+# Don't buffer output
+$|++;
+
 #use CGI;
 #$q = new CGI;
 
@@ -172,15 +175,20 @@ sub handle_request {
   print $header;
 
   # Currently only option, but could use this to fetch a file and force download.
+  sleep 10;
   if ( $parameters{tmp_file} ) {
-
     my $file = "$PHYSICAL_BASE_DIR/tmp/$parameters{tmp_file}";
-    undef local $/;
+
+    my $size = -s "$PHYSICAL_BASE_DIR/tmp/$parameters{tmp_file}";
+    $size = prettyBytes( $size );
+
+    $log->info( "starting file read, size is $size " . time() );
     open FIL, $file || exit;
     while ( my $line = <FIL> ) {
       $line =~ s/\&nbsp\;//gm;
       print $line;
     }
+    $log->info( "finished file read " . time() );
     close FIL;
   } else {
     # Currently a no-op?
@@ -199,4 +207,11 @@ sub handle_request {
 
 } # end handle_request
 
+sub prettyBytes {
+ my $size = $_[0];
+ for my $units ('Bytes','KB','MB','GB','TB','PB') {
+    return sprintf("%.1f",$size) . " $units" if $size < 1024;
+    $size /= 1024;
+ }
+}
 
