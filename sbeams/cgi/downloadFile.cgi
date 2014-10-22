@@ -166,27 +166,35 @@ sub handle_request {
     die "missing required parameter $param" unless $parameters{$param};
   }
 
+  #### Default format is Tab Separated Value
+  $parameters{format} = "tsv" unless $parameters{format};
+  my $header = $sbeams->get_http_header( mode => $parameters{format}, filename => $parameters{name} );
+  print $header;
+
   # Currently only option, but could use this to fetch a file and force download.
-  my $file_contents;
   if ( $parameters{tmp_file} ) {
+
     my $file = "$PHYSICAL_BASE_DIR/tmp/$parameters{tmp_file}";
     undef local $/;
-    open FIL, $file;
-    $file_contents = <FIL>;
-    $file_contents =~ s/\&nbsp\;//gm;
+    open FIL, $file || exit;
+    while ( my $line = <FIL> ) {
+      $line =~ s/\&nbsp\;//gm;
+      print $line;
+    }
     close FIL;
   } else {
+    # Currently a no-op?
     my $ua = LWP::UserAgent->new();
     my $link = 'http://www.peptideatlas.org';
   }
 
 
 
-  #### Default format is Tab Separated Value
-  $parameters{format} = "tsv" unless $parameters{format};
-  my $header = $sbeams->get_http_header( mode => $parameters{format}, filename => $parameters{name} );
-  print $header;
-  print $file_contents;
+#  #### Default format is Tab Separated Value
+#  $parameters{format} = "tsv" unless $parameters{format};
+#  my $header = $sbeams->get_http_header( mode => $parameters{format}, filename => $parameters{name} );
+#  print $header;
+#  print $file_contents;
 
 
 } # end handle_request
