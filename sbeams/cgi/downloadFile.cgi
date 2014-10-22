@@ -175,17 +175,15 @@ sub handle_request {
   print $header;
 
   # Currently only option, but could use this to fetch a file and force download.
-  sleep 10;
   if ( $parameters{tmp_file} ) {
     my $file = "$PHYSICAL_BASE_DIR/tmp/$parameters{tmp_file}";
 
-    my $size = -s "$PHYSICAL_BASE_DIR/tmp/$parameters{tmp_file}";
-    $size = prettyBytes( $size );
+    my $size = prettyBytes( -s $file );
+    open FIL, $file || exit;
 
     $log->info( "starting file read, size is $size " . time() );
-    open FIL, $file || exit;
     while ( my $line = <FIL> ) {
-      $line =~ s/\&nbsp\;//gm;
+      $line =~ s/\&nbsp\;//gm if $parameters{trim_html};
       print $line;
     }
     $log->info( "finished file read " . time() );
