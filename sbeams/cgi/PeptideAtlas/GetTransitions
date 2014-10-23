@@ -216,6 +216,7 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
   }
 
   my $protein_list_info = $atlas->getProteinListInfo( username => $current_username, build_id => $parameters{pabst_build_id} );
+  my $pl_auth = 0;
   if ( $protein_list_info->{build_ok} && ( !$guest || $super_guest ) ) {
     $restricted_build_js = qq~
     var pb_select=document.getElementById("pabst_build_id");
@@ -232,6 +233,8 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
       $pabst_build_id = $protein_list_info->{build_id};
     } elsif ( $parameters{pabst_build_id} eq $protein_list_info->{build_id} ) {
       # They specified a build that is legal based on protein list.  Let it be. 
+      $log->info( "looks like a valid build_id" );
+      $pl_auth++;
       $pabst_build_id = $parameters{pabst_build_id};
     }
   }
@@ -239,7 +242,10 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
 
 
   # This might have gotten overridden due to permissions.
-  if ( $protein_list_info->{build_ok} && $pabst_build_id == 146 && !is_srma_preview_site() ) {
+  if ( $protein_list_info->{build_ok} &&
+       $pabst_build_id == 146         &&
+       !is_srma_preview_site()        &&
+       !$pl_auth  ) {
 
     # Could be allowed via a protein list
     $restricted_proteins = " AND biosequence_name IN ( '" . join( "','", keys( %{$protein_list_info->{proteins}} ) ) . " ' ) \n";
