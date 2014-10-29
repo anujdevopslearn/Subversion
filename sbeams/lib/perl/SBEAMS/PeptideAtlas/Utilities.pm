@@ -1459,24 +1459,27 @@ sub get_html_seq_vars {
 
   my $display_div;
   my $selected = '';
+  my $iselect = '';
+  my $tselect = '';
   if($is_trypsin_build eq 'Y'){
     $display_div = $div_txt{tryp};
     $display_div =~ s/display:none/display:block/g;
     $display_div =~ s/ID=tryp/ID=seq_display/;
+    $tselect = "selected";
   }else{
     $display_div = $div_txt{inter};
     $display_div =~ s/display:none/display:block/g;
     $display_div =~ s/ID=inter/ID=seq_display/;
-    $selected = "selected";
+    $iselect = "selected";
   }
 
   $str .= qq~
     <FORM>
     <B>Sequence Display Mode:</B> 
     <SELECT onChange=setSeqView() NAME=seqView ID="seqView">
-      <OPTION VALUE=inter $selected> Interval
+      <OPTION VALUE=inter $iselect> Interval
       <OPTION VALUE=nosp>  No Space
-      <OPTION VALUE=tryp>  Trypsin
+      <OPTION VALUE=tryp $tselect>  Trypsin
   ~;
 
   my %lc2name = ( aspn => 'AspN', 
