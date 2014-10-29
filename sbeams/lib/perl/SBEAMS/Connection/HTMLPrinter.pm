@@ -1108,6 +1108,7 @@ sub get_content_type {
                  html => 'text/html',
                 excel => 'application/excel',
                 force => 'application/force-download',
+                octet => 'application/octet-stream',
                  jpg  => 'image/jpeg',
                  png  => 'image/png',
                  jnlp => 'application/x-java-jnlp-file',
