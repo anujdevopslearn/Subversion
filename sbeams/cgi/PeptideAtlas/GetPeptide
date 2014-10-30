@@ -664,7 +664,7 @@ unless ( $apply_action eq "QUERY" || $apply_action eq "GO" ) { ## if receive fro
          P.molecular_weight, P.peptide_isoelectric_point,
          PI.n_samples, PI.n_protein_samples, PI.empirical_proteotypic_score,
          O.full_name, PI.original_protein_name,
-         P.SSRCalc_relative_hydrophobicity, CAST(biosequence_seq AS VARCHAR) biosequence_seq,
+         P.SSRCalc_relative_hydrophobicity, CAST(biosequence_seq AS VARCHAR(4000)) biosequence_seq,
 				 BS.biosequence_id,
          PA.peptide_sequence, PA.peptide_annotation, PA.peptide_annotation_id, 
          PA.annotator_name, CAST(PA.comment AS VARCHAR) comment
@@ -727,6 +727,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
             my $i=0;  ##index counter
 
             my %chrom_map;
+            my %protein_map;
             foreach my $row (@rows) {
 
                 my ($pa, $seq, $prob, $n_obs, $n_g_loc, $n_prot_map, 
@@ -734,6 +735,11 @@ if ($apply_action =~ /QUERY|GO/i ) {
                     $ns, $nps, $eps, $org, $orig_name,
 		    $SSRCalc_relative_hydrophobicity, $protein_sequence, $bioseq_id, @annot ) = @{$row};
                 @pep_annot = @annot unless @pep_annot;
+                $protein_map{$bioseq_id} ||= { name  => $b_name,
+                                            id    => $bioseq_id,
+                                            seq   => $protein_sequence,
+                                            level => 'tbd',
+                                            pep_seq => $seq };
 
                 $peptide_accession[$i] = $pa;
                 $peptide_sequence[$i] = $seq;
@@ -879,6 +885,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
 ### End first section
   $log->debug( "End overview " . time() );
+  print "<br>\n";
 
   #############################################################################
   #### Display the External Links section
@@ -1066,12 +1073,15 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
 #                                          value => $peptide_sequence[0],
   my $bioseqs = join( ',', keys( %biosequence_id ) );
+  my $compare_link = '';
 	if ( $bioseqs !~ /,/ ) {
 		my $text = $sbeams->makeInactiveText( 'Compare Proteins' );
-  	$mapHTML .= "<TR><TD COLSPAN=3><DIV TITLE='Cannot run alignment with only one sequence'>$text</DIV></TD></TR>\n";
+  	$compare_link = "<TR><TD COLSPAN=3><DIV TITLE='Cannot run alignment with only one sequence'>$text</DIV></TD></TR>\n";
 	} else  {
-  	$mapHTML .= "<TR><TD COLSPAN=3><A HREF=compareProteins?pepseq=$peptide_sequence[0];bioseq_id=$bioseqs>Compare Proteins</A></TD></TR>\n";
+  	$compare_link = "<TR><TD COLSPAN=3><A HREF=compareProteins?pepseq=$peptide_sequence[0];bioseq_id=$bioseqs>Compare Proteins</A></TD></TR>\n";
   }
+  $mapHTML .= $compare_link;
+
   print "<TABLE WIDTH=600>$mapHTML</TABLE>\n";
 
 ##  End mapping loop
@@ -1096,6 +1106,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
   if ($atlas_build_name =~ /Origene/i){
     $is_origene = 1;
   }
+  my $pmapHTML = get_protein_mapping_widget( \%protein_map, \%parameters );
+  print "<table> $pmapHTML </table>\n";
 
   my $modHTML .= $sbeamsMOD->encodeSectionHeader(
     text => "Modified Peptides",
@@ -1963,6 +1975,125 @@ if ($apply_action =~ /QUERY|GO/i ) {
   $log->debug( "End samples, handlerequest " . time() );
 
 } # end handle_request
+
+sub get_protein_mapping_widget {
+
+  my $protein_map = shift;
+  my $parameters = shift;
+  use Data::Dumper;
+#  die Dumper( $protein_map );
+  my $id_str = join( ',', keys( %{$protein_map} ) ) || '';
+  my $build_id = $parameters->{atlas_build_id};
+
+  return $id_str unless $id_str && $build_id;
+
+  my $sql = qq~
+  SELECT DISTINCT BS.biosequence_id,  BS.biosequence_name, dbxref_name,
+          CAST( BS.biosequence_desc AS VARCHAR(2000) ) biosequence_desc,
+          CASE WHEN PPL.level_name IS NULL THEN 'zzzz' ELSE PPL.level_name END as level_name,
+          BSRT.relationship_name,
+--          BS_REP.biosequence_name as "group_rep",
+          BS_REF.biosequence_name as "reference_biosequence_name"
+    FROM PeptideAtlas.dbo.biosequence_set BSS
+    INNER JOIN PeptideAtlas.dbo.biosequence BS
+          ON ( BSS.biosequence_set_id = BS.biosequence_set_id )
+
+     LEFT JOIN BioLink.dbo.dbxref DBX
+          ON ( BS.dbxref_id = DBX.dbxref_id )
+
+     LEFT JOIN PeptideAtlas.dbo.protein_identification PID
+          ON ( PID.biosequence_id = BS.biosequence_id )
+	            AND PID.atlas_build_id = $build_id
+
+     LEFT JOIN PeptideAtlas.dbo.protein_presence_level PPL
+          ON ( PPL.protein_presence_level_id = PID.presence_level_id )
+
+     LEFT JOIN PeptideAtlas.dbo.biosequence_relationship BSR
+          ON ( BSR.related_biosequence_id = BS.biosequence_id )
+          AND BSR.atlas_build_id = $build_id
+
+     LEFT JOIN PeptideAtlas.dbo.biosequence_relationship_type BSRT
+          ON ( BSRT.biosequence_relationship_type_id = BSR.relationship_type_id )
+         LEFT JOIN PeptideAtlas.dbo.biosequence BS_REF
+              ON ( BS_REF.biosequence_id = BSR.reference_biosequence_id )
+--         LEFT JOIN PeptideAtlas.dbo.protein_identification PID_REF
+--              ON ( PID_REF.biosequence_id = BS_REF.biosequence_id )
+--	            AND PID_REF.atlas_build_id = $build_id
+--         LEFT JOIN PeptideAtlas.dbo.biosequence BS_REF_REP
+--              ON ( BS_REF_REP.biosequence_id =
+--                    PID_REF.represented_by_biosequence_id )
+--         LEFT JOIN PeptideAtlas.dbo.biosequence_relationship BSR_REF
+--              ON ( BSR_REF.related_biosequence_id = BS_REF.biosequence_id )
+       WHERE BS.biosequence_id IN ( $id_str )
+       ORDER BY level_name ASC, dbxref_name DESC, BS.biosequence_name ASC
+       ~;
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my @ordered;
+  my %level;
+
+  my @headings = qw( ID Protein Database Annotation EvidenceLevel Relationship Reference isVariant );
+#  my @headings = qw( Protein Database Annotation EvidenceLevel Relationship Reference isVariant );
+#  my @headings = qw( Protein Database EvidenceLevel Relationship Representative Reference isVariant );
+  my @data = ( \@headings );
+  while ( my @row = $sth->fetchrow_array() ) {
+#    $level{$row[0]} = \@row;
+#    push @ordered, $row[0];
+    $row[4] = '' if $row[4] eq 'zzzz';
+    $row[2] =~ s/Human Proteins//g;
+    $row[2] =~ s/EBI IPI/IPI/g;
+    $row[2] ||= '';
+    my $desc = $row[3];
+
+    my $seq = $protein_map->{$row[0]}->{seq};
+    my $pep = $protein_map->{$row[0]}->{pep_seq};
+    my @seq = split( /\*/, $seq );
+    my $cseq = shift( @seq );
+    my $aseq = join( "*", @seq );
+
+    my $annot = '';
+    if ( $row[2] =~ /Swiss/ || $row[2] =~ /Uniprot/i ) {
+      if ( $desc =~ /\sPE=(\d)/ ) {
+        $annot = "PE level $1";
+      }
+    }
+    $row[3] = $annot;
+      
+
+    my $isvar = '';
+    if ( $cseq =~ /$pep/ ) {
+      $isvar = 'no';
+    } elsif ( $aseq =~ /$pep/ ) {
+      $isvar = 'yes';
+    } else {
+      $isvar = 'n/a';
+    }
+    push @data, [ @row[0..6], $isvar ]
+     
+  }
+  # Widget to allow show/hide of overview section
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'geteptide_proteinmapping',
+                                                visible => 1,
+                                                tooltip => 'Show/Hide Section',
+                                                imglink => 1,
+                                                sticky => 1 );
+
+  
+  my $widget .= $sbeamsMOD->encodeSectionHeader(
+    text => "Proteins Mapped",
+    link => $link,
+    bold => 1 );
+  $widget .= $sbeamsMOD->encodeSectionTable( header => 1, 
+                                               width => '600',
+                                             tr_info => $tr,
+                                              align  => [qw(left center right right right center center right)],
+                                                rows => \@data,
+                                        rows_to_show => 10,
+                                              nowrap => [1..7]
+                                              );
+  return $widget;
+
+}
 
 sub sort_ptm_peps {
   my $rows = shift;
