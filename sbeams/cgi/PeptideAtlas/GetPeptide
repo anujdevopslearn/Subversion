@@ -656,7 +656,7 @@ unless ( $apply_action eq "QUERY" || $apply_action eq "GO" ) { ## if receive fro
 
     #### Define the SQL statement
     $sql = qq~
-         SELECT distinct
+         SELECT
          P.peptide_accession, P.peptide_sequence,
          PI.best_probability, PI.n_observations, PI.n_genome_locations, 
          PI.n_protein_mappings, PM.chromosome, PM.start_in_chromosome, 
@@ -664,7 +664,7 @@ unless ( $apply_action eq "QUERY" || $apply_action eq "GO" ) { ## if receive fro
          P.molecular_weight, P.peptide_isoelectric_point,
          PI.n_samples, PI.n_protein_samples, PI.empirical_proteotypic_score,
          O.full_name, PI.original_protein_name,
-         P.SSRCalc_relative_hydrophobicity, CAST(biosequence_seq AS VARCHAR(4000)) biosequence_seq,
+         P.SSRCalc_relative_hydrophobicity, biosequence_seq,
 				 BS.biosequence_id,
          PA.peptide_sequence, PA.peptide_annotation, PA.peptide_annotation_id, 
          PA.annotator_name, CAST(PA.comment AS VARCHAR) comment
