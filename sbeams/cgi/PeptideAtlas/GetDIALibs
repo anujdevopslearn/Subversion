@@ -89,10 +89,10 @@ my %basespace = ( basespace_params => '' );
 
       authenticate_to_basespace();
       get_appsession_properties();
-      $log->info( "mode is $params->{mode}" );
+#      $log->info( "mode is $params->{mode}" );
       $params->{mode} ||= $basespace{mode};
       $params->{format} ||= 'peakview';
-      $log->info( "mode is $params->{mode}" );
+#      $log->info( "mode is $params->{mode}" );
     }
     $params->{mode} ||= 'download_libs';
 
@@ -133,7 +133,7 @@ my %basespace = ( basespace_params => '' );
     } elsif ( $params->{mode} eq 'download_libs' ) {
       $page .= $tabMenu;
       if ( $params->{action} eq 'download' ) {
-        $page .= get_status_box( "Uploading file to BaseSpace, make take several minutes" );
+        $page .= get_status_box( "" );
         print $page;
         upload_to_basespace();
 
@@ -342,12 +342,12 @@ sub get_library_table {
   my $build_id = shift;
 
   my $help = qq~
-   <div style="font-family:Helvetica, Arial, sans-serif;font-size:150%;font-weight:bold" id=heading> Library Download </div>
    <br>
-   <div id=help style="width:800px"> Download SWATH/DIA libraries in any of the supported formats. 
-   <br><br>
+   <div style="font-family:Helvetica, Arial, sans-serif;font-size:150%;font-weight:bold" id=heading> Library Download </div>
   </div>
   ~;
+#   <div id=help style="width:800px"> Download SWATH/DIA libraries in any of the supported formats. 
+#   <br><br>
 
   my $format_constraint = '';
   if ( $params->{format} ) {
@@ -396,7 +396,7 @@ sub get_library_table {
   }
   my $content = $help;
 
-  for my $lib ( sort( keys( %libraries ) ) ) {
+  for my $lib ( sort { $b cmp $a} ( keys( %libraries ) ) ) {
     my @lib_data = ( [ qw( Name Accession Instrument Format Size ), 'Get Libraries' ] );
     for my $lib_file ( @{$libraries{$lib}} ) {
       my $fname = basename( $lib_file->[7] ); 
@@ -626,7 +626,7 @@ sub get_subset_form {
           $fname = "$PHYSICAL_BASE_DIR/tmp/$fname";
 
           if ( $params->{upload_to_basespace} ) {
-            $bs = upload_to_basespace( basename => $base_name, tmpfile_name => $fname );
+            $bs = upload_to_basespace( basename => $base_name, tmpfile_name => $fname, status => $status );
           }
 
 #          $base_name =~ s/\.csv/\.tsv/;
@@ -652,7 +652,7 @@ sub get_subset_form {
 
 
   my $help = qq~
-   <div id=help style="width:800px"> This form allows you to a list of proteins to extract a subset SWATH/DIA library. This can be done with a user-uploaded list, or with any of the 
+   <div id=help style="width:720px"> This form allows you to a list of proteins to extract a subset SWATH/DIA library. This can be done with a user-uploaded list, or with any of the 
    Biology/Disease-driven Human Proteome Project ( <a href="http://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/proteinList?protein_list_id=2"> B/D-HPP </a>) contributed lists.
   </div>
   ~;
@@ -829,39 +829,9 @@ sub get_subset_form {
   <tr>
     <td colspan=3>&nbsp;</td>
   </tr>
-  <tr class="cellblock_top">
-    <td align=right><b><i>Upload SWATHs file:</i></b></td>
-    $title2help->{swaths_file}
-    <td><input type=file name=swaths_file id=swaths_file onchange=specify_swath('file')></input></td>
-  </tr>
-  <tr class=cellblock>
-    <td>&nbsp;</td>
-    <td>&nbsp;</td>
-    <td align=left>$or</td>
-  </tr>
-  <tr class=cellblock>
-    <td align=right><b>No SWATHs file:</b></td>
-    $title2help->{no_swaths_file}
-    <td align=left><input type=checkbox $no_swaths /></td>
-  </tr>
-  <tr class=cellblock>
-    <td>&nbsp;</td>
-    <td>&nbsp;</td>
-    <td align=left>$or</td>
-  </tr>
-  <tr class=cellblock>
-    <td align=right><b><i> SWATH window size:</i></b></td>
-    $title2help->{swath_size}
-    <td white-space:nowrap><input type=text name=swath_size id=swath_size onchange=specify_swath('direct') size=12 value=$swath_size></input><span id=swath_cnt>($n_bins total bins)</span></td>
-  </tr>
-  <tr class=cellblock_bottom>
-    <td align=right><b><i> SWATH window overlap:</i></b></td>
-    $title2help->{swath_overlap}
-    <td white-space:nowrap><input type=text name=swath_overlap id=swath_overlap onchange=specify_swath('direct') size=12 value=$swath_overlap></input></td>
-  </tr>
-  <tr>
-    <td colspan=3>&nbsp;</td>
-  </tr>
+
+
+
   <tr class=cellblock_top>
     <td align=right><b><i> Min precursor mz:</i></b></td>
     $title2help->{prec_min_mz}
@@ -898,6 +868,42 @@ sub get_subset_form {
   <tr>
     <td colspan=3>&nbsp;</td>
   </tr>
+
+  <tr class="cellblock_top">
+    <td align=right><b><i>Upload SWATHs file:</i></b></td>
+    $title2help->{swaths_file}
+    <td><input type=file name=swaths_file id=swaths_file onchange=specify_swath('file')></input></td>
+  </tr>
+  <tr class=cellblock>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td align=left>$or</td>
+  </tr>
+  <tr class=cellblock>
+    <td align=right><b>No SWATHs file:</b></td>
+    $title2help->{no_swaths_file}
+    <td align=left><input type=checkbox $no_swaths /></td>
+  </tr>
+  <tr class=cellblock>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td align=left>$or</td>
+  </tr>
+  <tr class=cellblock>
+    <td align=right><b><i> SWATH window size:</i></b></td>
+    $title2help->{swath_size}
+    <td white-space:nowrap><input type=text name=swath_size id=swath_size onchange=specify_swath('direct') size=12 value=$swath_size></input><span id=swath_cnt>($n_bins total bins)</span></td>
+  </tr>
+  <tr class=cellblock_bottom>
+    <td align=right><b><i> SWATH window overlap:</i></b></td>
+    $title2help->{swath_overlap}
+    <td white-space:nowrap><input type=text name=swath_overlap id=swath_overlap onchange=specify_swath('direct') size=12 value=$swath_overlap></input></td>
+  </tr>
+  <tr>
+    <td colspan=3>&nbsp;</td>
+  </tr>
+
+
   <tr>
     <td>&nbsp;</td>
     <td colspan=2 align=left><input type=submit value='Generate Custom Library'></input></td>
@@ -968,7 +974,7 @@ sub authenticate_to_basespace {
 
   # Have we been through authentication in this page?
   if ( $basespace{access_token} ) {
-    $log->info( "Already authenticated, returning" );
+#    $log->info( "Already authenticated, returning" );
     return;
   }
 
@@ -980,7 +986,7 @@ sub authenticate_to_basespace {
   my $token = $sbeams->getSessionAttribute( key => $basespace{appsessionuri} );
 
   if ( $token ) {   # Yes, will use to set header
-    $log->info( "Fetched token from Session Cookie" );
+#    $log->info( "Fetched token from Session Cookie" );
 
   } else { # No, fetch from bs using client ids and auth_code
 
@@ -1008,7 +1014,7 @@ sub authenticate_to_basespace {
   }
 
   if ( !$token ) {
-    $log->info( "Unable to get authorization from Base Space" );
+    $log->warn( "Unable to get authorization from Base Space" );
   } else {
 
     # Place access token in default header for user agent
@@ -1069,7 +1075,22 @@ sub upload_to_basespace {
   my %args = @_;
 
   my $tmp_file = $args{tmpfile_name} || "$PHYSICAL_BASE_DIR/tmp/$params->{tmp_file}";
+
+  # If we came from basespace, are downloading an entire peakview file:
+  if (  $params->{format} &&  $params->{format} =~ /peakview/i && $params->{name} &&  $params->{tmp_file} ) {
+    $params->{name} =~ s/.csv$/.txt/;
+    $params->{name} =~ s/.tsv$/.txt/;
+  }
   my $basename = $args{basename} || $params->{name};
+
+  if ( $basename !~ /\.txt$/ ) {
+    $basename =~ s/\....$/.txt/;
+  }
+  if ( $basename !~ /\.txt$/ ) {
+    $basename .= '.txt';
+  }
+
+  my $status = $args{status} || '';
 
   if ( ! -e $tmp_file ) {
     die "No tmp file $tmp_file";
@@ -1103,8 +1124,9 @@ sub upload_to_basespace {
     $basespace{appsession} = '';
 
     my $appresult_url = "https://api.basespace.illumina.com/v1pre3/projects/$project_id/appresults";
-    my $appresult_param_ref = { Name => 'SWATHAtlasIonLibraries',
-                                Description => "Ion Libraries from SWATH Atlas for SWATH Analysis",
+#    my $appresult_param_ref = { Name => 'SWATHAtlasIonLibraries.txt',
+    my $appresult_param_ref = { Name => $basename,
+                                Description => "Ion Library $basename from SWATH Atlas for SWATH Analysis",
                                 HrefAppSession => $appsessionuri
                               };
 
@@ -1119,19 +1141,26 @@ sub upload_to_basespace {
 #    $log->info( join( "\t", qw( Auth_code URI Token AppResult Project Project_name basename tmp_file client client_secret ) ) );
 #    $log->info( join( "\t", $auth_code, $appsession_id, $token, 'AppResultId', $project_id, $project, $basename, $tmp_file, $client, $client_secret  ) );
 
-    my $exe = "curl -v -H 'x-access-token: $token' -d '\@$tmp_file' -H 'Content-Type: text/tab-separated-values' 'https://api.basespace.illumina.com/" . $HrefFiles . "?name=$basename'";
-    my @result = `$exe`;
+    print_js_status( "Uploading file to Base Space, may take a minute or two. <br>" );
+    my $t0 = time();
 
-    $log->info( $exe );
-    $log->info( join( "\n", @result ) );
+    upload_file_multipart( token => $token, tmp_file => $tmp_file, href => $HrefFiles, name => $basename );
+#    upload_file( token => $token, tmp_file => $tmp_file, href => $HrefFiles, name => $basename );
+
+    my $t1 = time();
+    my $tdelta = $t1 - $t0;
 
     # Set analysis Status to Complete
-    set_appsession_status( 'Complete' );
+    set_appsession_status( 'Complete', $status );
 
-    if ( $params->{mode} eq 'download_libs' ) {
-      print_js_status( "Finished upload <br><br>", 1 );
-    }
-    print_js_status( "File $basename uploaded to Base Space, check project named $project, or follow <a href=https://basespace.illumina.com/analyses/$appsession_id/files target=basespace> this link </a><br>" );
+#    if ( $params->{mode} eq 'download_libs' ) {
+#      print_js_status( "Finished upload <br><br>", 1 );
+#    }
+    print_js_status( "File $basename uploaded to project $project in Base Space in $tdelta seconds<br>" );
+    print_js_status( "Returning to Base Space...<br>" );
+    sleep 4;
+    js_redirect( "https://basespace.illumina.com/analyses/$appsession_id/files" );
+    sleep 4;
 
   } else {
     print_js_status( "<br>Failure: no Base Space projects to write to" );
@@ -1140,9 +1169,90 @@ sub upload_to_basespace {
 
 }  # End upload_to_basespace
 
+sub upload_file {
+  my %args = @_;
+  my $token = $args{token};
+  my $tmp_file = $args{tmp_file};
+  my $basename = $args{name};
+  my $HrefFiles = $args{href};
+
+#    my $exe = "curl -v -H 'x-access-token: $token' -d '\@$tmp_file' -H 'Content-Type: text/tab-separated-values' 'https://api.basespace.illumina.com/" . $HrefFiles . "?name=$basename'";
+    my $exe = "curl -v -H 'x-access-token: $token' -d '\@$tmp_file' -H 'Content-Type: application/octet-stream' 'https://api.basespace.illumina.com/" . $HrefFiles . "?name=$basename'";
+    my @result = `$exe`;
+#    $log->info( $exe );
+#    $log->info( join( "\n", @result ) );
+}
+
+
+#curl -H 'x-access-token: 20dd0ed0340942a49a5b938a592b6900' -H 'Content-Type: text/tab-separated-values' -X POST https://api.basespace.illumina.com/v1pre3/appresults/16026018/files?name=Frankenfile\&multipart=true
+
+#curl -H 'x-access-token: 20dd0ed0340942a49a5b938a592b6900' -H 'Content-Type: text/tab-separated-values' -X POST -T /tmp/20_parts00 -X PUT https://api.basespace.illumina.com/v1pre3/files/16026108/parts/1
+
+#curl -H 'x-access-token: 20dd0ed0340942a49a5b938a592b6900'  -X PUT https://api.basespace.illumina.com/v1pre3/files/998044314?uploadstatus=Complete
+
+
+sub upload_file_multipart {
+  my %args = @_;
+  my $token = $args{token};
+  my $tmp_file = $args{tmp_file};
+  my $basename = $args{name};
+  my $HrefFiles = $args{href};
+
+# /v1pre3/appresults/XXXXX/files/;
+  my $parts_href = $HrefFiles;
+  $parts_href =~ s/\/files/\/parts/;
+  $parts_href =~ s/\/appresults/\/files/;
+
+  my $finish_href = $HrefFiles;
+  $finish_href =~ s/\/files//;
+  $finish_href =~ s/\/appresults/\/files/;
+
+  my $rdir = $sbeams->getRandomString( num_chars => 20 );
+  `mkdir /tmp/$rdir/`;
+  `split -b10000000 -d $tmp_file /tmp/$rdir/upload_ `;
+
+   # Initiate upload 
+   my $exe = "curl -H 'x-access-token: $token' -H 'Content-Type: text/tab-separated-values' -X POST https://api.basespace.illumina.com/$HrefFiles?name=$basename" . '\&multipart=true';
+   my @results = `$exe`;
+#   $log->info( "started multipart upload" );
+#   $log->info( $exe );
+#   $log->info( $results[0] );
+    
+   my $multipart_upload = $json->decode( $results[0] );
+   my $upload_href = $multipart_upload->{Response}->{Href};
+
+   # Upload the parts
+   opendir DIR, "/tmp/$rdir/";
+   my @files = sort( grep( !/\./, readdir DIR ) );
+   my $part = 1;
+   for my $file ( @files ) {
+     if ( -e $file  ) {
+#       $log->info( $file . " exists" );
+     }
+     $exe = "curl -H 'x-access-token: $token' -H 'Content-Type: text/tab-separated-values' -X POST -T /tmp/$rdir/$file -X PUT https://api.basespace.illumina.com/$upload_href/parts/$part";
+#    $log->info( $exe );
+     @results = `$exe`;
+#     $log->info( "uploaded part $part" );
+#     $log->info( join( "\n", @results ) );
+     $part++;
+   }
+
+   # Finish upload
+# curl -H 'x-access-token: 20dd0ed0340942a49a5b938a592b6900'  -X POST https://api.basespace.illumina.com/v1pre3/files/998044314?uploadstatus=Complete
+   $exe = "curl -H 'x-access-token: $token' -X POST https://api.basespace.illumina.com/$upload_href?uploadstatus=complete";
+   @results = `$exe`;
+#   $log->info( $exe );
+#   $log->info( "finished multipart upload" );
+#   $log->info( join( "\n", @results  ) );
+   `rm -Rf /tmp/$rdir/`;
+
+}
+
 sub set_appsession_status {
 
   my $new_status = shift || return;
+  my $status_description = shift || '';
+  $status_description =~ s/<br>//gi;
 
   if ( !$basespace{ua} ) {
     authenticate_to_basespace();
@@ -1151,8 +1261,16 @@ sub set_appsession_status {
   my $ua = $basespace{ua};
 
   my $appsession_url = $basespace{appsession_url};
-  $ua->post( $appsession_url, [ Status => $new_status ] );
+  $ua->post( $appsession_url, [ Status => $new_status, Statussummary => $status_description ] );
+  $ua->post( "$appsession_url/properties", [ 'Logs.tail' => $status_description ] );
+  $ua->post( "$appsession_url/properties", [ 'Logs' => $status_description ] );
+#  die "$appsession_url/properties";
 
+}
+
+sub js_redirect {
+  my $url = shift || return;
+  print qq~<script type=text/javascript> window.location.replace( "$url" ); </script>~;
 }
 
 sub print_js_status {
