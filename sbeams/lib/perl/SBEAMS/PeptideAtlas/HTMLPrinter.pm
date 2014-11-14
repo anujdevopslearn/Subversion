@@ -987,7 +987,7 @@ sub getSamplePlotDisplay {
 sub getSampleMapDisplay {
   my $self = shift;
   my $sbeams = $self->getSBEAMS();
-  my %args = @_;
+  my %args = ( peptide_field => 'peptide_accession', @_ );
 
   my $in = join( ", ", keys( %{$args{instance_ids}} ) );
   return unless $in;
@@ -1011,8 +1011,7 @@ sub getSampleMapDisplay {
 
   my $sql = qq~     
   	SELECT DISTINCT SB.atlas_search_batch_id, sample_tag, 
-		-- CASE WHEN PISB.n_observations IS NULL THEN 0 ELSE PISB.n_observations END
-		PISB.n_observations, peptide_accession 
+		PISB.n_observations, $args{peptide_field}
 		FROM $TBAT_ATLAS_SEARCH_BATCH SB 
 	  JOIN $TBAT_SAMPLE S ON s.sample_id = SB.sample_id
 	  JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB ON PISB.atlas_search_batch_id = SB.atlas_search_batch_id
@@ -1020,7 +1019,7 @@ sub getSampleMapDisplay {
 	  JOIN $TBAT_PEPTIDE P ON P.peptide_id = PI.peptide_id
     WHERE PI.peptide_instance_id IN ( $in )
     AND S.record_status != 'D'
-    ORDER BY peptide_accession ASC
+    ORDER BY $args{peptide_field} ASC
   ~;
 
   my @samples = $sbeams->selectSeveralColumns($sql);
@@ -1043,10 +1042,10 @@ sub getSampleMapDisplay {
     var data = new google.visualization.DataTable();
     data.addColumn('string', 'Sample Name');
 	~;
-	my @peps;
-  for my $pa ( sort( keys( %peptides ) ) ) {
+	my @peps = ( $args{force_order} ) ? @{$args{force_order}} : sort( keys( %peptides ) );
+#  for my $pa ( sort( keys( %peptides ) ) ) {
+  for my $pa ( @peps ) {
     $array_def .= "    data.addColumn('number', '$pa');\n";
-		push @peps, $pa;
 	}
 	$array_def .= "DEFINE_ROWS_HERE\n";
 
@@ -1059,6 +1058,7 @@ sub getSampleMapDisplay {
 		my ( $name, $id ) = split "::::", $sa;
     $array_def .= "    data.setValue( $row, $col, '$name' );\n";
 	  $col++;
+
     for my $pa ( @peps ) {
 			if ( $samples{$sa}->{$pa} ) {
         my $pep_cnt = log(1 + $samples{$sa}->{$pa})/log(10);
