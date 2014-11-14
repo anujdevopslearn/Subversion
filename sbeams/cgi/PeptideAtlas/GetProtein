@@ -22,6 +22,7 @@
 use strict;
 use Getopt::Long;
 use FindBin;
+use Data::Dumper;
 $|++;
 
 use lib "$FindBin::Bin/../../lib/perl";
@@ -29,7 +30,6 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
-
 use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
@@ -1446,7 +1446,6 @@ sub handle_request {
       is_trypsin_build => $is_trypsin_build,
       no_escape => 1
     );
-#    use Data::Dumper;
 #    $log->debug( Dumper( $best_peptide_information ) );
 #    $log->debug( Dumper( $resultset_ref ) );
 
@@ -2024,8 +2023,12 @@ sub get_sequence_graphic {
   my $tmhmm = $args{protein_data}->{transmembrane_topology};
   my $id =  $args{protein_data}->{biosequence_id};
   my $protseq = $args{protein_data}->{biosequence_seq};
-  my @concat = split( /\*/, $protseq );
-	$protseq = $concat[0];
+  my $biosequence_name = $args{protein_data}->{biosequence_name} || '';
+
+  if ( $biosequence_name =~ /[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}/ ) {
+    my @concat = split( /\*/, $protseq );
+  	$protseq = $concat[0];
+  }
 
   my $protlen = length( $protseq );
   my $peptide_instance_constraint = $args{peptide_instance_constraint} || '';
@@ -2797,11 +2800,14 @@ sub displayAnnotatedSequence {
 # print "<PRE>\n";
 
 
-  my @concat = split( /\*/, $sequence );
-  my $concat_length = length($concat[0]);
+  my $biosequence_name = $args{biosequence}->{biosequence_name} || '';
   my $seq_length = length($sequence);
-	$seq_length = $concat_length;
-#	die ( "orig is $seq_length, becomes $concat_length" );
+  if ( $biosequence_name =~ /[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}/ ) {
+    my @concat = split( /\*/, $sequence );
+#    die Dumper( @concat );
+  	$sequence = $concat[0];
+    $seq_length = length($concat[0]);
+  }
 
   my $i = 0;
   my $color_level = 0;
