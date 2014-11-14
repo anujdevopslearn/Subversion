@@ -1358,10 +1358,13 @@ sub get_html_seq_vars {
                  clustal_display => '',
                  variant_list => [ [qw( Type Num Start End Info )] ] );
 
-  my $full_seq = $args{seq} || return '';
-  my @seqs = split( /\*/, $full_seq );
+# Let the caller do this.
+#  my $full_seq = $args{seq} || return '';
+#  my @seqs = split( /\*/, $full_seq );
+#  my $seq = shift @seqs;
 
-  my $seq = shift @seqs;
+  my $seq = $args{seq} || return '';
+
   my $ruler = '';
   my $ruler_cnt = ' ';
   my $acnt = 1;
@@ -1417,7 +1420,10 @@ sub get_html_seq_vars {
     push @nsposn, "\n" unless ( $cnt % 70 );
     push @iposn, "\n" unless ( $cnt % 70 );
 
-    if ( $prev_aa =~ /[KR]/ && $aa ne 'P' ) {
+    if ( $aa =~ /\*/ || $prev_aa =~ /\*/ ) {
+      my $idx = scalar( @{$values{tryp}} );
+      push @{$values{tryp}->[$idx]}, $whitespace;
+    } elsif ( $prev_aa =~ /[KR]/ && $aa ne 'P' ) {
       my $idx = scalar( @{$values{tryp}} );
       push @{$values{tryp}->[$idx]}, $whitespace;
       if ( $line_len > 70 ) {
