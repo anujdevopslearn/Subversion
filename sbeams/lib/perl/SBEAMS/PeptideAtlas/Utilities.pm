@@ -342,6 +342,42 @@ sub do_tryptic_digestion {
   return \@peptides;
 }
 
+sub do_simple_tryptic_digestion {
+  my $self = shift;
+  my %args = @_;
+
+  # Check for required params
+  my $missing;
+  for my $param ( qw( aa_seq ) ) {
+    $missing = ( $missing ) ? $missing . ',' . $param : $param if !defined $args{$param};
+  }
+  die "Missing required parameter(s) $missing" if $missing;
+  
+  # Set default param values
+  $args{min_len} ||= 1;
+  $args{max_len} ||= 10e9;
+  $args{split_asterisk} = 1 if !defined $args{split_asterisk};
+
+
+  # Store list to pass back
+  my @peptides;
+
+  # If we get option to split on '*' peptides, do this with recursive calls
+  if ( $args{split_asterisk} ) {
+    my @seqs = split( /\*/, $args{aa_seq} );
+    for my $seq ( @seqs ) {
+      my $sub_tryp = $self->do_simple_tryptic_digestion( %args, aa_seq => $seq, split_asterisk => 0 );
+      push @peptides, @{$sub_tryp};
+    }
+  } else {
+    for my $cpep ( split(/(?!P)(?<=[RK])/, $args{aa_seq} ) ) {
+      next if length( $cpep ) < $args{min_len};
+      next if length( $cpep ) > $args{max_len};
+      push @peptides, $cpep;
+    }
+  }
+  return \@peptides;
+}
 
 #+
 # @nparam aa_seq
