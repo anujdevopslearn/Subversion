@@ -139,7 +139,7 @@ sub GetBuildSelect {
 		# default to first one
 		$args{build_name} ||= $row[1];
 		my $selected = ( $row[1] =~ /^$args{build_name}$/ ) ? 'SELECTED' : '';
-		$select .= "<OPTION VALUE=$row[0] $selected> $row[1] </OPTION>";
+		$select .= "<OPTION VALUE=$row[0] $selected> $row[1] </OPTION>\n";
 	}
 	$select .= "</SELECT>\n";
 
