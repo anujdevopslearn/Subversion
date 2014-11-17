@@ -2948,15 +2948,18 @@ sub displayAnnotatedSequence {
       print "<TR $tr><TD><B>Annotated Variants (SwissProt):</B> </TD></TR>\n";
       for my $var (  @{$html_seq->{variant_list}} ) {
         $cnt++;
-        $variant_list .= '<SPAN style="display:none" ID=var_list>' if $cnt == 12;
+        $variant_list .= '<SPAN style="display:none" ID=var_list>' if $cnt == 17;
         if ( $var->[0] eq 'InitMet' ) {
           push @{$var}, "<a href='GetVariantEvidence?type=init_met;protein_name=$biosequence->{biosequence_name};atlas_build_id=$args{atlas_build_id};action=GO' title='View evidence for Initiator Methionine cleavage in $biosequence->{biosequence_name}'><img src=$HTML_BASE_DIR/images/search_icon_small.png /></a>";
 
         }
-        $variant_list .= join( "\t", @{$var} ) . "\n";
+        if ( $var->[5] eq 'seen' ) {
+          $var->[1] = "<span class=pa_observed_sequence title='observed SNP'>$var->[1]</span>";
+        }
+        $variant_list .= join( "\t", @{$var}[0..4] ) . "\n";
       }
       my $var_toggle_link = '';
-      if ( $cnt > 11 ) {
+      if ( $cnt > 16 ) {
         $variant_list .= "</SPAN>";
         $var_toggle_link =  qq~ <A NAME=vars HREF="javascript:void(0)" onClick=showVariants() ID=vars_toggle>Show More</A>\n ~;
         print qq~
@@ -3894,7 +3897,6 @@ sub displayExternalLinksSection {
   }
   #### Debug
   if ( 1 == 0 ) {
-    use Data::Dumper;
     my $tmp = Dumper( $biosequence->{synonyms} );
     if ($sbeams->output_mode() eq 'html') {
       $external_links .= $sbeamsMOD->encodeSectionItem(
