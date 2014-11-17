@@ -1588,6 +1588,9 @@ sub get_html_seq_vars {
                       CONFLICT => 'SeqConflict' );
 
   # Removed CONFLICT peptides.
+  my @obs;
+  my @unobs;
+  my %obs_snps;
   for my $type ( qw( INIT_MET SIGNAL PROPEP PEPTIDE CHAIN VARIANT ) ) {
     my $pepcnt = 1;
     for my $entry ( @{$swiss->{$type}} ) {
@@ -1604,9 +1607,39 @@ sub get_html_seq_vars {
       my $var_string = '';
       $pepcnt++;
       my ( $vtype, $vnum ) = split( /_/, $pepname );
-      push @{$return{variant_list}}, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info} ];
+      if ( $type eq 'VARIANT' ) {
+        my $skey = $entry->{start} - 1;
+
+        if ( $coverage_coords{$pepname}->{$skey} ) {
+#          my $blah = "Start for $pepname is $entry->{start}, end is $entry->{end}, and info is $entry->{info} for this 'seen' peptide";
+#          $blah .= Dumper( $coverage_coords{$pepname} );
+#          die $blah;
+          push @obs, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info}, 'seen' ];
+          $obs_snps{$pepname}++;
+        } else {
+          push @unobs, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info}, 'notseen' ];
+        }
+      } else {
+        push @{$return{variant_list}}, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info} ];
+      }
     }
   } 
+  push @{$return{variant_list}}, @obs, @unobs;
+
+  my @clustal_top;
+  my @clustal_bottom;
+  for my $track ( @global_clustal ) {
+    if ( $track->[0] && $track->[0] =~ /SNP/ ) {
+      if ( $obs_snps{$track->[0]} ) {
+        push @clustal_top, $track;
+      } else {
+        push @clustal_bottom, $track;
+      }
+    } else {
+      push @clustal_top, $track;
+    }
+  }
+  @global_clustal = ( @clustal_top, @clustal_bottom );
 
   # Add modified residues track
   my $cover = $self->get_modres_coverage( $swiss );
@@ -1628,6 +1661,8 @@ sub get_html_seq_vars {
 																					       			coverage => \%coverage_coords,
 																       			 		acc2bioseq_id => {},
 																			      			         %args );
+
+#  die Dumper( $clustal_display );
 
   $return{clustal_display} = $clustal_display;
   return \%return;
@@ -2142,6 +2177,7 @@ sub highlight_sites {
 
   my $self = shift;
   my %args = @_;
+#  die Dumper( %args ) if $args{acc} eq 'SNP_38';
 	my $coverage = $args{coverage};
   my @aa = split( '', $args{seq} );
   my $return_seq = '';
@@ -2184,6 +2220,7 @@ sub highlight_sites {
 	if ( $in_coverage ) {
 		$return_seq .= '</span>';
 	}
+#  print Dumper( $return_seq ) if $args{acc} eq 'SNP_38';
 	return $return_seq;
 
   my $dump = "$return_seq\n";
