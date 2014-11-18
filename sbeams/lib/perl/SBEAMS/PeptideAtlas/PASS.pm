@@ -602,7 +602,104 @@ sub getSubmitterInfo {
 }
 
 
+#######################################################################
+# emailPasswordReminder
+#######################################################################
+sub emailPasswordReminder {
+  my $self = shift;
+  my %args = @_;
+  my $SUB_NAME = 'emailPasswordReminder';
 
+  #### Decode the argument list
+  my $emailAddress = $args{'emailAddress'} || die "[$SUB_NAME] ERROR: emailAddress not passed";
+
+  my $response;
+  $response->{result} = 'UNKNOWN ERROR';
+
+  #### Ensure that the email address seems valid
+  unless ( $emailAddress =~ /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i ) {
+    $response->{result} = 'ERROR';
+    push(@{$response->{errors}},"ERROR: The email address '$emailAddress' does not appear to be valid according to current rules.");
+    return $response;
+  }
+
+  #### Prepare a query to get information about the submitter
+  my @columns = qw( submitter_id firstName lastName emailAddress password emailReminders emailPasswords );
+  my $columns = join(',',@columns);
+  my $sql = qq~
+    SELECT $columns
+      FROM $TBAT_PASS_SUBMITTER
+     WHERE emailAddress = '$emailAddress'
+  ~;
+
+  #### Execute the query
+  my @rows = $sbeams->selectSeveralColumns($sql);
+
+  #### If no rows returned
+  unless (@rows) {
+    $response->{result} = 'ERROR';
+    push(@{$response->{errors}},"ERROR: No records found for email address '$emailAddress'.");
+    return $response;
+  }
+
+  #### If too many rows returned
+  if (scalar(@rows) > 1) {
+    $response->{result} = 'ERROR';
+    push(@{$response->{errors}},"ERROR: Multiple records found for email address '$emailAddress'.");
+    return $response;
+  }
+
+  #### Create a hash out of the result
+  my %submitter;
+  for (my $i=0; $i<scalar(@columns); $i++) {
+    $submitter{$columns[$i]} = $rows[0]->[$i];
+  }
+
+  #### Prepare an email
+  my $reminderMessage = qq~
+Dear $submitter{firstName},
+
+Thank you again for submitting your dataset to PeptideAtlas. A request was received for a password reminder. If this was not you, you may wish to report this to PeptideAtlas at http://www.peptideatlas.org/feedback.php. If it was you, then you may go to a PASS page such as the dataset viewer:
+
+https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/PASS_View
+
+and enter your email address and password there. Or, if you were trying to submit a dataset, return to:
+
+https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/PASS_Submit
+
+and enter your email address and password there. Your password is:
+
+$submitter{password}
+
+Thank you for your time.
+
+The PeptideAtlas Agent
+on behalf of the PeptideAtlas Team
+
+~;
+
+  #### Send the email
+  my (@toRecipients,@ccRecipients,@bccRecipients);
+  @toRecipients = (
+    "$submitter{firstName} $submitter{lastName}",$submitter{emailAddress},
+  );
+  @ccRecipients = ();
+  @bccRecipients = (
+    'Eric Deutsch','eric.deutsch@systemsbiology.org',
+  );
+
+  SBEAMS::Connection::Utilities::sendEmail(
+    toRecipients=>\@toRecipients,
+    ccRecipients=>\@ccRecipients,
+    bccRecipients=>\@bccRecipients,
+    subject=>"PeptideAtlas PASS password reminder",
+    message=>$reminderMessage,
+  );
+
+  $response->{result} = 'SUCCESS';
+
+  return $response;
+}
 
 
 
