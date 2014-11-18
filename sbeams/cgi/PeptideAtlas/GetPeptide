@@ -22,6 +22,7 @@
 use strict;
 use Getopt::Long;
 use FindBin;
+use Data::Dumper;
 
 use POSIX qw(ceil);
 
@@ -890,6 +891,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
   #############################################################################
   #### Display the External Links section
   displayExternalLinksSection( pepseq =>$peptide_sequence[0],);
+  print "<br>\n";
 
 
 
@@ -908,8 +910,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
 #  tr_info => $tr,
 
   my $mapHTML = qq~
-  <TR><TD COLSPAN=2>&nbsp;</TD></TR>
   ~; 
+#  <TR><TD COLSPAN=2>&nbsp;</TD></TR>
   $n_genome_locations[0] = 0 if $n_genome_locations[0] < 0;
   $mapHTML .= $sbeamsMOD->encodeSectionHeader(
     text => "Genome Mappings: $n_genome_locations[0]",
@@ -1035,6 +1037,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
     $mapHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
                                                 width => '600',
                                                 tr_info => $tr,
+                                                rows_to_show => 5,
                                                 align  => [qw(center left left center center)],
                                                 rows => \@rows );
 
@@ -1083,6 +1086,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
   $mapHTML .= $compare_link;
 
   print "<TABLE WIDTH=600>$mapHTML</TABLE>\n";
+  print "<br>\n";
 
 ##  End mapping loop
 
@@ -1980,8 +1984,6 @@ sub get_protein_mapping_widget {
 
   my $protein_map = shift;
   my $parameters = shift;
-  use Data::Dumper;
-#  die Dumper( $protein_map );
   my $id_str = join( ',', keys( %{$protein_map} ) ) || '';
   my $build_id = $parameters->{atlas_build_id};
 
@@ -2051,28 +2053,37 @@ sub get_protein_mapping_widget {
     my $cseq = shift( @seq );
     my $aseq = join( "*", @seq );
 
+    my $isvar = 'n/a';
     my $annot = '';
     if ( $row[2] =~ /Swiss/ || $row[2] =~ /Uniprot/i ) {
       if ( $desc =~ /\sPE=(\d)/ ) {
         $annot = "PE level $1";
       }
+
+      if ( $cseq =~ /$pep/ ) {
+        $isvar = 'no';
+      } elsif ( $aseq =~ /$pep/ ) {
+        $isvar = 'yes';
+      } else {
+        my $lpep = $pep;
+        my $lcseq = $cseq;
+        $lpep =~ s/I/L/g;
+        $lcseq =~ s/I/L/g;
+        if ( $lcseq =~ /$lpep/ ) {
+          $isvar = 'L/I';
+        } else {
+          $isvar = 'n/a';
+        }
+      }
     }
     $row[3] = $annot;
       
 
-    my $isvar = '';
-    if ( $cseq =~ /$pep/ ) {
-      $isvar = 'no';
-    } elsif ( $aseq =~ /$pep/ ) {
-      $isvar = 'yes';
-    } else {
-      $isvar = 'n/a';
-    }
     push @data, [ @row[0..6], $isvar ]
      
   }
   # Widget to allow show/hide of overview section
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'geteptide_proteinmapping',
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getpeptide_proteinmapping',
                                                 visible => 1,
                                                 tooltip => 'Show/Hide Section',
                                                 imglink => 1,
@@ -2331,7 +2342,7 @@ sub makeProteinLink {
     die "missing parameter $_" unless $args{$_};
   }
   my $target = ( $args{target} ) ? "TARGET=$args{target}" : '';
-
+  $args{name} = $q->escape( $args{name} );
   my $link = "<A HREF='$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=";
   $link   .= "$args{build}&protein_name=$args{name}&action=QUERY' ";
   $link   .= "class='text_link' $target>$args{name}</A>";
