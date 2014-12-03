@@ -276,6 +276,10 @@ my $module_styles =<<"  END_STYLE";
   .pa_observed_sequence{font-family:courier; font-size: ${FONT_SIZE}pt; color: red;  letter-spacing:0.5; font-weight: bold;}	
 
   .pa_snp_font{font-family:courier; font-size: ${FONT_SIZE}pt; letter-spacing:0.5; font-weight: bold; background-color: #66CCFF}	
+  .pa_snp_obs_font{font-family:courier; font-size: ${FONT_SIZE}pt; letter-spacing:0.5; font-weight: bold; color: #00CC00}	
+  .pa_snp_medium_font{font-family:courier; font-size: ${FONT_SIZE}pt; letter-spacing:0.5; font-weight: bold; color: #CCCC00}	
+  .pa_snp_warn_font{font-family:courier; font-size: ${FONT_SIZE}pt; letter-spacing:0.5; font-weight: bold; color: #CC0000}	
+
   .pa_acetylated_font{font-family:courier; font-size: ${FONT_SIZE}pt; letter-spacing:0.5; font-weight: bold; background-color: #FFCC66}	
   .pa_phospho_font{font-family:courier; font-size: ${FONT_SIZE}pt; letter-spacing:0.5; font-weight: bold; background-color: #009966}	
   .pa_modified_aa_font{font-family:courier; font-size: ${FONT_SIZE}pt; letter-spacing:0.5; font-weight: bold; background-color: #999999}	
