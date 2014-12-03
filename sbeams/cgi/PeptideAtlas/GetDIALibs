@@ -403,7 +403,7 @@ sub get_library_table {
 
       $sbeams->makeSBEAMSTempLink( path => $lib_file->[7], linkname => $lib_file->[6] );
 
-      my $dwn = "<a href=$CGI_BASE_DIR/downloadFile.cgi?name=$fname;format=tsv;tmp_file=$lib_file->[6]>Download</a>";
+      my $dwn = "<a href=$CGI_BASE_DIR/downloadFile.cgi?name=$fname;format=tsv;tmp_file=$lib_file->[6];raw_download=1>Download</a>";
       if ( $basespace{url_params} ) {
         $dwn = "<a href=GetDIALibs?mode=download_libs;action=download;name=$fname;tmp_file=$lib_file->[6];$basespace{url_params}>Download</a>";
       }
@@ -633,12 +633,12 @@ sub get_subset_form {
 #          $base_name =~ s/\.txt/\.tsv/;
           if ( -e "/tmp/$fname.swaths" ) {
             move( "/tmp/$fname.swaths", "$PHYSICAL_BASE_DIR/tmp/" );
-            my $swath_file_link = qq~ Download generated <a href=$CGI_BASE_DIR/downloadFile.cgi?name=swath_windows.txt;format=tsv;tmp_file=$fname.swaths>SWATH window file</a>.~;
+            my $swath_file_link = qq~ Download generated <a href=$CGI_BASE_DIR/downloadFile.cgi?raw_download=1;name=swath_windows.txt;format=tsv;tmp_file=$fname.swaths>SWATH window file</a>.~;
             print "<script type=text/javascript> update_status( '<br>$swath_file_link' ); </script>" ;
           }
 
           if ( -e "$fname" ) {
-            $result = qq~ Customized library is ready for download via this <a href=$CGI_BASE_DIR/downloadFile.cgi?name=$base_name;format=tsv;tmp_file=$fname>link</a>~;
+            $result = qq~ Customized library is ready for download via this <a href=$CGI_BASE_DIR/downloadFile.cgi?raw_download=1;name=$base_name;format=tsv;tmp_file=$fname>link</a>~;
           } else {
             $result = "Library customization failed";
           }
