@@ -1193,9 +1193,8 @@ sub handle_request {
     my $protein_structure = getProteinStructure(
       biosequence_id => $biosequence_id,
     );
-    my ( $obs, $peptides ) = getPeptideCount( biosequence => $biosequence,
-                                            resultset_ref => $resultset_ref );
-
+    my ( $obs, $peptides, $pep_nobs, $seq2instance ) = getPeptideCount( biosequence => $biosequence,
+                                                        resultset_ref => $resultset_ref );
     my $peptide_counts = scalar( @$peptides );
 
     # Stragglers for protein section, doh!
@@ -1276,6 +1275,8 @@ sub handle_request {
 
   displayAnnotatedSequence( %parameters,  
                             peptides => $peptides,
+                        peptide_nobs => $pep_nobs,
+                        seq2instance => $seq2instance,
                          biosequence => $biosequence,
                        resultset_ref => $resultset_ref,
                     is_trypsin_build => $is_trypsin_build,
@@ -2687,11 +2688,17 @@ sub getPeptideCount {
   #### Loop over all the peptides
   my $data_ref = $resultset_ref->{data_ref};
   my @peptides = ();
+  my %peptides;
+  my %seq2instance;
   foreach my $row (@{$data_ref}) {
+    $peptides{$row->[$col{peptide_sequence}]} = $row->[$col{n_observations}];
+    $seq2instance{$row->[$col{peptide_sequence}]} = $row->[$col{peptide_instance_id}];
+
     push(@peptides,$row->[$col{peptide_sequence}]);
    $total_observations += $row->[$col{n_observations}];
   }
-  return( $total_observations, \@peptides );
+  return( $total_observations, \@peptides, \%peptides, \%seq2instance );
+#  return( $total_observations, \@peptides );
 }
 
 ###############################################################################
@@ -2712,6 +2719,8 @@ sub displayAnnotatedSequence {
   my $protein_structure = $args{'protein_structure'};
   my $total_observations = $args{'total_observations'};
 
+  my $peptide_nobs = $args{peptide_nobs} || {};
+  my $seq2instance = $args{seq2instance} || {};
 
   #### Don't display unless HTML
   return unless ($sbeams->output_mode() eq 'html');
@@ -2931,11 +2940,13 @@ sub displayAnnotatedSequence {
   my $html_seq = $sbeamsMOD->get_html_seq_vars( seq => $sequence,
                                           accession => $biosequence->{biosequence_name},
                                       show_all_snps => 1, 
-                                          tags => $tags, 
-                                       alt_enz => $alt_enz,
-                                      peptides => \@peptides,
-                              is_trypsin_build => $args{is_trypsin_build}, 
-                                  show_clustal => $args{show_clustal} );
+                                               tags => $tags, 
+                                            alt_enz => $alt_enz,
+                                           peptides => \@peptides,
+                                       peptide_nobs => $peptide_nobs,
+                                       seq2instance => $seq2instance,
+                                   is_trypsin_build => $args{is_trypsin_build}, 
+                                       show_clustal => $args{show_clustal} );
 
   print "<TR $tr><TD> $html_seq->{seq_display} </TD></TR>\n";
   if ( $html_seq->{clustal_display} ) { # If we have any variants
@@ -2954,7 +2965,43 @@ sub displayAnnotatedSequence {
 
         }
         if ( $var->[5] eq 'seen' ) {
-          $var->[1] = "<span class=pa_observed_sequence title='observed SNP'>$var->[1]</span>";
+
+          my $skey = $var->[0] . '_' . $var->[1];
+          my $nobs = $html_seq->{site_nobs};
+#          die Dumper( $nobs );
+          my $site = $nobs->{$skey}->{site};
+          my $post_aa = $nobs->{$skey}->{post_aa};
+          my $post_cnt = $nobs->{$skey}->{$post_aa};
+          my $total = $nobs->{total}->{$site};
+
+          my $spep_str = '';
+          my @spep_str = sort( keys( %{$nobs->{$skey}->{peptides}} ) );
+          if ( scalar( @spep_str ) > 9 ) {
+            my $num = scalar( @spep_str ) - 9;
+            $spep_str = join( ",<br>", @spep_str[0..8], "and $num more" );
+          } else {
+            $spep_str = join( ",<br>", @spep_str );
+          }
+
+          my $perc = ( $total ) ? sprintf( "%0.1f", 100*$post_cnt/$total ) : 0;
+          my $observations = '';
+          my $class = 'pa_snp_obs_font';
+          my $uniq = '';
+          my $title = 'SNP was observed at given frequency in Peptide Atlas.';
+          if ( $nobs->{unique}->{$skey} ne $post_cnt ) {
+            if ( !$nobs->{unique}->{$skey} ) {
+              $class = 'pa_snp_warn_font';
+              $title .= " All supporting peptides also seen in other proteins";
+            } else {
+              $class = 'pa_snp_medium_font';
+              $title .= " Some supporting peptides also seen in other proteins";
+            }
+            $uniq = "($nobs->{unique}->{$skey} unique)";
+          }
+          $title .= "<br>Supporting Peptides:<br>$spep_str";
+          $var->[4] = qq~<span class=$class onMouseout="hideTooltip()" onMouseover="showTooltip(event,'$title')">Obs $perc ~ . '% (' . "$post_cnt/$total) $uniq </span>\t " . "$var->[4] "; 
+
+#          $var->[1] = "<span class=pa_ title='observed SNP'>$var->[1]</span>";
         }
         $variant_list .= join( "\t", @{$var}[0..4] ) . "\n";
       }
