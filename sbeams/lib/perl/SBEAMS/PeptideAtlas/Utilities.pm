@@ -678,8 +678,17 @@ sub get_site_positions {
   my $idx = $args{index_base} || 0;
   return unless $args{seq};
 
+  my $seq = $args{seq};
+  my $pattern = $args{pattern};
+  if ( $args{l_agnostic} ) {
+#    print "Before, $args{seq} and $args{pattern}<br>\n";
+    $seq =~ s/I/L/g;
+    $pattern =~ s/I/L/g;
+#    print "After, $args{seq} and $args{pattern}<br>\n";
+  }
+
   my @posn;
-  while ( $args{seq} =~ m/$args{pattern}/g ) {
+  while ( $seq =~ m/$pattern/g ) {
     my $posn = length($`);
     push @posn, ($posn + $idx);# pos($string); # - length($&) # start position of match
   }
@@ -738,6 +747,8 @@ sub get_coverage_hash {
 
     my $posn = $self->get_site_positions( pattern => $peptide,
                                               seq => $seq );
+
+#    die Dumper $posn if $peptide eq 'CQSFLDHMK';
 
     for my $p ( @$posn ) {
       for ( my $i = 0; $i < length($peptide); $i++ ){
@@ -1358,6 +1369,7 @@ sub get_html_seq_vars {
                  clustal_display => '',
                  variant_list => [ [qw( Type Num Start End Info )] ] );
 
+  
 # Let the caller do this.
 #  my $full_seq = $args{seq} || return '';
 #  my @seqs = split( /\*/, $full_seq );
@@ -1551,13 +1563,10 @@ sub get_html_seq_vars {
   }
   $return{seq_display} = $str;
 
-#  die Dumper( $str );
-
   my $swiss = {};
   if ( $args{accession} ) {
     $swiss = $self->get_uniprot_annotation( %args );
   }
-#  $log->info( Dumper( $swiss ) );
 
   # Or if there are no variants.
   return \%return unless $swiss->{success};
@@ -1591,6 +1600,7 @@ sub get_html_seq_vars {
   my @obs;
   my @unobs;
   my %obs_snps;
+
   for my $type ( qw( INIT_MET SIGNAL PROPEP PEPTIDE CHAIN VARIANT ) ) {
     my $pepcnt = 1;
     for my $entry ( @{$swiss->{$type}} ) {
@@ -1608,14 +1618,20 @@ sub get_html_seq_vars {
       $pepcnt++;
       my ( $vtype, $vnum ) = split( /_/, $pepname );
       if ( $type eq 'VARIANT' ) {
+
+
+        my %sorted;
+        for my $key ( keys( %coverage_coords ) ) {
+          $sorted{$key} ||= [];
+          for my $skey ( sort { $a <=> $b } keys %{$coverage_coords{$key}} ) {
+            push @{$sorted{$key}}, { $skey => $coverage_coords{$key}->{$skey} };
+          }
+        }
         my $skey = $entry->{start} - 1;
 
         if ( $coverage_coords{$pepname}->{$skey} ) {
-#          my $blah = "Start for $pepname is $entry->{start}, end is $entry->{end}, and info is $entry->{info} for this 'seen' peptide";
-#          $blah .= Dumper( $coverage_coords{$pepname} );
-#          die $blah;
           push @obs, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info}, 'seen' ];
-          $obs_snps{$pepname}++;
+          $obs_snps{$pepname} = $entry;
         } else {
           push @unobs, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info}, 'notseen' ];
         }
@@ -1626,12 +1642,16 @@ sub get_html_seq_vars {
   } 
   push @{$return{variant_list}}, @obs, @unobs;
 
+
+  # 2014-11 - Want to sort observed variants above those not observed. 
+  # pre-SNP go to top, seen SNP go to middle, and unseen go to bottom.
   my @clustal_top;
+  my @clustal_middle;
   my @clustal_bottom;
   for my $track ( @global_clustal ) {
     if ( $track->[0] && $track->[0] =~ /SNP/ ) {
       if ( $obs_snps{$track->[0]} ) {
-        push @clustal_top, $track;
+        push @clustal_middle, $track;
       } else {
         push @clustal_bottom, $track;
       }
@@ -1639,7 +1659,116 @@ sub get_html_seq_vars {
       push @clustal_top, $track;
     }
   }
-  @global_clustal = ( @clustal_top, @clustal_bottom );
+  @global_clustal = ( @clustal_top, @clustal_middle, @clustal_bottom );
+
+  # Here we are getting coverage depth for just observed SNPS
+  my %site_specific_nobs;
+  my $t0 = time;
+  if ( @clustal_middle ) {
+    my $pnobs = $args{peptide_nobs};
+    my %primary;
+    my %snp_only;
+
+    # First see which peptides map to primary sequence
+    for my $pep ( keys( %{$pnobs} ) ) {
+      my $posn = $self->get_site_positions( seq => $args{seq},
+                                        pattern => $pep, 
+                                           l_agnostic => 1 );
+
+      if ( scalar( @{$posn} ) ) {
+        $primary{$pep} = $posn->[0];
+      } else {
+        $snp_only{$pep}++
+      }
+    }
+
+    my %unique_evidence;
+    my %snp_evidence_used;
+    if ( scalar( keys( %snp_only ) ) ) {
+      my %inst2seq = reverse( %{$args{seq2instance}} );
+      my $pi_str = '';
+      my $sep = '';
+      for my $pep ( keys( %snp_only ) ) {
+        $pi_str .= $sep . $args{seq2instance}->{$pep};
+        $sep = ',';
+      }
+      my $nmap_sql = qq~
+        SELECT peptide_instance_id, COUNT(*)
+        FROM $TBAT_PEPTIDE_MAPPING PM
+        JOIN $TBAT_BIOSEQUENCE B
+          ON B.biosequence_id = PM.matched_biosequence_id
+        WHERE peptide_instance_id IN ( $pi_str )
+        AND dbxref_id = 1
+        AND len( biosequence_name ) = 6
+        GROUP BY peptide_instance_id
+      ~;
+      my $sbeams = $self->getSBEAMS();
+      my $sth = $sbeams->get_statement_handle( $nmap_sql );
+      while ( my @row = $sth->fetchrow_array() ) {
+        next if $row[1] > 1;
+        my $seq = $inst2seq{$row[0]};
+		    $unique_evidence{$seq} = $row[1];
+      }
+    }
+
+    my $seq_len = length(  $args{seq} );
+    # Next loop over seen snps, and count primary and SNPPY counts
+    for my $snp ( keys( %obs_snps ) ) {
+      my $site = $obs_snps{$snp}->{start};
+      my $snpped_seq = $args{seq};
+      $obs_snps{$snp}->{info} =~ /(\w)\s+\-\>\s+(\w)/;
+      my $pre = $1;
+      my $post = $2;
+      substr( $snpped_seq, $site - 1, 1, $post );
+
+      my $pre_aa = substr( $args{seq}, $site - 1, 1 );
+      my $post_aa = substr( $snpped_seq, $site - 1, 1 );
+
+      $site_specific_nobs{$snp} ||= {};
+      $site_specific_nobs{$snp}->{pre_aa} ||= $pre_aa;
+      $site_specific_nobs{$snp}->{post_aa} ||= $post_aa;
+      $site_specific_nobs{$snp}->{site} = $site;
+
+#      $log->info( "$pre and $post from $obs_snps{$snp}->{info}; Seq munging yeilds $pre_aa and $post_aa " );
+
+      for my $ppep ( keys( %primary ) ) {
+        if ( $primary{$ppep} <= $site && $site <= $primary{$ppep} + length( $ppep ) ) {
+          $site_specific_nobs{$snp}->{$pre_aa} += $args{peptide_nobs}->{$ppep};
+          $site_specific_nobs{total}->{$site} += $args{peptide_nobs}->{$ppep};
+        }
+      }
+
+      for my $spep ( keys( %snp_only ) ) {
+
+        my $snp_posn = $self->get_site_positions( seq => $snpped_seq,
+                                              pattern => $spep,
+                                              l_agnostic => 1 );
+
+        if ( scalar( @{$snp_posn} ) ) {
+#          print "$spep seems to map to to snpped sequence for $site<br>\n";
+          $snp_evidence_used{$spep}++;
+          $site_specific_nobs{$snp}->{$post_aa} += $args{peptide_nobs}->{$spep};
+          $site_specific_nobs{unique} ||= {};
+          $site_specific_nobs{unique}->{$snp} ||= 0;
+          $site_specific_nobs{unique}->{$snp} += $args{peptide_nobs}->{$spep} if $unique_evidence{$spep};
+          $site_specific_nobs{$snp}->{peptides} ||= {};
+          $site_specific_nobs{$snp}->{peptides}->{$spep}++;
+
+          $site_specific_nobs{total}->{$site} += $args{peptide_nobs}->{$spep};
+        }
+      }
+#  die Dumper( %unique_evidence );
+    }
+    for my $spep ( keys( %snp_only ) ) {
+      next if $snp_evidence_used{$spep};
+#      next unless $unique_evidence{$spep};
+#      print "Check peptide $spep mapping<br>\n";
+    }
+  } # End get SNP abundance loop (whew)
+  my $t1 = time;
+  my $td = $t1 - $t0;
+  $log->info( "Counted SNPs in $td seconds " );
+  $return{site_nobs} = \%site_specific_nobs;
 
   # Add modified residues track
   my $cover = $self->get_modres_coverage( $swiss );
@@ -1653,7 +1782,6 @@ sub get_html_seq_vars {
   $trypsites =~ s/[^KR]/-/g;
   push @global_clustal, [ 'TrypticSites', $trypsites ];
 
-
 	my $clustal_display .= $self->get_clustal_display( alignments => \@global_clustal, 
 			                                                dup_seqs => {},
 			                                                  pepseq => 'ZORRO',
@@ -1665,6 +1793,7 @@ sub get_html_seq_vars {
 #  die Dumper( $clustal_display );
 
   $return{clustal_display} = $clustal_display;
+
   return \%return;
 }
 
@@ -1950,6 +2079,7 @@ sub get_uniprot_annotation {
   JOIN $TBAT_UNIPROT_DB_ENTRY UDE
   ON UD.uniprot_db_id = UDE.uniprot_db_id
   WHERE entry_accession = '$args{accession}'
+  ORDER BY uniprot_db_entry_id DESC
   ~;
 
 
@@ -1967,6 +2097,7 @@ sub get_uniprot_annotation {
     my @fasta = split( /\n/, $fasta );
     my $fasta_seq = join( '', @fasta[1..$#fasta] );
     if ( $swiss->{FTs} ) {
+
       for my $var ( @{$swiss->{FTs}->{list}} ) {
         if ( $var->[0] =~ /SIGNAL|CHAIN|INIT_MET/ || 
              $var->[0] =~ /VARIANT/ && $var->[3] =~ /dbSNP/ || 
