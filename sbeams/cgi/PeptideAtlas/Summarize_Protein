@@ -339,7 +339,7 @@ sub get_peptide_resultset {
   $params->{action} ||= 'QUERY';
   my $bioseq_str = join( ",", keys( %{$parameters{bioseqs}} ) );
   my $page_size = $params->{rs_page_size} || 20;
-  my $name_base = 'PeptideAlasPeptideSummary';
+  my $name_base = 'PeptideAtlasPeptideSummary';
   my %rs_params = ( set_name => $name_base . '_' . 'SETME' );
   my $read_rs = 0;
   if ( $global_rs_params{set_name} =~ /$name_base/ ) {
@@ -463,7 +463,7 @@ sub get_pa_resultset {
     resultset_ref=>$pa_resultset,
   );
 
-  my $name_base = 'PeptideAlasSummary';
+  my $name_base = 'PeptideAtlasSummary';
   my %rs_params = ( set_name => $name_base . '_' . 'SETME' );
   if ( $global_rs_params{set_name} =~ /$name_base/ ) {
     %rs_params = %global_rs_params; 
