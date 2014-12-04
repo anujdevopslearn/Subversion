@@ -688,7 +688,8 @@ sub handle_request {
       $mapping_constraints = '';
       if ( ! ($parameters{biosequence_name_constraint} || 
 						 $parameters{biosequence_gene_name_constraint} || 
-						 $parameters{biosequence_desc_constraint}) 
+						 $parameters{biosequence_desc_constraint} || 
+             $biosequence_names_clause ne '') 
          ){
 					$mapping_join = '';
         }
