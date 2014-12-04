@@ -3,27 +3,55 @@
 #$Id:  $
 
 use DBI;
-use Test::More tests => 35;
+use Test::More tests => 38;
 use Test::Harness;
 use strict;
 use FindBin qw ( $Bin );
 #use lib( "/net/dblocal/www/html/devTF/sbeams/lib/perl/" );
 use lib ( "$Bin/../.." );
+use Data::Dumper;
 
 # Globals
 my $sbeams;
 my $atlas;
 my $pepselector;
 my $pepfragmentor;
+use vars qw( $TBAT_DEFAULT_ATLAS_BUILD );
+my $default_build_id = 0;
+my $liver_build_id = 0;
 
 
 use_ok( 'SBEAMS::Connection' );
 use_ok( 'SBEAMS::PeptideAtlas' );
+use_ok( 'SBEAMS::PeptideAtlas::Tables' );
+use_ok( 'SBEAMS::PeptideAtlas::Settings' );
 use_ok( 'SBEAMS::PeptideAtlas::BestPeptideSelector' );
 use_ok( 'SBEAMS::PeptideAtlas::PeptideFragmenter' );
 ok( get_sbeams(), 'Instantiate sbeams object' );
 ok( get_atlas(), 'Instantiate peptide atlas object' );
 ok( authenticate(), 'Authenticate login' );
+
+my $sql = qq~
+select atlas_build_id from $TBAT_DEFAULT_ATLAS_BUILD 
+where organism_id = 2
+and organism_specialized_build is null
+~;
+my $sth = $sbeams->get_statement_handle( $sql );
+while ( my @row = $sth->fetchrow_array() ) {
+  $default_build_id = $row[0];
+}
+
+$sql = qq~
+select atlas_build_id from $TBAT_DEFAULT_ATLAS_BUILD 
+where organism_id = 2
+and organism_specialized_build = 'Human Liver'
+~;
+$sth = $sbeams->get_statement_handle( $sql );
+while ( my @row = $sth->fetchrow_array() ) {
+  $liver_build_id = $row[0];
+}
+
+
 like( get_file( touch => 1, file => '' ), qr/\/tmp\/interact.xml/, 'Fetch filename without preferred' );
 
 like( get_file( touch => 1, file => 'interact-combined.iproph.pep.xml', preferred => ['interact-combined.iproph.pep.xml'] ), 
@@ -56,6 +84,7 @@ ok( test_fetch_build_organism(), 'Test build fetch with organism_name' );
 ok( test_fetch_build_organism_id(), 'Test build fetch with organism_id' );
 ok( test_fetch_build_specialized_build(), 'Test build fetch with specialized_build' );
 ok( test_fetch_build_organism_and_specialized_build(), 'Test build fetch with organism_name and specialized build' );
+ok( test_tryptic_digestion(), 'Tryptic digestion routines' );
 
 sub test_bad_peptide {
 # A very bad peptide, should hit the following penalties!
@@ -280,7 +309,6 @@ sub test_uniprot_vars {
                                           accession => 'P15516' );
                                           
   my $var_list = $html_seq->{variant_list};
-  use Data::Dumper;
 
   return $var_list;
 }
@@ -395,6 +423,108 @@ sub calculate_SSR {
 #  print STDERR "SSR is $ssr\n";
   return sprintf( "%0.2f", $ssr ) == 31.69;
 }
+
+
+sub test_tryptic_digestion {
+
+
+  # Multi-part test.  First check plain routine for short peptides.
+  my %protein = ( 'KAAAAARBBBBBBBKCCCCCCCCCCREEEEE'  => [ qw( K AAAAAR BBBBBBBK CCCCCCCCCCR EEEEE ) ],
+                  'RAAAAAKBBBBBBBRCCCCCCCCCCKEEEEER' => [ qw( R AAAAAK BBBBBBBR CCCCCCCCCCK EEEEER ) ],
+      );
+  my $err = 0;
+  for my $protein ( keys( %protein ) ) {
+    my @peps = @{$protein{$protein}};
+    my $digest = $atlas->do_tryptic_digestion( aa_seq => $protein );
+    if ( scalar @{$digest} != scalar @peps ) {
+      print STDERR "scalar is wrong:" . scalar( @{$digest} ) . "\n";
+      $err++;
+    }
+    for my $pep ( @{$digest} ) {
+      unless ( grep /^$pep$/, @peps ) {
+        print STDERR "Canna find $pep\n";
+        $err++;
+      }
+    }
+  }
+
+  # Next, compare 3 methods - regular, full, and simple (backwards compat)
+  my $prot = 'MTTQAPTFRQPLQSVVVLEGSTATFEAHISGFPVPEVSWFRDGQVISTSTLPGVQISFSDGRAKLTIPAVTKANSGRYSLKATNGSGQATSTAELLVKAETAPPNFVQRLQSMTVRQGSQVRLQVRVTGIPTPVVKFYRDGAEIQSSLDFQISQEGDLYSLLIAEAYPEDSGTYSVNATNSVGRATSTAELLVQGEEEVPAKKTKTIVSTAQISESRQTRIEKKIEAHFDARSIATVEMVIDGAAGQQLPHKTPPRIPPKPKSRSPTPPSIAAKAQLARQQSPSPIRHSPSPVRHVRAPTPSPVRSVSPAARISTSPIRSVRSPLLMRKTQASTVATGPEVPPPWKQEGYVASSSEAEMRETTLTTSTQIRTEERWEGRYGVQEQVTISGAAGAAASVSASASYAAEAVATGAKEVKQDADKSAAVATVVAAVDMARVREPVISAVEQTAQRTTTTAVHIQPAQEQVRKEAEKTAVTKVVVAADKAKEQELKSRTKEVITTKQEQMHVTHEQIRKETEKTFVPKVVISAAKAKEQETRISEEITKKQKQVTQEAIRQETEITAASMVVVATAKSTKLETVPGAQEETTTQQDQMHLSYEKIMKETRKTVVPKVIVATPKVKEQDLVSRGREGITTKREQVQITQEKMRKEAEKTALSTIAVATAKAKEQETILRTRETMATRQEQIQVTHGKVDVGKKAETTTDFGHT';
+ 
+  my $td = $atlas->do_tryptic_digestion( aa_seq => $prot, min_len => 7, max_len => 30 );
+  my $fd = $atlas->do_full_tryptic_digestion( aa_seq => $prot, min_len => 7, max_len => 30 );
+  my $sd = $atlas->do_tryptic_digestion( aa_seq => $prot, min_len => 7, max_len => 30 );
+
+  if ( scalar( @{$td} ) != scalar( @{$fd} ) || scalar( @{$td} ) != scalar( @{$sd} ) ) {
+    $err++;
+  }
+
+  my @td = @{$td};
+  for ( my $i = 0; $i <= $#td; $i++ ) {
+    if ( $td->[$i] ne $fd->[$i] || $td->[$i] ne $sd->[$i] ) {
+      $err++;
+    }
+  }
+
+  # Now same protein, check flanking aa - should all fall back to full.
+  $td = $atlas->do_tryptic_digestion( flanking => 1, aa_seq => $prot, min_len => 7, max_len => 30 );
+  $fd = $atlas->do_full_tryptic_digestion( flanking => 1, aa_seq => $prot, min_len => 7, max_len => 30 );
+  $sd = $atlas->do_tryptic_digestion( flanking => 1, aa_seq => $prot, min_len => 7, max_len => 30 );
+
+  if ( scalar( @{$td} ) != scalar( @{$fd} ) || scalar( @{$td} ) != scalar( @{$sd} ) ) {
+    $err++;
+  }
+
+  my @td = @{$td};
+  for ( my $i = 0; $i <= $#td; $i++ ) {
+    if ( $td->[$i] ne $fd->[$i] || $td->[$i] ne $sd->[$i] ) {
+      $err++;
+    }
+  }
+
+  # Same protein plus mass mods - should all fall back to full.
+  $prot = 'MTTQAPTFTQPLQSVVVLEGSTATFEAHISGFPVPEVSWFRDGQVISTSTLPGVQISFSDGRAKLTIPAVTKAN[115]SGRYSLKATN[115]GSGQATSTAELLVKAETAPPN[115]FVQRLQSMTVRQGSQVRLQVRVTGIPTPVVKFYRDGAEIQSSLDFQISQEGDLYSLLIAEAYPEDSGTYSVNATNSVGRATSTAELLVQGEEEVPAKKTKTIVSTAQISESRQTRIEKKIEAHFDARSIATVEMVIDGAAGQQLPHKTPPRIPPKPKSRSPTPPSIAAKAC[160]LARQQSPSPIRHSPSPVRHVRAPT';
+ 
+  $td = $atlas->do_tryptic_digestion( aa_seq => $prot, min_len => 7, max_len => 30 );
+  $fd = $atlas->do_full_tryptic_digestion( aa_seq => $prot, min_len => 7, max_len => 30 );
+  $sd = $atlas->do_tryptic_digestion( aa_seq => $prot, min_len => 7, max_len => 30 );
+
+  if ( scalar( @{$td} ) != scalar( @{$fd} ) || scalar( @{$td} ) != scalar( @{$sd} ) ) {
+    $err++;
+  }
+
+  @td = @{$td};
+  for ( my $i = 0; $i <= $#td; $i++ ) {
+    if ( $td->[$i] ne $fd->[$i] || $td->[$i] ne $sd->[$i] ) {
+      $err++;
+    }
+  }
+
+  # Finally, test asterisk splitting (recursive) 
+  my $prot = 'MTTQAPTFRQPLQSVVVLEGSTATFEAHISGFPVPEVSWFRDGQVISTSTLPGVQISFSDGRAKLTIPAVTKANSGRYSLKATNGSGQATSTAELLVKAETAPPNFVQRLQSMTVRQGSQVRLQVRVTGIPTPVVKFYRDGAEIQSSLDFQISQEGDLYSLLIAEAYPEDSGTYSVNATNSVGRATSTAELLVQGEEEVPAKKTKTIVSTAQISESRQTRIEKKIEA*FDARSIATVEMVIDGAAGQQLP*KTPPRIPPKPKSRSPTPPSIAAKAQLARQQSPSPIR*SPSPVRHVRAPTPSPVRSVSPAARISTSPIRSVRSPLLMRKTQASTVATGPEVPPPWKQEGYVASSSEAEMRETTLTTSTQIRTEERWEGRYGVQEQVTISGAAGAAASVSASASYAAEAVATGAKEVKQDADKSAAVATVVAAVDMARVREPVISAVEQTAQRTTTTAV*IQPAQEQVRKEAEKTAVTKVVVAADKAKEQELKSRTKEVITTKQEQMHVTHEQIRKETEKTFVPKVVISAAKAKEQETRISEEITKKQKQVTQEAIRQETEITAASMVVVATAKSTKLETVPGAQEETTTQQDQM*LSYEKIMKETRKTVVPKVIVATPKVKEQDLVSRGREGITTKREQVQITQEKMRKEAEKTALSTIAVATAKAKEQETILRTRETMATRQEQIQVT*GKVDVGKKAETTTDFGHT';
+ 
+  $td = $atlas->do_tryptic_digestion( aa_seq => $prot, min_len => 17, max_len => 30 );
+  $fd = $atlas->do_full_tryptic_digestion( aa_seq => $prot, min_len => 17, max_len => 30 );
+  $sd = $atlas->do_tryptic_digestion( aa_seq => $prot, min_len => 17, max_len => 30 );
+
+  if ( scalar( @{$td} ) != scalar( @{$fd} ) || scalar( @{$td} ) != scalar( @{$sd} ) ) {
+    $err++;
+  }
+
+  my @td = @{$td};
+  for ( my $i = 0; $i <= $#td; $i++ ) {
+    if ( $td->[$i] ne $fd->[$i] || $td->[$i] ne $sd->[$i] ) {
+      print STDERR Dumper( $td );
+      print STDERR Dumper( $sd );
+      print STDERR Dumper( $fd );
+      die "TD: $td->[$i], FD $fd->[$i], and SD $sd->[$i] \n";
+      $err++;
+    }
+  }
+
+  return ( $err ) ? 0 : 1;
+}
+
 
 
 sub test_aspn_digest {
@@ -580,24 +710,24 @@ sub test_fetch_build_explicit {
 sub test_fetch_build_organism {
   my $test_id = 'Human';
   my $id = $atlas->getCurrentAtlasBuildID( parameters_ref => { organism_name => $test_id } );
-  return ( $id && $id eq 393 ) ? 1 : 0;
+  return ( $id && $id eq $default_build_id ) ? 1 : 0;
 }
 sub test_fetch_build_organism_id {
   my $test_id = 2;
   my $id = $atlas->getCurrentAtlasBuildID( parameters_ref => { organism_id => $test_id } );
-  return ( $id && $id eq 393 ) ? 1 : 0;
+  return ( $id && $id eq $default_build_id ) ? 1 : 0;
 }
 sub test_fetch_build_specialized_build {
   my $test_id = 'Human Liver';
   my $id = $atlas->getCurrentAtlasBuildID( parameters_ref => { organism_specialized_build => $test_id } );
-  return ( $id && $id eq 395 ) ? 1 : 0;
+  return ( $id && $id eq $liver_build_id ) ? 1 : 0;
 }
 sub test_fetch_build_organism_and_specialized_build {
   my $test_build = 'Human Liver';
   my $test_name = 'Human';
   my $id = $atlas->getCurrentAtlasBuildID( parameters_ref => { organism_specialized_build => $test_build, 
                                                                organism_name => $test_name    } );
-  return ( $id && $id eq 395 ) ? 1 : 0;
+  return ( $id && $id eq $liver_build_id ) ? 1 : 0;
 }
 
 
