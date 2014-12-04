@@ -1474,7 +1474,6 @@ if ($apply_action =~ /QUERY|GO/i ) {
   ~;
 
 
-  $log->info( "$modSQL" );
   my @mod_peps;
   my $sth = $sbeams->get_statement_handle( $modSQL );
   my $has_header_info = 0;
