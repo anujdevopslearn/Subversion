@@ -236,7 +236,7 @@ sub do_LysC_digestion {
 # @nparam max_len
 # @nparam flanking
 #-
-sub do_tryptic_digestion {
+sub do_full_tryptic_digestion {
   my $self = shift;
   my %args = @_;
 
@@ -251,6 +251,7 @@ sub do_tryptic_digestion {
   $args{flanking} ||= 0;
   $args{min_len} ||= 1;
   $args{max_len} ||= 10e6;
+  $args{split_asterisk} = 1 if !defined $args{split_asterisk};
 
   # Store list to pass back
   my @peptides;
@@ -259,7 +260,7 @@ sub do_tryptic_digestion {
   if ( $args{split_asterisk} ) {
     my @seqs = split( /\*/, $args{aa_seq} );
     for my $seq ( @seqs ) {
-      my $sub_tryp = $self->do_tryptic_digestion( %args, aa_seq => $seq, split_asterisk => 0 );
+      my $sub_tryp = $self->do_full_tryptic_digestion( %args, aa_seq => $seq, split_asterisk => 0 );
       push @peptides, @{$sub_tryp};
     }
     return \@peptides;
@@ -345,6 +346,12 @@ sub do_tryptic_digestion {
 sub do_simple_tryptic_digestion {
   my $self = shift;
   my %args = @_;
+  return $self->do_tryptic_digestion( %args );
+}
+
+sub do_tryptic_digestion {
+  my $self = shift;
+  my %args = @_;
 
   # Check for required params
   my $missing;
@@ -352,6 +359,10 @@ sub do_simple_tryptic_digestion {
     $missing = ( $missing ) ? $missing . ',' . $param : $param if !defined $args{$param};
   }
   die "Missing required parameter(s) $missing" if $missing;
+
+  if ( $args{flanking} || $args{aa_seq} =~ /\d/ ) {
+    return $self->do_full_tryptic_digestion( %args );
+  }
   
   # Set default param values
   $args{min_len} ||= 1;
@@ -366,7 +377,7 @@ sub do_simple_tryptic_digestion {
   if ( $args{split_asterisk} ) {
     my @seqs = split( /\*/, $args{aa_seq} );
     for my $seq ( @seqs ) {
-      my $sub_tryp = $self->do_simple_tryptic_digestion( %args, aa_seq => $seq, split_asterisk => 0 );
+      my $sub_tryp = $self->do_tryptic_digestion( %args, aa_seq => $seq, split_asterisk => 0 );
       push @peptides, @{$sub_tryp};
     }
   } else {
