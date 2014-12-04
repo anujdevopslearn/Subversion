@@ -1282,6 +1282,8 @@ sub get_pabst_static_peptide_display {
 #  $log->debug( "build is $pabst_build_id!" );
   
 
+
+
   $args{patr_peptides} ||= {};
 
 
@@ -1357,7 +1359,6 @@ sub get_pabst_static_peptide_display {
   AND PB.pabst_build_id = $pabst_build_id
   ORDER BY PATR DESC, synthesis_adjusted_score DESC
   ~;
-#  $log->debug( $sql );
 
   my @columns = ( 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'ESS', 'PSS', 
                    'SSRT', 'N Gen Loc', 'N Obs', 'Annot', 'Org', 'PATR' );
@@ -1447,16 +1448,20 @@ sub get_pabst_static_peptide_display {
   SELECT DISTINCT peptide_sequence, organism_id 
   FROM $TBAT_PABST_BUILD PB  
   JOIN $TBAT_PABST_PEPTIDE PP ON PB.pabst_build_id = PP.pabst_build_id
-  WHERE peptide_sequence IN ( $uniq_peps )
+  WHERE peptide_sequence = ? 
   ~;
+  my $dbh = $sbeams->getDBHandle( $uniq_sql );
+  my $sth = $dbh->prepare( $uniq_sql );
 
-  my $uniq_sth = $sbeams->get_statement_handle( $uniq_sql );
   my %pep2org;
-  while ( my @row = $uniq_sth->fetchrow_array() ) {
-    $pep2org{$row[0]} ||= [];
-    push @{$pep2org{$row[0]}}, $row[1];
+  for my $pep ( keys( %uniq_peps ) ) {
+    $sth->execute( $pep );
+    while ( my @row = $sth->fetchrow_array() ) {
+      $pep2org{$row[0]} ||= [];
+      push @{$pep2org{$row[0]}}, $row[1];
+    }
   }
-	$uniq_sth->finish();
+	$sth->finish();
 
   my $seen_sql = qq~
   SELECT DISTINCT peptide_sequence 
