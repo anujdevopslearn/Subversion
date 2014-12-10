@@ -2074,7 +2074,9 @@ sub get_uniprot_variant_seq {
 
 sub get_uniprot_annotation {
   my $self = shift;
-  my %args = ( show_all_snps => 0, @_ );
+  my %args = ( show_all_snps => 0,
+               use_nextprot => 0,
+               @_ );
 
   my %annot = ( success => 0,
                 all_vars => [], 
@@ -2084,15 +2086,18 @@ sub get_uniprot_annotation {
 
   return \%annot unless $args{accession};
 
+  my $np_clause = "AND is_nextprot = 'N'";
+  $np_clause = "AND is_nextprot = 'Y'" if $args{use_nextprot};
+
   my $sql = qq~
   SELECT file_path, entry_offset, entry_name
   FROM $TBAT_UNIPROT_DB UD 
   JOIN $TBAT_UNIPROT_DB_ENTRY UDE
   ON UD.uniprot_db_id = UDE.uniprot_db_id
   WHERE entry_accession = '$args{accession}'
+  $np_clause
   ORDER BY uniprot_db_entry_id DESC
   ~;
-
 
   my $sbeams = $self->getSBEAMS();
   my @results = $sbeams->selectrow_array( $sql );
