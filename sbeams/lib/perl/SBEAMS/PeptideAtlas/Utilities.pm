@@ -1,6 +1,6 @@
 package SBEAMS::PeptideAtlas::Utilities;
 
-use lib "/net/db/projects/PeptideAtlas/lib/Swissknife_1.68/lib";
+use lib "/net/db/projects/PeptideAtlas/lib/Swissknife_1_72/lib";
 
 use SWISS::Entry;
 use SWISS::FTs;
