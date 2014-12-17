@@ -302,7 +302,7 @@ my $module_styles =<<"  END_STYLE";
   .clustalx {width:1000px; }
   .clustal {width: 1000px; overflow-x: scroll; scrollbar-arrow-color: blue; scrollbar- face-color: #e7e7e7; scrollbar-3dlight-color: #a0a0a0; scrollbar-darkshadow-color: #888888}
   .clustal_peptide {width: 1000px; height: 400px; overflow-x: scroll; overflow-y: scroll; scrollbar-arrow-color: blue; scrollbar- face-color: #e7e7e7; scrollbar-3dlight-color: #a0a0a0; scrollbar-darkshadow-color: #888888}
-	
+  .fade_header { background-image: url($HTML_BASE_DIR/images/fade_orange_header_2.png); background-repeat: no-repeat }
 
   /* Glycopeptide */
   .blue_bg_glyco{ font-family: Helvetica, Arial, sans-serif; background-color: #4455cc; font-size: ${FONT_SIZE_MED}pt; font-weight: bold; color: white}
