@@ -1581,6 +1581,14 @@ sub get_html_seq_vars {
 
   # Or if there are no variants.
   return \%return unless $swiss->{success};
+
+  my $is_html = ( $self->getSBEAMS()->output_mode() eq 'html' ) ? 1 : 0;
+
+  if ( $swiss->{fasta_seq} ne $args{seq} ) {
+    print "<div class=clear_warning_box><font color=red>Warning:</font> Difference detected between peptide sequence from annotations and biosequence table </div>\n" if $is_html;
+    $log->warn( "Drift detected between biosequence and uniprot_db tables" );
+  }
+
   $return{has_variants} = $swiss->{has_variants};
   $return{has_modres} = $swiss->{has_modres};
 
@@ -1709,8 +1717,7 @@ sub get_html_seq_vars {
         JOIN $TBAT_BIOSEQUENCE B
           ON B.biosequence_id = PM.matched_biosequence_id
         WHERE peptide_instance_id IN ( $pi_str )
-        AND dbxref_id = 1
-        AND len( biosequence_name ) = 6
+        AND dbxref_id IN ( 1, 35 )
         GROUP BY peptide_instance_id
       ~;
       my $sbeams = $self->getSBEAMS();
@@ -2076,7 +2083,10 @@ sub get_uniprot_annotation {
   my $self = shift;
   my %args = ( show_all_snps => 0,
                use_nextprot => 0,
+               uniprot_db_id => 0,
                @_ );
+
+  $args{uniprot_db_id} = 0 if $args{uniprot_db_id} !~ /^\d+$/;
 
   my %annot = ( success => 0,
                 all_vars => [], 
@@ -2088,6 +2098,9 @@ sub get_uniprot_annotation {
 
   my $np_clause = "AND is_nextprot = 'N'";
   $np_clause = "AND is_nextprot = 'Y'" if $args{use_nextprot};
+  
+  my $er_clause = '';
+  $er_clause = "AND UD.uniprot_db_id = $args{uniprot_db_id}" if $args{uniprot_db_id};
 
   my $sql = qq~
   SELECT file_path, entry_offset, entry_name
@@ -2095,6 +2108,7 @@ sub get_uniprot_annotation {
   JOIN $TBAT_UNIPROT_DB_ENTRY UDE
   ON UD.uniprot_db_id = UDE.uniprot_db_id
   WHERE entry_accession = '$args{accession}'
+  $er_clause
   $np_clause
   ORDER BY uniprot_db_entry_id DESC
   ~;
@@ -2112,6 +2126,10 @@ sub get_uniprot_annotation {
     my $fasta = $swiss->toFasta();
     my @fasta = split( /\n/, $fasta );
     my $fasta_seq = join( '', @fasta[1..$#fasta] );
+    $fasta_seq =~ s/\s//g;
+    $fasta_seq = uc($fasta_seq);
+    $annot{fasta_seq} = $fasta_seq;
+
     if ( $swiss->{FTs} ) {
 
       for my $var ( @{$swiss->{FTs}->{list}} ) {
