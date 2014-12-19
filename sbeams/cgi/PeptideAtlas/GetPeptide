@@ -1416,10 +1416,11 @@ if ($apply_action =~ /QUERY|GO/i ) {
                                                 tooltip => 'Show/Hide Section',
                                                 imglink => 1,
                                                 sticky => 1 );
-# Encode section header
-#   'link' => $link,
-# encodeSectionTable(
-# tr_info => $tr,
+  my $PTMHTML .= $sbeamsMOD->encodeSectionHeader(
+    text => "PTM Spectra",
+   'link' => $link,
+    bold => 1
+  );
   my $modHTML .= $sbeamsMOD->encodeSectionHeader(
     text => "Individual Spectra",
    'link' => $link,
@@ -1554,11 +1555,12 @@ if ($apply_action =~ /QUERY|GO/i ) {
     #### Loops through resultset and do formatting
 
     my @display_peps;
+    my @ptm_display_peps;
     my $at_least_one_chromatogram = 0;
+    my %ptm_score_summary = ();
     for my $pep ( @mod_peps ) {
       # Get mzML filename, cycle, and charge from spectrum name
       $pep->[$name_idx] =~ /(\S+)\.(\d+?)\.(\d+?)\.(\d)/;
-      
       my $mzml_basename = $1;
       my $cycle = $2;
       my $cycle2 = $3;
@@ -1591,6 +1593,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
         ~;
 
         my @rows = $sbeams->selectSeveralColumns($sql);
+        my %site_ptm_info = ();
+
         if (scalar @rows) {
 					my $first_row = shift @rows;
 					my ($qt5500_transition_group_id,
@@ -1673,6 +1677,10 @@ if ($apply_action =~ /QUERY|GO/i ) {
 			my $modified_pepseq = $pep->[$mseq_idx];
 
 			if ($pep->[$ptm_idx-1]){
+        my @ptm_pep =();
+        foreach my $i (0..9){
+          push @ptm_pep, $pep->[$i];
+        }
 				my $ptm_sequence = $pep->[$ptm_idx-1];
 				my $newseq = '';
 				my %mods = ();
@@ -1687,19 +1695,58 @@ if ($apply_action =~ /QUERY|GO/i ) {
             $pos += length ($str);
           }
 				}
-
+        
 				@elms = split(/\)/, $ptm_sequence);
         if (@elms > 1){ $has_ptm_score = 1;}
-        $pos = -1;
-        foreach my $str (@elms){
-         
-          if ($str =~ /(.*)\((.*)/){
-            $pos += length ($1);
-            $ptm_score{$pos} = $2;
-          }else{
-            $pos += length ($str);
+					$pos = -1;
+					foreach my $str (@elms){
+						if ($str =~ /(.*)\((.*)/){
+							$pos += length ($1);
+							$ptm_score{$pos} = $2;
+						}else{
+							$pos += length ($str);
+						}
+					}
+          $pos=0;
+          @elms =  split(/(?=[a-zA-Z])/, $ptm_sequence) ;
+          my @melms = split(/(?=[a-zA-Z])/, $modified_pepseq) ;
+          for (my $i=0; $i<=$#elms;$i++){
+            my $pstr = $elms[$i];
+            my $mstr = $melms[$i];
+            if ($pstr =~ /n/){
+              next;
+            }
+            $pstr =~ /([A-Z])/;
+            my $aa = $1;
+            my $score='';
+            if ($aa !~ /[STY]/){
+              $ptm_score_summary{$pos}{aa} = $aa;
+              $ptm_score_summary{$pos}{obsmh}='';
+              $ptm_score_summary{$pos}{obsh}='';
+              $ptm_score_summary{$pos}{obsm}='';
+              $ptm_score_summary{$pos}{obsl}='';
+              $ptm_score_summary{$pos}{obsml}=''; 
+              $pos++;
+              next;
+            }
+            $ptm_score_summary{$pos}{aa} = $aa;
+            if ($pstr =~ /[STY]\(/){ 
+              $pstr =~ /([\d\.]+)/;
+              $score = $1;
+							if ($score >= 0.98){
+								 $ptm_score_summary{$pos}{obsh}++;
+							}elsif($score >= 0.9 && $score < 0.98 ){
+								$ptm_score_summary{$pos}{obsmh}++;
+							}elsif($score >= 0.7 && $score < 0.9){
+								 $ptm_score_summary{$pos}{obsm}++;
+							}elsif($score >= 0.3 && $score < 0.7){
+								 $ptm_score_summary{$pos}{obsml}++;
+							}elsif($score < 0.3){
+								$ptm_score_summary{$pos}{obsl}++;
+							}
+            }
+            $pos++;
           }
-        }
         my $pepseq = $modified_pepseq;
         $pepseq =~ s/\[[\d\.]+\]//g;
         my @aas = split(//, $pepseq);
@@ -1715,16 +1762,16 @@ if ($apply_action =~ /QUERY|GO/i ) {
           }
         }
 				$modified_pepseq = $newseq;
+			  if ($modified_pepseq  !~/\(/){
+          $ptm_pep[$mseq_idx] = $sbeamsMOD->formatMassMods($modified_pepseq);
+        }else{
+          $ptm_pep[$mseq_idx] = $modified_pepseq;
+        }
+        $ptm_pep[$frag_idx] = $pep->[14];
+        push @ptm_display_peps, \@ptm_pep;
+        $pep->[$mseq_idx] =~ s/(\([\d\.]+\))//g;
       }
-			if ($modified_pepseq  !~/\(/){
-        $pep->[$mseq_idx] = $sbeamsMOD->formatMassMods($modified_pepseq);
-      }else{
-        $pep->[$mseq_idx] = $modified_pepseq;
-      }
-         
-      #$pep->[$mseq_idx] =~ s/"aa_mod">(\[[\d\.]+\])(\([\d\.]+\))/"supsub"><sup class="superscript">$1<\/sup><sub class="subscript">$2<\/sub>/g;
-      #$pep->[$mseq_idx] =~ s/([A-Z])(\([\d\.]+\))/$1<scan class="supsub"><sup class="superscript">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/sup><sub class="subscript">$2<\/sub><\/scan>/g;
-
+     
       $pep->[$frag_idx] = $pep->[14];
       delete $pep->[14];
 
@@ -1736,7 +1783,6 @@ if ($apply_action =~ /QUERY|GO/i ) {
         $pep->[$it_idx] = ( $pep->[$it_idx] ) ? $sbeams->formatScientific( number=> $pep->[$it_idx], precision=>1, output_mode => $sbeams->get_output_mode() ): $sbeams->makeInactiveText('n/a'); 
         $pep->[$rt_idx] = ( $pep->[$rt_idx] ) ? sprintf( "%0.1f", $pep->[$rt_idx]/60 ) : $sbeams->makeInactiveText('n/a'); 
         $pep->[$ce_idx] = ( $pep->[$ce_idx] ) ? sprintf( "%0.1f", $pep->[$ce_idx] ) : $sbeams->makeInactiveText('n/a'); 
-        
       }
       push @display_peps, $pep;
 
@@ -1747,23 +1793,31 @@ if ($apply_action =~ /QUERY|GO/i ) {
       for my $pep (@display_peps) {
         delete $pep->[$chrm_idx];
       }
+      for my $pep (@ptm_display_peps) {
+        delete $pep->[$chrm_idx];
+      }
     }
-    print qq~ 
+
+
+    print qq~
      <style>
-      .ptm_low {background:#F8DBF2;}
-			.ptm_mlow {background:yellow;}
-			.ptm_mhigh {background:#46F0D6;}
-			.ptm_high {background:#ABF99C;}
+      .ptm_low {background:#A6A6A6;}
+      .ptm_mlow {background:#E0A7D2;}
+      .ptm_mhigh {background:#00F0F0;}
+      .ptm_high {background:#ABF99C;}
      </style>
     ~;
+
 
     my @headings = ( 'Modified Sequence', 'Chg', 'Smpl', 'Instr', 'Prob', 'Spectrum Name', 'Avg Eval', 'Fragmentation Type', 'Spectrum');
     push @headings, 'Chromatogram' if $at_least_one_chromatogram;
     push @headings, ( 'Precursor Intensity', 'RT', 'CE' ) if $has_header_info;
     #### Add table column headings
     unshift @display_peps, [ @headings ];
+
     if ($has_ptm_score){
-       sort_ptm_peps(\@display_peps);
+       unshift @ptm_display_peps, [ @headings ];
+       sort_ptm_peps(\@ptm_display_peps);
     }
  
     #### Format table
@@ -1776,34 +1830,47 @@ if ($apply_action =~ /QUERY|GO/i ) {
                                               max_rows => 500,
                                               nowrap => [1],
                                               );
+
+
     if ($has_ptm_score){
+      $PTMHTML .= $sbeamsMOD->encodeSectionTable( header => 1,
+                                                 width => '600',
+                                               tr_info => $tr,
+                                                align  => $align,
+                                                  rows => \@ptm_display_peps,
+                                          rows_to_show => 10,
+                                              max_rows => 500,
+                                              nowrap => [1],
+                                              );
 			my $PTM_color = qq~
 			 <table>
 				<tr align="CENTER" bgcolor="#CCCCCC">
 				<td>PTM Probability Score: </td> 
-				<td> 0 - 0.5 </td>
+				<td> 0 - 0.3 </td>
 				<td class="ptm_low" style="width: 10px; height: 5px;"></td>
-				<td> 0.5 - 0.75 </td>
+				<td> 0.3 - 0.7 </td>
 				<td class="ptm_mlow" style="width: 10px; height: 5px;"></td>
-				<td> 0.75 - 0.9 </td>
+				<td> 0.7 - 0.9 </td>
 				<td class="ptm_mhigh" style="width: 10px; height: 5px;"></td>
 				<td> 0.9 - 1.0 </td> 
 				<td class="ptm_high" style="width: 10px; height: 5px;"></td>
 				</tr>
 			 </table>
 			~;
-			$modHTML =~ s/<table/\n$PTM_color\n<table/i;
+      my $GV = SBEAMS::Connection::GoogleVisualization->new();
+      my $ptm_summary_chart = $GV->drawPTMHisChart(data=> \%ptm_score_summary);
+			$PTMHTML =~ s/<table/\n$ptm_summary_chart\n$PTM_color\n<table/i;
     }
     #### Display table
-    print "<TABLE WIDTH=600><BR>$modHTML</TABLE>\n";
     if ($has_ptm_score){
+      print "<TABLE WIDTH=600><BR>$PTMHTML</TABLE>\n";
 			print( <<"		END" );
 			<script LANGUAGE="JavaScript" TYPE="text/javascript">
 			var indiv_spec = document.getElementsByName("getprot_indiv_spec"); 
 			var rows = indiv_spec[1].getElementsByTagName('TR');	
 			var j=1;
 			while (j<=rows.length) {
-				var aas = rows[j].cells[0].innerHTML.split('\\)'); ;
+				var aas = rows[j].cells[0].innerHTML.split('\\)'); 
 				var newInnerHTML = '';
 				var re;
 				for (var i=0; i < aas.length; i++){
@@ -1812,11 +1879,11 @@ if ($apply_action =~ /QUERY|GO/i ) {
 						var prob = parseFloat(aa[1]);
 						if (aas[i].match(/\\[...\\]\\(/g)){ 
 							re =  new RegExp('(\\\\w)(\\\\[...\\\\])\\\\('+aa[1], "g"); 
-							if (prob < 0.5 ){   
+							if (prob < 0.3 ){   
 								 aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_low">\$1</span>\$2');
-							}else if (prob >=0.5 && prob < 0.75){
+							}else if (prob >=0.3 && prob < 0.7){
 								 aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_mlow">\$1</span>\$2'); 
-							}else if (prob >= 0.75 && prob < 0.9 ){
+							}else if (prob >= 0.7 && prob < 0.9 ){
 								 aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_mhigh">\$1</span>\$2'); 
 							}else{
 								aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_high">\$1</span>\$2'); 
@@ -1846,6 +1913,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
 				</script>
 		END
     }
+    print "<TABLE WIDTH=600><BR>$modHTML</TABLE>\n";
   }
 
   $log->debug( "End spectra " . time() );
@@ -1926,10 +1994,6 @@ if ($apply_action =~ /QUERY|GO/i ) {
                                                 tooltip => 'Show/Hide Section',
                                                 imglink => 1,
                                                 sticky => 1 );
-# Encode section header
-#   'link' => $link,
-# encodeSectionTable(
-#                                               tr_info => $tr,
 
   my ($sheader, $sHTML) = $sbeamsMOD->getSamplePlotDisplay( n_obs => $n_obs,
                                                   obs_per_million => $obs_per_million,
@@ -1948,7 +2012,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
                                                            tr_info => $tr );
 
   print qq~
-  <TABLE WIDTH=600><TR><TD COLSPAN=2>&nbsp;</TD></TR>
+  <BR>
+  <TABLE WIDTH=600><TR>
   $sheader
   $sHTML
   <TR><TD>&nbsp;</TD><TD>&nbsp;</TD></TR>
@@ -2311,7 +2376,7 @@ sub sample_view {
   my @samples = split(',', $samples);
 
   my $viewable = join( ',', @samples[0..3] );
-  my $session_samples = "$viewable,<BR>\n";
+  my $session_samples = "$viewable<BR>\n";
   my $cnt = 0;
   my $sep = '';
   for ( my $j = 4; $j <= $#samples; $j++ ) {

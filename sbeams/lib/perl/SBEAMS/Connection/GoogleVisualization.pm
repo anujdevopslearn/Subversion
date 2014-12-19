@@ -19,6 +19,7 @@ use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Log;
 
 use POSIX;
+use List::Util qw/max/;
 
 my $log = SBEAMS::Connection::Log->new();
 my $sbeams = SBEAMS::Connection->new();
@@ -306,5 +307,138 @@ sub is_supported_browser {
 	}
 	return 1;
 }
+
+sub drawPTMHisChart{
+  my $self = shift;
+  my %args = @_;
+  my $data = $args{data};
+  my $dataTable = qq~ 
+   var data = new google.visualization.DataTable();
+   data.addColumn('string', 'AA');
+   data.addColumn('number', '< 0.3');
+   data.addColumn({type:'string', role:'annotation'});
+   data.addColumn('number', '0.30 - 0.70');
+   data.addColumn({type:'string', role:'annotation'});
+   data.addColumn('number', '0.70 - 0.90');
+   data.addColumn({type:'string', role:'annotation'});
+   data.addColumn('number', '0.90 - 0.98');
+   data.addColumn({type:'string', role:'annotation'});
+   data.addColumn('number', '0.98 - 1.00');
+   data.addColumn({type:'string', role:'annotation'});
+   data.addRows([
+  ~;
+  my $not_sty='';
+  my $total;
+  my $max_obs = 0;
+  foreach my $pos(sort {$a <=> $b} keys %$data){
+    my $aa=$data->{$pos}{aa};
+    my ($obsh,$obsmh,$obsm,$obsml,$obsl); 
+    if ($aa =~ /[STY]/){
+       if($not_sty){
+         $dataTable .= "['$not_sty',0,'',0,'',0,'',0,'',0,''],";
+       }
+       $not_sty='';
+
+       $obsh= $data->{$pos}{obsh}  || 0;
+       $obsmh = $data->{$pos}{obsmh} || 0;
+       $obsm = $data->{$pos}{obsm} || 0;
+       $obsml = $data->{$pos}{obsml} || 0;
+       $obsl=$data->{$pos}{obsl} || 0;
+       my $higestval = max ($obsl, $obsml,$obsm,$obsmh,$obsh);
+       if ($max_obs < $higestval){
+         $max_obs = $higestval;
+       } 
+       $dataTable .= "['$aa',$obsl,'$obsl',$obsml,'$obsml',$obsm,'$obsm',$obsmh,'$obsmh',$obsh,'$obsh'],";
+      $total = $obsl+$obsml+$obsm+$obsmh+$obsh;
+    }else{
+       $not_sty .= "$aa";
+    }
+  }
+  if($not_sty){
+    $dataTable .= "['$not_sty',0,'',0,'',0,'',0,'',0,'']";
+  }
+  $dataTable =~ s/,$//;
+  $dataTable .= "]);";
+
+  $max_obs += ceil(0.2 * $max_obs);
+  my $chart_div = qq~
+    <script type="text/javascript" src="../../usr/javascript/jquery/jquery.js"></script>
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+    <script type="text/javascript">
+      google.load("visualization", "1", {packages:["corechart"]});
+			function drawVisualization() {
+          $dataTable
+				var chart = new google.visualization.ComboChart(document.getElementById('chart_ptm'));
+        chart.draw(data,{
+					vAxis: {title: "N obs"},
+          vAxes: {0: {'maxValue':$max_obs }},
+          seriesType: "bars",
+					annotations:{alwaysOutside:'true'},
+					legend: { position: 'top' },
+					'colors': ['#A6A6A6', '#7030A0', '#00B0F0', '#FFC000', '#00B050'],
+          width: 900, height: 400,
+          chartArea: {left: 30, top: 50, width: "100%"},
+          focusTarget: 'category'
+         });
+  
+				var mydiv = document.getElementById('chart_ptm')
+				var rects = \$(mydiv).find('svg > g > g > g > text')
+				var re = \/[STY]\/i;  
+				var row = 0;
+				for (i = 0; i < rects.length; i++) {
+          var el = \$(rects[i]);
+          var aparent = el.parent();
+          var aas = el.text();
+          if (! re.test(aas)) {    
+            continue;
+          }
+          //alert (el.attr("height"));
+          var pos = getElementPos(el);
+          var attrs = {x:pos.x,y: 70,
+                     fill: 'black',
+                     'font-family': 'Arial',
+                     'font-size': 14,
+                     'text-anchor': 'middle'};
+          aparent.append(addTextNode(attrs, $total, aparent));
+        }
+        var attrs = {x: 50 ,y: 70,
+                     fill: 'black',
+                     'font-family': 'Arial',
+                     'font-size': 14,
+                     'text-anchor': 'middle'};
+        \$(rects[0]).parent().append(addTextNode(attrs, 'Total obs' , \$(rects[0]).parent()));
+ 
+			}
+      google.setOnLoadCallback(drawVisualization);
+		  function getElementPos(\$el) {
+				// returns an object with the element position
+				return {
+						x: parseFloat(\$el.attr("x")),
+						width: parseFloat(\$el.attr("width")),
+						y: parseFloat(\$el.attr("y")),
+						height: parseFloat(\$el.attr("height"))
+				}
+	  	}
+
+
+		  function addTextNode(attrs, text, _element) {
+							// creates an svg text node
+          var sNamespace = "http://www.w3.org/2000/svg";
+					var el = document.createElementNS(sNamespace, "text");
+					for (var k in attrs) { el.setAttribute(k, attrs[k]); }
+					var textNode = document.createTextNode(text);
+					el.appendChild(textNode);
+					return el;
+	  	}
+
+  </script>
+  <table>
+  <div id="chart_ptm" style="width: 1000px;height: 400px;"></div>
+  </table>
+  ~;
+  return $chart_div;
+}
+
+
 1;
 
