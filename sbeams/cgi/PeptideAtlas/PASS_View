@@ -1458,7 +1458,7 @@ sub finalizeDataset {
   my $emailAddress = $args{'emailAddress'};
 
   my $PK;
-  if ($identifier =~ /^PASS(\d+)$/) {
+  if ($identifier =~ /^\s*PASS(\d+)\s*$/) {
     $PK = $1;
     my %rowdata = ( finalizedDate => 'CURRENT_TIMESTAMP' );
     my $result = $sbeams->updateOrInsertRow(
@@ -1549,7 +1549,7 @@ sub unFinalizeDataset {
   my $emailAddress = $args{'emailAddress'};
 
   my $PK;
-  if ($identifier =~ /^PASS(\d+)$/) {
+  if ($identifier =~ /^\s*PASS(\d+)\s*$/) {
     $PK = $1;
     my %rowdata = ( finalizedDate => 'NULL' );
     my $result = $sbeams->updateOrInsertRow(
