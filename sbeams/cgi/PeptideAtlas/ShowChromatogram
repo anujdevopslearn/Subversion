@@ -241,11 +241,13 @@ sub processRequest {
   );
 
   # Print sptxt info, if provided.
-  my ($SRMProb) = ($sptxt_fulltext =~ /SRMProb=(\S*)\s*/);
-	if ( $ref_parameters->{show_sptxt_info} ) {
-    print "<p>SRM Probability: $SRMProb</p>\n" if $SRMProb;
-    print "<pre>$sptxt_fulltext</pre>\n";
-	}
+  unless ( $sbeams->isGuestUser() ) {
+    my ($SRMProb) = ($sptxt_fulltext =~ /SRMProb=(\S*)\s*/);
+	  if ( $ref_parameters->{show_sptxt_info} ) {
+      print "<p>SRM Probability: $SRMProb</p>\n" if $SRMProb;
+      print "<pre>$sptxt_fulltext</pre>\n";
+  	}
+  }
 
   # Print the HTML that allows user to recall and download resultset
   print $cgram->getBottomHTMLforChromatogramViewer(
