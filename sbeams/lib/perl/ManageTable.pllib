@@ -792,7 +792,7 @@ sub printEntryForm {
         # Handle text fields
         # 'block' long strings into 80-char chunks
         $text = $parameters{$column_name};
-        if ($column_name =~ /sample_publication_ids/){
+        if ($column_name =~ /sample_publication_ids/ && $text ne ''){
           my $sql = qq~
               SELECT PUBMED_ID, author_list, TITLE, ABSTRACT,
                      journal_name,published_year,volume_number,
