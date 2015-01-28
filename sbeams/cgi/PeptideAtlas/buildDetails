@@ -469,19 +469,17 @@ sub getSampleMapDisplay {
   
   my $sql = qq~
 	SELECT biosequence_name, SUM(PISB.n_observations) total_cnts,
-	SB.atlas_search_batch_id, sample_tag -- , peptide_accession
+	SB.atlas_search_batch_id, sample_tag 
   FROM $TBAT_ATLAS_SEARCH_BATCH SB
   JOIN $TBAT_SAMPLE S ON s.sample_id = SB.sample_id
   JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB ON PISB.atlas_search_batch_id = SB.atlas_search_batch_id
   JOIN $TBAT_PEPTIDE_INSTANCE PI ON PI.peptide_instance_id = PISB.peptide_instance_id
---  JOIN $TBAT_PEPTIDE P ON P.peptide_id = PI.peptide_id
   JOIN $TBAT_PEPTIDE_MAPPING PM ON PM.peptide_instance_id = PI.peptide_instance_id
   JOIN $TBAT_BIOSEQUENCE B ON B.biosequence_id = PM.matched_biosequence_id
   JOIN $TBAT_ATLAS_BUILD AB ON ( AB.biosequence_set_id = B.biosequence_set_id AND AB.atlas_build_id = PI.atlas_build_id ) 
   WHERE AB.atlas_Build_id = $args{build_id}
 	AND biosequence_id IN ( $bioseq_ids )
 	GROUP BY biosequence_name, SB.atlas_search_batch_id, sample_tag
---	ORDER BY biosequence_name, SB.atlas_search_batch_id, sample_tag
   ~;
   
 	my $t1 = time;
@@ -763,7 +761,7 @@ sub get_sample_info {
                                                   sticky  => 1 );
 
   my $sql =<<"  END";
-  SELECT ASB.atlas_search_batch_id, sample_tag, SBS.n_searched_spectra,
+  SELECT S.sample_id, sample_tag, SBS.n_searched_spectra,
          n_good_spectra, n_distinct_multiobs_peptides,
          n_uniq_contributed_peptides, n_progressive_peptides,
          cumulative_n_peptides, n_canonical_proteins, cumulative_n_proteins,
@@ -795,6 +793,10 @@ sub get_sample_info {
     for my $idx ( 10 ) {
       $batch->[$idx] = $sbeams->makeInactiveText('ND') if !defined $batch->[$idx];
       $batch->[$idx] = sprintf( "%0.1f", (100 * $batch->[$idx]))  if $batch->[$idx] !~ /FONT/;  # only one digit after decimal
+    }
+    for my $idx (1) {
+      $batch->[$idx] = $atlas->make_pa_tooltip( tip_text => $batch->[$idx],
+          link_text => "<a href='$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=AT_SAMPLE&sample_id=$batch->[0]'>$batch->[$idx]</a>" );
     }
     push @samples, $batch;
 
