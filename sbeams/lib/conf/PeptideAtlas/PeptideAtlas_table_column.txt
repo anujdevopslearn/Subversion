@@ -1171,3 +1171,22 @@ AT_sample_category	6	date_modified	date_modified	datetime	8	0	Y		N			N					Y	N
 AT_sample_category	7	modified_by_id	modified_by_id	int	4	0	Y		N			N					Y	N			
 AT_sample_category	8	owner_group_id	owner_group_id	int	4	0	Y		N			N					Y	N			
 AT_sample_category	9	record_status	record_status	char	1	0	Y		N			N					Y	N			
+AT_ptm_summary	1	id	ptm summary id	int	4	0	N		Y							N	N	Y			pkDEFAULT
+AT_ptm_summary	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	atlas_build	atlas_build_id	Y				N	N	N			
+AT_ptm_summary	3	biosequence_id	Biosequence ID	int	4	0	N		N	biosequence	biosequence_id	Y				N	N	N			
+AT_ptm_summary	4	offset	Protein offset	int	4	0	N		N			Y				N	N	N			
+AT_ptm_summary	5	residue	Residue	char	1	0	N		N			Y				N	N	N			
+AT_ptm_summary	6	nObs	Number of Observation	int	4	0	N		N			Y				N	N	N			
+AT_ptm_summary	7	one_site	Only one PTM site in  each peptide	int	4	0	N		N			Y				N	N	N			
+AT_ptm_summary	8	two_sites	Only two PTM sites in each peptide	int	4	0	N		N			Y				N	N	N			
+AT_ptm_summary	9	over_two_sites	More than two PTM sites in each peptide	int	4	0	N		N			Y				N	N	N			
+AT_ptm_summary	10	nP01	P < 0.1  	int	4	0	N		N			Y				N	N	N			
+AT_ptm_summary	11	nP05	0.1 =< P < 0.5  	int	4	0	N		N			Y				N	N	N			
+AT_ptm_summary	12	nP19	0.5 =< P < 0.19  	int	4	0	N		N			Y				N	N	N			
+AT_ptm_summary	13	nP81	0.19 =< P < 0.81	int	4	0	N		N			Y				N	N	N			
+AT_ptm_summary	14	nP95	0.81 =< P < 0.95  	int	4	0	N		N			Y				N	N	N			
+AT_ptm_summary	15	nP99	0.95 =< P < 0.99  	int	4	0	N		N			Y				N	N	N			
+AT_ptm_summary	16	nP100	0.99 =< P	int	4	0	N		N			Y				N	N	N			
+AT_ptm_summary	17	isInUniProt      	Uniprot Annotated	char	3	0	N		N			Y				N	N	N			
+AT_ptm_summary	18	isInNeXtProt 	NextProt Annotated	char	3	0	N		N			Y				N	N	N			
+AT_ptm_summary	19	most_observed_ptm_peptide	Most Frequently Observed PTM Peptide	char	100	0	N		N			Y				N	N	N			

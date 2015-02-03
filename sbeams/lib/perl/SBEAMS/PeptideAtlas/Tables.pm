@@ -153,7 +153,8 @@ use vars qw(@ISA @EXPORT
 
     $TBAT_DIA_LIBRARY
     $TBAT_DIA_LIBRARY_SET
-
+    
+    $TBAT_PTM_SUMMARY
 );
 
 
@@ -301,6 +302,8 @@ require Exporter;
 
     $TBAT_DIA_LIBRARY
     $TBAT_DIA_LIBRARY_SET
+
+    $TBAT_PTM_SUMMARY
 );
 
 
@@ -457,3 +460,5 @@ $TBAT_PROTEIN_IDENTIFICATION_ANNOTATION   = "${mod}protein_identification_annota
 
 $TBAT_DIA_LIBRARY                   = "${mod}dia_library";
 $TBAT_DIA_LIBRARY_SET               = "${mod}dia_library_set";
+
+$TBAT_PTM_SUMMARY                   =  "${mod}ptm_summary";
