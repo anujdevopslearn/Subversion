@@ -1173,6 +1173,55 @@ sub getDetailedSampleDisplay {
   return $table;
 }
 
+sub getPTMTableDisplay{
+  my $self = shift;
+  my %args = @_;
+  my $SUB_NAME = 'getPTMTableDisplay';
+  my $cols = $args{cols};
+  my $data = $args{data};
+  my $atlas_build_id = $args{atlas_build_id}; 
+  my $biosequence_name = $args{biosequence_name};
+  my @rows;
+  shift @$cols;
+  pop @$cols;
+  push @rows, [@$cols];
+  foreach my $prot (keys %$data){
+    foreach my $pos (sort {$a <=> $b} keys %{$data->{$prot}}){
+      my @row = ();
+      push @row, $pos+1; 
+      next if ($data->{$prot}{$pos}{nObs} ==0 );
+      foreach my $col (@$cols){
+        next if ($col =~ /offset/i);
+        if ($col eq 'Residue' && ($data->{$prot}{$pos}{nObs} > 0 
+                                || $data->{$prot}{$pos}{InUniprot} =='yes'  
+                                ||  $data->{$prot}{$pos}{InneXtprot} =='yes' )){
+          my $start_in_biosequence = $pos + 1;
+          my $link = "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?".
+                     "atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Sequence&searchForThis=".
+                     "$data->{$prot}{$pos}{peptide}&apply_action=QUERY"; 
+          $data->{$prot}{$pos}{$col} = $self->make_pa_tooltip( tip_text => "Get peptide sequence covering this site",
+                                                               link_text => "<a href='$link'>$data->{$prot}{$pos}{$col}</a>" );
+        }
+        push @row, $data->{$prot}{$pos}{$col};
+      }
+      push @rows , [@row];
+    }
+  }
+  my @align = ();
+  foreach my $i(0..15){
+    push @align, 'center';
+  }
+  my $table = $self->encodeSectionTable( header => 1,
+                                         width => '600',
+                                         tr_info => $args{tr_info},
+                                         align  => [@align],
+                                         rows_to_show => $args{rows_to_show},
+                                         max_rows => $args{max_rows},
+                                         rows => \@rows );
+  return $table;
+
+
+}
 
 
 ###############################################################################
@@ -1747,7 +1796,7 @@ sub get_what_is_new {
       SELECT B.SAMPLE_ID 
       FROM $TBAT_ATLAS_BUILD_SAMPLE B 
       WHERE B.ATLAS_BUILD_ID IN ($previous_build_id)
-    )  
+    ) 
   ~;
   my @sample_ids = $sbeams->selectOneColumn($sql);
   if(@sample_ids){

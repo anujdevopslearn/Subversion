@@ -362,7 +362,7 @@ sub drawPTMHisChart{
 
   $max_obs += ceil(0.2 * $max_obs);
   my $chart_div = qq~
-    <script type="text/javascript" src="../../usr/javascript/jquery/jquery.js"></script>
+    <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/jquery/jquery.js"></script>
     <script type="text/javascript" src="https://www.google.com/jsapi"></script>
     <script type="text/javascript">
       google.load("visualization", "1", {packages:["corechart"]});
@@ -381,10 +381,9 @@ sub drawPTMHisChart{
           focusTarget: 'category'
          });
   
-				var mydiv = document.getElementById('chart_ptm')
-				var rects = \$(mydiv).find('svg > g > g > g > text')
+				var mydiv = document.getElementById('chart_ptm');
+				var rects = \$(mydiv).find('svg > g > g > g > text');
 				var re = \/[STY]\/i;  
-				var row = 0;
 				for (i = 0; i < rects.length; i++) {
           var el = \$(rects[i]);
           var aparent = el.parent();
@@ -394,7 +393,7 @@ sub drawPTMHisChart{
           }
           //alert (el.attr("height"));
           var pos = getElementPos(el);
-          var attrs = {x:pos.x,y: 70,
+          var attrs = {x:pos.x,y: 70, 
                      fill: 'black',
                      'font-family': 'Arial',
                      'font-size': 14,
@@ -433,12 +432,207 @@ sub drawPTMHisChart{
 
   </script>
   <table>
-  <div id="chart_ptm" style="width: 1000px;height: 400px;"></div>
+  <div id="chart_ptm" style="width: 1000px; height: 400px;"></div>
   </table>
   ~;
   return $chart_div;
 }
 
+
+sub drawPTMHisChart_Protein{
+  my $self = shift;
+  my %args = @_;
+  my $protein = $args{protein};
+  my $data = $args{data};
+  my $sequence = $args{seq}, 
+  my $atlas_build_id = $args{atlas_build_id};
+  my $dataTable = qq~ 
+   var data = new google.visualization.DataTable();
+   data.addColumn('string', 'AA');
+   data.addColumn('number', '< 0.01');
+   data.addColumn({type:'string', role:'annotation'});
+   data.addColumn('number', '0.01 - 0.05');
+   data.addColumn({type:'string', role:'annotation'});
+   data.addColumn('number', '0.05 - 0.19');
+   data.addColumn({type:'string', role:'annotation'});
+   data.addColumn('number', '0.19 - 0.81');
+   data.addColumn({type:'string', role:'annotation'});
+   data.addColumn('number', '0.81 - 0.95');
+   data.addColumn({type:'string', role:'annotation'});
+   data.addColumn('number', '0.95 - 0.99');
+   data.addColumn({type:'string', role:'annotation'});
+   data.addColumn('number', '0.99 - 1.00');
+   data.addColumn({type:'string', role:'annotation'});
+   data.addRows([
+  ~;
+
+  my $nobs=  "var obs=[";
+  my $curpos = "var curpos=[";
+  my $peptides = "var peptidelist=[";
+
+  my $max_obs = 0;
+  $sequence =~ s/\*.*//g;
+  my @aas = split(//, $sequence);
+  my $sep = '';
+  foreach my $pos (0..$#aas){
+    my $aa=$aas[$pos];
+    if ($aa =~ /[STY]/){
+       if (defined $data->{$protein}{$pos}){
+         $dataTable .= "['$aa'";
+				 foreach my $c (qw (nP01 nP05 nP19 nP81 nP95 nP99 nP100)){
+					 $dataTable .=",$data->{$protein}{$pos}{$c},'$data->{$protein}{$pos}{$c}'";
+					 if ($max_obs < $data->{$protein}{$pos}{$c} ){ 
+						 $max_obs = $data->{$protein}{$pos}{$c};
+					 } 
+				 }
+         $nobs .= "$sep$data->{$protein}{$pos}{nObs}";
+         $peptides .= "$sep'$data->{$protein}{$pos}{peptide}'";
+         $dataTable .= "],\n";
+       }else{
+         $dataTable .= "['$aa',0,'',0,'',0,'',0,'',0,'',0,'',0,''],\n";
+         $nobs .= $sep."0";
+         $peptides .= "$sep''";
+       }
+       $curpos .= "$sep";
+       $curpos .=$pos+1 ;
+       $sep = ",";
+    }else{
+       $dataTable .= "['$aa',0,'',0,'',0,'',0,'',0,'',0,'',0,''],\n";
+    }
+  }
+  $dataTable =~ s/,$//;
+  $dataTable =~ s/\n$//;
+  $dataTable .= "]);\n";
+
+  $nobs .= "];\n";
+  $curpos .= "];\n"; 
+  $peptides .= "];\n"; 
+
+  $max_obs += ceil(0.2 * $max_obs);
+  my $chart_div = qq~
+    <script type='text/javascript' src="$HTML_BASE_DIR/usr/javascript/jquery/jquery.js"></script>
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+   
+    <script type="text/javascript">
+      google.load("visualization", "1",  {packages:["corechart"]});
+			function drawVisualization() {
+          $dataTable
+          $nobs
+          $curpos
+          $peptides
+				var chart = new google.visualization.ComboChart(document.getElementById('chart_ptm'));
+        chart.draw(data,{
+					vAxis: {title: "N obs"},
+          vAxes: {0: {'maxValue':$max_obs }},
+          seriesType: "bars",
+					annotations:{alwaysOutside:'true'},
+					legend: { position: 'top' },
+          height: 400,
+          fontName: 'Arial',
+          fontSize: 12,
+          width: data.getNumberOfRows() * 65,
+          bar: {groupWidth: 40},
+          chartArea: {left: 30, top: 50, width: "100%"},
+          focusTarget: 'category'
+         });
+  
+				var mydiv = document.getElementById('chart_ptm');
+        var y0;
+				jQuery(function(\$){
+					var rects = \$(mydiv).find('svg > g > g > g > text');
+					var re = \/[STY]\/i;  
+					var row = 0;
+					for (i = 0; i < rects.length; i++) {
+						var el = \$(rects[i]);
+						var aparent = el.parent();
+						var aas = el.text();
+						if (! re.test(aas)) {    
+							continue;
+						}
+						var pos = getElementPos(el);
+						var attrs = {x:pos.x,y: 70,
+											 fill: 'black',
+											 'font-family': 'Arial',
+											 'font-size': 14,
+											 'text-anchor': 'middle'};
+						aparent.append(addTextNode(attrs, obs[row], aparent));
+            if (obs[row] > 0){
+							attrs = {x:pos.x,y:pos.y+20,
+												 fill: 'blue',
+												 'font-family': 'Arial',
+												 'font-size': 14,
+												 'text-anchor': 'middle'};
+							aparent.append(addTextLink(attrs, curpos[row], peptidelist[row], aparent));
+            }else{
+              attrs = {x:pos.x,y:pos.y+20,
+                         fill: 'black',
+                         'font-family': 'Arial',
+                         'font-size': 14,
+                         'text-anchor': 'middle'};
+              aparent.append(addTextNode(attrs, curpos[row], aparent));
+
+            }
+            row++;
+            y0 = pos.y;
+					}
+					var attrs = {x: 50 ,y: 70,
+											 fill: 'black',
+											 'font-family': 'Arial',
+											 'font-size': 14,
+											 'text-anchor': 'middle'};
+					\$(rects[0]).parent().append(addTextNode(attrs, 'Total obs' , \$(rects[0]).parent()));
+          var attrs = {x: 30 ,y: y0+20,
+                       fill: 'black',
+                       'font-family': 'Arial',
+                       'font-size': 14,
+                       'text-anchor': 'middle'};
+          \$(rects[0]).parent().append(addTextNode(attrs, 'Offset' , \$(rects[0]).parent()));
+
+				});
+			}
+      google.setOnLoadCallback(drawVisualization);
+		  function getElementPos(\$el) {
+				// returns an object with the element position
+				return {
+						x: parseFloat(\$el.attr("x")),
+						width: parseFloat(\$el.attr("width")),
+						y: parseFloat(\$el.attr("y")),
+						height: parseFloat(\$el.attr("height"))
+				}
+	  	}
+		  function addTextNode(attrs, text, _element) {
+							// creates an svg text node
+          var sNamespace = "http://www.w3.org/2000/svg";
+					var el = document.createElementNS(sNamespace, "text");
+					for (var k in attrs) { el.setAttribute(k, attrs[k]); }
+					var textNode = document.createTextNode(text);
+					el.appendChild(textNode);
+					return el;
+	  	}
+      function addTextLink(attrs, text,pep, _element) {
+              // creates an svg text node
+          var el = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          for (var k in attrs) { el.setAttribute(k, attrs[k]); }
+          var textNode = document.createTextNode(text);
+          var plink = document.createElementNS("http://www.w3.org/2000/svg", 'a');
+          plink.setAttributeNS('http://www.w3.org/1999/xlink',
+                               'xlink:href', 
+                               "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Sequence&searchForThis="+pep+"&apply_action=QUERY"
+                               );
+          plink.appendChild(textNode);
+          el.appendChild(plink);
+          return el;
+
+
+      }
+
+  </script>
+  <div id="chart_ptm" style="width:1000px;height:420px;overflow:auto;position:relative;"></div>
+  <br>
+  </table>
+  ~;
+  return $chart_div;
+}
 
 1;
 

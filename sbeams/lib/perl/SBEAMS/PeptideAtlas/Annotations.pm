@@ -502,6 +502,22 @@ sub get_column_defs {
     'N Yeast Mapping', => 'Number of Yeast protein mapping, including SwissProt, SGD and Ensembl Proteins',
     'Probability threshold'	=> 'iProphet probability threshold applied to build',
     'Canonical Proteins' => 'Minimally redunant set of proteins required to explain (virtually) all non-decoy peptides observed in build',
+
+    'Offset' => 'Residue offset in the protein.', 
+    'Residue' =>'' , 
+    'nObs' => 'Total observed PTM spectra for the site.',
+    'One_site' => 'The containing peptides have only one observed PTM site.', 
+    'Two_sites' => 'The containing peptides have two observed PTM sites.', 
+    'Over_two_sites' => 'The containing peptides have more than two observed PTM sites.',
+    'nP01' => 'PTMProphet probability < 0.01', 
+    'nP05' => 'PTMProphet probability >= 0.01 and < 0.05', 
+    'nP19' => 'PTMProphet probability >= 0.05 and < 0.19', 
+    'nP81' => 'PTMProphet probability >= 0.19 and < 0.81', 
+    'nP95' => 'PTMProphet probability >= 0.81 and < 0.95 ', 
+    'nP99' => 'PTMProphet probability >= 0.95 and < 0.99 ', 
+    'nP100' => 'PTMProphet probability >= 0.99', 
+    'InNextProt' => 'PTM site annotated in neXtprot',
+    'InUniprot' => 'PTM site annotated in Uniprot',
     );
 
   if ( $args{labels} ) {

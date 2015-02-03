@@ -1394,6 +1394,64 @@ sub handle_request {
     }
     LABEL:
   }
+
+  #############################################################
+  # PTM
+
+  my $ptm_sql = qq~
+    SELECT biosequence_name,offset,residue,nObs,one_site,two_sites,over_two_sites,
+           nP01,nP05,nP19,nP81,nP95,nP99,nP100,isInNextProt,isInUniprot,most_observed_ptm_peptide
+    FROM $TBAT_PTM_SUMMARY PS 
+    JOIN $TBAT_BIOSEQUENCE BS ON (PS.BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID) 
+    WHERE BS.BIOSEQUENCE_NAME = '$protein_name'  
+    AND PS.ATLAS_BUILD_ID = $atlas_build_id 
+  ~;
+
+  my @ptm_results = $sbeams->selectSeveralColumns ($ptm_sql);
+  if(@ptm_results){
+		my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_ptm_summary',
+																									visible => 1,
+																									tooltip => 'Show/Hide Section',
+																									imglink => 1,
+																									sticky => 1 );
+		my $ptm_header = $sbeamsMOD->encodeSectionHeader(
+														 text => "PTM Summary",
+														 link => $link );
+
+		print qq~ <TABLE width="600">$ptm_header</TABLE><TABLE><TR $tr><TD ALIGN=left></TD><TR $tr><TD COLSPAN=2>~ if $htmlmode;
+		my $GV = SBEAMS::Connection::GoogleVisualization->new();
+		my %data = ();
+    my @columns = ('Protein', 'Offset', 'Residue','nObs', 'One_site', 'Two_sites', 'Over_two_sites',
+                 'nP01', 'nP05', 'nP19', 'nP81', 'nP95', 'nP99', 'nP100', 'InNextProt','InUniprot','peptide');
+		foreach my $row  (@ptm_results){
+			my @vals = @$row;
+			$vals[1] = $vals[1] -1;
+			for my $i (2..$#vals){ 
+				$data{$vals[0]}{$vals[1]}{$columns[$i]} = $vals[$i];
+			}
+		}
+		my $ptm_summary_chart = $GV->drawPTMHisChart_Protein(data=> \%data,
+                                                       protein=>$protein_name, 
+                                                  atlas_build_id => $atlas_build_id,
+                                                       seq=>$biosequence->{biosequence_seq});
+    my $PTM_table_Display = $sbeamsMOD->getPTMTableDisplay( cols => \@columns,
+                                                           data => \%data, 
+                                                  atlas_build_id => $atlas_build_id,
+                                                  biosequence_name => $protein_name, 
+                                                          'link' => $link,
+                                                     rows_to_show => 10,
+                                                         max_rows => 500,
+                                                         tr_info => $tr );
+    shift @columns;
+    pop @columns;
+    my $col_defs = $sbeamsMOD->get_column_defs( labels => \@columns );
+    my $ptm_table_help = $sbeamsMOD->make_table_help( entries => $col_defs,
+                                                    description => '');
+    print "$ptm_summary_chart \n$ptm_table_help<TABLE width='600'>$PTM_table_Display</TABLE><BR>" if $htmlmode;
+
+
+  }
+
   #############################################################
   # Widget to allow show/hide of observed peptides section
   my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_observedlist',
@@ -1408,8 +1466,6 @@ sub handle_request {
   my $col_defs = $sbeamsMOD->get_column_defs( labels => \@labels );
   my $obs_help = $sbeamsMOD->make_table_help( entries => $col_defs,
                                             description => 'Observed peptides mapping to subject protein' );
-
-
 
 
     my $observed_header = $sbeamsMOD->encodeSectionHeader(
