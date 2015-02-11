@@ -619,6 +619,7 @@ sub print_form {
         input_types_ref=>\%input_types,
         mask_user_context=> '1',
         mask_query_constraints => 1,
+        apply_uc_first => 1
     );
     my $form = $sbeams->fetchSTDOUT();
 #      <TD><SELECT NAME="pabst_build_id" >
@@ -666,16 +667,16 @@ sub print_form {
 #    $form =~ s/(\<INPUT TYPE="hidden" NAME="QUERY_NAME" VALUE="AT_GetPABSTList"\>)/$1<BR>$sub_form/gm;
 #    $form =~ s/\<\/TABLE\>/<TR><TD COLSPAN=3> $sub_form<\/TD><\/TR><\/TABLE>/i;
 #    $form .= "<TR><TD COLSPAN=3>$sub_form</TD></TR>\n";
-    my $change_help = mk_help_link( title => 'Pabst Parameters', text => 'Adjust PABST peptide parameters to fine-tune peptide list (advanced)' );
-    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Adjust weights:</B></TD>$change_help<TD>$link$sub_form $parameters{apply_action_hidden}</TD></TR> ~;
+    my $change_help = mk_help_link( title => 'Pabst Parameters', text => 'Adjust PABST peptide parameters to refine peptide list (advanced)' );
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Adjust Weights:</B></TD>$change_help<TD>$link$sub_form $parameters{apply_action_hidden}</TD></TR> ~;
 
 
     my $cmod_select = get_cmod_select( $parameters{cmod_mass} );
-    my $cmod_help = mk_help_link( title => 'Heavy Label', text => 'Fetch heavy-labeled (or light, if source data is heavy) versions of selected peptides' );
-    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Heavy label:</B></TD>$cmod_help<TD>$cmod_select</TD></TR> ~;
+    my $cmod_help = mk_help_link( title => 'Heavy Label', text => 'Fetch heavy-labeled (or light, if source data is heavy) versions of selected peptides. Use ctrl-shift for multiple options.' );
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Heavy Label:</B></TD>$cmod_help<TD>$cmod_select</TD></TR> ~;
 
     my $cmod_radio = get_cmod_radio( $parameters{cmod_opts} );
-    my $cmod_help = mk_help_link( title => 'Heavy/Light Peptides', text => 'Calculate heavy transitions, heavy and light, or only light.  Only relevant if one or more heavy label options are selected.' );
+    my $cmod_help = mk_help_link( title => 'Heavy/Light Peptides', text => 'Calculate heavy transitions, light and heavy (L & H), or only light.  Only relevant if one or more heavy label options are selected.' );
 
     $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Labeled Transitions:</B></TD>$cmod_help<TD NOWRAP><DIV class=nowrap_clear_info_box>$cmod_radio &nbsp;</DIV></TD></TR> ~;
 
@@ -693,12 +694,12 @@ sub print_form {
     my $splinks_chk = ( $parameters{speclinks} ) ? 'checked' : 'checked';
 
     my $spec_help = mk_help_link( title => 'Spectra Link Display', text => 'Show links to various spectra in results' );
-    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Show spectral links</B></TD>$spec_help<TD><INPUT TYPE=CHECKBOX NAME=speclinks SIZE=10 $splinks_chk></INPUT></TD></TR> ~;
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Show Spectral Links</B></TD>$spec_help<TD><INPUT TYPE=CHECKBOX NAME=speclinks SIZE=10 $splinks_chk></INPUT></TD></TR> ~;
     
 
     my $rt_help =  "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Select type of RT value to show in results'</TD>";
 
-    my $rt_help = mk_help_link( title => 'Elution Time', text => 'Select RT values to show in results' );
+    my $rt_help = mk_help_link( title => 'Elution Time', text => 'Select retention time values to show in results' );
     $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Elution Time Type</B></TD>$rt_help<TD>$rt_select</INPUT></TD></TR> ~;
     $form .= $ion_filters;
     $form .= $mod_filters;
@@ -817,7 +818,7 @@ sub get_mod_filters {
     }
   }
 
-  my $mods_help = mk_help_link( title => 'Allowed Modifications', text => 'Checking options will allow peptides containing specified modification(s) in SRM list' );
+  my $mods_help = mk_help_link( title => 'Allowed Modifications', text => 'Checking options will allow peptides containing specified modification(s) in SRM transition list' );
 
   my $checks = qq~
     <DIV class=clear_info_box>
@@ -854,7 +855,7 @@ sub get_mod_filters {
   ~;
 
   my $filter_element = qq~
-  <TR><TD VALIGN=TOP NOBR><B>Allowed peptide modifications:</B></TD>$mods_help<TD>$checks</TD></TR> 
+  <TR><TD VALIGN=TOP NOBR><B>Allowed Peptide Modifications:</B></TD>$mods_help<TD>$checks</TD></TR> 
   ~;
   return $filter_element;
 }
@@ -876,7 +877,7 @@ sub get_multimap_filters {
   $names{results} = 'checked' unless $multimap_set;
 
 
-  my $help = mk_help_link( title => 'Peptide Mapping Filter', text => 'Limit peptides that map to multiple proteins - Allow all does not limit the list, unique to results ensures that a particular peptide is shown only once in a given set of results, and no multi-mapping keeps out any peptides that map to more than one peptide in the targeted namespace' );
+  my $help = mk_help_link( title => 'Peptide Mapping Filter', text => 'Limit peptides that map to multiple proteins - Allow all does not limit the list, Unique in results ensures that a particular peptide is shown only once in a given set of results, and No multi-mapping keeps out any peptides that map to more than one peptide in the targeted namespace' );
       
   my $checks = "$help<TD><DIV class=nowrap_clear_info_box >";
 	my %name2param = ('Allow all' => 'all', 'Unique in results' => 'results', 'No multi-mapping' => 'global' );
@@ -895,7 +896,7 @@ sub get_namespace_filters {
   # Only Mouse/Human currently have hybrid reference databases
   return '' unless ( $opts{organism} );
 
-  my $help = mk_help_link( title => "Accession Namespace", text => "Select protein accession namespace(s) in which to search. Can help limit redundancies." );
+  my $help = mk_help_link( title => "Accession Namespace", text => "Select protein accession namespace(s) in which to search. Can help to limit redundancies." );
 
   my $js = qq~
     <script type=text/javascript>
@@ -967,7 +968,7 @@ sub get_ion_filters {
     $n_loss_ions = ( $opts{n_loss_ions} ) ? 'checked' : '';
   }
 
-  my $ions_help = mk_help_link( title => 'Ion Types', text => 'Checking options will allow that ion type in the SRM list' );
+  my $ions_help = mk_help_link( title => 'Ion Types', text => 'Checking options will allow that ion type in the SRM transition list' );
   my $b_ions_chk = "<INPUT TYPE=checkbox NAME=b_ions $b_ions></INPUT>";
   my $y_ions_chk = "<INPUT TYPE=checkbox NAME=y_ions $y_ions></INPUT>";
   my $n_loss_chk = "<INPUT TYPE=checkbox NAME=n_loss_ions $n_loss_ions></INPUT>";
@@ -976,7 +977,7 @@ sub get_ion_filters {
   my $checks = "<DIV class=clear_info_box>$y_ions_chk y ions $space $b_ions_chk b ions $space $n_loss_chk Neutral-loss ions</DIV>\n";
 
   my $filter_element = qq~
-  <TR><TD VALIGN=TOP NOBR><B>Allowed ion types:</B></TD>$ions_help<TD>$checks</TD></TR> 
+  <TR><TD VALIGN=TOP NOBR><B>Allowed Ion Types:</B></TD>$ions_help<TD>$checks</TD></TR> 
   ~;
 #  <TR><TD VALIGN=TOP NOBR></TD><TD></TD><TD>b ions $b_ions_chk</TD></TR>
 #  <TR><TD VALIGN=TOP NOBR></TD><TD></TD><TD>Neutral-loss ions $n_loss_chk</TD></TR>
