@@ -4927,6 +4927,18 @@ sub display_input_form {
       $new_name =~ s/\$parameters{$1}/$tmp/g;
       $columns_data[$i]->[0] = $new_name;
     }
+    if ( $args{apply_uc_first} ) {
+      my @words;
+      for my $word ( split( /\s+/, $columns_data[$i]->[1] ) ) {
+        if ( $word =~ /^of$|^or$|^with$|^in$|^per$|^to$/i ) {
+          $word = lc( $word );
+        } else {
+          $word = ucfirst( $word );
+        }
+        push @words, $word;
+      }
+      $columns_data[$i]->[1] = join( ' ', @words );
+    }
   }
 
   # First just extract any valid optionlist entries.  This is done
