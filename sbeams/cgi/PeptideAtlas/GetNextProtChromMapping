@@ -147,13 +147,22 @@ sub handle_request {
   my %parameters = %{$ref_parameters};
 
   ### get current public build id
-  my $sql = qq~
-		SELECT atlas_build_id
-		FROM $TBAT_DEFAULT_ATLAS_BUILD
-		WHERE DEFAULT_ATLAS_BUILD_ID = 4
-  ~;
-  my @ids = $sbeams->selectOneColumn($sql);
-  my $atlas_build_id = $ids[0];
+  #my $sql = qq~
+	#	SELECT atlas_build_id
+	#	FROM $TBAT_DEFAULT_ATLAS_BUILD
+	#	WHERE DEFAULT_ATLAS_BUILD_ID = 4
+  #~;
+  #my @ids = $sbeams->selectOneColumn($sql);
+  #my $atlas_build_id = $ids[0];
+
+  #### Get the current atlas_build_id based on parameters or session
+  my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
+    parameters_ref => \%parameters,
+  );
+  if (defined($atlas_build_id) && $atlas_build_id < 0) {
+    return;
+  }
+  $parameters{atlas_build_id} = $atlas_build_id;
 
 
   #### Show current user context information
@@ -220,7 +229,6 @@ sub handle_request {
   #### Apply any parameter adjustment logic
   # None
 
-
   #### Display the user-interaction input form
   $sbeams->display_input_form(
     TABLE_NAME=>$TABLE_NAME,
@@ -249,8 +257,6 @@ sub handle_request {
 
   #########################################################################
   #### Process all the constraints
-
-
   my %protein_hash;
   if ( $parameters{upload_file} )
   {
@@ -479,7 +485,8 @@ sub evalSQL {
 ###############################################################################
 sub getResultset {
   my %args = @_;
-  my $file = "/net/db/projects/PeptideAtlas/pipeline/../species/Human/NextProt/mapping.txt";
+  my $atlas_build_id = $args{query_parameters_ref}->{atlas_build_id};
+  my $file = "/net/db/projects/PeptideAtlas/pipeline/../species/Human/NextProt/mapping-$atlas_build_id.txt";
   open (IN, "<$file");
 
   #### Process the arguments list
@@ -525,7 +532,7 @@ sub getResultset {
     %protein_hash = ();
   }
   #foreach my $key (keys %parameters){
-  #  print "$key <BR>";
+  #  print "$key $parameters{$key}<BR>";
   #}
 	#$parameters{strand_constraint} ;
   my $idx = 0;
