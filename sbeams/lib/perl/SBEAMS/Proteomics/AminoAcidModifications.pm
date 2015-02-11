@@ -44,6 +44,7 @@ sub new {
       'n[230]' => 229.162932,   # 6 plex
       'n[305]' => 304.199040,   # 8 plex
 
+      'A[85]'  => 14.01565,     # Methylation (Unimod) This may be a red herring
       'C[143]' => 39.994915,    # Pyro-carbamidonmethyl (Unimod)
       'C[148]' => 45.987721,    # Beta-methylthiolation (UniMod)
       'C[160]' => 57.021464,    # Carbamidomethyl (UniMod)Cys_CAM
@@ -67,9 +68,11 @@ sub new {
       'I[119]' => 6.020129,     # 13C(6) Silac label (Unimod)
       'L[116]' =>	3.018830 ,    #	D3_Label 
       'L[123]' => 10.062767,    # D10_Label 
+
       'K[132]' => 4.02511,	    # D4_Label
       'K[272]' => 144.102063,   # ABI iTRAQ (UniMod)
       'K[156]' => 28.031300,    # di-Methylation  (Unimod)
+      'K[300]' => 172.133363,   # ABI iTRAQ + di-Methylation
       'K[160]' => 32.056407,    # DiMethyl-CHD2   (Unimod)
       'K[164]' => 36.07567,     # DiMethyl-Heavy   (Unimod)
       'K[134]' =>	6.020129,     # Silac label (UniMod)
@@ -78,6 +81,7 @@ sub new {
       'K[357]' => 229.162932,   # 6 plex
       'K[432]' => 304.199040,   # 8 plex
       'K[467]' => 339.161662,   #	NHS-LC-Biotin 
+
       'L[119]' => 6.020129,     # 13C(6) Silac label (Unimod)
       'L[120]' => 7.017164,     # 13C(6)15N(1) Silac label (Unimod)
       'M[147]' => 15.994915,    # Oxidation (UniMod)
@@ -135,6 +139,7 @@ sub new {
       'K[134]' =>	5.9559,     # Silac label (UniMod)
       'K[136]' => 7.9427,     # Silac label (UniMod)
       'K[156]' => 28.0532,    # di-Methylation (Unimod)
+      'K[300]' => 172.2076,   # ABI iTRAQ + di-Methylation
       'K[160]' => 32.0778,    # DiMethyl-CHD2  (Unimod)
       'K[164]' => 36.0754,    # DiMethyl-Heavy  (Unimod)
       'K[357]' => 229.2634,   # 6 plex
