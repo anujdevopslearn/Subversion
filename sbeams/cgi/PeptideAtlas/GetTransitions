@@ -694,13 +694,13 @@ sub print_form {
     my $splinks_chk = ( $parameters{speclinks} ) ? 'checked' : 'checked';
 
     my $spec_help = mk_help_link( title => 'Spectra Link Display', text => 'Show links to various spectra in results' );
-    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Show Spectral Links</B></TD>$spec_help<TD><INPUT TYPE=CHECKBOX NAME=speclinks SIZE=10 $splinks_chk></INPUT></TD></TR> ~;
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Show Spectral Links:</B></TD>$spec_help<TD><INPUT TYPE=CHECKBOX NAME=speclinks SIZE=10 $splinks_chk></INPUT></TD></TR> ~;
     
 
     my $rt_help =  "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Select type of RT value to show in results'</TD>";
 
     my $rt_help = mk_help_link( title => 'Elution Time', text => 'Select retention time values to show in results' );
-    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Elution Time Type</B></TD>$rt_help<TD>$rt_select</INPUT></TD></TR> ~;
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Elution Time Type:</B></TD>$rt_help<TD>$rt_select</INPUT></TD></TR> ~;
     $form .= $ion_filters;
     $form .= $mod_filters;
 
