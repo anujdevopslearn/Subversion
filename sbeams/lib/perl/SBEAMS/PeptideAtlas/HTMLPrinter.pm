@@ -629,7 +629,7 @@ sub encodeSectionHeader {
 #        <TR><TD colspan="2" background="$HTML_BASE_DIR/images/fade_orange_header_2.png" width="600">$link<font color="white">$anchor$text</font></TD></TR>
 #        <TR><TD colspan="2" class=fade_header width="600">$link<font color="white">$anchor$text</font></TD></TR>
   my $buffer = qq~
-        <TR><TD colspan="2" style="background-repeat: no-repeat; background-image: url('$HTML_BASE_DIR/images/fade_orange_header_2.png'" width="600">$link<font color="white">$anchor$text</font></TD></TR>
+        <TR><TD colspan="2" style="background-repeat: no-repeat; background-image: url('$HTML_BASE_DIR/images/fade_orange_header_2.png')" width="600">$link<font color="white">$anchor$text</font></TD></TR>
 ~;
 
   return $buffer;
