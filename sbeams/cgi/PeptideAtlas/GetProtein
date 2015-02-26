@@ -1142,7 +1142,7 @@ sub handle_request {
 	  AND PIA.record_status != 'D'
     WHERE 1 = 1
           AND AB.atlas_build_id IN ( $atlas_build_id )
-	  AND BS.biosequence_id = $biosequence_id
+					AND BS.biosequence_id = $biosequence_id
 	  $group_by_clause
     ORDER BY P.peptide_accession
   ~;
@@ -1187,7 +1187,6 @@ sub handle_request {
         query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
       );
     }
-
 
     #### Get protein structure information
     my $protein_structure = getProteinStructure(
@@ -2205,8 +2204,12 @@ sub get_sequence_graphic {
     my $acc  =  $row->[0];
     my $seq  =  $row->[1];
 
+    my $val = 0;
+    if ($row->[5]){
+      $val = log($row->[5]);
+    }
     my $score = ( $row->[2] > 1 ) ? 0 : 
-                ( $row->[5] <= $threshold ) ? (log($row->[5])/$lten) + 0.3 : $max;
+                ( $row->[5] <= $threshold ) ? ($val/$lten) + 0.3 : $max;
 
     my $start =  $row->[3];
     my $stop  =  $row->[4];

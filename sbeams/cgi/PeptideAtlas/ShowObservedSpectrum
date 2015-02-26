@@ -19,7 +19,7 @@ use FindBin;
 
 use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($q $sbeams $sbeamsMOD $PROG_NAME
-             $current_username $massCalculator );
+             $current_username $massCalculator $TESTONLY $VERBOSE );
 
 use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
@@ -33,6 +33,7 @@ use SBEAMS::PeptideAtlas::PeptideFragmenter;
 use SBEAMS::Proteomics::PeptideMassCalculator;
 #$massCalculator = new SBEAMS::Proteomics::PeptideMassCalculator;
 use SBEAMS::Proteomics::SpecViewer;
+use SBEAMS::PeptideAtlas::ProtInfo;
 
 use File::Basename;
 
@@ -97,13 +98,31 @@ sub processDatabaseActions {
 
     my $apply_action  = $q->param('apply_action');
 
+    my $prot_info = new SBEAMS::PeptideAtlas::ProtInfo;
+    $VERBOSE = 0;
+    $TESTONLY = 0;
+		$prot_info->setSBEAMS($sbeams);
+		$prot_info->setVERBOSE($VERBOSE);
+		$prot_info->setTESTONLY($TESTONLY);
+
+    ## get original value 
+    my $orig_spectrum_annotation_level = 0; 
+    if($parameters{spectrum_annotation_id}){
+      my $spectrum_annotation_id = $parameters{spectrum_annotation_id};
+      my $sql = qq~ 
+        SELECT max(spectrum_annotation_level_id)
+        FROM $TBAT_SPECTRUM_ANNOTATION 
+        WHERE spectrum_annotation_id = $spectrum_annotation_id
+      ~;
+      my @result = $sbeams->selectOneColumn($sql);
+      $orig_spectrum_annotation_level = $result[0];
+    }
     if ($apply_action eq "UPDATE ANNOTATION") {
-	my %rowdata = (
+			my %rowdata = (
 		       spectrum_annotation_level_id => $parameters{user_spectrum_annotation},
 		       comment => $parameters{user_spectrum_commment}
 		       );
-
-	my $PK = $sbeams->updateOrInsertRow(
+			my $PK = $sbeams->updateOrInsertRow(
 					    update => 1,
 					    table_name => $TBAT_SPECTRUM_ANNOTATION,
 					    rowdata_ref => \%rowdata,
@@ -113,13 +132,26 @@ sub processDatabaseActions {
 					    add_audit_parameters => 1
 					    );
 
-	if ($PK) { $sbeams->set_page_message( type => 'Info',  msg => "Your annotation record has been updated." ); }
-	else     { $sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem updating your annotation record." ); }
+			if ($PK) { 
+        my $action = '';
+        if ($orig_spectrum_annotation_level <= 2 && $parameters{user_spectrum_annotation} > 2 ){
+				  $action = 'remove';
+        }elsif($orig_spectrum_annotation_level > 2 && $parameters{user_spectrum_annotation} <= 2 ){
+           $action = 'add';
+        }
+        if($action){
+					$prot_info -> update_protInfo (
+						spectrum_annotation_id => $parameters{spectrum_annotation_id}, 
+						atlas_build_id=>$parameters{atlas_build_id},
+						action => $action);
+        }
+        $sbeams->set_page_message( type => 'Info',  msg => "Your annotation record has been updated." ); 
+      }
+			else     { $sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem updating your annotation record." ); }
 
-	$redirect++;
-
+			$redirect++;
     } elsif ($apply_action eq "ADD ANNOTATION") {
-	my %rowdata = (
+			my %rowdata = (
 		       annotator_contact_id => $sbeams->getCurrent_contact_id(),
 		       spectrum_identification_id => $parameters{spectrum_identification_id},
 		       spectrum_id => $parameters{spectrum_id},
@@ -129,7 +161,7 @@ sub processDatabaseActions {
 		       comment => $parameters{user_spectrum_commment}
 		       );
 
-	my $PK = $sbeams->updateOrInsertRow(
+			my $PK = $sbeams->updateOrInsertRow(
 				   insert => 1,
 				   table_name => $TBAT_SPECTRUM_ANNOTATION,
 				   rowdata_ref => \%rowdata,
@@ -137,17 +169,26 @@ sub processDatabaseActions {
 				   add_audit_parameters => 1
 				   );
 
-	if ($PK) { $sbeams->set_page_message( type => 'Info',  msg => "Your annotation record has been added." ); }
-	else     { $sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem inserting your annotation record." ); }
+			if ($PK) { 
+        if ($parameters{user_spectrum_annotation} > 2 ){
+					$prot_info -> update_protInfo (
+						spectrum_annotation_id => $PK,
+						atlas_build_id=>$parameters{atlas_build_id},
+						action => 'remove',
+          );
+        }
+        $sbeams->set_page_message( type => 'Info',  msg => "Your annotation record has been added." ); 
+      }
+			else     { $sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem inserting your annotation record." ); }
 
-	$redirect++;
+			$redirect++;
 
     } elsif ($apply_action eq "DELETE ANNOTATION") {
-	my %rowdata = (
+			my %rowdata = (
 		       record_status => 'D'
 		       );
 
-	my $PK = $sbeams->updateOrInsertRow(
+			my $PK = $sbeams->updateOrInsertRow(
 					    update => 1,
 					    table_name => $TBAT_SPECTRUM_ANNOTATION,
 					    rowdata_ref => \%rowdata,
@@ -157,17 +198,28 @@ sub processDatabaseActions {
 					    add_audit_parameters => 1
 					    );
 
-	if ($PK) { $sbeams->set_page_message( type => 'Info',  msg => "Your annotation record has been deleted." ); }
-	else     { $sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem deleting your annotation record." ); }
+			if ($PK) { 
+        ## annotation has low value, need to add back obs
+        if ($orig_spectrum_annotation_level > 2){
+					$prot_info -> update_protInfo (
+						spectrum_annotation_id => $PK,
+						atlas_build_id=>$parameters{atlas_build_id},
+						action => 'add',
+					);
+        }
+        $sbeams->set_page_message( type => 'Info',  msg => "Your annotation record has been deleted." ); 
+      }
+			else     { $sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem deleting your annotation record." ); }
 
-	$redirect++;
-    }
+			$redirect++;
 
-    if ($redirect) {
-	$q->delete( 'apply_action' );
-	print $q->redirect( $q->self_url() );
-	exit;
-    }
+		}
+
+		if ($redirect) {
+			$q->delete( 'apply_action' );
+			print $q->redirect( $q->self_url() );
+			exit;
+		}
 
 }
 

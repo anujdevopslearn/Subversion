@@ -176,6 +176,7 @@ sub getBestPeptides {
     my $peptide_sequence = $resultset_ref->{data_ref}->[$i]->[$cols->{peptide_sequence}];
 
     my @annot; # array of sequence annotations
+    next if(! $n_observations);
 
     # removed p=1.0 fudge factor 2008-11-04 as per EWD.
     # $best_probability += 0.03 if ($best_probability == 1.000);

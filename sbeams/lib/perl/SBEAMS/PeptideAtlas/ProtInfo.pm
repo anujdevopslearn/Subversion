@@ -201,6 +201,8 @@ sub loadBuildProtInfo {
       next;
     }
 
+    $level_name =~ s/\s+from.*//;
+
     my $inserted = $self->insertProteinIdentification(
        atlas_build_id => $atlas_build_id,
        biosequence_name => $biosequence_name,
@@ -779,8 +781,8 @@ sub get_preferred_protid_from_list {
     }
     for $protid (@protid_list) {
       print "  Checking $protid vs. $pattern\n" if ($debug);
-      if (($protid =~ /$pattern/) && ($protid !~ /UNMAPPED/)) {
-	return $protid;
+      if (($protid =~ /$pattern/) && ($protid !~ /UNMAPPED/) && ($protid !~ /DECOY/)) {
+	      return $protid;
       }
     }
   }
@@ -883,6 +885,8 @@ sub more_likely_protein_identification {
   my $protid1 = $args{'protid1'};
   my $protid2 = $args{'protid2'};
   return $protid1 if ($protid1 eq $protid2);
+#  return $protid1 if ($protid2 =~ /DECOY/);
+#  return $protid2 if ($protid1 =~ /DECOY/);
   my $swiss_prot_overrides_all_else = 1;  #added 12/27/12
 
   # Note that if no hash of Swiss-Prot idents is provided,
@@ -993,6 +997,8 @@ sub get_swiss_prot_species {
     return "ECOLI";
   } elsif ($genus_species =~ /rattus.*norvegicus/i) {
     return "RAT";
+  } elsif ($genus_species =~ /(danio.*rerio|zebrafish)/){
+    return "DANRE";
   } else {
     return "";
   }
@@ -1192,12 +1198,184 @@ sub get_all_idents_in_build {
 
 }
 
+#############################################################################
+###  Update_protInfo when spectrum annotation update
+#############################################################################
+sub update_protInfo{
+  my $METHOD = 'update_protInfo';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+  my $atlas_build_id = $args{atlas_build_id} || die "need atlas_build_id\n";
+  my $action = $args{action} || die "need action term\n"; 
+  my $spectrum_annotation_id = $args{spectrum_annotation_id} || die "need spectrum_annotation_id\n";;
 
+  my $sql = qq~
+    SELECT 	BS.BIOSEQUENCE_NAME,
+            PRI.PROTEIN_IDENTIFICATION_ID,
+            PRI.PRESENCE_LEVEL_ID, 
+						PRI.N_OBSERVATIONS,
+						PRI.N_DISTINCT_PEPTIDES, 
+						PI.PEPTIDE_INSTANCE_ID,
+						PI.N_OBSERVATIONS
+		FROM $TBAT_SPECTRUM_ANNOTATION SA
+		JOIN $TBAT_SPECTRUM_IDENTIFICATION SI ON (SA.SPECTRUM_IDENTIFICATION_ID = SI.SPECTRUM_IDENTIFICATION_ID)
+		JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI ON (SI.MODIFIED_PEPTIDE_INSTANCE_ID = MPI.MODIFIED_PEPTIDE_INSTANCE_ID)
+		JOIN $TBAT_PEPTIDE_INSTANCE PI ON (PI.PEPTIDE_INSTANCE_ID = MPI.PEPTIDE_INSTANCE_ID)
+		JOIN $TBAT_PEPTIDE_MAPPING PM ON (PM.PEPTIDE_INSTANCE_ID = PI.PEPTIDE_INSTANCE_ID)
+		JOIN $TBAT_BIOSEQUENCE BS ON (BS.BIOSEQUENCE_ID = PM.MATCHED_BIOSEQUENCE_ID )
+		JOIN $TBAT_PROTEIN_IDENTIFICATION PRI ON (PRI.BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID)
+		WHERE PRI.ATLAS_BUILD_ID = $atlas_build_id 
+         AND spectrum_annotation_id = $spectrum_annotation_id 
+  ~;
+  my @rows = $sbeams->selectSeveralColumns($sql);
+  my %peptide_instance_id = ();
+  foreach my $row(@rows){
+    my ($prot,$prot_id,$presence_level_id, $prot_n_obs,$prot_n_peps,$pi_id,$pep_n_obs) = @$row;
+    if ($action =~ /add/i){
+      $pep_n_obs++;
+      $prot_n_obs++;
+    }elsif($action =~ /remove/i){
+      $pep_n_obs--;
+      $prot_n_obs--;
+    }
+    if ($action =~ /add/i){
+      if($pep_n_obs == 1){
+        ## protein recovered if protein was rejected 
+        $presence_level_id = 13 if($presence_level_id == 12);
+      }
+    }elsif($action =~ /remove/i){
+      $prot_n_peps-- if(!$pep_n_obs);
+      ## protein rejected if prot_n_peps goes from 1 -> 0
+      $presence_level_id = 12 if(! $prot_n_peps);
+    }
+		my $rowdata = {n_observations => $pep_n_obs};
+		update_table (table_name => $TBAT_PEPTIDE_INSTANCE,
+										key => 'peptide_instance_id',
+										key_value => $pi_id,
+										rowdata_ref => $rowdata) if (! $peptide_instance_id{$pi_id});
+      
+    $rowdata = {presence_level_id => $presence_level_id};
+    ## update protein identification table
+    update_table( table_name => $TBAT_PROTEIN_IDENTIFICATION,
+									key => 'PROTEIN_IDENTIFICATION_ID',
+									key_value => $prot_id,
+									rowdata_ref => $rowdata);
+    $peptide_instance_id{$pi_id} = 1;
+  }
+}
+#############################################################################
+###  Update_protInfo_using_annotation
+#############################################################################
+sub update_protInfo_all_annotation {
+  my $METHOD = 'Update_protInfo_using_annotation';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+  my $atlas_build_id = $args{atlas_build_id} || die "need atlas_build_id\n";
+  my $sql = qq~
+    SELECT 	BS.BIOSEQUENCE_NAME, 
+            PRI.PROTEIN_IDENTIFICATION_ID, 
+						PRI.N_OBSERVATIONS,
+						PRI.N_DISTINCT_PEPTIDES, 
+            PRI.PRESENCE_LEVEL_ID,
+						PI.PEPTIDE_INSTANCE_ID,
+						PI.N_OBSERVATIONS, 
+						COUNT (SI.SPECTRUM_IDENTIFICATION_ID ) AS N_SPEC_REMOVED
+		FROM $TBAT_SPECTRUM_ANNOTATION SA
+		JOIN $TBAT_SPECTRUM_IDENTIFICATION SI ON (SA.SPECTRUM_IDENTIFICATION_ID = SI.SPECTRUM_IDENTIFICATION_ID)
+		JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI ON (SI.MODIFIED_PEPTIDE_INSTANCE_ID = MPI.MODIFIED_PEPTIDE_INSTANCE_ID)
+		JOIN $TBAT_PEPTIDE_INSTANCE PI ON (PI.PEPTIDE_INSTANCE_ID = MPI.PEPTIDE_INSTANCE_ID)
+		JOIN $TBAT_PEPTIDE_MAPPING PM ON (PM.PEPTIDE_INSTANCE_ID = PI.PEPTIDE_INSTANCE_ID)
+		JOIN $TBAT_BIOSEQUENCE BS ON (BS.BIOSEQUENCE_ID = PM.MATCHED_BIOSEQUENCE_ID )
+		JOIN $TBAT_PROTEIN_IDENTIFICATION PRI ON (PRI.BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID)
+		WHERE SA.SPECTRUM_ANNOTATION_LEVEL_ID > 2 AND SA.IDENTIFIED_PEPTIDE_SEQUENCE = MPI.MODIFIED_PEPTIDE_SEQUENCE
+		AND PRI.ATLAS_BUILD_ID = $atlas_build_id 
+		AND SA.RECORD_STATUS  != 'D'
+    GROUP BY PRI.PROTEIN_IDENTIFICATION_ID,
+            PRI.N_OBSERVATIONS,
+            PRI.N_DISTINCT_PEPTIDES,
+            PI.PEPTIDE_INSTANCE_ID,
+            PI.N_OBSERVATIONS,
+            PRI.PRESENCE_LEVEL_ID,
+            BS.BIOSEQUENCE_NAME 
+    ORDER BY PRI.PROTEIN_IDENTIFICATION_ID 
+  ~;
+  my @rows = $sbeams->selectSeveralColumns($sql);
+  my %peptide_instance_id = ();
+  my $pre_prot_id = '';
+  my $pre_prot = '';
+  my $pre_presence_level_id ='';
+  my $new_prot_n_peps;
+  my $new_prot_n_obs;
+  foreach my $row(@rows){
+    my ($prot,$prot_id,$prot_n_obs,$prot_n_peps,$presence_level_id,$pi_id,$pep_n_obs,$n_spec_removed) = @$row;
+    if ($prot_id ne $pre_prot_id){
+      if ($pre_prot_id ne ''){
+        if (! $new_prot_n_peps ){
+          $pre_presence_level_id = 12;
+        }
+        #print "$pre_prot, $new_prot_n_obs,$new_prot_n_peps, $pre_presence_level_id\n";
+        my $rowdata = { presence_level_id => $pre_presence_level_id };
+        ## update protein identification table
+        update_table( table_name => $TBAT_PROTEIN_IDENTIFICATION,
+											key => 'protein_identification_id',
+											key_value => $pre_prot_id,
+											rowdata_ref => $rowdata);
+     }
+     $new_prot_n_peps = $prot_n_peps;
+     $new_prot_n_obs = $prot_n_obs;
+   }
+		$pep_n_obs -= $n_spec_removed;
+		$new_prot_n_obs -= $n_spec_removed;
+		if (! $pep_n_obs ){
+			$new_prot_n_peps--;
+		}
+		## update peptide n_obs 
+		my $rowdata = {n_observations => $pep_n_obs };
+		update_table (table_name => $TBAT_PEPTIDE_INSTANCE,
+									key => 'peptide_instance_id',
+									key_value => $pi_id,
+									rowdata_ref => $rowdata) if (! $peptide_instance_id{$pi_id});
+    $peptide_instance_id{$pi_id} = 1;
+		$pre_prot_id = $prot_id;
+		$pre_prot = $prot;
+		$pre_presence_level_id = $presence_level_id;
+  }
+  if (! $new_prot_n_peps ){
+    $pre_presence_level_id = 12;
+  }
+  my $rowdata = { presence_level_id => $pre_presence_level_id };
+
+  update_table( table_name => $TBAT_PROTEIN_IDENTIFICATION,
+                key => 'protein_identification_id',
+                key_value => $pre_prot_id,
+                rowdata_ref => $rowdata);
+
+}
+
+sub update_table {
+  my %args = @_;
+  my $rowdata_ref = $args{rowdata_ref};
+  my $key_value = $args{key_value};
+  my $key = $args{key};
+  my $table_name = $args{table_name};
+
+	my $PK = $sbeams->updateOrInsertRow(
+			update => 1,
+			table_name => $table_name, 
+			rowdata_ref => $rowdata_ref,
+			PK => $key, 
+			PK_value => $key_value,
+			return_PK => 1,
+			verbose=>$VERBOSE,
+			testonly=>$TESTONLY,
+	);
+}
 =head1 BUGS
 
 Please send bug reports to SBEAMS-devel@lists.sourceforge.net
 
 =head1 AUTHOR
+
 
 Terry Farrah (tfarrah@systemsbiology.org)
 
