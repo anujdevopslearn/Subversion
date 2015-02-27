@@ -4143,6 +4143,11 @@ sub renderProteinAccessionAndStatus {
       $statusMessage = "The status '$identification_status' means that although there are peptides that map to this protein $biosequence->{biosequence_name}, all peptides can be explained by $specificProteinMessage some independent evidence. This protein is not part of our overall parsimonious protein count. Still, peptides from this protein may have been measured, but PeptideAtlas has no independent evidence that this is so.";
       $identification_status =~ s/$relatedAccession/<a href="$base_url?action=QUERY&protein_name=$relatedAccession">$relatedAccession<\/a>/ if ($1);
 
+    } elsif ($identification_status =~ /indistinguishable representative/) {
+      my $specificProteinMessage = "considered the leader of a group of proteins that are indistinguishable";
+      $statusColor = "green";
+      $statusMessage = "The status '$identification_status' means that there are peptides that map uniquely to a set of non-canonical proteins, thereby indicating that at least one of the proteins in the set must be present, but it cannot be determined which it is. The protein most highly regarded by UniProt (i.e. lowest PE value, lowest accession number) is selected as the '$identification_status' and the others are either indistinguishable or subsumed. For example, if PE=1 protein P12345 and PE=2 P12999 both shared the exact same 5 peptides, but were sequence distinct, P12345 would be '$identification_status' and P12999 would be indistinguishable.";
+
     } elsif ($identification_status =~ /indistinguishable from (.*)$/) {
       my $specificProteinMessage = "another protein entry with a different sequence, to which PeptideAtlas has assigned these peptides";
       $specificProteinMessage = "$1, which has a different sequence than this one, and to which PeptideAtlas has assigned these peptides" if ($1);
@@ -4155,7 +4160,31 @@ sub renderProteinAccessionAndStatus {
       $statusColor = "red";
       $statusMessage = "The status '$identification_status' means that although there are peptides that map to this protein $biosequence->{biosequence_name}, all peptides also map to $specificProteinMessage. PeptideAtlas has selected the other protein as the representative. Thus this protein is not part of our overall parsimonious protein count. It is merely another accession number for the same sequence.";
 
+    } elsif ($identification_status =~ /weak/) {
+      my $specificProteinMessage = "there are fewer proteotypic peptides than is desirable to call this protein canonical";
+      $statusColor = "orange";
+      $statusMessage = "The status '$identification_status' means that there are fewer distinct proteotypic peptides than are desirable to call this protein canonical.";
+
+    } elsif ($identification_status =~ /insufficient evidence/) {
+      my $specificProteinMessage = "all proteotypic peptides are of insufficient length to feel confident that they truly indicative that this protein has been detected";
+      $statusColor = "red";
+      $statusMessage = "The status '$identification_status' means that all apparent supporting proteotypic peptides have insufficient length to be confident that they could not be explained by unconsidered variation in the human proteome.";
+
+    } elsif ($identification_status =~ /rejected/) {
+      my $specificProteinMessage = "all supporting spectra were manually rejected, leaving no supporting evidence";
+      $statusColor = "red";
+      $statusMessage = "The status '$identification_status' means that all spectra that provided supporting evidence for this protein were rejected via manual inspection. As result, there is no credible evidence to suppose that this protein has been detected in PeptideAtlas. The rejected peptides and spectra may still be visible for inspection.";
+
+    } elsif ($identification_status =~ /recovered/) {
+      my $specificProteinMessage = "temporary status for a protein that was onec rejected but was since manually recovered";
+      $statusColor = "red";
+      $statusMessage = "The status '$identification_status' means that this protein was previously rejected manually due to inconclusive spectra, but was then later recovered. This is a transient status that should not stay for long.";
+
     } elsif ($identification_status =~ /possibly_distinguished/) {
+      $statusColor = "orange";
+      $statusMessage = "The status '$identification_status' means that this protein has peptides that are shared with a canonical peptide, but it also has a small number of peptides that appear to distinguish it from the canonical identification. However, since there are some false positives in PeptideAtlas and the reference sequences may not be annotated completely or correctly, we conservatively call this similar protein possibly distinguished from the canonical entry. Because of the shared peptides with another protein, this protein is not part of our overall parsimonious protein count.";
+
+    } elsif ($identification_status =~ /marginally distinguished/) {
       $statusColor = "orange";
       $statusMessage = "The status '$identification_status' means that this protein has peptides that are shared with a canonical peptide, but it also has a small number of peptides that appear to distinguish it from the canonical identification. However, since there are some false positives in PeptideAtlas and the reference sequences may not be annotated completely or correctly, we conservatively call this similar protein possibly distinguished from the canonical entry. Because of the shared peptides with another protein, this protein is not part of our overall parsimonious protein count.";
 
