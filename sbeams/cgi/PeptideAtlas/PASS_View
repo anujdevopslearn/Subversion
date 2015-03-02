@@ -272,7 +272,7 @@ sub handle_request {
   my $isAdmin = 0;
   if ($datasetIdentifier) {
     $datasetMetadata = getPASSMetaData(identifier=>$datasetIdentifier);
-    if ($datasetMetadata->{result} eq 'Success' && $emailAddress eq $datasetMetadata->{emailAddress}) {
+    if ($datasetMetadata->{result} eq 'Success' && uc($emailAddress) eq uc($datasetMetadata->{emailAddress})) {
       $isOwner = 1;
       $isAccessible = 1;
     } elsif ($parameters{datasetPassword} && $datasetMetadata->{datasetPassword} eq $parameters{datasetPassword}) {
@@ -303,7 +303,7 @@ sub handle_request {
   #### If the desired action was to finalize the dataset
   if ($action eq "FINALIZE" && ! @errors ) {
     if ( ( $authentication->{result} eq 'Success' &&
-           $emailAddress eq $datasetMetadata->{emailAddress} ) || $isAdmin) {
+           uc($emailAddress) eq uc($datasetMetadata->{emailAddress}) ) || $isAdmin) {
       finalizeDataset(
 				authentication=>$authentication,
 				identifier=>$parameters{'identifier'},
@@ -319,7 +319,7 @@ sub handle_request {
   #### If the desired action was to finalize the dataset
   if ($action eq "UNFINALIZE" && ! @errors ) {
     if ( ( $authentication->{result} eq 'Success' &&
-           $emailAddress eq $datasetMetadata->{emailAddress} ) || $isAdmin) {
+           uc($emailAddress) eq uc($datasetMetadata->{emailAddress}) ) || $isAdmin) {
       unFinalizeDataset(
 	authentication=>$authentication,
 	identifier=>$parameters{'identifier'},
@@ -550,8 +550,16 @@ sub handle_request {
      }
 
 
+     if ( 0 == 1 ) {
+       print "Result=",$datasetMetadata->{result},"<BR>\n";
+       print "emailaddress=",$emailAddress,"<BR>\n";
+       print "metadata emailaddress=",$datasetMetadata->{emailAddress},"<BR>\n";
+       print "finalizedDate=",$datasetMetadata->{finalizedDate},"<BR>\n";
+     }
+
+
      if ($datasetMetadata->{result} eq 'Success' &&
-         ($emailAddress eq $datasetMetadata->{emailAddress}) || $isAdmin) {
+         (uc($emailAddress) eq uc($datasetMetadata->{emailAddress})) || $isAdmin) {
        if ($datasetMetadata->{finalizedDate}) {
        } else {
          print "<B><font color=\"red\">Notice:</B></font> This dataset has not yet been marked as finalized!<BR>";
