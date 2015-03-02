@@ -2872,7 +2872,6 @@ sub displayAnnotatedSequence {
   my $seq_length = length($sequence);
   if ( $biosequence_name =~ /[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}/ ) {
     my @concat = split( /\*/, $sequence );
-#    die Dumper( @concat );
   	$sequence = $concat[0];
     $seq_length = length($concat[0]);
   }
@@ -2993,7 +2992,9 @@ sub displayAnnotatedSequence {
   }
 
 #  print "</PRE></TD></TR>\n";  
-
+ 
+  my $use_nextprot = ( $parameters->{use_nextprot} ) ? 1 : 0;
+  my $ub_id = $parameters->{uniprot_db_id} || 0;
 
 
   my $html_seq = $sbeamsMOD->get_html_seq_vars( seq => $sequence,
@@ -3002,6 +3003,8 @@ sub displayAnnotatedSequence {
                                                tags => $tags, 
                                             alt_enz => $alt_enz,
                                            peptides => \@peptides,
+                                       use_nextprot => $use_nextprot,
+                                      uniprot_db_id => $ub_id,
                                        peptide_nobs => $peptide_nobs,
                                        seq2instance => $seq2instance,
                                    is_trypsin_build => $args{is_trypsin_build}, 
@@ -3014,8 +3017,21 @@ sub displayAnnotatedSequence {
     my $variant_list = '';
     my $cnt;
 
+    my $source = ( $use_nextprot ) ? 'neXtProt </b>' : 'Swiss Prot </b>';
+    $q->delete( 'use_nextprot' );
+    my $self_url = $q->self_url();
+    if ( $use_nextprot ) {
+      $source .= "(see <a href='$self_url'>Swiss Prot </a> annotations)"
+    } else {
+      if ( $self_url =~ /\?/ ) {
+        $source .= "(see <a href='$self_url;use_nextprot=1'>neXtProt </a> annotations)"
+      } else {
+        $source .= "(see <a href='$self_url?use_nextprot=1'>neXtProt </a> annotations)"
+      }
+    }
+
     if ( $html_seq->{has_variants} ) {
-      print "<TR $tr><TD><B>Annotated Variants (SwissProt):</B> </TD></TR>\n";
+      print "<TR $tr><TD><B>Annotated Variants from $source </TD></TR>\n";
       for my $var (  @{$html_seq->{variant_list}} ) {
         $cnt++;
         $variant_list .= '<SPAN style="display:none" ID=var_list>' if $cnt == 17;
@@ -3027,11 +3043,13 @@ sub displayAnnotatedSequence {
 
           my $skey = $var->[0] . '_' . $var->[1];
           my $nobs = $html_seq->{site_nobs};
-#          die Dumper( $nobs );
           my $site = $nobs->{$skey}->{site};
           my $post_aa = $nobs->{$skey}->{post_aa};
           my $post_cnt = $nobs->{$skey}->{$post_aa};
           my $total = $nobs->{total}->{$site};
+
+          my $opep = join( '_', keys( %{$nobs->{$skey}->{opeptides}} ) ) || 'na';
+          my $spep = join( '_', keys( %{$nobs->{$skey}->{peptides}} ) ) || 'na';
 
           my $spep_str = '';
           my @spep_str = sort( keys( %{$nobs->{$skey}->{peptides}} ) );
@@ -3057,8 +3075,10 @@ sub displayAnnotatedSequence {
             }
             $uniq = "($nobs->{unique}->{$skey} unique)";
           }
+#          Not yet ready to release
+#          $var->[1] = "<a href=ViewPeptideExpression?atlas_build_id=$args{atlas_build_id};spep=$spep;opep=$opep;use_nextprot=$use_nextprot;acc=$biosequence->{biosequence_name} title='View SNP expression profile'>$var->[1]</a>\t";
           $title .= "<br>Supporting Peptides:<br>$spep_str";
-          $var->[4] = qq~<span class=$class onMouseout="hideTooltip()" onMouseover="showTooltip(event,'$title')">Obs $perc ~ . '% (' . "$post_cnt/$total) $uniq </span>\t " . "$var->[4] "; 
+          $var->[4] = qq~<span class=$class onMouseout="hideTooltip()" onMouseover="showTooltip(event,'$title')">Obs $perc ~ . '% (' . "$post_cnt/$total) $uniq </span> $var->[4] "; 
 
 #          $var->[1] = "<span class=pa_ title='observed SNP'>$var->[1]</span>";
         }
