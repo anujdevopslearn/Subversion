@@ -1106,6 +1106,140 @@ sub getSampleMapDisplay {
 } # end getSampleMapDisplay
 
 
+sub getSampleMapDisplayMod {
+  my $self = shift;
+  my $sbeams = $self->getSBEAMS();
+  my %args = ( peptide_field => 'peptide_accession', @_ );
+
+  my @all_peps = ( @{$args{snp_support}}, @{$args{snp_original}} );
+  my @speps = @{$args{snp_support}};
+  my $in = join( ", ", @all_peps );
+  return unless $in;
+
+  my $header = '';
+  if ( $args{link} ) {
+    $header .= $self->encodeSectionHeader( text => 'Sample peptide map:',
+                                          link => $args{link},
+                                          anchor => 'samples'
+                                          );
+  } else {
+    $header .= $self->encodeSectionHeader( text => 'Sample peptide map:',
+                                          anchor => 'samples'
+                                         );
+  }
+  $header = '' if $args{no_header};
+
+  my $html = '';
+  my $trinfo = $args{tr_info} || '';
+
+
+  my $sql = qq~     
+  	SELECT DISTINCT SB.atlas_search_batch_id, sample_tag, 
+		PISB.n_observations, peptide_sequence, PI.peptide_instance_id
+		FROM $TBAT_ATLAS_SEARCH_BATCH SB 
+	  JOIN $TBAT_SAMPLE S ON s.sample_id = SB.sample_id
+	  JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB ON PISB.atlas_search_batch_id = SB.atlas_search_batch_id
+	  JOIN $TBAT_PEPTIDE_INSTANCE PI ON PI.peptide_instance_id = PISB.peptide_instance_id
+	  JOIN $TBAT_PEPTIDE P ON P.peptide_id = PI.peptide_id
+    WHERE PI.peptide_instance_id IN ( $in )
+    AND S.record_status != 'D'
+    ORDER BY sample_tag ASC
+  ~;
+
+  my @samples = $sbeams->selectSeveralColumns($sql);
+
+  my $sample_js;
+	my %samples;
+	my %peptides;
+	my $cntr = 0;
+  my %id2seq;
+  for my $row ( @samples ) { 
+		$cntr++;
+		my $key = $row->[1] . '::::' . $row->[0];
+		$peptides{$row->[3]}++;
+		$samples{$key} ||= {};
+		$samples{$key}->{$row->[3]} = $row->[2];
+    $id2seq{$row->[4]} = $row->[3];
+	}
+	my $array_def = qq~
+	<script type="text/javascript">
+    google.setOnLoadCallback(drawHeatMap);
+    function drawHeatMap() {
+    var data = new google.visualization.DataTable();
+    data.addColumn('string', 'Sample Name');
+	~;
+#	my @peps = ( $args{force_order} ) ? @{$args{force_order}} : sort( keys( %peptides ) );
+  my %speps;
+  for my $pep ( @speps ) {
+    $speps{$pep}++;
+  }
+
+#  for my $pa ( sort( keys( %peptides ) ) ) {
+  for my $pi ( @all_peps ) {
+    my $pa = $id2seq{$pi};
+    $array_def .= "    data.addColumn('number', '$id2seq{$pi}');\n";
+	}
+	$array_def .= "DEFINE_ROWS_HERE\n";
+
+	my $row = 0;
+	my $max = 0;
+	my $min = 50;
+	$cntr = 0;
+	for my $sa ( sort( keys( %samples ) ) ) {
+	  my $col = 0;
+		my ( $name, $id ) = split "::::", $sa;
+    $array_def .= "    data.setValue( $row, $col, '$name' );\n";
+	  $col++;
+
+    for my $pi ( @all_peps ) {
+      my $pa = $id2seq{$pi};
+			if ( $samples{$sa}->{$pa} ) {
+        my $pep_cnt = log(1 + $samples{$sa}->{$pa})/log(10);
+			  $max = ( $pep_cnt > $max ) ? $pep_cnt : $max;
+    		$min = ( $pep_cnt < $min ) ? $pep_cnt : $min;
+        $array_def .= "    data.setValue( $row, $col, $pep_cnt );\n";
+		    $cntr++;
+			}
+		  $col++;
+		}
+		$row++;
+	}
+	$array_def =~ s/DEFINE_ROWS_HERE/data.addRows($row);/;
+	my $num_colors = 256;
+	$array_def .= qq~
+	heatmap = new org.systemsbiology.visualization.BioHeatMap(document.getElementById('heatmapContainer'));
+	heatmap.draw(data, {numberOfColors:$num_colors,passThroughBlack:false,startColor:{r:255,g:255,b:255,a:1},endColor:{r:100,g:100,b:100,a:1},emptyDataColor:{r:256,g:256,b:256,a:1}});
+		}
+  </script>
+  ~;
+
+	$args{header_text} = ( $args{header_text} ) ? "<TR $trinfo><TD ALIGN=CENTER CLASS=section_description>$args{header_text}</TD></TR>" : '';
+	my $content = qq~
+  <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+  <script type="text/javascript">
+    google.load("visualization", "1", {});
+    google.load("prototype", "1.6");
+  </script>    
+  <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/main/js/load.js"></script>
+  <script type="text/javascript">
+    systemsbiology.load("visualization", "1.0", {packages:["bioheatmap"]});
+  </script>
+
+	$array_def
+
+  $args{header_text}
+	<TR $trinfo><TD> <DIV ID="heatmapContainer"></DIV>  </TD></TR>
+	~;
+
+  return ( wantarray() ) ? ($header, $content) : $header . "\n" . $content;
+
+
+} # end getSampleMapDisplay
+
+
+
+### END
+
 ###############################################################################
 # display enhance sample info
 ###############################################################################
