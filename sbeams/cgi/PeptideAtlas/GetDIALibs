@@ -357,7 +357,8 @@ sub get_library_table {
   my $sql = qq~
   SELECT dia_library_id, dia_library_name, set_tag, instrument_type_name,
   organism_name, DIL.comment, md5sum, file_path, file_format, is_master,
-  px_identifier, contributors, coverage_statement
+  px_identifier, contributors, coverage_statement, 
+  publication_url, publication_title, description
   FROM $TBAT_DIA_LIBRARY DIL 
   JOIN $TBAT_DIA_LIBRARY_SET DILS ON DILS.dia_library_set_id = DIL.dia_library_set_id
   JOIN $TBAT_INSTRUMENT_TYPE IT ON IT.instrument_type_id = DIL.instrument_type_id
@@ -365,7 +366,7 @@ sub get_library_table {
   WHERE project_id IN ( $project_ids )
   AND DIL.record_status = 'N'
   $format_constraint
-  ORDER BY set_tag, instrument_type_name, dia_library_id
+  ORDER BY DIL.dia_library_set_id, dia_library_name, instrument_type_name
   ~;
 # 0 dia_library_id
 # 1 dia_library_name
@@ -376,7 +377,7 @@ sub get_library_table {
 # 6 md5sum
 # 7 file_path
 # 8 file_format
-# 9 is_master
+# 9 is_masterAn open-source data and computational resource to analyze digital maps of immunopeptidomes
 # 10 px_identifier
 # 11 contributors
 # 12 converage_statement
@@ -388,7 +389,9 @@ sub get_library_table {
                          TraML => 'TraML',
                          sptxt => 'Speclib' );
 
+  my @libs;
   while( my @row = $sth->fetchrow_array() ) {
+    push @libs, $row[2] unless $libraries{$row[2]};
     $libraries{$row[2]} ||= [];
     $row[8] = $display_format{$row[8]} || $row[8]; 
     push @{$libraries{$row[2]}}, \@row;
@@ -396,7 +399,8 @@ sub get_library_table {
   }
   my $content = $help;
 
-  for my $lib ( sort { $b cmp $a} ( keys( %libraries ) ) ) {
+#  for my $lib ( sort { $b cmp $a} ( keys( %libraries ) ) ) {
+  for my $lib ( @libs ) {
     my @lib_data = ( [ qw( Name Accession Instrument Format Size ), 'Get Libraries' ] );
     for my $lib_file ( @{$libraries{$lib}} ) {
       my $fname = basename( $lib_file->[7] ); 
@@ -408,7 +412,10 @@ sub get_library_table {
         $dwn = "<a href=GetDIALibs?mode=download_libs;action=download;name=$fname;tmp_file=$lib_file->[6];$basespace{url_params}>Download</a>";
       }
       my $size = -s $lib_file->[7];
-      $size = hr_size( $size );
+#      if ( !$size ) {
+#        die Dumper( $lib_file ) unless -e $lib_file->[7];
+#      }
+      $size = hr_size( $size, $lib_file->[7] );
       my $cust = '';
       if ( $lib_file->[8] =~ /peakview/i ||
            $lib_file->[8] =~ /openswath/i ||
@@ -451,18 +458,40 @@ sub get_library_table {
 # 10 px_identifier
 # 11 contributors
 # 12 converage_statement
+# 13 publication_url
+# 14 publication_title
+# 15 description
+
+    # Hokey way to pull out some set-specific items.
+    my $lib_zero = $libraries{$lib}->[0];
+
+    # Publication info
+    my $publication = '';
+    if ( $lib_zero->[13] && $lib_zero->[14] ) {
+      if ( $lib_zero->[13] =~ /In press/ || $lib_zero->[13] =~ /Submitted/ ) {
+        $publication = "Publication: <i>$lib_zero->[14]</i> ($lib_zero->[13]) <br>";
+      } else {
+        $publication = "Publication: <i>$lib_zero->[14]</i> (<a href='$lib_zero->[13]'>View</a>) <br>";
+      }
+    }
+    my $description = '';
+    if ( $lib_zero->[15] ) {
+      $description = "$lib_zero->[15]<br>";
+    }
 
     my $px_link = '';
-    my $lib_zero = $libraries{$lib}->[0];
     if ( $lib_zero->[10] ) {
       $px_link = "(<a href='http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=$lib_zero->[10]' target=_px title='View dataset $lib_zero->[10] at Proteome Exchange'>$lib_zero->[10]</a>)";
     }
 
+    $lib_zero->[12] .= '<br>' if $lib_zero->[12];
     $content .= qq~
     <br>
      <span style="font-family:Helvetica, Arial, sans-serif;font-size:110%;font-weight:bold" id=heading> $lib </span><br>
+     $description
      $lib_zero->[11] $px_link <br>
-     $lib_zero->[12] <br>
+     $lib_zero->[12] 
+     $publication
      <table>$lib_table
     <br>
     ~;
@@ -473,14 +502,21 @@ sub get_library_table {
 
 sub hr_size {
   my $size = shift;
+  if ( !$size ) {
+    my $file = shift;
+    $log->info( "why does $file have no size?" );
+  }
   my @sfx = ( '', 'KB', 'MB', 'GB', 'TB', 'PB' );
 
+#  $log->info( "in sizer, original size is $size" );
   my $i = 0;
   while ( $size > 1024 ) {
     $size = $size / 1024;
     $i++;
   }
-  return sprintf( "%.1f", $size ) . " $sfx[$i]";
+  my $format_size = sprintf( "%.1f", $size ) . " $sfx[$i]";
+#  $log->info( "in sizer, formatted size is $format_size" );
+  return $format_size;
 }
 
 sub get_btxt {
