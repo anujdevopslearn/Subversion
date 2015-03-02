@@ -1582,12 +1582,12 @@ sub get_html_seq_vars {
   # Or if there are no variants.
   return \%return unless $swiss->{success};
 
-  my $is_html = ( $self->getSBEAMS()->output_mode() eq 'html' ) ? 1 : 0;
 
+  my $is_html = ( $self->getSBEAMS()->output_mode() eq 'html' ) ? 1 : 0;
   if ( $swiss->{fasta_seq} ne $args{seq} ) {
-    print "<div class=clear_warning_box><font color=red>Warning:</font> Difference detected between peptide sequence from annotations and biosequence table </div>\n" if $is_html;
-    $log->warn( "Drift detected between biosequence and uniprot_db tables" );
+    $log->error( "Drift detected between biosequence and uniprot_db tables" );
   }
+
 
   $return{has_variants} = $swiss->{has_variants};
   $return{has_modres} = $swiss->{has_modres};
@@ -1717,7 +1717,8 @@ sub get_html_seq_vars {
         JOIN $TBAT_BIOSEQUENCE B
           ON B.biosequence_id = PM.matched_biosequence_id
         WHERE peptide_instance_id IN ( $pi_str )
-        AND dbxref_id IN ( 1, 35 )
+        AND dbxref_id = 1
+        AND len( biosequence_name ) = 6
         GROUP BY peptide_instance_id
       ~;
       my $sbeams = $self->getSBEAMS();
@@ -1737,7 +1738,18 @@ sub get_html_seq_vars {
       $obs_snps{$snp}->{info} =~ /(\w)\s+\-\>\s+(\w)/;
       my $pre = $1;
       my $post = $2;
-      substr( $snpped_seq, $site - 1, 1, $post );
+      eval { substr( $snpped_seq, $site - 1, 1, $post ) };
+      if ( $@ ) {
+        $log->error( "Error in SNP substring" );
+        $log->error( $@ );
+        $log->error( Dumper( $obs_snps{$snp} ) );
+        $log->error( Dumper( %args ) );
+        if ( $site > length( $snpped_seq ) ) {
+          $log->error( "SNP position has exceeded length of sequence!" );
+          last;
+        }
+        next;
+      }
 
       my $pre_aa = substr( $args{seq}, $site - 1, 1 );
       my $post_aa = substr( $snpped_seq, $site - 1, 1 );
@@ -1753,6 +1765,8 @@ sub get_html_seq_vars {
         if ( $primary{$ppep} <= $site && $site <= $primary{$ppep} + length( $ppep ) ) {
           $site_specific_nobs{$snp}->{$pre_aa} += $args{peptide_nobs}->{$ppep};
           $site_specific_nobs{total}->{$site} += $args{peptide_nobs}->{$ppep};
+          $site_specific_nobs{$snp}->{opeptides} ||= {};
+          $site_specific_nobs{$snp}->{opeptides}->{$ppep}++;
         }
       }
 
@@ -1785,8 +1799,8 @@ sub get_html_seq_vars {
   } # End get SNP abundance loop (whew)
   my $t1 = time;
   my $td = $t1 - $t0;
-  $log->info( "Counted SNPs in $td seconds " );
   $return{site_nobs} = \%site_specific_nobs;
+
 
   # Add modified residues track
   my $cover = $self->get_modres_coverage( $swiss );
@@ -1809,6 +1823,8 @@ sub get_html_seq_vars {
 																			      			         %args );
 
 #  die Dumper( $clustal_display );
+
+#  die Dumper( %return );
 
   $return{clustal_display} = $clustal_display;
 
@@ -2083,10 +2099,7 @@ sub get_uniprot_annotation {
   my $self = shift;
   my %args = ( show_all_snps => 0,
                use_nextprot => 0,
-               uniprot_db_id => 0,
                @_ );
-
-  $args{uniprot_db_id} = 0 if $args{uniprot_db_id} !~ /^\d+$/;
 
   my %annot = ( success => 0,
                 all_vars => [], 
@@ -2098,9 +2111,6 @@ sub get_uniprot_annotation {
 
   my $np_clause = "AND is_nextprot = 'N'";
   $np_clause = "AND is_nextprot = 'Y'" if $args{use_nextprot};
-  
-  my $er_clause = '';
-  $er_clause = "AND UD.uniprot_db_id = $args{uniprot_db_id}" if $args{uniprot_db_id};
 
   my $sql = qq~
   SELECT file_path, entry_offset, entry_name
@@ -2108,7 +2118,6 @@ sub get_uniprot_annotation {
   JOIN $TBAT_UNIPROT_DB_ENTRY UDE
   ON UD.uniprot_db_id = UDE.uniprot_db_id
   WHERE entry_accession = '$args{accession}'
-  $er_clause
   $np_clause
   ORDER BY uniprot_db_entry_id DESC
   ~;
