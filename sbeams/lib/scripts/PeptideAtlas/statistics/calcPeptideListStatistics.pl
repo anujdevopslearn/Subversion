@@ -23,28 +23,13 @@ use Getopt::Long;
 use FindBin;
 
 #### Set up SBEAMS modules
-use lib "/net/dblocal/www/html/devTF/sbeams/lib/perl";
-use SBEAMS::Connection qw($q);
-use SBEAMS::Connection::Settings;
-use SBEAMS::Connection::Tables;
-
-use SBEAMS::PeptideAtlas;
-use SBEAMS::PeptideAtlas::Settings;
-use SBEAMS::PeptideAtlas::Tables;
-
-use SBEAMS::Proteomics;
-use SBEAMS::Proteomics::Settings;
-use SBEAMS::Proteomics::Tables;
-
-## Globals
-my $sbeams = new SBEAMS::Connection;
-my $atlas = new SBEAMS::PeptideAtlas;
-$atlas->setSBEAMS($sbeams);
+use lib "$ENV{SBEAMS}/lib/perl";
 
 use vars qw (
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
              $peptide_hash $probcol $protcol $seqcol
             );
+use DB_File ;
 
 
 ###############################################################################
@@ -134,7 +119,7 @@ sub main {
   my $prot_file = $OPTIONS{prot_file};
   my $pepmap_file = $OPTIONS{pepmap_file};
   unless (($prot_file && open(PROTFILE, $prot_file)) &&
-          ($pepmap_file && open(PEPMAPFILE, $pepmap_file))) {
+      ($pepmap_file && open(PEPMAPFILE, $pepmap_file))) {
     print "WARNING: --prot_file or --pepmap_file missing or unopenable; protein stats won't be compiled and cumulative protein plot won't be drawn.\n\n";
     undef $prot_file;
   }
@@ -146,16 +131,18 @@ sub main {
   my $n_experiments = 0;
 
   my @peptides;
-  my @search_batch_pepseqs;
+  my %search_batch_pepseqs;
   my @correct_peptides;
   my @search_batch_peptides;
-  my @stats_table;
 
-
+  my %distinct_peptides;
+  my $n_assignments;
   #### Array of search_batch_ids and a hash of all peptides by search_batch_id
   my @all_search_batch_ids;
   my %all_peptides;
   my %sample_tags;
+
+  tie %all_peptides, "DB_File", "peptidehash";
 
   #### Hashes containing canonical protein info
   my %canonical_hash;
@@ -194,6 +181,8 @@ sub main {
 	$canonical_hash{$fields[$biosequence_name_idx]} = 1;
       }
     }
+    close PROTFILE;
+
     my $n_canonicals = scalar keys %canonical_hash;
     print "$n_canonicals total distinct canonical protein identifiers found\n";
 
@@ -216,6 +205,7 @@ sub main {
         $n_pep_mappings++;
       }
     }
+    close PEPMAPFILE;
     print "$n_pep_mappings total peptide->canonical mappings\n";
     my $n_mapped_peps = keys %pepmap_hash;
     print "$n_mapped_peps distinct unmodified peptides mapped\n";
@@ -239,6 +229,7 @@ sub main {
   my $n_spectra = 0;
   my %canonical_protids;
   my $not_done = 1;
+  my $cnt = 0;
   while ($not_done) {
 
     #### Try to read in the next line;
@@ -246,6 +237,7 @@ sub main {
       chomp($line);
       @columns = split(/\t/,$line);
       next if ($columns[$origprobcol] < $P_threshold);
+
       if ($process_search_batch_id) {
 	next unless ($columns[0] == $process_search_batch_id);
       }
@@ -271,18 +263,13 @@ sub main {
       #### Store all the peptides in a hash
       my @tmp = @search_batch_peptides;
       push(@all_search_batch_ids,$this_search_batch_id);
-      $all_peptides{$this_search_batch_id} = \@tmp;
-
-      #### Remove some peptides according to their probabilities
-      my $result = removePeptides(
-        peptide_list => \@search_batch_peptides,
-      );
-      push(@correct_peptides,@{$result->{peptide_list}});
+ 
+      $all_peptides{$this_search_batch_id} = join("\n", @tmp); 
 
       #### Get the canonical proteins mapped to by all peptides in this
       #### search batch.
       my %canonical_protids_batch = ();
-      for my $pep (@search_batch_pepseqs) {
+      for my $pep (keys %search_batch_pepseqs) {
         for my $canonical_protid (@{$pepmap_hash{$pep}}) {
           $canonical_protids_batch{$canonical_protid} = 1;
           $canonical_protids{$canonical_protid} = 1;
@@ -297,27 +284,16 @@ sub main {
 
       #### Update the summary table of incorrect values with data from
       #### this search_batch
-      my $irow = 0;
-      foreach my $stat_row ( @{$result->{stats_table}} ) {
-	for (my $col=0; $col<2; $col++) {
-	  $stats_table[$irow]->[$col] = $stat_row->[$col];
-	}
-	for (my $col=2; $col<5; $col++) {
-	  $stats_table[$irow]->[$col] += $stat_row->[$col];
-	}
-	$irow++;
-      }
-
 
       #### Prepare for next search_batch_id
       $this_search_batch_id = $columns[0];
       @search_batch_peptides = ();
-      @search_batch_pepseqs = ();
+      %search_batch_pepseqs = ();
       print "n_spectra=$n_spectra\n";
       #print "$sample_tag n_spectra=$n_spectra n_prots = $n_canonical_proteins_batch ($n_cum_canonicals_batch cumul.)\n";
       unless ($this_search_batch_id == -998899) {
-	print "Processing search_batch_id=$this_search_batch_id  ";
-	$n_experiments++;
+      	print "Processing search_batch_id=$this_search_batch_id  ";
+      	$n_experiments++;
       }
 
     }
@@ -328,10 +304,18 @@ sub main {
       my $unmodified_pepseq = $columns[$origseqcol];
       my $prob = $columns[$origprobcol];
       my $one_mapped_protid = $columns[$origprotcol];
-      my @tmp = ($unmodified_pepseq, $prob, $one_mapped_protid);
-      push(@search_batch_peptides,\@tmp);
-      push(@peptides,\@tmp);
-      push(@search_batch_pepseqs,$unmodified_pepseq);
+      my $tmp = "$unmodified_pepseq,$prob,$one_mapped_protid";
+      push(@search_batch_peptides,$tmp);
+      #push(@peptides,$tmp);
+      $n_assignments++;
+      $distinct_peptides{$unmodified_pepseq}->{count}++;
+      if (! $distinct_peptides{$unmodified_pepseq}->{best_probability}) {
+        $distinct_peptides{$unmodified_pepseq}->{best_probability} = $prob;
+      } elsif ($prob > $distinct_peptides{$unmodified_pepseq}->{best_probability}) {
+        $distinct_peptides{$unmodified_pepseq}->{best_probability} = $prob; 
+      }
+
+      $search_batch_pepseqs{$unmodified_pepseq} =1;
     }
   }
 
@@ -339,16 +323,18 @@ sub main {
   print "Done reading.\n";
 
   #### Now build a hash out of all peptides and count the distinct ones
-  my %distinct_peptides;
-  foreach my $peptide (@peptides) {
-    $distinct_peptides{$peptide->[$seqcol]}->{count}++;
-    if (! $distinct_peptides{$peptide->[$seqcol]}->{best_probability}) {
-      $distinct_peptides{$peptide->[$seqcol]}->{best_probability} = $peptide->[$probcol];
-    } elsif ($peptide->[$probcol] >
-               $distinct_peptides{$peptide->[$seqcol]}->{best_probability}) {
-      $distinct_peptides{$peptide->[$seqcol]}->{best_probability} = $peptide->[$probcol];
-    }
-  }
+#  my %distinct_peptides;
+#  foreach my $line (@peptides) {
+#    my @tmp = split(",", $line);
+#    my $peptide = \@tmp;
+#    $distinct_peptides{$peptide->[$seqcol]}->{count}++;
+#    if (! $distinct_peptides{$peptide->[$seqcol]}->{best_probability}) {
+#      $distinct_peptides{$peptide->[$seqcol]}->{best_probability} = $peptide->[$probcol];
+#    } elsif ($peptide->[$probcol] >
+#               $distinct_peptides{$peptide->[$seqcol]}->{best_probability}) {
+#      $distinct_peptides{$peptide->[$seqcol]}->{best_probability} = $peptide->[$probcol];
+#    }
+#  }
 
 
   #### If we want to write a revised 2+ton peptide list
@@ -378,105 +364,29 @@ sub main {
   }
 
 
-
-  #### Now build a hash out of all peptides and count the distinct ones
-  my %correct_distinct_peptides;
-  foreach my $peptide (@correct_peptides) {
-    $correct_distinct_peptides{$peptide->[1]}++;
-  }
-
-
-  #### Count how many dupe DECOY peptides there are
-  my %DECOYcount;
-  foreach my $peptide ( keys(%{$peptide_hash}) ) {
-    if ($peptide_hash->{$peptide}->{DECOYcount}) {
-      $DECOYcount{$peptide_hash->{$peptide}->{DECOYcount}}++;
-    }
-  }
-
-
-  my $n_assignments = scalar(@peptides);
-  my $n_correct_assignments = scalar(@correct_peptides);
-  my $n_incorrect_assignments = $n_assignments - $n_correct_assignments;
+  #my $n_assignments = scalar(@peptides);
 
   my $n_distinct_peptides = scalar(keys(%distinct_peptides));
-  my $n_correct_distinct_peptides = scalar(keys(%correct_distinct_peptides));
-  my $n_incorrect_distinct_peptides = $n_distinct_peptides -
-    $n_correct_distinct_peptides;
 
-  my $assignments_FDR = round($n_incorrect_assignments/$n_assignments,3);
-  my $distinct_peptide_FDR =
-    round($n_incorrect_distinct_peptides/$n_distinct_peptides,3);
-
-  my $most_pessimistic_distinct_peptide_FDR =
-    round($n_incorrect_assignments/$n_distinct_peptides,3);
-  my $most_pessimistic_distinct_peptides =
-    $n_distinct_peptides*(1-($n_incorrect_assignments/$n_distinct_peptides));
 
 
   print "Total experiments: $n_experiments\n";
   print "Total assignments above threshold: $n_assignments\n";
-  print "Total correct assignments: $n_correct_assignments\n";
-  print "Total incorrect assignments: $n_incorrect_assignments\n";
-  print "Peptide FDR: $assignments_FDR\n\n";
 
   print "Total distinct peptides: $n_distinct_peptides\n";
   print "Total singleton distinct peptides: $n_singleton_distinct_peptides\n";
   print "Total P=1 singleton distinct peptides: $n_P1_singleton_distinct_peptides\n";
-  print "Most pessimistic distinct peptide FDR: $most_pessimistic_distinct_peptide_FDR\n";
-  print "Most pessimistic distinct peptides: $most_pessimistic_distinct_peptides\n\n";
-
-  my $num_incorr_mult_hit_percent = 6;
-  if ($P_threshold < .75) {
-    $num_incorr_mult_hit_percent = 10;
-  }
 
 
-  print "Discard all singletons and assume that $num_incorr_mult_hit_percent% of incorrect are 2+tons\n";
   my $n_nonsingleton_distinct_peptides = $n_distinct_peptides-$n_singleton_distinct_peptides;
   print "Non-singleton distinct peptides: $n_nonsingleton_distinct_peptides\n";
-  my $n_nonsingleton_incorrect_assignments = int($n_incorrect_assignments*$num_incorr_mult_hit_percent/100);
-  print "$num_incorr_mult_hit_percent% of incorrect peptides: $n_nonsingleton_incorrect_assignments\n";
-  my $better_distinct_peptide_FDR = round($n_nonsingleton_incorrect_assignments/
-    $n_nonsingleton_distinct_peptides,3);
-  print "Estimated non-singleton distinct peptide FDR: $better_distinct_peptide_FDR\n\n";
 
 
-  my $totDECOY = 0;
-  my $totDistinctDECOY = 0;
-  my $buffer = '';
-  foreach my $count ( sort numerically (keys(%DECOYcount)) ) {
-    $buffer .= "  $count\t$DECOYcount{$count}\n";
-    $totDECOY += $DECOYcount{$count} * $count;
-    $totDistinctDECOY += $DECOYcount{$count};
-  }
-  print "\nTotal number of DECOY hits: $totDECOY\n";
-  print "Frequency/count of duplicate DECOY peptides:\n$buffer\n";
-
-
-  #### Print out the table of final stats
-  open(OUTFILE,">PPvsDECOY.dat");
-  print "\nFinal stats by P bin:\n";
-  print " P_floor P_ceiling  PP_incorr  n_DECOY  N_assignments\n";
-  print OUTFILE " P_floor P_ceiling  PP_incorr  n_DECOY  N_assignments\n";
-  foreach my $stat_row ( @stats_table ) {
-    printf("%8.2f %8.2f %8d %8d %8d\n",@{$stat_row});
-    printf OUTFILE ("%8.2f %8.2f %8d %8d %8d\n",@{$stat_row});
-  }
-  close(OUTFILE);
-
-
-  print "\nFDR rates based on decoy numbers (after discarding decoy hits)\n";
-  printf("Spectrum FDR = %d / %d = %.4f\n",$totDECOY,$n_assignments,$totDECOY/$n_assignments);
-  printf("Peptide FDR = %d / %d = %.4f\n",$totDistinctDECOY,$n_distinct_peptides,$totDistinctDECOY/$n_distinct_peptides);
-
-
-
-    #my $outfile2="experiment_contribution_summary_w_singletons.out";
-    my $outfile2="experiment_contribution_summary.out";
-    open (OUTFILE2, ">", $outfile2) or die "can't open $outfile2 ($!)";
-    print OUTFILE2 "          sample_tag sbid ngoodspec      npep n_new_pep cum_nspec cum_n_new is_pub nprot cum_nprot\n";
-    print OUTFILE2 "-------------------- ---- --------- --------- --------- --------- --------- ------ ----- ---------\n";
+	#my $outfile2="experiment_contribution_summary_w_singletons.out";
+	my $outfile2="experiment_contribution_summary.out";
+	open (OUTFILE2, ">", $outfile2) or die "can't open $outfile2 ($!)";
+	print OUTFILE2 "          sample_tag sbid ngoodspec      npep n_new_pep cum_nspec cum_n_new is_pub nprot cum_nprot\n";
+	print OUTFILE2 "-------------------- ---- --------- --------- --------- --------- --------- ------ ----- ---------\n";
 
 
   #### Calculate the number of distinct peptides as a function of exp.
@@ -500,19 +410,25 @@ sub main {
     my $p_cum_n_new_all = 0;
     my $cum_nspec = 0;
 
+    print "number of sbid " , scalar  @shuffled_search_batch_ids ,"\n";
     foreach my $search_batch_id ( @shuffled_search_batch_ids ) {
-      my $peptide_list = $all_peptides{$search_batch_id};
       my %batch_distinct_peptides_multobs;
       my %batch_distinct_peptides_all;
-      foreach my $peptide ( @{$peptide_list} ) {
-	$batch_distinct_peptides_all{$peptide->[$seqcol]}++;
-	$total_distinct_peptides_all{$peptide->[$seqcol]}++;
-	if ($distinct_peptides{$peptide->[$seqcol]}->{count} > 1) {
-	  $batch_distinct_peptides_multobs{$peptide->[$seqcol]}++;
-	  $total_distinct_peptides_multobs{$peptide->[$seqcol]}++;
-	}
+      my @lines;
+      tie @lines, "DB_File", "psbi", O_RDWR|O_CREAT, 0666, $DB_RECNO or die "Cannot open file 'text': $!\n" ;
+      @lines =  split("\n", $all_peptides{$search_batch_id});
+
+      foreach my $line ( @lines ) {
+        my @tmp = split(",", $line);
+        my $peptide = \@tmp;
+				$batch_distinct_peptides_all{$peptide->[$seqcol]}++;
+				$total_distinct_peptides_all{$peptide->[$seqcol]}++;
+				if ($distinct_peptides{$peptide->[$seqcol]}->{count} > 1) {
+					$batch_distinct_peptides_multobs{$peptide->[$seqcol]}++;
+					$total_distinct_peptides_multobs{$peptide->[$seqcol]}++;
+				}
       }
-      my $n_goodspec = scalar(@{$peptide_list});
+      my $n_goodspec = scalar @lines;
       $cum_nspec += $n_goodspec;
       my $n_peptides_multobs = scalar(keys(%batch_distinct_peptides_multobs));
       my $cum_n_new_multobs = scalar(keys(%total_distinct_peptides_multobs));
@@ -530,13 +446,14 @@ sub main {
 	      $cum_nspec, $cum_n_new_all, 'N',
               $n_prots, $n_cum_prots
 	     ;
-
       $p_cum_n_new_multobs = $cum_n_new_multobs;
       $p_cum_n_new_all = $cum_n_new_all;
+      untie @lines;
     }
   }
   print "$outfile2 written.\n" if $VERBOSE;
-
+  unlink "peptidehash";
+  unlink "psbi";
 
   return(1);
 
@@ -576,233 +493,6 @@ sub round {
   return sprintf("%.${digits}f",$value);
 
 } # end round
-
-
-
-###############################################################################
-# removePeptides
-###############################################################################
-sub removePeptides {
-  my $METHOD = 'removePeptides';
-  my %args = @_;
-  my $peptide_list = $args{'peptide_list'} || die("No peptide_list provided");
-
-  my @peptides = @{$peptide_list};
-  my $n_peptides = scalar(@peptides);
-
-  my @sorted_peptides = sort by_Probability @peptides;
-  my @filtered_peptides;
-
-  my @stats_table;
-
-  my ($floor,$ceiling) = ( 1.0, 1.0 );
-  #my ($increment,$minimum) = ( 0.01, 0.90 );
-  my ($increment,$minimum) = ( 0.05, 0.50 );
-
-  my @buffer;
-  my $remainder = 0.0;
-  my $n_DECOY = 0;
-
-  foreach my $peptide ( @sorted_peptides ) {
-    #print "$peptide->[0]\t$peptide->[1]\t$peptide->[$probcol]\n";
-    my $probability = $peptide->[$probcol];
-
-    #### If this peptide hits the floor, remove peptides in this window
-    unless ($probability >= $floor) {
-
-      my $result = removePeptidesWithinWindow2(
-        peptide_list => \@buffer,
-        floor => $floor,
-        ceiling => $ceiling,
-        remainder => $remainder,
-      );
-
-      push(@filtered_peptides,@{$result->{peptide_list}});
-      push(@stats_table,[$floor,$ceiling,$result->{n_wrong},$n_DECOY,
-			 $result->{n_peptides}]);
-      print "    n_DECOY=$n_DECOY\n" if ($VERBOSE > 1);
-
-      $remainder = $result->{remainder};
-
-
-      @buffer = ();
-      $ceiling = $floor;
-      $floor = $ceiling - $increment;
-      $n_DECOY=0;
-
-    }
-
-    #### Save the peptide in the buffer
-    push(@buffer,$peptide);
-    $peptide_hash->{$peptide->[$seqcol]}->{count}++;
-    if (defined($peptide->[$protcol]) && $peptide->[$protcol] =~ /^DECOY/) {
-      #print "  decoy $peptide->[$protcol]  $peptide->[$seqcol]\n";
-      $n_DECOY++;
-      $peptide_hash->{$peptide->[$seqcol]}->{DECOYcount}++;
-    }
-
-
-  }
-
-  my $result = removePeptidesWithinWindow2(
-    peptide_list => \@buffer,
-    floor => $floor,
-    ceiling => $ceiling,
-    remainder => $remainder,
-  );
-
-  push(@filtered_peptides,@{$result->{peptide_list}});
-  push(@stats_table,[$floor,$ceiling,$result->{n_wrong},$n_DECOY,$result->{n_peptides}]);
-  print "    n_DECOY=$n_DECOY\n" if ($VERBOSE > 1);
-
-
-
-  my $n_filtered_peptides = scalar(@filtered_peptides);
-
-  if ($VERBOSE) {
-    print "  Initial number of peptides: $n_peptides\n";
-    print "  Filtered number of peptides: $n_filtered_peptides\n";
-  }
-
-  my %result = (
-    remainder => $remainder,
-    peptide_list => \@filtered_peptides,
-    stats_table => \@stats_table,
-  );
-
-  return(\%result);
-
-
-} # end removePeptides
-
-
-
-###############################################################################
-# removePeptidesWithinWindow1
-#
-# Removes the number of peptides from the peptide_list based on probabilities
-# by calculating the total number of wrong ones and randomly picking some
-# to throw out.  This will yield a different result every time.
-###############################################################################
-sub removePeptidesWithinWindow1 {
-  my $METHOD = 'removePeptidesWithinWindow2';
-  my %args = @_;
-  my $peptide_list = $args{'peptide_list'} || die("No peptide_list provided");
-  my $floor = $args{'floor'} || die("No floor provided");
-  my $ceiling = $args{'ceiling'} || die("No ceiling provided");
-  my $remainder = $args{'remainder'};
-
-  my $n_peptides = scalar(@{$peptide_list});
-
-  #### Calculate the total number of wrong ones based on the sum of P's
-  my $sum = 0;
-  foreach my $peptide ( @{$peptide_list} ) {
-    $sum += $peptide->[$probcol];
-  }
-  my $n_wrong = $n_peptides - $sum;
-
-
-  if ($VERBOSE > 1) {
-    print "  [$METHOD]: floor=$floor; ceiling=$ceiling\n";
-    print "    n_peptides=$n_peptides; n_wrong=$n_wrong\n";
-    print "    remainder=$remainder\n";
-  }
-
-  my $n_to_remove = int($n_wrong);
-  $remainder = $n_wrong - $n_to_remove;
-
-  for (my $i=0; $i<$n_to_remove; $i++) {
-    my $success = 0;
-    while (! $success) {
-      my $index = rand(@{$peptide_list});
-      if ($peptide_list->[$index]) {
-	$peptide_list->[$index] = undef;
-	$success = 1;
-      }
-    }
-  }
-
-  my @new_peptide_list;
-  foreach my $entry ( @{$peptide_list}) {
-    push(@new_peptide_list,$entry) if ($entry);
-  }
-
-  my $n_surviving_peptides = scalar(@new_peptide_list);
-  print "    n_surviving_peptides=$n_surviving_peptides\n" if ($VERBOSE > 1);
-
-
-  my %result = (
-    remainder => $remainder,
-    peptide_list => \@new_peptide_list,
-    n_peptides => $n_peptides,
-    n_wrong => $n_wrong,
-  );
-
-  return(\%result);
-
-} # end removePeptidesWithinWindow1
-
-
-
-###############################################################################
-# removePeptidesWithinWindow2
-#
-# Removes the number of peptides from the peptide_list based on probabilities
-# by iterating through a sorted list of peptides and throwing one out when the
-# 1-P sum exceeds 1.  This is the same every time it's run and most
-# accurate.
-###############################################################################
-sub removePeptidesWithinWindow2 {
-  my $METHOD = 'removePeptidesWithinWindow2';
-  my %args = @_;
-  my $peptide_list = $args{'peptide_list'} || die("No peptide_list provided");
-  my $floor = $args{'floor'} || die("No floor provided");
-  my $ceiling = $args{'ceiling'} || die("No ceiling provided");
-  my $remainder = $args{'remainder'};
-
-  my $n_peptides = scalar(@{$peptide_list});
-
-  my @sorted_peptides = sort by_Probability(@{$peptide_list});
-  my @new_peptide_list;
-  my $n_wrong = 0;
-
-  #### Iterate through sorted list and throw out whenever we exceed 1
-  my $sum = 0;
-  foreach my $peptide ( @sorted_peptides ) {
-    $sum += 1 - $peptide->[$probcol];
-    if ($sum >= 1.0) {
-      $sum -= 1;
-      $n_wrong++;
-    } else {
-      push(@new_peptide_list,$peptide);
-    }
-  }
-
-  $remainder = $sum;
-
-  if ($VERBOSE > 1) {
-    print "  [$METHOD]: floor=$floor; ceiling=$ceiling\n";
-    print "    n_peptides=$n_peptides; n_wrong=$n_wrong\n";
-    print "    remainder=$remainder\n";
-  }
-
-
-  my $n_surviving_peptides = scalar(@new_peptide_list);
-  print "    n_surviving_peptides=$n_surviving_peptides\n" if ($VERBOSE > 1);
-
-
-  my %result = (
-    remainder => $remainder,
-    peptide_list => \@new_peptide_list,
-    n_peptides => $n_peptides,
-    n_wrong => $n_wrong,
-  );
-
-  return(\%result);
-
-} # end removePeptidesWithinWindow2
-
-
 
 ###############################################################################
 # shuffleArray
