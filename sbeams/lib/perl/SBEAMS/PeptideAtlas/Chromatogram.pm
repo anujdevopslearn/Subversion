@@ -153,7 +153,6 @@ sub getChromatogramParameters{
      WHERE SELC.SEL_chromatogram_id = '$SEL_chromatogram_id'
      ;
   ~;
-  #print "$sql<br>\n";
   my @rows = $sbeams->selectSeveralColumns( $sql );
   my $n_rows = scalar @rows;
   print "<P>ERROR: nothing returned for chromatogram_id $param_href->{'SEL_chromatogram_id'}.</P>\n"
@@ -196,32 +195,33 @@ sub getChromatogramParameters{
             FROM $TBAT_SEL_TRANSITION
            WHERE SEL_transition_group_id = '$transition_group_id'
         ~;
-	my @rows = $sbeams->selectSeveralColumns($sql);
+				my @rows = $sbeams->selectSeveralColumns($sql);
 
-	# See if there are any relative_intensity (eri) values.
-	# If there are, we will set eri to very small number for those rows
-	# that have no value.
-	my $any_eri = 0;
-	for my $row (@rows) {
-	  if ( defined $row->[5] && $row->[5] ne '' && $row->[5] > 0) {
-	      $any_eri = 1;
-	      last;
-	  }
-	}
+				# See if there are any relative_intensity (eri) values.
+				# If there are, we will set eri to very small number for those rows
+				# that have no value.
+				my $any_eri = 0;
+				for my $row (@rows) {
+					if ( defined $row->[5] && $row->[5] ne '' && $row->[5] > 0) {
+							$any_eri = 1;
+							last;
+					}
+				}
 
-        my $tx_info = "";
-        for my $row (@rows) {
-	  $row->[5] = 0.01
-	     if ($any_eri && ($row->[5] eq '' || $row->[5] == 0));
-          $tx_info .= "$row->[0],";  #q3
-	  $tx_info .= "$row->[1]";   #frg_type
-	  $tx_info .= "$row->[2]" if $row->[1] ne 'p'; #frg_nr
-	  $tx_info .= "^$row->[3]" if $row->[3] > 1;   #frg_z
-	  $tx_info .= "$row->[4]" if $row->[4] != 0;   #frg_loss
-	  $tx_info .= ",$row->[5],"; #eri
-        }
+				my $tx_info = "";
+				for my $row (@rows) {
+					$row->[5] = 0.01
+					 if ($any_eri && ($row->[5] eq '' || $row->[5] == 0));
+						 $tx_info .= "$row->[0],";  #q3
+							$tx_info .= "$row->[1]";   #frg_type
+							$tx_info .= "$row->[2]" if $row->[1] ne 'p'; #frg_nr
+							$tx_info .= "^$row->[3]" if $row->[3] > 1;   #frg_z
+							$tx_info .= "$row->[4]" if $row->[4] != 0;   #frg_loss
+							$tx_info .= ",$row->[5],"; #eri
+				}
         return $tx_info;
-      }
+         
+   }
 }
 
 ###############################################################################
@@ -600,7 +600,6 @@ sub mzML2traces {
   } # End if index elsif loop
   my $etime = time();
   my $tdelta = $etime - $stime;
-  print "Took $tdelta seconds to read chromatogram<br>\n";
 
 
   for my $cgram_row ( @target_cgrams ) {
