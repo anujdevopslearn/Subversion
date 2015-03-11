@@ -7,7 +7,7 @@
 # Description : Prints summary of a given protein given selection
 #               atlas build and protein name.
 #
-# SBEAMS is Copyright (C) 2000-2014 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2015 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -495,6 +495,7 @@ sub handle_request {
                            -action=>"$base_url",
 			   -name=>"SearchForm",
                           );
+      print $q->hidden( "use_nextprot", $q->param( 'use_nextprot' ) );
 
       print "PeptideAtlas Build: ";
 
@@ -1909,14 +1910,15 @@ sub handle_request {
 
     $log->debug( "UA is $ENV{HTTP_USER_AGENT}" );
 
-    my $sampleMap = $sbeamsMOD->getSampleMapDisplay( sample_ids => $sample_ids,
-		                                                 instance_ids => \%instance_ids,
-		                                               atlas_build_id => $atlas_build_id,
-                                                      link => $link,
-                                                      tr_info => $tr,
-																					   			header_text => "Shows per-experiment expression for $max_peptides most highly observed peptides"
-																										);
-    print "<A NAME='samplemap'></A><TABLE width='600'>$sampleMap</TABLE>" if $htmlmode;
+    my $sampleMap = $sample_ids;
+#    my $sampleMap = $sbeamsMOD->getSampleMapDisplay( sample_ids => $sample_ids,
+#		                                                 instance_ids => \%instance_ids,
+#		                                               atlas_build_id => $atlas_build_id,
+#                                                      link => $link,
+#                                                      tr_info => $tr,
+#																					   			header_text => "Shows per-experiment expression for $max_peptides most highly observed peptides"
+#																										);
+#    print "<A NAME='samplemap'></A><TABLE width='600'>$sampleMap</TABLE>" if $htmlmode;
 
     # Widget to allow show/hide of sample section
     ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_samplelist',
@@ -2996,7 +2998,6 @@ sub displayAnnotatedSequence {
   my $use_nextprot = ( $parameters->{use_nextprot} ) ? 1 : 0;
   my $ub_id = $parameters->{uniprot_db_id} || 0;
 
-
   my $html_seq = $sbeamsMOD->get_html_seq_vars( seq => $sequence,
                                           accession => $biosequence->{biosequence_name},
                                       show_all_snps => 1, 
@@ -3011,13 +3012,13 @@ sub displayAnnotatedSequence {
                                        show_clustal => $args{show_clustal} );
 
   print "<TR $tr><TD> $html_seq->{seq_display} </TD></TR>\n";
-  if ( $html_seq->{clustal_display} ) { # If we have any variants
+  if ( $html_seq->{clustal_display} ) { # If we have any annotations
 
     print "<TR $tr><TD>&nbsp;</TD></TR>\n";
     my $variant_list = '';
     my $cnt;
 
-    my $source = ( $use_nextprot ) ? 'neXtProt </b>' : 'Swiss Prot </b>';
+    my $source = ( $use_nextprot ) ? 'neXtProt ' : 'Swiss Prot ';
     $q->delete( 'use_nextprot' );
     my $self_url = $q->self_url();
     if ( $use_nextprot ) {
@@ -3031,7 +3032,7 @@ sub displayAnnotatedSequence {
     }
 
     if ( $html_seq->{has_variants} ) {
-      print "<TR $tr><TD><B>Annotated Variants from $source </TD></TR>\n";
+      print "<TR $tr><TD><b>Annotated Variants from $source </b></TD></TR>\n";
       for my $var (  @{$html_seq->{variant_list}} ) {
         $cnt++;
         $variant_list .= '<SPAN style="display:none" ID=var_list>' if $cnt == 17;
@@ -3045,43 +3046,45 @@ sub displayAnnotatedSequence {
           my $nobs = $html_seq->{site_nobs};
           my $site = $nobs->{$skey}->{site};
           my $post_aa = $nobs->{$skey}->{post_aa};
-          my $post_cnt = $nobs->{$skey}->{$post_aa};
-          my $total = $nobs->{total}->{$site};
+          my $post_cnt = $nobs->{$skey}->{$post_aa} || 0;
+          my $total = $nobs->{total}->{$site} || 0;
 
-          my $opep = join( '_', keys( %{$nobs->{$skey}->{opeptides}} ) ) || 'na';
-          my $spep = join( '_', keys( %{$nobs->{$skey}->{peptides}} ) ) || 'na';
-
-          my $spep_str = '';
-          my @spep_str = sort( keys( %{$nobs->{$skey}->{peptides}} ) );
-          if ( scalar( @spep_str ) > 9 ) {
-            my $num = scalar( @spep_str ) - 9;
-            $spep_str = join( ",<br>", @spep_str[0..8], "and $num more" );
-          } else {
-            $spep_str = join( ",<br>", @spep_str );
-          }
-
-          my $perc = ( $total ) ? sprintf( "%0.1f", 100*$post_cnt/$total ) : 0;
-          my $observations = '';
-          my $class = 'pa_snp_obs_font';
-          my $uniq = '';
-          my $title = 'SNP was observed at given frequency in Peptide Atlas.';
-          if ( $nobs->{unique}->{$skey} ne $post_cnt ) {
-            if ( !$nobs->{unique}->{$skey} ) {
-              $class = 'pa_snp_warn_font';
-              $title .= " All supporting peptides also seen in other proteins";
+          if ( $total ) {
+            my $opep = join( '_', keys( %{$nobs->{$skey}->{opeptides}} ) ) || 'na';
+            my $spep = join( '_', keys( %{$nobs->{$skey}->{peptides}} ) ) || 'na';
+  
+            my $spep_str = '';
+            my @spep_str = sort( keys( %{$nobs->{$skey}->{peptides}} ) );
+            if ( scalar( @spep_str ) > 9 ) {
+              my $num = scalar( @spep_str ) - 9;
+              $spep_str = join( ",<br>", @spep_str[0..8], "and $num more" );
             } else {
-              $class = 'pa_snp_medium_font';
-              $title .= " Some supporting peptides also seen in other proteins";
+              $spep_str = join( ",<br>", @spep_str );
             }
-            $uniq = "($nobs->{unique}->{$skey} unique)";
+  
+            my $perc = ( $total ) ? sprintf( "%0.1f", 100*$post_cnt/$total ) : 0;
+            my $observations = '';
+            my $class = 'pa_snp_obs_font';
+            my $uniq = '';
+            my $title = 'SNP was observed at given frequency in Peptide Atlas.';
+            if ( $nobs->{unique}->{$skey} ne $post_cnt || !$post_cnt ) {
+              if ( !$nobs->{unique}->{$skey} ) {
+                $class = 'pa_snp_warn_font';
+                $title .= " All supporting peptides also seen in other proteins";
+              } else {
+                $class = 'pa_snp_medium_font';
+                $title .= " Some supporting peptides also seen in other proteins";
+              }
+              $uniq = "($nobs->{unique}->{$skey} unique)" if $nobs->{unique}->{$skey};
+            }
+  #          Not yet ready to release
+            $var->[1] = "<a href=ViewPeptideExpression?atlas_build_id=$args{atlas_build_id};spep=$spep;opep=$opep;use_nextprot=$use_nextprot;acc=$biosequence->{biosequence_name} title='View SNP expression profile'>$var->[1]</a>\t";
+            $title .= "<br>Supporting Peptides:<br>$spep_str";
+            $var->[4] = qq~<span class=$class onMouseout="hideTooltip()" onMouseover="showTooltip(event,'$title')">Obs $perc ~ . '% (' . "$post_cnt/$total) $uniq </span> $var->[4] "; 
+  
+  #          $var->[1] = "<span class=pa_ title='observed SNP'>$var->[1]</span>";
+            }
           }
-#          Not yet ready to release
-#          $var->[1] = "<a href=ViewPeptideExpression?atlas_build_id=$args{atlas_build_id};spep=$spep;opep=$opep;use_nextprot=$use_nextprot;acc=$biosequence->{biosequence_name} title='View SNP expression profile'>$var->[1]</a>\t";
-          $title .= "<br>Supporting Peptides:<br>$spep_str";
-          $var->[4] = qq~<span class=$class onMouseout="hideTooltip()" onMouseover="showTooltip(event,'$title')">Obs $perc ~ . '% (' . "$post_cnt/$total) $uniq </span> $var->[4] "; 
-
-#          $var->[1] = "<span class=pa_ title='observed SNP'>$var->[1]</span>";
-        }
         $variant_list .= join( "\t", @{$var}[0..4] ) . "\n";
       }
       my $var_toggle_link = '';
@@ -3104,11 +3107,29 @@ sub displayAnnotatedSequence {
         ~;
       }
       print qq~ <TR $tr><TD> <PRE>$variant_list</PRE> $var_toggle_link </TD></TR> ~;
-    }
+    } 
     print "<TR $tr><TD>&nbsp;</TD></TR>\n";
-    print "<TR $tr><TD><B>Variants in Sequence Context:</B> </TD></TR>\n";
+    print "<TR $tr><TD><B>Annotations in Sequence Context:</B> </TD></TR>\n";
     print "<TR $tr><TD> $html_seq->{clustal_display} </TD></TR>\n";
-  }
+  } 
+
+  if ( !$html_seq->{has_variants} ) {
+    my $atype = ( $html_seq->{clustal_display} ) ? ' Variants' : ' Annotations';
+
+    my $alt_source = ( !$use_nextprot ) ? 'neXtProt ' : 'Swiss Prot ';
+    my $curr_source = ( $use_nextprot ) ? 'neXtProt ' : 'Swiss Prot ';
+    my $chg_src = ( $use_nextprot ) ? 0 : 1;
+    $q->delete( 'use_nextprot' );
+    my $self_url = $q->self_url();
+    my $look_src = '';
+    if ( $self_url =~ /\?/ ) {
+      $look_src .= "(Look for <a href='$self_url;use_nextprot=$chg_src'>$alt_source </a> annotations)"
+    } else {
+      $look_src .= "(Look for <a href='$self_url?use_nextprot=$chg_src'>$alt_source </a> annotations)"
+    }
+    print "<TR $tr><TD><b>No $atype found in $curr_source </b> $look_src</TD></TR>\n";
+  } # End if !variants
+
   print "</TABLE>\n\n";
   print "<TABLE><TR $tr><TD>Protein Coverage = ",int($observed_residues/$seq_length*1000)/10,"% ";
   my $likely = ( $seq_length-$cnt ) ? int(($observed_residues)/($seq_length-$cnt)*1000)/10 : 0;
