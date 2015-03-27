@@ -258,7 +258,7 @@ sub get_alignment_display {
 --													   WHEN organism_name = 'Yeast' THEN 'Description'
 --													   ELSE resource_name
 --											  END
-  ORDER BY LEN(CAST(biosequence_seq AS VARCHAR(4000) ) ) DESC, biosequence_name DESC
+  ORDER BY LEN(CAST(biosequence_seq AS VARCHAR(4000) ) ) DESC, CAST(biosequence_seq AS VARCHAR(4000)), biosequence_name DESC
 
   END_SQL
 
@@ -324,7 +324,7 @@ sub get_alignment_display {
     my $seq = $row[3];
     if ( $acc =~ /[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}/ ) {
       my @subseqs = split( /\*/, $row[3] );
-      my $seq = $subseqs[0];
+      $seq = $subseqs[0];
     }
 #		$seq =~ s/[^a-zA-Z]//g;
 
