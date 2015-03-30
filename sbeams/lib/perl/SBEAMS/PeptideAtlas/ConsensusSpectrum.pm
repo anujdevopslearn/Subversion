@@ -100,9 +100,13 @@ sub spectrum_search {
     die( "Missing required parameter $opt" ) unless defined $args{$opt};
   }
 
+  my $projects = ( !$args{project_ids} ) ? '' : "AND project_id IN ($args{project_ids})";
   my $charge = ( !$args{charge} ) ? '' : "AND charge = '$args{charge}'";
   my $m_seq = ( !$args{m_seq} ) ? '' : "AND modified_sequence = '$args{m_seq}'";
-  my $lib = ( !$args{lib_id} ) ? '' : "AND CLS.consensus_library_id = '$args{lib_id}'";
+  my $lib = ( !$args{lib_id} ) ? '' : 
+            ( $args{lib_id} =~ /,/ ) ? "AND CLS.consensus_library_id IN ( $args{lib_id} )" : "AND CLS.consensus_library_id = $args{lib_id}";
+
+  my $file_path = ( $args{rm_path_constraint} ) ? '' : 'AND file_path IS NULL';
 
   my $sql =<<"  END";
   SELECT consensus_library_spectrum_id, sequence, charge, modifications, protein_name,
@@ -111,7 +115,8 @@ sub spectrum_search {
     FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM CLS
     JOIN $TBAT_CONSENSUS_LIBRARY CL ON CL.consensus_library_id = CLS.consensus_library_id
     WHERE sequence = '$args{seq}'
-    AND file_path IS NULL
+    $file_path 
+    $projects
     $charge
     $m_seq
     $lib
