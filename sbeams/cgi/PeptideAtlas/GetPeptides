@@ -856,12 +856,14 @@ sub handle_request {
       $sbeams->display_sql( sql => $sql,
                             use_tabbed_panes => 1 ) if ($show_sql);
 
+      my $use_caching = (defined $parameters{use_caching}) ? $parameters{use_caching} : 1;
+      $log->info( "Caching is $use_caching" );
 
       #### Fetch the results from the database server
       $sbeams->fetchResultSet(
         sql_query=>$sql,
         resultset_ref=>$resultset_ref,
-        use_caching => 1
+        use_caching => $use_caching
       );
       if (scalar @{$resultset_ref->{data_ref}} < $MAX_ROW_NUMBER){
         $parameters{row_limit} = '';
