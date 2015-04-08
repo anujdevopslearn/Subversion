@@ -8,7 +8,7 @@
 # Description : This CGI program dumps the ResultSet data to the user
 #               in various formats
 #
-# SBEAMS is Copyright (C) 2000-2011 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2014 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -38,8 +38,8 @@ use SBEAMS::Connection::Tables;
 
 $sbeams = new SBEAMS::Connection;
 
-# Don't buffer output
-$|++;
+# Don't turn off buffering, as this slows performance
+# $|++;
 
 #use CGI;
 #$q = new CGI;
@@ -145,7 +145,7 @@ sub handle_request {
 
 
   #### Define the parameters that can be passed by CGI
-  my @possible_parameters = qw( tmp_file format name );
+  my @possible_parameters = qw( tmp_file format name raw_download );
 
   #### Read in all the passed parameters into %parameters hash
   foreach $element (@possible_parameters) {
@@ -166,7 +166,7 @@ sub handle_request {
 
   #### verify that needed parameters were passed
   for my $param ( @possible_parameters ) {
-    die "missing required parameter $param" unless $parameters{$param};
+    die "missing required parameter $param" unless defined $parameters{$param};
   }
 
   #### Default format is Tab Separated Value
@@ -177,17 +177,26 @@ sub handle_request {
   # Currently only option, but could use this to fetch a file and force download.
   if ( $parameters{tmp_file} ) {
     my $file = "$PHYSICAL_BASE_DIR/tmp/$parameters{tmp_file}";
+    $file = $parameters{tmp_file} unless -e $file;
 
     my $size = prettyBytes( -s $file );
-    open FIL, $file || exit;
 
-    $log->info( "starting file read, size is $size " . time() );
-    while ( my $line = <FIL> ) {
-      $line =~ s/\&nbsp\;//gm if $parameters{trim_html};
-      print $line;
+    if ( $parameters{raw_download} ) {
+      $log->info( "starting file cat, size is $size " . time() );
+      system( "cat $file" );
+      $log->info( "finished file cat " . time() );
+
+    } else {
+      open FIL, $file || exit;
+
+      $log->info( "starting file read, size is $size " . time() );
+      while ( my $line = <FIL> ) {
+        $line =~ s/\&nbsp\;//gm;
+        print $line;
+      }
+      $log->info( "finished file read " . time() );
+      close FIL;
     }
-    $log->info( "finished file read " . time() );
-    close FIL;
   } else {
     # Currently a no-op?
     my $ua = LWP::UserAgent->new();
