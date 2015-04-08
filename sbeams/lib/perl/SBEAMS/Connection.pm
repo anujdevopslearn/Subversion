@@ -323,7 +323,10 @@ sub makeSBEAMSTempLink {
   # Generate random filename iff necessary 
 	$args{linkname} ||= $self->getRandomString( num_chars => 20 );
 
-	my $tmp_path = "$PHYSICAL_BASE_DIR/tmp/" . $args{linkname};
+	my $tmp_path = "/tmp/" . $args{linkname};
+  unless( $args{relative} ) {
+	  $tmp_path = "$PHYSICAL_BASE_DIR/$tmp_path";
+  }
 
 	if ( ! -e $tmp_path ) {
 		system( "ln -s $args{path} $tmp_path");
