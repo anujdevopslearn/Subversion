@@ -665,7 +665,7 @@ sub get_subset_form {
           my $tmp_fname = "/tmp/$fname";
 
           if ( $params->{upload_to_basespace} ) {
-            $bs = upload_to_basespace( basename => $base_name, tmpfile_name => $fname, status => $status );
+            $bs = upload_to_basespace( basename => $base_name, tmpfile_name => $full_fname, status => $status );
           }
 
 #          $base_name =~ s/\.csv/\.tsv/;
