@@ -2179,7 +2179,7 @@ sub get_uniprot_annotation {
 
           if ( $var->[0] =~ /MOD_RES|CARBOHYD/ ) {
             $annot{has_modres}++;
-          } else {
+          } elsif ( $var->[0] ne 'CONFLICT' ) { # Not yet using these
             $annot{has_variants}++;
           }
           $annot{success}++;
