@@ -223,6 +223,7 @@ sub handle_request {
   #### Set some reasonable defaults if no parameters supplied
   unless ($n_params_found) {
     $parameters{input_form_format} = "minimum_detail";
+    $parameters{redundancy_constraint} = "on";
   }
 
 
@@ -537,6 +538,7 @@ sub getResultset {
 	#$parameters{strand_constraint} ;
   my $idx = 0;
   my @data = ();
+  my %proteins = ();
   $resultset_ref->{data_ref} = \@data;
 
   LOOP:while (my $line = <IN>){
@@ -548,7 +550,12 @@ sub getResultset {
     }
 
     if ($redundancy_constraint eq 'on'){
-       next if ( $elms[19] !~ /\d+-1$/);
+       #next if ( $elms[19] !~ /\d+-1$/);
+       if (defined $proteins{$elms[1]}){
+         next;
+       }else{
+         $proteins{$elms[1]} = 1;
+       }
     }
 
     foreach my $num ( qw(0 1 2 3 4 8 18)){

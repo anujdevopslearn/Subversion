@@ -1016,7 +1016,7 @@ AT_GetNextProtChromMapping	11	start_in_chromosome	Start Position in Chromosome	i
 AT_GetNextProtChromMapping	12	end_in_chromosome	End Position in Chromosome	int	4	0	N		N			N	text	20		Y	Y	N	Constrain to proteins whose genes end at a particular region of the chromosome		
 AT_GetNextProtChromMapping	13	protein_evidence_level_constraint	Protein Evidence Level Constraint									N	text	40		Y	Y	N	Constraint for the Protein Evidence Level.  		
 AT_GetNextProtChromMapping	14	peptideatlas_constraint	PeptideAtlas Observation					No constraint				N	optionlist	4		Y	Y	N	"<a href=""http://www.peptideatlas.org/docs/protein_ident_terms.php"">Protein Identification Terminology</a>"	"select '01' ,'In PA reference DB & observed & canonical' union select '02','In PA reference DB & observed'  union select '03','In PA reference DB' union select '04','No constraint'"	
-AT_GetNextProtChromMapping	15	redundancy_constraint	No Redundancy in Each Chromosome									N	checkbox	0		Y	Y	N	remove redundant nextprot accession entries in each chromosome		
+AT_GetNextProtChromMapping	15	redundancy_constraint	No Redundancy									N	checkbox	0		Y	Y	N	remove redundant nextprot accession entries		
 AT_spectrum_ptm_identification	1	spectrum_ptm_identification_id	Spectrum PTM Identification ID	int	4	0	N		Y			Y							spectrum_ptm_identification_id		
 AT_spectrum_ptm_identification	2	spectrum_identification_id	Spectrum Identification ID	int	4	0	N		N	AT_spectrum_identification	spectrum_identification_id	Y							spectrum_identification_id		
 AT_spectrum_ptm_identification	3	ptm_sequence	PTM sequence	varchar	255	0	N		N			Y							ptm_sequence		
