@@ -175,6 +175,7 @@ sub get_status_box {
 
 sub get_help_links {
 
+
   my %title2text = ( 'Library' => "Source library file to customize. <br><br> <sup>&dagger;</sup> Note that libraries that have already had SWATHS applied can only be filtered by protein list",
                      'min_num_frags' => "Minimum number of fragment ions to include an assay. <br><br>Must be less than or equal to Max num fragments ",
                      'max_num_frags' => "Maximum number of fragment ions to use in an assay for a specific precursor. <br><br> Must be greater than or equal to Min num fragments ",
@@ -183,6 +184,8 @@ sub get_help_links {
                      'prec_max_mz' => "Maximum precursor ion m/z value for library entries ",
                      'frag_min_mz' => "Minimum fragment ion m/z value for library entries ",
                      'frag_max_mz' => "Maximum fragment ion m/z value for library entries ",
+                       'cmod_mass' => 'Generate transision with heavy-labeled versions of selected amino acids, Use ctrl-shift for multiple options.',
+                       'cmod_opts' => $q->escape( 'Generate heavy transitions, light and heavy (L & H), or light only (default).  Relevant only if one or more heavy label options are selected.' ),
                      'swaths_file' => "File of SWATH bins, format is lower mz bound 'tab' upper bound mz 'newline' ",
                      'no_swaths_file' => "SWATH file not needed, ion library filtered at analysis time (Peakview) ",
                      'swath_size' => "Size of each SWATH bin, default is 25 Th ",
@@ -483,7 +486,14 @@ sub get_library_table {
 
     my $px_link = '';
     if ( $lib_zero->[10] ) {
-      $px_link = "(<a href='http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=$lib_zero->[10]' target=_px title='View dataset $lib_zero->[10] at Proteome Exchange'>$lib_zero->[10]</a>)";
+      if ( $lib_zero->[10] =~ /^PXD/ ) {
+        $px_link = "(<a href='http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=$lib_zero->[10]' target=_px title='View dataset $lib_zero->[10] at Proteome Exchange'>$lib_zero->[10]</a>)";
+      } else {
+        $px_link = "(<a href='https://db.systemsbiology.org/sbeams/cgi/PeptideAtlas/PASS_View?identifier=$lib_zero->[10]' target=_px title='View dataset $lib_zero->[10] at Proteome Exchange'>$lib_zero->[10]</a>)";
+      }
+
+
+
     }
 
     $lib_zero->[12] .= '<br>' if $lib_zero->[12];
@@ -609,6 +619,11 @@ sub get_subset_form {
           }
           close PROTS;
           $exec .= "--protein /tmp/$pfile ";
+
+          # Yeast library has garbage in uniprot_acc field 
+          if ( $path =~ /Yeast/i ) {
+            $exec .= "--use_protein ";
+          }
         } elsif ( $params->{domain_protein_list_id} ) {
 
           my $sql = qq~;
@@ -625,6 +640,7 @@ sub get_subset_form {
             print PROTS "$row[0]\n";
           }
           $exec .= "--protein /tmp/$pfile ";
+
           close PROTS;
 #        } else {
 #          die Dumper( $params );
@@ -632,6 +648,9 @@ sub get_subset_form {
         $exec .= "--min_num $params->{min_num_frags} ";
         $exec .= "--max_num $params->{max_num_frags} ";
 
+        if ( $params->{cmod_mass} && $params->{cmod_opts} ) {
+          $exec .= "--cmod_mass $params->{cmod_mass} --cmod_opts $params->{cmod_opts} ";
+        }
 
 
         $log->info( $exec );
@@ -780,6 +799,8 @@ sub get_subset_form {
     $no_swaths = 'checked';
   }
 
+  my $cmod_mass_select = get_cmod_select( $params->{cmod_mass} );
+  my $cmod_opts_radio = get_cmod_radio( $params->{cmod_opts} );
 
   my $form = qq~
   $help
@@ -826,8 +847,8 @@ sub get_subset_form {
   }
   </script>
   <style type="text/css">
-   .cellblock_top { border-top:1px solid; border-color:black; border-left:1px solid; border-right:1px solid}
-   .cellblock_bottom { border-bottom:thin solid; border-color:black; border-left:thin solid; border-right:thin solid}
+   .cellblock_top { border-top:1px solid; border-color:black; border-left:1px solid; border-right:1px solid; padding:10px }
+   .cellblock_bottom { border-bottom:thin solid; border-color:black; border-left:thin solid; border-right:thin solid; padding:10px }
    .cellblock { border-color:black; border-left:thin solid; border-right:thin solid}
    .cellblock_complete { border-color:black; border-left:thin solid; border-right:thin solid; border-top: thin solid; border-bottom:thin solid }
   </style>
@@ -837,6 +858,7 @@ sub get_subset_form {
   <input type=hidden name=mode value=subset_libs />
   <input type=hidden name=action value=download />
   $basespace{basespace_params}
+  <tr><td colspan=3 align=left><b>Library selection</b></td></tr>
   <tr class=cellblock_top>
     <td align=right><b><i> Input library<sup>&dagger;</sup>:</i></b></td>
     $title2help->{Library}
@@ -849,6 +871,7 @@ sub get_subset_form {
   </tr>
   <tr>
     <td colspan=3>&nbsp;</td>
+    <tr><td colspan=3 align=left><b>Protein filtering</b></td></tr>
   </tr>
   <tr class="cellblock_top">
     <td align=right><b><i> Proteins:</i></b></td>
@@ -868,9 +891,7 @@ sub get_subset_form {
   <tr>
     <td colspan=3>&nbsp;</td>
   </tr>
-
-
-
+  <tr><td colspan=3 align=left><b>M/Z filtering</b></td></tr>
   <tr class=cellblock_top>
     <td align=right><b><i> Min precursor mz:</i></b></td>
     $title2help->{prec_min_mz}
@@ -894,6 +915,8 @@ sub get_subset_form {
   <tr>
     <td colspan=3>&nbsp;</td>
   </tr>
+  <tr><td colspan=3 align=left><b>Number of fragment ions</b></td></tr>
+
   <tr class=cellblock_top>
     <td align=right><b><i> Min num fragments:</i></b></td>
     $title2help->{min_num_frags}
@@ -907,6 +930,24 @@ sub get_subset_form {
   <tr>
     <td colspan=3>&nbsp;</td>
   </tr>
+
+  <tr><td colspan=3 align=left><b>Isotopic labelling</b></td></tr>
+
+  <tr class=cellblock_top>
+    <td align=right><b><i>Heavy isotopes:</i></b></td>
+    $title2help->{cmod_mass}
+    <td>$cmod_mass_select</td>
+  </tr>
+  <tr class=cellblock_bottom>
+    <td align=right><b><i> Transition types:</i></b></td>
+    $title2help->{cmod_opts}
+    <td>$cmod_opts_radio</td>
+  </tr>
+  <tr>
+    <td colspan=3>&nbsp;</td>
+  </tr>
+
+  <tr><td colspan=3 align=left><b>SWATH Settings</b></td></tr>
 
   <tr class="cellblock_top">
     <td align=right><b><i>Upload SWATHs file:</i></b></td>
@@ -1002,6 +1043,41 @@ sub process_params {
   $sbeams->processStandardParameters( parameters_ref => $params );
   return( $params );
 }
+
+sub get_cmod_select {
+  
+  my $curr_val = shift || '';
+  my %sel = ( K8 => '', R10 => '', K6 => '', R6 => '' );
+  my %seen;
+  for my $curr ( split( ',', $curr_val ) ) {
+    $sel{$curr} = 'SELECTED';
+  }
+
+  my $cmod_sel = qq~
+    <SELECT SIZE=4 MULTIPLE NAME=cmod_mass>
+      <OPTION VALUE='' ></OPTION>
+      <OPTION VALUE=K8 $sel{K8}>Lysine + 8</OPTION>
+      <OPTION VALUE=R10 $sel{R10}>Arginine + 10</OPTION>
+      <OPTION VALUE=K6 $sel{K6}>Lysine + 6</OPTION>
+      <OPTION VALUE=R6 $sel{R6}>Arginine + 6</OPTION>
+    </SELECT>
+  ~;
+  return $cmod_sel;
+}
+
+sub get_cmod_radio {
+  my $curr_val = shift || 'light_only';
+  my %sel = (  light_only => '', 'heavy_only' => '', both => '' );
+  $sel{$curr_val} = 'checked';
+
+  my $cmod_radio = qq~
+  <INPUT TYPE=radio name=cmod_opts $sel{light_only} value=light_only> Light only </INPUT>
+  <INPUT TYPE=radio name=cmod_opts $sel{heavy_only} value=heavy_only> Heavy only </INPUT>
+  <INPUT TYPE=radio name=cmod_opts $sel{both} value=both> L & H </INPUT>
+  ~;
+  return $cmod_radio;
+}
+
 
 
 sub authenticate_to_basespace {
@@ -1382,7 +1458,12 @@ sub get_public_libsets {
       $sets{$row[0]}->{inst} = $row[1] if $row[1] =~ /TripleTOF/;
       $sets{$row[0]}->{lib_cnt} += $row[6];
     } else {
-      my $px = ( $row[3] ) ? "<a href='http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=$row[3]' target=_px>$row[3]</a>" : $sbeams->makeInactiveText( 'na' );
+      my $px = ( $row[3] ) ? 
+               ( $row[3] =~ /^PXD/ ) ? "<a href='http://groteomecentral.proteomexchange.org/cgi/GetDataset?ID=$row[3]' target=_px>$row[3]</a>" :
+                                       "<a href='https://db.systemsbiology.org/sbeams/cgi/PeptideAtlas/PASS_View?identifier=$row[3]' target=_px>$row[3]</a>" :
+               $sbeams->makeInactiveText( 'na' );
+        
+        $sbeams->makeInactiveText( 'na' );
       $row[5] =~ s/Proteome Coverage//gi;
       $sets{$row[0]} = { inst => $row[1],
                          lib_cnt => $row[6],
