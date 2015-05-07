@@ -1,6 +1,6 @@
-// $LastChangedDate$
-// $LastChangedBy$
-// $LastChangedRevision$
+// $LastChangedDate: 2013-10-18 15:27:42 -0700 (Fri, 18 Oct 2013) $
+// $LastChangedBy: vagisha@gmail.com $
+// $LastChangedRevision: 57 $
 
 // -----------------------------------------------------------------------------
 // Peptide sequence and modifications

@@ -1,3 +1,7 @@
+// $LastChangedDate: 2012-12-21 16:04:41 -0800 (Fri, 21 Dec 2012) $
+// $LastChangedBy: vagisha@gmail.com $
+// $LastChangedRevision: 49 $
+
 /* Javascript plotting library for jQuery, v. 0.6.
  *
  * Released under the MIT license by IOLA, December 2007.
@@ -1781,11 +1785,8 @@
                 		
                 		if(series.labelType == 'mz') {
                 			var label = x.toFixed(2);
-                		} else if ( series.labelType == 'both') {
-               		    var mz = x.toFixed(2);
-               		    var ion = series.labels[l];
-                 		  label = ion + ' [' + mz + ']';
-                		} else  {
+                		}
+                		else  {
 		                	if(series.labels) {
 		                		//alert(myx1+", "+myx2);
 		                		label = series.labels[l];

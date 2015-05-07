@@ -1,3 +1,7 @@
+// $LastChangedDate: 2012-12-21 16:04:41 -0800 (Fri, 21 Dec 2012) $
+// $LastChangedBy: vagisha@gmail.com $
+// $LastChangedRevision: 49 $
+
 function AminoAcid(aaCode, aaShortName, aaName, monoMass, avgMass) {
    this.code = aaCode;
    this.shortName = aaShortName;
@@ -55,9 +59,8 @@ AminoAcid.aa["V"] = AminoAcid.V;
 AminoAcid.get = _getAA;
 
 function _getAA(aaCode) {
-   if(AminoAcid.aa[aaCode]){
+   if(AminoAcid.aa[aaCode])
       return AminoAcid.aa[aaCode];
-   }else{
+   else
       return new AminoAcid(aaCode, aaCode, 0.0, 0.0);
-   }
 }
