@@ -101,6 +101,8 @@ if ($DEBUG) {
      my @datasetTypes = ( 'MSMS' => 'MS/MS dataset',
 			  'SRM' => 'SRM dataset',
 			  'MS1' => 'MS1 dataset',
+			  'SWATH' => 'SWATH MS dataset',
+			  'XlinkMS' => 'Cross-linking MS dataset',
 			  'QC' => 'Ongoing QC dataset',
 			  'Other' => 'Other',
 			);
