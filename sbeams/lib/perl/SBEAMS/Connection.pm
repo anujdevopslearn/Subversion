@@ -126,7 +126,7 @@ sub output_mode {
   my $METHOD_NAME = "output_mode()";
 
   my @legal_modes = (qw( html interactive tsv tsvfull csv csvfull xml cytoscape
-                         boxtable print excel excelfull) );
+                         boxtable print excel excelfull json) );
 
   #### If a new value was supplied, set it
   if ( $new_value ) {
