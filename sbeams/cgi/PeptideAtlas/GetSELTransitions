@@ -433,6 +433,21 @@ sub handle_request {
     constraint_value=>$parameters{SEL_runs} );
   return if ($runs_clause eq '-1');
 
+  if($protein_mapping_clause eq '' && $runs_clause eq ''){
+    if ($sbeams->output_mode() eq 'html') {
+        print "\&nbsp;\&nbsp;(<font color=red>WARNING: </font>".
+               "NO protein and SRM Experiment constraint. ".
+               "First SRM Experiment is queried by default.)\n";
+    } else {
+        print "WARNING: NO protein and SRM Experiment constraint. ".
+               "First SRM Experiment is queried by default.\n";
+    }
+    $project_id_clause = qq~
+    AND SELE.project_id in ( 1141 )
+    ~;
+
+  }
+
   #### Build display decoys constraint 
   my $display_decoys = $parameters{display_options} =~ /ShowDecoys/ ;
   my $display_decoys_clause = $display_decoys ?
