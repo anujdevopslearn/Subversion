@@ -80,7 +80,7 @@ sub main
   # Authenticate and exit if a username is not returned
   my $current_username = $sbeams->Authenticate( allow_anonymous_access => 1 );
   exit unless $current_username;
-  $sbeams->setSessionAttribute( key => 'PA_resource', value => 'SRMAtlas' );
+  $sbeams->setSessionAttribute( key => 'PA_resource', value => 'SRMAtlas' ) if $is_html;
 
 
   #### Read in the default input parameter_onlys
@@ -187,7 +187,7 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
         <span class=info_box>You are being allowed access to the Complete Human SRM Atlas subject to the provisional license agreement</span>
         <br>
         </p>
-        ~
+        ~ if $is_html;
       } else {
         $bad_build_specified++ unless $super_guest;
       }
@@ -265,7 +265,6 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
     $parameters{pabst_build_id} = 12;
   }
   if ( $parameters{default_search} ) {
-    $log->debug( "in the auto-setting mode, command-line only!"  . time());
     $parameters{y_ions} ||= 'on';
     $parameters{b_ions} ||= 'on';
     $parameters{C160} ||= 'on';
@@ -486,10 +485,10 @@ function get_agreement() {
         }, 10000);
       </script>
       <br>
-      ~
+      ~ if $is_html;
     }
     my $dhtml = $sbeams->getTabbedPanesDHTML();
-    print $dhtml;
+    print $dhtml if $is_html;
   }
 
   # Print form regardless.  A heavily-modified manage table form, 
@@ -501,10 +500,11 @@ function get_agreement() {
   }
   print $err if $err;
 
-  print "<DIV id=query_info></DIV>\n";
-
-  print_form ( %parameters );  
-  $sbeams->time_stmt( "Printed form" );
+  if ( $is_html ) {
+    print "<DIV id=query_info></DIV>\n";
+    print_form ( %parameters );  
+    $sbeams->time_stmt( "Printed form" );
+  }
 
   if ( $parameters{action} && $parameters{action} eq 'QUERY' && !$err ) {
     $log->debug( "  Going to fetch transitions"  . time());
@@ -512,7 +512,7 @@ function get_agreement() {
     $log->debug( "  Done fetching transitions"  . time());
   }
   $atlas->display_page_footer( close_tables => 0 ) if $guest;
-  $sbeams->setSessionAttribute( key => 'PA_resource', value => '' );
+  $sbeams->setSessionAttribute( key => 'PA_resource', value => '' ) if $is_html;
 
 } # end main
 
@@ -1581,7 +1581,7 @@ sub fetch_transitions {
   info_txt.innerHTML=" ";
   info_txt.innerHTML="<BR><DIV class=clear_warning_box><IMG SRC=$HTML_BASE_DIR/images/wait_sm.gif>&nbsp;$status_txt</DIV>";
   </script>
-  ~;
+  ~ if $is_html;
   
   my $organism = $parameters{organism} || $best_peptide->getBuildOrganism( pabst_build_id => $parameters{pabst_build_id} );
   my $scan_clause = $pep_id_string;
@@ -1766,7 +1766,6 @@ sub fetch_transitions {
     }
   }
   my $start = time;
-#  $log->debug( $lib_sql );
   $sbeams->time_stmt( "Lib SQL" );
   my $sth = $sbeams->get_statement_handle( $lib_sql );
   $sbeams->time_stmt( "Done" );
@@ -1933,8 +1932,6 @@ sub fetch_transitions {
       $row[7] = $cc{$alt_seq}->{$row[6]}->{$row[9] . $row[8]};
     }
 
-#      my $rowdata = join( ':', @row );
-#      $log->debug( "$row_cnt> $rowdata" );
       my $prot = $row[14];
       
       $counts{row}++;
@@ -2172,7 +2169,7 @@ sub fetch_transitions {
         $links =~ s/\n//g;
         $links = "<span class=nowrap_text>$links</span>";
       } else {
-        $prot = "<A HREF='GetProtein?organism_name=$organism_name;protein_name=$prot;apply_action=GO&action=GO#Sequence%20Motifs' TARGET='_peptideatlas' title='Look up protein in the Peptide Atlas'>$prot</A>";
+        $prot = "<A HREF='GetProtein?organism_name=$organism_name;protein_name=$prot;apply_action=GO&action=GO#Sequence%20Motifs' TARGET='_peptideatlas' title='Look up protein in the Peptide Atlas'>$prot</A>" if $is_html;
       }
 
       my $display_prot = $prot;
@@ -2296,7 +2293,6 @@ sub fetch_transitions {
           my ( $aa, $mass ) = $mod =~ /^(\w)(\d+)$/;
   
           if ( $aa && $mass ) {
-            $log->debug( "$mod is actionable" );
 
             # Only consider the first instance of any AA (only one mod mass each for K/R)
             next if $seen{$aa}++;
@@ -2384,7 +2380,7 @@ sub fetch_transitions {
 	}
   setTimeout( "clear_status()", 5000 );
   </script>
-  ~;
+  ~ if $is_html;
 
   if ( scalar( keys( %skipped_multimap ) ) ) {
 		my $mesg = 'Some multiple-mapping peptides were skipped: ';
@@ -2397,7 +2393,7 @@ sub fetch_transitions {
 		  }
 			$mesg .= ") ";
 		}
-		update_status( $mesg );
+		update_status( $mesg ) if $is_html;
 	}
 
 
@@ -2518,13 +2514,20 @@ sub fetch_transitions {
                                     name => 'SRM_transitions', 
                                     type => 'indirect' );
       
+
 				my $rs = $atlas->get_cached_resultset( rs_name => $rs_name );
       if ( $is_html ) {
         $content .= "<BR><BR><TABLE >$html $gXML";
-#        $log->debug( "HTML:\n $html\n" );
-
       } else {
 
+        if ( !$is_html && !$rs_params{set_name} ) {
+          $rs_params{set_name} = 'srm_atlas_build_' . $pabst_build_id; 
+        }
+        my $suppress_header = 1;
+        my $omode = $sbeams->output_mode();
+        if ( $omode =~ /tsv|json/i  ) {
+          $suppress_header = 0;
+        }
         $sbeams->displayResultSet( resultset_ref => $rs,
                              query_parameters_ref=>\%parameters,
                              rs_params_ref=> \%rs_params,
@@ -2533,8 +2536,9 @@ sub fetch_transitions {
                              max_widths=> {},
                              column_titles_ref=> $rs->{column_list_ref},
                              base_url=> '',
+                             suppress_header => $suppress_header,
 														 output_mode => $sbeams->output_mode()
-                                  );
+                               );
 
 
       }
@@ -2553,9 +2557,11 @@ sub fetch_transitions {
 #    print FRM qq~
 #    $content
 #    ~;
-  print $sbeams->addTabbedPane( label => 'Results' );
-  print "$content\n";
-  print $sbeams->closeTabbedPane( selected => 'Results' );
+  if ( $is_html ) {
+    print $sbeams->addTabbedPane( label => 'Results' );
+    print "$content\n";
+    print $sbeams->closeTabbedPane( selected => 'Results' );
+  }
 
   $sbeams->time_stmt( "Done.  Almost" );
   return unless ( $parameters{protein_context} );
@@ -2620,7 +2626,7 @@ sub update_status {
   info_txt.innerHTML=" ";
   info_txt.innerHTML="<BR><DIV class=clear_warning_box><IMG SRC=$HTML_BASE_DIR/images/wait_sm.gif>&nbsp;$msg</DIV>";
   </script>
-  ~;
+  ~ if $is_html;
 }
 
 sub get_quant_info {
@@ -2724,9 +2730,8 @@ sub get_peptide_mappings {
 
     for my $pep ( keys( %mappings ) ) {
 			if ( $pep2accstr{$pep} ) {
-#				die "pepppy!";
 			  my $cnt = $mappings{$pep};
-			  $mappings{$pep} = "<SPAN TITLE='$pep2accstr{$pep}'>$cnt</SPAN>";
+			  $mappings{$pep} = "<SPAN TITLE='$pep2accstr{$pep}'>$cnt</SPAN>" if $is_html;
 			} else {
 			}
 		}
@@ -2814,7 +2819,6 @@ sub get_scan_path {
 
   my $sth = $sbeams->get_statement_handle($sql);
   $log->debug( "Done" . time() );
-  $log->debug( $sql );
 
   my %pepion2scan = { QTrap5500 => {}, QQQ => {} };
   while ( my @row = $sth->fetchrow_array() ) {
@@ -2935,7 +2939,6 @@ sub get_PATR_transitions {
   Q1_mz, Q3_mz
  
   ~;
-#  $log->debug( $sql );
 
   my $sth = $sbeams->get_statement_handle($sql);
 
