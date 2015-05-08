@@ -2951,7 +2951,7 @@ sub displayResultSet {
       my $delimiter = ( $output_mode =~ /csv/ ) ? ',' : "\t";
 
       # Print http header
-      print $header if $self->invocation_mode() eq 'http';
+      print $header if $self->invocation_mode() eq 'http' && !$args{suppress_header};
 
       #### Set a very high page size if using defaults
       $resultset_ref->{page_size} = 1100000
@@ -3114,7 +3114,24 @@ sub displayResultSet {
       }
       print "</resultset>\n";
       return;
+    } elsif ( $output_mode =~ /json/i ) {
+
+      use JSON;
+      my $json = new JSON;
+      my @resultset;
+      for my $datarow ( @{$resultset_ref->{data_ref}} ) {
+        my %map;
+        for ( my $i = 0; $i < scalar( @{$datarow} ); $i++ ) {
+          $map{$resultset_ref->{column_list_ref}->[$i]} = $datarow->[$i];
+        }
+        push @resultset, \%map;
+      }
+      print $header if $self->invocation_mode() eq 'http' && !$args{suppress_header};
+      print $json->encode( \@resultset );
+      return;
     }
+
+    
 
 
     #### If the desired output format is Cytoscape, prepare a temp directory
