@@ -1262,6 +1262,16 @@ sub update_protInfo{
 									rowdata_ref => $rowdata);
     $peptide_instance_id{$pi_id} = 1;
   }
+  print "Purging caching\n";
+  $sql = qq~
+     DELETE FROM sbeams.dbo.cached_resultset 
+     WHERE key_field = 'atlas_build_id' 
+           AND key_value = $atlas_build_id
+           AND query_name like '%GetProteins%'
+  ~;
+  $sbeams->executeSQL($sql);
+
+
 }
 #############################################################################
 ###  Update_protInfo_using_annotation
