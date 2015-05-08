@@ -1111,6 +1111,7 @@ sub get_content_type {
                  text => 'text/plain',
                  html => 'text/html',
                 excel => 'application/excel',
+                 json => 'application/json',
                 force => 'application/force-download',
                 octet => 'application/octet-stream',
                  jpg  => 'image/jpeg',
