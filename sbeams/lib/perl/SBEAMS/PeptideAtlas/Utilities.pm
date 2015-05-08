@@ -1372,6 +1372,117 @@ sub get_html_seq {
   return $str;
 }
 
+sub assess_protein_peptides {
+  my $self = shift;
+  my %args = ( use_len => 1,
+               min_len => 7,
+               max_len => 30,
+               use_ssr => 1,
+               min_ssr => 10,
+               max_ssr => 60,
+               use_signal => 0,
+               use_tm => 0,
+               @_ );
+  my $sbeams = $self->getSBEAMS();
+
+  # If no sequence given, will extract
+  if ( !$args{seq} ) {
+    my $error = 0;
+    for my $arg ( qw( build_id accession ) ) {
+      if ( ! $args{$arg} ) {
+        $log->warn( "missing required argument $arg\n" );
+        $error++;
+      }
+    }
+    return '' if $error;
+
+    my $protein_sql = qq~
+    SELECT biosequence_seq FROM $TBAT_BIOSEQUENCE B
+    JOIN $TBAT_ATLAS_BUILD AB
+      ON AB.biosequence_set_id = B.biosequence_set_id
+    WHERE AB.atlas_build_id = $args{build_id}
+    AND biosequence_accession = '$args{accession}'
+    ~;
+
+    my $sth = $sbeams->get_statement_handle( $protein_sql );
+
+    while ( my @row = $sth->fetchrow_array() ) {
+      my @seqs = split( /\*/, $row[0] );
+      $args{seq} = $seqs[0];
+      last;
+    }
+  }
+  unless ( $args{seq} ) {
+    $log->warn( "No sequence found" );
+    return '';
+  }
+  my %fail = ( len => 0, ssr => 0 );
+  my $peps = $self->do_tryptic_digestion( aa_seq => $args{seq} ); 
+#  die Dumper( $peps );
+
+  my %len_ok;
+  for my $pep ( @{$peps} ) {
+    my $plen = length( $pep );
+    if ( $plen >= $args{min_len} && $plen <= $args{max_len} ) {
+      $len_ok{$pep}++;
+    } else {
+      $fail{len}++ if $args{use_len};
+    }
+  }
+
+  my $calc = $self->getSSRCalculator();
+  my %ssr_ok;
+  my %ssr_seen;
+  if ( $args{use_ssr} ) {
+    for my $pep ( @{$peps} ) {
+      next if ( $args{use_len} && !$len_ok{$pep} );
+      next if $ssr_seen{$pep}++;
+      if ($calc->checkSequence($pep) ){
+        my $ssr ||= $calc->TSUM3($pep);
+        print STDERR "SSR for $pep is $ssr\n";
+        if ( $ssr >= $args{min_ssr} && $ssr <= $args{max_ssr} ) {
+          $ssr_ok{$pep}++;
+        } else {
+          $fail{ssr}++;
+        }
+      }
+    }
+  }
+
+  my @pepinfo;
+  my %passing;
+  my $total = 0;
+  my $passing = 0;
+  my $likely_str = '';
+  for my $pep ( @{$peps} ) {
+    my $status = 'OK';
+    my $start = $total + 1;
+    $total += length( $pep );
+    my $end = $total;
+    if ( $args{use_len} && !$len_ok{$pep} ) {
+      $likely_str .= 0 x length( $pep );
+      $status = 'Length';
+    } elsif ( $args{use_ssr} && !$ssr_ok{$pep} ) {
+      $likely_str .= 0 x length( $pep );
+      $status = 'SSR';
+    } else {
+      $passing += length( $pep );
+      $passing{$pep}++;
+      $likely_str .= 1 x length( $pep );
+    }
+    push @pepinfo, { seq => $pep, start => $start, end => $end, status => $status };
+  }
+  
+  return ( { peptides => \@pepinfo,
+             pass_len => $passing,
+             failure =>  \%fail,
+            total_len => $total,
+              passing => [ keys( %passing ) ],
+           likely_str => $likely_str,
+       percent_likely => sprintf( "%0.1f", 100*($passing/$total)) } );
+}
+
+
 sub get_html_seq_vars {
   my $self = shift;
   my %args = @_;
