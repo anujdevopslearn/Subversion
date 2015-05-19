@@ -1191,3 +1191,15 @@ AT_ptm_summary	16	nP100	0.99 =< P	int	4	0	N		N			Y				N	N	N
 AT_ptm_summary	17	isInUniProt      	Uniprot Annotated	char	3	0	N		N			Y				N	N	N			
 AT_ptm_summary	18	isInNeXtProt 	NextProt Annotated	char	3	0	N		N			Y				N	N	N			
 AT_ptm_summary	19	most_observed_ptm_peptide	Most Frequently Observed PTM Peptide	char	100	0	N		N			Y				N	N	N			
+AT_GetAtlasVariants	1	atlas_build_id	Atlas Build									N	optionlist			Y	Y	N	Atlas build in which to search for SNPs	"SELECT atlas_build_id,atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids )  AND atlas_build_id IN (SELECT distinct atlas_build_id FROM $TBAT_ATLAS_SNPS)"	
+AT_GetAtlasVariants	2	snp_source	SNP Source	 	 	 	 	 	 			N	optionlist			Y	Y	N	"SNP source, one of Swiss Prot, NeXtProt, or both"	"SELECT option_value,option_key FROM $TBAT_QUERY_OPTION WHERE option_type='GetAtlasVariants_source'"	
+AT_GetAtlasVariants	3	protein_name	Protein Name Constraint									N	text	40		Y	Y	N	Constraint for the Protein Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.	 	
+AT_GetAtlasVariants	4	protein_file	Upload File Of Proteins									N	file	40		Y	Y	N	"Path to file with list of Protein Names, one per line, to be uploaded via the web interface (NOTE: if proteins are not found, search defaults to printing all proteins of the selected Atlas build)"		
+AT_GetAtlasVariants	5	original_aa	Original AA	 	 	 	 		 			N	text	10		Y	Y	N	Original amino acid		
+AT_GetAtlasVariants	6	variant_aa	Variant AA									N	text	10		Y	Y	N	Variant amino acid		
+AT_GetAtlasVariants	7	n_observations	N Observations									N	text	10		Y	Y	N	Number of times SNP version was seen		
+AT_GetAtlasVariants	8	n_uniq_observations	N Unique Observations									N	text	10		Y	Y	N	Number of times SNP version was seen by peptides that cannot be ascribed to another protein in the target proteome		
+AT_GetAtlasVariants	9	expression_ratio	Expression percentage									N	text	10		Y	Y	N	Percentage of PSM which observed the variant amion acid		
+AT_GetAtlasVariants	10	category	Category									N	text	10		Y	Y	N	"Category of SNP, one of XNUE (no unique evidence) XAMBI (ambiguous, e.g. I -> L), XHV (High-value), XEXCL (Exclusively as SNP)"		
+AT_GetAtlasVariants	11	original_peptide_sequence	Original Peptide Sequence									N	text	40		Y	Y	N	Original peptide sequence(s)		
+AT_GetAtlasVariants	12	variant_peptide_sequence	Variant Peptide Sequence									N	text	40		Y	Y	N	Variant peptide sequence(s)		
