@@ -1,0 +1,572 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : GetAtlasVariants
+# Author      : David Campbell  
+# $Id: $
+#
+# Description : Allows user to query SNPs in various Atlas builds.
+#
+# SBEAMS is Copyright (C) 2000-2015 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+use FindBin;
+use Data::Dumper;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+$sbeams = new SBEAMS::Connection;
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    #permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin'],
+    # connect_read_only=>1,
+    allow_anonymous_access=>1,
+  ));
+
+
+  #### Read in the default input parameters
+  my %parameters;
+
+  $parameters{uploaded_file_not_saved} = 1;
+
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+     #$sbeams->printDebuggingInfo($q);
+
+#
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+  #### Decide what action to take based on information so far
+  if ($parameters{action} eq "???") {
+
+    # Some action
+
+  } else {
+
+    $sbeamsMOD->display_page_header(
+      use_tabbed_panes=> '1',
+    );
+
+    handle_request(ref_parameters=>\%parameters);
+
+    $sbeamsMOD->display_page_footer(
+       use_tabbed_panes=> '1',
+     );
+
+  }
+
+
+} # end main
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+
+
+  #### Show current user context information
+  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
+  #$sbeams->printUserContext();
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $sbeamsMOD->getTabMenu(
+    parameters_ref => \%parameters,
+    program_name => $PROG_NAME,
+  );
+  print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+
+  #my  @accessibleBuilds = $sbeamsMOD->getAccessibleBuilds();
+
+  ### Define some generic variables
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+  #### Read in the standard form values
+  my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+  #### Set some specific settings for this program
+  my $CATEGORY="Get Atlas Variants";
+  $TABLE_NAME="AT_GetAtlasVariants" unless ($TABLE_NAME);
+  ($PROGRAM_FILE_NAME) =
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+
+  #### Get the columns and input types for this table/query
+  my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
+
+  my %input_types = 
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
+
+  #### Read the input parameters for each column
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters,
+    columns_ref=>\@columns,input_types_ref=>\%input_types);
+   #$sbeams->printDebuggingInfo($q);
+
+
+  #### Set some reasonable defaults if no parameters supplied
+  unless ($n_params_found) {
+    $parameters{input_form_format} = "minimum_detail";
+  }
+  if( not defined $parameters{organism_id}){
+    $parameters{organism_id} = 2;
+  }
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+  if ($apply_action eq "VIEWRESULTSET"  || $apply_action eq "VIEWPLOT") {
+    $sbeams->readResultSet(
+        resultset_file=>$rs_params{set_name},
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters
+    );
+    $n_params_found = 99;
+  }
+
+
+
+  my %sacrificial_params = %parameters;
+  #### Display the user-interaction input form
+  $sbeams->display_input_form(
+    TABLE_NAME=>$TABLE_NAME,
+    CATEGORY=>$CATEGORY,
+    apply_action=>$apply_action,
+    PROGRAM_FILE_NAME=>$PROG_NAME,
+    parameters_ref=>\%sacrificial_params,
+    input_types_ref=>\%input_types,
+    mask_user_context=> '1',
+    use_tabbed_panes=> '1',
+  );
+
+  #### Display the form action buttons
+  $sbeams->display_form_buttons(
+     TABLE_NAME=>$TABLE_NAME,
+     use_tabbed_panes=> '1'
+     );
+
+  ### validate form input 
+  if ($sbeams->output_mode() eq 'html'){
+		print qq~
+			<SCRIPT LANGUAGE="JavaScript" TYPE="text/javascript">
+			 var newDiv = null;
+			 validate_value = function (){
+				 if(this.value > 50 || this.value < 6){
+					 newDiv = document.createElement ("B"); 
+					 newDiv.innerHTML = '<font color="red">number must be >=6 and <=50 </font>';
+					 this.parentNode.appendChild(newDiv);
+				 }
+			 }
+			document.getElementsByName("peptide_length_constraint")[0].onblur = validate_value;
+
+		</SCRIPT>
+  ~;
+  }
+  #### Finish the upper part of the page and go begin the full-width
+  #### data portion of the page
+  $sbeams->display_page_footer(
+    close_tables=>'NO',
+    separator_bar=>'NO',
+    display_footer=>'NO',
+    use_tabbed_panes=> '1',
+  );
+
+  #########################################################################
+  #### Process all the constraints
+  ### check required field -- need to remove the empty selection from the optionlist.
+  my ($organism_id) = $parameters{organism_id};
+  
+
+  my $protein_name_clause = $sbeams->parseConstraint2SQL(
+			constraint_column=>"ASNP.protein",
+			constraint_type=>"plain_text",
+			constraint_name=>"protein_name",
+			constraint_value=>$parameters{protein_name} );
+		return if ($protein_name_clause eq '-1');
+
+  my $source_clause = '';
+  if ( $parameters{snp_source} eq 'NP' ) {
+    $source_clause = "AND snp_source = 'NP'"
+  } elsif  ( $parameters{snp_source} eq 'SP' ) {
+    $source_clause = "AND snp_source = 'UP'"
+  } elsif ( $parameters{snp_source} =~ /NP../ ) {
+    $source_clause = "AND snp_source = 'NP' AND annotation NOT LIKE '%Cosmic%'"
+  }
+
+  #ad and clause for sql for $parameters{protein_file} - supercedes protein_name
+  my %protein_hash;
+  if ( $parameters{protein_file} ) {
+     ## upload the file to a file handler
+     my $fh = $q->upload('protein_file');
+
+     if (!$fh && $q->cgi_error) {
+       print $q->header(-status=>$q->cgi_error) if ($sbeams->output_mode() eq 'html');
+     }
+     # size constraint of 1 MB, restrict $count < 30000
+     if ( (-T $fh) && (-s $fh < 1000000)) {
+       my $count = 0;
+       my $read_file=0;
+       my $prt;
+       ## protein list
+       while ($prt=<$fh>) {
+         chomp($prt);
+         $prt =~ s/\s+$//;
+         if ($prt) {
+           $protein_hash{$prt} = $prt;
+           $count = $count + 1;
+         }
+         last if ($count > 30000);
+      }
+    }
+    ## join with a commas:
+    
+    my $protein_list = '';
+    $protein_list = "'" . join( "','", keys( %protein_hash ) ) . "'" if scalar( keys( %protein_hash ) );
+    my $protein_names_clause = ( $protein_list ) ? " AND ASNP.protein IN ( $protein_list )" : '';
+  } # if upload file
+
+  #### Build ROWCOUNT constraint
+  $parameters{row_limit} = 50000 unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
+  my $limit_clause = "TOP $parameters{row_limit}";
+
+  #### Define some variables needed to build the query
+  my @column_array;
+    # Set up base column defs
+    @column_array = (
+    ["atlas_build_id", "ASNP.atlas_build_id", "Atlas Build"],
+    ["snp_source","CASE WHEN ASNP.snp_source = 'UP' THEN 'Swiss Prot' ELSE 'NeXtProt' END", "SNP Source"],
+    ["protein","ASNP.protein", "Protein"],
+    ["site","ASNP.site", "SNP site"],
+    ["pe","ASNP.pe", "Protein existence level"],
+    ["pre_aa","ASNP.pre_aa", "Original AA"],
+    ["post_aa","ASNP.post_aa", "Variant AA"],
+    ["total_nobs","ASNP.total_nobs", "Total N observations (site)"],
+    ["post_nobs","ASNP.post_nobs", "N observations (SNP)"],
+    ["post_uniq_nobs","ASNP.post_uniq_nobs", "N unique observations (SNP)"],
+    ["category","ASNP.category", "Category"],
+    ["annotation","ASNP.annotation", "Annotation"],
+
+    );
+
+
+  #### Set flag to display SQL statement if user selected
+  if ( $parameters{display_options} =~ /ShowSQL/ ) {
+    $show_sql = 1;
+  }
+
+  
+  #### Build the columns part of the SQL statement
+  my %colnameidx = ();
+  my @column_titles = ();
+
+
+  ## Sends @column_array_ref to build_SQL_columns_list, which
+  ## (1) appends the 2nd element in array to $columns_clause
+  ## (2) fills %colnameidx_ref as a hash with key = 1st element
+  ## and value = 3rd element, and (3) fills @column_titles_ref
+  ## array with the 3rd element
+  my $columns_clause = $sbeams->build_SQL_columns_list(
+    column_array_ref=>\@column_array,
+    colnameidx_ref=>\%colnameidx,
+    column_titles_ref=>\@column_titles
+  );
+
+  #### Define the SQL statement
+  my $sql = qq~
+     SELECT $limit_clause
+     $columns_clause
+     FROM $TBAT_ATLAS_SNPS ASNP
+    WHERE 1 = 1
+    $protein_name_clause
+    $source_clause
+    ORDER BY protein ASC, site ASC
+  ~;
+ 
+  #$sbeams->display_sql(sql=>$sql);
+
+  #### Certain types of actions should be passed to links
+  my $pass_action = "QUERY";
+  $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
+
+  #### Pass nearly all of the constraints down to a child query
+  my @parameters_to_pass;
+  my $parameters_list = '';
+  while ( ($key,$value) = each %input_types ) {
+    if ($key ne 'sort_order' && $key ne 'display_options') {
+      if ($parameters{$key}) {
+        push(@parameters_to_pass,"$key=$parameters{$key}");
+      }
+    }
+  }
+  if (@parameters_to_pass) {
+    $parameters_list = join('&',@parameters_to_pass);
+  }
+
+
+
+  #### Define columns that should be hidden in the output table
+
+  #########################################################################
+  #### If QUERY or VIEWRESULTSET was selected, display the data
+  if ($apply_action =~ /(QUERY|VIEWRESULTSET|VIEWPLOT)/i ){
+
+    #### If the action contained QUERY, then fetch the results from
+    #### the database
+    if ($apply_action =~ /QUERY/i) {
+      #### Show the SQL that will be or was executed
+      $sbeams->display_sql(sql=>$sql,use_tabbed_panes=> '1') if ($show_sql);
+
+      #### Fetch the results from the database server
+      $sbeams->fetchResultSet(
+        sql_query=>$sql,
+        resultset_ref=>$resultset_ref,
+      );
+
+      if($parameters{n_peptide_per_protein_constraint}){
+        postProcessResultset(
+          rs_params_ref=>\%rs_params,
+          resultset_ref=>$resultset_ref,
+          query_parameters_ref=>\%parameters,
+          column_titles_ref=>\@column_titles,
+          sql => $sql
+        );
+      }
+      #### Store the resultset and parameters to disk resultset cache
+      $rs_params{set_name} = "SETME";
+      $sbeams->writeResultSet(
+        resultset_file_ref=>\$rs_params{set_name},
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters,
+        resultset_params_ref=>\%rs_params,
+        query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+      );
+    }
+
+
+#		my @headings = ('Biosequence Name',
+#		);
+
+#		my $col_info = $sbeamsMOD->get_column_defs( labels => \@headings );
+#		my $help_text = $sbeamsMOD->make_table_help( entries => $col_info,);
+#    $help_text =~ s/<span.*<\/span>//g;
+#    $help_text =~ s/<BR>//g;
+
+    my $use_tabbed_panes = 1;
+#		if ( $help_text ) {
+#       my $prefix = $sbeams->addTabbedPane(label => "Result");
+#       print "$prefix$help_text\n" if ($sbeams->output_mode() eq 'html');
+#       $use_tabbed_panes = 0;
+#    }
+#    die Dumper( $help_text );
+
+    #### Display the resultset
+    $sbeams->displayResultSet(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      url_cols_ref=>\%url_cols,
+      hidden_cols_ref=>\%hidden_cols,
+      max_widths=>\%max_widths,
+      column_titles_ref=>\@column_titles,
+      base_url=>$base_url,
+      use_tabbed_panes=>$use_tabbed_panes,
+    );
+      
+
+    #### Display the resultset controls
+    $sbeams->displayResultSetControls(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      base_url=>$base_url,
+      use_tabbed_panes=>$use_tabbed_panes,
+    );
+    if(! $use_tabbed_panes ){
+      print $sbeams->closeTabbedPane() , "\n" if ($sbeams->output_mode() eq 'html');
+    }
+
+
+    #print "$parameters{organism_id}<BR>";
+    #### Display a plot of data from the resultset
+#    $sbeams->displayResultSetPlot(
+#      rs_params_ref=>\%rs_params,
+#      resultset_ref=>$resultset_ref,
+#      query_parameters_ref=>\%parameters,
+#      column_titles_ref=>\@column_titles,
+#      base_url=>$base_url,
+#      use_tabbed_panes=>'1',
+#      apply_action=>$apply_action,
+#    );
+
+  #### If QUERY was not selected, then tell the user to enter some parameters
+  } else {
+    if ($sbeams->invocation_mode() eq 'http') {
+      print "<H4>Select parameters above and press QUERY</H4>\n";
+    } else {
+      print "You need to supply some parameters to contrain the query\n";
+    }
+  }
+
+
+} # end handle_request
+
+###############################################################################
+# postProcessResultset
+#
+# Perform some additional processing on the resultset that would otherwise
+# be very awkward to do in SQL.
+###############################################################################
+sub postProcessResultset {
+  my %args = @_;
+  #### Process the arguments list
+  my $resultset_ref = $args{'resultset_ref'};
+  my $rs_params_ref = $args{'rs_params_ref'};
+  my $query_parameters_ref = $args{'query_parameters_ref'};
+
+  my %rs_params = %{$rs_params_ref};
+  my %parameters = %{$query_parameters_ref};
+
+  my $n_peptide_per_protein = $parameters{n_peptide_per_protein_constraint};
+  $n_peptide_per_protein =~ s/\s+//g;
+  if($n_peptide_per_protein =~ /(\D)/){
+     print "<H4>only interger number allowed in Number of Peptides Per Protein Constraint.</H4>";
+     return -1;
+  }
+  
+  my $n_rows = scalar(@{$resultset_ref->{data_ref}}); 
+  my $cols = $resultset_ref->{column_hash_ref};
+
+  my @processed_result =();
+  my %counts = ();
+  for (my $i=0; $i<$n_rows; $i++) {
+    my $protein_accession = $resultset_ref->{data_ref}->[$i]->[$cols->{biosequence_name}];
+    if ($counts{$protein_accession} < $n_peptide_per_protein){
+      push @processed_result , $resultset_ref->{data_ref}->[$i] ;
+    }
+    $counts{$protein_accession}++;
+  }
+  $resultset_ref->{data_ref} = \@processed_result;
+
+}
+###############################################################################
+# evalSQL
+#
+# Callback for translating Perl variables into their values,
+# especially the global table variables to table names
+###############################################################################
+sub evalSQL {
+  my $sql = shift;
+
+  return eval "\"$sql\"";
+
+} # end evalSQL
+
+#######################################################################
+sub getOrganismName 
+{
+    my %args = @_;
+    
+    my $organism_id = $args{organism_id};
+
+    my $sql = qq~
+        SELECT organism_name
+        FROM $TB_ORGANISM
+        WHERE organism_id = '$organism_id'
+        AND record_status != 'D'
+    ~;
+
+    my ($name) = $sbeams->selectOneColumn($sql);
+
+    ## replace spaces with _
+    $name =~ s/ /\_/g;
+
+    return $name;
+}
+
