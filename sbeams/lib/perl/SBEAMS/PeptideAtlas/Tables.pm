@@ -155,6 +155,7 @@ use vars qw(@ISA @EXPORT
     $TBAT_DIA_LIBRARY_SET
     
     $TBAT_PTM_SUMMARY
+    $TBAT_ATLAS_SNPS
 );
 
 
@@ -304,6 +305,7 @@ require Exporter;
     $TBAT_DIA_LIBRARY_SET
 
     $TBAT_PTM_SUMMARY
+    $TBAT_ATLAS_SNPS
 );
 
 
@@ -462,3 +464,4 @@ $TBAT_DIA_LIBRARY                   = "${mod}dia_library";
 $TBAT_DIA_LIBRARY_SET               = "${mod}dia_library_set";
 
 $TBAT_PTM_SUMMARY                   =  "${mod}ptm_summary";
+$TBAT_ATLAS_SNPS                    =  "${mod}atlas_snps";
