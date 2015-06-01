@@ -285,7 +285,7 @@ sub processRequest {
     if ($parameters{'spectrum_identification_id'})
     {
         my $sql = qq~
-            SELECT peptide_sequence,peptide_charge,average_parent_mz,
+            SELECT peptide_sequence,peptide_charge,monoisotopic_parent_mz,
                    MPI.modified_peptide_sequence,
 	           S.spectrum_id, S.spectrum_name, S.start_scan, S.fragmentation_type_id
               FROM $TBAT_SPECTRUM_IDENTIFICATION SI
