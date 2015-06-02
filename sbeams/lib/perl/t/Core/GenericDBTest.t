@@ -133,10 +133,10 @@ sub testInitiateTransaction {
 
 sub getOptions {
   my %opts;
-  GetOptions( \%opts, 'username=s', 'pass=s', 'server=s', 'db=s', 'setup', 'delete_tables' );
+  GetOptions( \%opts, 'username=s', 'pass=s', 'server=s', 'db=s', 'setup' );
 
   for my $opt ( qw( username pass ) ) {
-    die "missing required option $opt ($opts{$opt})\n" unless $opts{$opt};  
+    die "usage: $1 --username Username --pass Password [ --server Server(default helios) --db Database (default sbeams) --setup (add/drop test table)\n" if !$opts{$opt};
   }
   $opts{server} ||= 'helios';
   $opts{db} ||= 'sbeams';
