@@ -1,6 +1,6 @@
-// $LastChangedDate: 2015-02-02 10:28:14 -0800 (Mon, 02 Feb 2015) $
-// $LastChangedBy: djaschob@uw.edu $
-// $LastChangedRevision: 67 $
+// $LastChangedDate$
+// $LastChangedBy$
+// $LastChangedRevision$
 
 (function($) {
 
@@ -1096,27 +1096,30 @@
     {
         var options = container.data("options");
 
-        // m/z: 113, 114, 115, 116, 117, 118, 119, and 121
-        var itraqIons = [145.1069, 113.107325, 114.11068, 115.107715, 116.111069, 117.114424, 118.111459, 119.114814, 121.121524];
+        var itraqWholeLabel = 145.1069;
+        var itraqIons = [113.107325, 114.11068, 115.107715, 116.111069, 117.114424, 118.111459, 119.114814, 121.121524];
 
-        var tmtIons = [230.1702, 126.127725, 127.124760, 128.134433, 129.131468, 130.141141, 131.138176];
+        var tmtWholeLabel = 230.1702;
+        var tmtIons = [126.127725, 127.124760, 128.134433, 129.131468, 130.141141, 131.138176];
 
         var reporterSeries = [];
-        reporterSeries.push({color: "#2f4f4f", ions: itraqIons});  // DarkSlateBlue
-        reporterSeries.push({color: "#556b2f", ions: tmtIons});  // DarkOliveGreen
+        reporterSeries.push({color: "#2f4f4f", ions: itraqIons, wholeLabel: itraqWholeLabel});  // DarkSlateBlue
+        reporterSeries.push({color: "#556b2f", ions: tmtIons, wholeLabel: tmtWholeLabel});  // DarkOliveGreen
 
         for(var i = 0; i < reporterSeries.length; i += 1)
         {
             var series = reporterSeries[i];
-            var matches = calculateReporters(series.ions, series.color, container);
+            var matches = calculateReporters(series, container);
             reporterSeries[i].matches = matches;
         }
 
             container.data("reporterSeries", reporterSeries);
     }
 
-    function calculateReporters(ionMzArray, color, container)
+    function calculateReporters(seriesInfo, container)
     {
+        var ionMzArray = seriesInfo.ions;
+
         var options = container.data("options");
         var peaks = options.peaks;
         var matches = [];
@@ -1129,27 +1132,30 @@
             }
         }
         var labels = [];
+        var maxIntensity = 0;
+        for(var i = 0; i < matches.length; i += 1)
+        {
+            maxIntensity = Math.max(maxIntensity, matches[i][1]);
+        }
+
+        for(var i = 0; i < matches.length; i += 1)
+        {
+            var intensity = matches[i][1];
+            var rank = Math.round(((intensity/maxIntensity) * 100.0));
+            var mzRounded = matches[i][0].toFixed(1);
+            labels.push(mzRounded + " (" + rank + "%)");
+        }
+        // Get a match for the whole label.
+        var match = getMatchingPeakForMz(container, peaks, seriesInfo.wholeLabel);
+        if(match.bestPeak)
+        {
+            matches.push([match.bestPeak[0], match.bestPeak[1]]);
+            labels.push('nterm');
+        }
+
         if(matches.length > 0)
         {
-            var maxIntensity = 0;
-            for(var i = 0; i < matches.length; i += 1)
-            {
-                maxIntensity = Math.max(maxIntensity, matches[i][1]);
-            }
-
-            for(var i = 0; i < matches.length; i += 1)
-            {
-                var intensity = matches[i][1];
-                var rank = Math.round(((intensity/maxIntensity) * 100.0));
-                if(matches[i][0] < 140)
-                {
-                    var mzRounded = matches[i][0].toFixed(1);
-                    labels.push(mzRounded + " (" + rank + "%)");
-                } else {
-                    labels.push("nterm");
-                }
-            }
-            return {data: matches, labels: labels, color:color};
+            return {data: matches, labels: labels, color:seriesInfo.color};
         }
     }
 
