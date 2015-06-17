@@ -2253,7 +2253,11 @@ sub get_uniprot_annotation {
     if ( $swiss->{FTs} ) {
 
       for my $var ( @{$swiss->{FTs}->{list}} ) {
-        if ( $var->[0] =~ /SIGNAL|CHAIN|INIT_MET/ || 
+        if ( $var->[0] =~ /CHAIN/ || 
+             $var->[0] =~ /SIGNAL/ || 
+             $var->[0] =~ /INIT_MET/ || 
+             $var->[0] =~ /TRANSMEM/ || 
+             $var->[0] =~ /TOPO_DOM/ || 
              $var->[0] =~ /VARIANT/ && $var->[3] =~ /dbSNP/ || 
              $var->[0] =~ /VARIANT/  && $args{show_all_snps} || # dbsnp conditionally req.
              $var->[0] =~ /MOD_RES/ ||
@@ -3526,6 +3530,15 @@ sub calculate_antigenic_index {
 
 }
 
+sub is_uniprot_accession {
+  my $self = shift;
+  my %args = @_;
+  return 0 unless $args{accession};
+  if ( $args{accession} =~ /^[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}/ ) {
+    return 1;
+  }
+  return 0;
+}
 
 1;
 
