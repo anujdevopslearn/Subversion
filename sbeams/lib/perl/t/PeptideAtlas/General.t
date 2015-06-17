@@ -3,7 +3,7 @@
 #$Id:  $
 
 use DBI;
-use Test::More tests => 38;
+use Test::More tests => 39;
 use Test::Harness;
 use strict;
 use FindBin qw ( $Bin );
@@ -85,6 +85,9 @@ ok( test_fetch_build_organism_id(), 'Test build fetch with organism_id' );
 ok( test_fetch_build_specialized_build(), 'Test build fetch with specialized_build' );
 ok( test_fetch_build_organism_and_specialized_build(), 'Test build fetch with organism_name and specialized build' );
 ok( test_tryptic_digestion(), 'Tryptic digestion routines' );
+ok( test_uniprot_regex(), 'Uniprot accession regex' );
+
+
 
 sub test_bad_peptide {
 # A very bad peptide, should hit the following penalties!
@@ -730,6 +733,15 @@ sub test_fetch_build_organism_and_specialized_build {
   return ( $id && $id eq $liver_build_id ) ? 1 : 0;
 }
 
+sub test_uniprot_regex {
+  my $pass_cnt = 0;
+  $pass_cnt++ if $atlas->is_uniprot_accession( accession => 'Q2BC19' );
+  $pass_cnt++ if $atlas->is_uniprot_accession( accession => 'P12345' );
+  $pass_cnt++ if $atlas->is_uniprot_accession( accession => 'A0A022YWF9' );
+  $pass_cnt++ unless $atlas->is_uniprot_accession( accession => 'IPI000001231' );
+  $pass_cnt++ unless $atlas->is_uniprot_accession( accession => 'ENSP00000374576' );
+  return ( $pass_cnt > 4 ) ? 1 : 0;  
+}
 
 sub breakdown {
  # Put clean-up code here
