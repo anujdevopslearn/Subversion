@@ -573,7 +573,15 @@ sub getResultset {
            $pat =~ s/^0//;
            next LOOP if ($chrm !~ /^$pat$/i);
          }else {
-           next LOOP  if ($elms[$num] !~ /($pat)/i);
+
+	   #### Allow negation with a ! in front for certain constraints. This may not always work, for example with lists
+	   if ( $pat =~ /^!(.+)/ ) {
+	     my $nonpat = $1;
+	     next LOOP if ($elms[$num] =~ /($nonpat)/i);
+	   } else {
+	     next LOOP  if ($elms[$num] !~ /($pat)/i);
+	   }
+
          }
        }
     }
