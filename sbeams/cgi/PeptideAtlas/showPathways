@@ -73,11 +73,12 @@ $|++;
   $atlas_build_id = $atlas->getCurrentAtlasBuildID( parameters_ref => $params );
 
   my $paramstr = '';
-  $kegg_organism = $atlas->getCurrentAtlasOrganism( atlas_build_id => $atlas_build_id,
+  my $organism = $atlas->getCurrentAtlasOrganism( atlas_build_id => $atlas_build_id,
                                                     parameters_ref => $params, 
-                                                              type => 'kegg',
-#                                                          no_cache => 1 
+                                                              type => 'organism_id',
                                                   );
+  $kegg_organism = $keggmap->getOrganismCode( organism_id => $organism );
+
   $log->info( "Kegg organism is  $kegg_organism in showPathways" );
 
   $params->{apply_action} ||= 'list_pathways';
@@ -128,6 +129,7 @@ sub list_pathways {
     END
   }
   my $t0 = new Benchmark;
+
   my $pathways = $keggmap->getKeggPathways( organism => $kegg_organism );
 
   my $table = SBEAMS::Connection::DataTable->new();
@@ -303,7 +305,7 @@ sub pathway_details {
       if ( $entry2genes{$en} ) {
         my @genes = map( /$kegg_organism:(.*)/, @{$entry2genes{$en}} );
         my $gene = join( '%3B', @genes ); # @{$entry2genes{$en}} );
-        push @links, "Search?organism_name=$organism;search_key=$gene;action=GO";
+        push @links, "Search?build_type_name=$organism;search_key=$gene;action=GO";
         push @text, "Gene ID(s) " . join( ", ", @genes );
         for my $prot ( @genes ) {
           $proteins{$prot}++;
@@ -465,7 +467,7 @@ sub getExpressionValues {
 
   } else {  # Fetch from Peptide Atlas, original
 
-    my $search_type = ( $kegg_organism =~ /hsa|mmu/ ) ? 'Entrez GeneID' : 'ORF NAME';
+    my $search_type = ( $kegg_organism =~ /hsa|mmu|ssc|bta|rno|ecb|ptr/ ) ? 'Entrez GeneID' : 'ORF NAME';
   
     my $sk_sql = qq~
       SELECT DISTINCT resource_name, search_key_name
@@ -600,7 +602,15 @@ sub keggOrg2Std {
   my %k2s = ( hsa => 'Human',
               dme => 'Drosophila',
               sce => 'Yeast',
-              mmu => 'Mouse'
+              mmu => 'Mouse',
+              ssc => 'Pig',
+              eco => 'E Coli',
+              rno => 'Rat',
+              bta => 'Cow',
+              ecb => 'Horse',
+              ptr => 'Chimpanzee',
+              hal => 'Halobacterium',
+              mtu => 'Mybacterium tuberculosis'
             );
   return $k2s{$korg} || '';
 }
