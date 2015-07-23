@@ -433,7 +433,7 @@ sub handle_request {
     constraint_value=>$parameters{SEL_runs} );
   return if ($runs_clause eq '-1');
 
-  if($protein_mapping_clause eq '' && $runs_clause eq ''){
+  if($protein_mapping_clause eq '' && $experiments_clause eq ''){
     if ($sbeams->output_mode() eq 'html') {
         print "\&nbsp;\&nbsp;(<font color=red>WARNING: </font>".
                "NO protein and SRM Experiment constraint. ".
@@ -1019,7 +1019,12 @@ sub postProcessResultset {
   for (my $i=1; $i<$n_rows; $i++) {
     # merge with previous row?
     my $this_row = $resultset_ref->{data_ref}->[$i];
-    my $prev_row = $resultset_ref->{data_ref}->[$i-1];
+    my $prev_row; 
+    my $n=$i-1;
+    while (defined $rows_to_delete{$n}){
+      $n--;
+    }
+    $prev_row = $resultset_ref->{data_ref}->[$n];
     my $this_z = $this_row->[$cols->{peptide_charge}];
     my $prev_z = $prev_row->[$cols->{peptide_charge}];
     my $this_run = $this_row->[$cols->{run}];
@@ -1035,19 +1040,21 @@ sub postProcessResultset {
                    $prev_row->[$cols->{frg_z}]+
 		   $prev_row->[$cols->{frg_loss}];
 
-    my $merge = (($this_run eq $prev_run) &&
-		 ($this_z eq $prev_z) &&
-		 ($this_pepseq eq $prev_pepseq));
-    $merge &= ($this_frg eq $prev_frg)
-      if ($parameters{display_options} =~ /ShowEachTransition/i);
-
+    my $merge = (($this_run eq $prev_run)&&($this_z eq $prev_z)&&($this_pepseq eq $prev_pepseq));
+    $merge &= ($this_frg eq $prev_frg) if ($parameters{display_options} =~ /ShowEachTransition/i);
+    if ($merge){
+       if ($this_row->[$cols->{isotype}] eq $prev_row->[$cols->{isotype}]){
+         $rows_to_delete{$i} = 1;
+         next;
+       }
+    }
     # Yes!
     if ($merge) {
       # Copy 2nd chromatogram_id into chromatogram_id_heavy for 1st.
       # Relies on sorting by isotype!
       #print "Row $i matches previous!<br>\n";
       $prev_row->[$cols->{SEL_chromatogram_id_heavy}] =
-	$this_row->[$cols->{SEL_chromatogram_id}];
+			$this_row->[$cols->{SEL_chromatogram_id}];
       $prev_row->[$cols->{isotype}] = 'heavy+light';
       # Mark duplicate row for deletion
       $rows_to_delete{$i} = 1;
@@ -1055,21 +1062,21 @@ sub postProcessResultset {
     } else {
       ### (url_cols processing will display nothing for empty value)
       if ($this_row->[$cols->{isotype}] eq 'heavy') {
-	$this_row->[$cols->{SEL_chromatogram_id_heavy}] =
-	  $this_row->[$cols->{SEL_chromatogram_id}];
-	$this_row->[$cols->{SEL_chromatogram_id}] = '';
+				$this_row->[$cols->{SEL_chromatogram_id_heavy}] =
+				$this_row->[$cols->{SEL_chromatogram_id}];
+				$this_row->[$cols->{SEL_chromatogram_id}] = '';
       } else {
-	$this_row->[$cols->{SEL_chromatogram_id_heavy}] = '';
+				$this_row->[$cols->{SEL_chromatogram_id_heavy}] = '';
       }
       # deal with top row if second row was not merged with it
       if ($i == 1) {
-	if ($prev_row->[$cols->{isotype}] eq 'heavy') {
-	  $prev_row->[$cols->{SEL_chromatogram_id_heavy}] =
-	    $prev_row->[$cols->{SEL_chromatogram_id}];
-	  $prev_row->[$cols->{SEL_chromatogram_id}] = '';
-	} else {
-	  $prev_row->[$cols->{SEL_chromatogram_id_heavy}] = '';
-	}
+				if ($prev_row->[$cols->{isotype}] eq 'heavy') {
+						$prev_row->[$cols->{SEL_chromatogram_id_heavy}] =
+						$prev_row->[$cols->{SEL_chromatogram_id}];
+						$prev_row->[$cols->{SEL_chromatogram_id}] = '';
+				} else {
+					$prev_row->[$cols->{SEL_chromatogram_id_heavy}] = '';
+				}
       }
     }
   }
