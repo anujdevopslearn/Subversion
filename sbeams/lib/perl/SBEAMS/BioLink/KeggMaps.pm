@@ -167,6 +167,26 @@ sub getOrganismID {
   return $org_id;
 }
 
+#+
+# Get kegg organism code based on organism_id 
+#-
+sub getOrganismCode {
+  my $this = shift;
+  my %args = @_;
+
+  return '' unless $args{organism_id} && $args{organism_id} =~ /^\d+$/ ;
+      
+  my $sql = qq~ 
+  SELECT kegg_organism_name 
+  FROM $TBBL_KEGG_ORGANISM 
+  WHERE organism_id = $args{organism_id};
+  ~;
+
+  my ($org_code) = $sbeams->selectrow_array( $sql );
+
+  return $org_code || '';
+}
+
 
 ## KGML processing section
 
@@ -714,13 +734,12 @@ sub color_pathway {
 
 sub getSupportedOrganisms {
   my $self = shift;
-  my @organisms;
-  if ( $self->kegg_tables_exist() ) {
-    my $sql = "SELECT DISTINCT kegg_organism_name FROM $TBBL_KEGG_ORGANISM";
-    @organisms = $sbeams->selectOneColumn( $sql );  
-  } else {
+  my $sql = "SELECT DISTINCT kegg_organism_name FROM $TBBL_KEGG_ORGANISM";
+  my @organisms = $sbeams->selectOneColumn( $sql );  
+#  if ( $self->kegg_tables_exist() ) {
+  if ( !scalar( @organisms ) ) {
     $log->info( "Kegg caching tables not installed, see BioLink.installnotes: $@\n" );
-    @organisms = (qw( hsa sce dme mmu ) );
+    @organisms = (qw( hsa sce dme mmu ssc ) );
   }
   return \@organisms;
 }
@@ -1221,6 +1240,10 @@ sub get_kegg_pathway_image {
   my $self = shift;
   my $pathway = shift || return '';
   my $url = "http://rest.kegg.jp/get/$pathway/image";
+
+  $log->info( "Fetching $url from kegg to get map\n" );
+
+
   my $response = $self->{_user_agent}->get( $url );
   return $response->{_content};
 }
