@@ -732,6 +732,8 @@ sub handle_request {
 	colnameidx_ref=>\%colnameidx,
       ) if ($parameters{display_options} !~ /ShowEachIsotype/i);
 
+
+
       ### DEBUG
 #--------------------------------------------------
 #       print "After postprocessing...<br>\n";
@@ -1015,7 +1017,6 @@ sub postProcessResultset {
   ### adjacent due to ORDER BY clause.
   ### Perhaps should accomodate >2 for unusual future cases?
   my %rows_to_delete;
-
   for (my $i=1; $i<$n_rows; $i++) {
     # merge with previous row?
     my $this_row = $resultset_ref->{data_ref}->[$i];
@@ -1045,6 +1046,9 @@ sub postProcessResultset {
     if ($merge){
        if ($this_row->[$cols->{isotype}] eq $prev_row->[$cols->{isotype}]){
          $rows_to_delete{$i} = 1;
+         if($i == 1){
+           $prev_row->[$cols->{SEL_chromatogram_id_heavy}] = ''; 
+         }
          next;
        }
     }
@@ -1088,8 +1092,7 @@ sub postProcessResultset {
   for my $row (sort {$b <=>$a} keys %rows_to_delete) {
     #print "Deleting row $row!<br>\n";
     for (my $i=$row; $i<$n_rows-1; $i++) {
-      $resultset_ref->{data_ref}->[$i] =
-	$resultset_ref->{data_ref}->[$i+1];
+      $resultset_ref->{data_ref}->[$i] = $resultset_ref->{data_ref}->[$i+1];
     }
     delete $resultset_ref->{data_ref}->[$n_rows-1];
     $n_rows--;
@@ -1110,15 +1113,11 @@ sub postProcessResultset {
     for (my $i = $n_cols-1; $i >= $idx; $i--) {
       # Shift columns to right in four array data structures
       # plus the %ref_colnameidx hash.
-      $resultset_ref->{types_list_ref}->[$i+1] =
-	$resultset_ref->{types_list_ref}->[$i];
-      $resultset_ref->{precisions_list_ref}->[$i+1] =
-	$resultset_ref->{precisions_list_ref}->[$i];
-      $column_titles_ref->[$i+1] =
-	$column_titles_ref->[$i];
+      $resultset_ref->{types_list_ref}->[$i+1] = $resultset_ref->{types_list_ref}->[$i];
+      $resultset_ref->{precisions_list_ref}->[$i+1] = $resultset_ref->{precisions_list_ref}->[$i];
+      $column_titles_ref->[$i+1] =	$column_titles_ref->[$i];
       for (my $j=0; $j < $n_rows; $j++) {
-	$resultset_ref->{data_ref}->[$j]->[$i+1] =
-	  $resultset_ref->{data_ref}->[$j]->[$i];
+				$resultset_ref->{data_ref}->[$j]->[$i+1] = $resultset_ref->{data_ref}->[$j]->[$i];
       }
       $rev_colnameidx{$i+1} = $rev_colnameidx{$i};
     }
@@ -1145,15 +1144,11 @@ sub postProcessResultset {
     #print "<p>Deleting $column_label at index $idx<br>\n";
     # Shift columns to left in four array data structures
     for (my $i = $idx; $i < $n_cols-1; $i++) {
-      $resultset_ref->{types_list_ref}->[$i] =
-	$resultset_ref->{types_list_ref}->[$i+1];
-      $resultset_ref->{precisions_list_ref}->[$i] =
-	$resultset_ref->{precisions_list_ref}->[$i+1];
-      $column_titles_ref->[$i] =
-	$column_titles_ref->[$i+1];
+      $resultset_ref->{types_list_ref}->[$i] = $resultset_ref->{types_list_ref}->[$i+1];
+      $resultset_ref->{precisions_list_ref}->[$i] = $resultset_ref->{precisions_list_ref}->[$i+1];
+      $column_titles_ref->[$i] = $column_titles_ref->[$i+1];
       for (my $j=0; $j < $n_rows; $j++) {
-	$resultset_ref->{data_ref}->[$j]->[$i] =
-	  $resultset_ref->{data_ref}->[$j]->[$i+1];
+				$resultset_ref->{data_ref}->[$j]->[$i] = $resultset_ref->{data_ref}->[$j]->[$i+1];
       }
       $rev_colnameidx{$i} = $rev_colnameidx{$i+1};
     }
