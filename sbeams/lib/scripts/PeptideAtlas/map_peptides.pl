@@ -96,8 +96,9 @@ while( my $line = <PEPS> ) {
 
   unless ( $tested{$pepseq} ) {
 
-    my $matched = map_peptide( $pepseq );
+    my $matched = '';
     if ( $opts->{n_convert} ) {
+      $matched = map_peptide( $pepseq );
       if ( $matched ) {
 #        print "NnotD: $pepseq\n";
         $stats{NnotD}++;
@@ -127,7 +128,27 @@ while( my $line = <PEPS> ) {
 #        if ( $mcnt == 1 ) { print "$pepseq has only one!\n"; }
         } # End altseq matching attempt
       } # End if matched else
+    } elsif ( $opts->{d2n_force} ) {
+      my $ndseq = $pepseq;
+      $ndseq =~ s/D/N/g;
+      $ndseq =~ s/D/N/;
+#      die "$ndseq from $pepseq\n";
+      $matched = map_peptide( $ndseq );
+      $matching_seq = $ndseq;
+      if ( !$matched ) {
+        # Force mapping
+        $matched = map_peptide( $ndseq, 1 ) unless $opts->{suppress_brute};
+        if ( $matched ) {
+          $matching_seq = $ndseq;
+          $stats{peptide_map_ok_brute}++;
+        } else {
+          print "MIA: >$pepseq<\n" if $opts->{show_mia};
+        }
+      } else {
+        $stats{peptide_map_ok}++;
+      }
     } else { # End if n_convert
+      $matched = map_peptide( $pepseq );
       if ( !$matched ) {
         # Force mapping
         $matched = map_peptide( $pepseq, 1 ) unless $opts->{suppress_brute};
@@ -501,6 +522,7 @@ sub read_fasta {
   my %acc2seq;
   my %tryptic;
 
+  print STDERR "Interpreting peptides in N/D neutral manner...\n" if $opts->{d2n_force};
 #  if ( $opts->{grep_only} ) {
 #    return ( \%seq2acc, \%acc2seq, \%tryptic );
 #  }
@@ -540,10 +562,12 @@ sub read_fasta {
     my $seq = uc( $entry->seq() );
     chomp $seq;
     $seq =~ s/\s//gm;
+    if ( $opts->{d2n_force} ) {
+      $seq =~ s/D/N/g; 
+    }
     if ( $opts->{i_to_l_convert} ) {
       $seq =~ s/I/L/gm;
     }
-
 
     if ( defined $seq2acc{$seq} ) {
       die "Duplicate sequences" unless $opts->{duplicates};
@@ -566,7 +590,19 @@ sub read_fasta {
                                                  min_len => 6,
                                                  max_len => 300 );
 
+      my $tp_cnt = 0;
       for my $tp ( @{$tryptic} ) {
+        if ( $opts->{met_trim} && !$tp_cnt ) {
+          $tp_cnt++;
+          $seq =~ m/$tp/g;
+          my $pos = length( $` );
+          if ( !$pos ) {
+            my $mt = $tp;
+            $mt =~ s/^M//;
+            $tryptic{$mt} ||= {};
+            $tryptic{$mt}->{$def}++;
+          }
+        }
 #        print STDERR "Adding $tp\n";
         $tryptic{$tp} ||= {};
         $tryptic{$tp}->{$def}++;
@@ -615,7 +651,7 @@ sub get_options {
              'show_degen', 'show_mia', 'nocount_degen', 'show_nomap', 'show_himap=i',
              'show_proteo', 'show_all_pep', 'omit_match_seq', 'suppress_brute',
              'key_calc', 'show_all_flanking', "min_nomap=i", 'c_term_cnt', 'n_term_cnt',
-             'print_context', 'i_to_l_convert', 'acc_sep_char=s' );
+             'print_context', 'i_to_l_convert', 'acc_sep_char=s', 'd2n_force', 'met_trim' );
 
   print_usage() if $opts{help};
 
