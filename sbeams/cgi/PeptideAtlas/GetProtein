@@ -1915,7 +1915,8 @@ sub handle_request {
                                                  atlas_build_id => $atlas_build_id,
                                                            link => $link,
                                                         tr_info => $tr,
-                                                    header_text => "Shows per-experiment expression for $max_peptides most highly observed peptides"
+                                                    header_text => "Per-experiment expression for $max_peptides most highly observed peptides",
+                                                    second_header => "(Peptides listed by accession, * denotes single genome mapping)" 
 																										);
     print "<A NAME='samplemap'></A><TABLE width='600'>$sampleMap</TABLE>" if $htmlmode;
 
@@ -1928,7 +1929,7 @@ sub handle_request {
 
     my $sampleDisplay = $sbeamsMOD->getSampleDisplay( sample_ids => $sample_ids,
 				                                                  'link' => $link,
-                                                     rows_to_show => 10, 
+                                                     rows_to_show => 25, 
                                                          max_rows => 500,
 																												 tr_info => $tr );
     print "<TABLE width='600'>$sampleDisplay</TABLE>" if $htmlmode;
@@ -3233,7 +3234,7 @@ sub getSampleList {
       $observed_samples{$element}++;
     }
   }
-  my @keys = keys( %observed_samples );
+  my @keys = sort  { "\L$a" cmp "\L$b" } (keys( %observed_samples ));
   return \@keys;
 }
 
