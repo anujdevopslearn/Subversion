@@ -1013,7 +1013,8 @@ sub getSampleMapDisplay {
 
   my $sql = qq~     
   	SELECT DISTINCT SB.atlas_search_batch_id, sample_tag, 
-		PISB.n_observations, $args{peptide_field}
+		PISB.n_observations, $args{peptide_field},
+    CASE when n_genome_locations = 1 THEN 1 ELSE 2 END
 		FROM $TBAT_ATLAS_SEARCH_BATCH SB 
 	  JOIN $TBAT_SAMPLE S ON s.sample_id = SB.sample_id
 	  JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB ON PISB.atlas_search_batch_id = SB.atlas_search_batch_id
@@ -1021,7 +1022,8 @@ sub getSampleMapDisplay {
 	  JOIN $TBAT_PEPTIDE P ON P.peptide_id = PI.peptide_id
     WHERE PI.peptide_instance_id IN ( $in )
     AND S.record_status != 'D'
-    ORDER BY $args{peptide_field} ASC
+    -- ORDER BY PISB.n_observations, $args{peptide_field} ASC
+    ORDER BY sample_tag ASC
   ~;
 
   my @samples = $sbeams->selectSeveralColumns($sql);
@@ -1033,6 +1035,7 @@ sub getSampleMapDisplay {
   for my $row ( @samples ) { 
 		$cntr++;
 		my $key = $row->[1] . '::::' . $row->[0];
+    $row->[3] .= '*' if $row->[4] < 2;
 		$peptides{$row->[3]}++;
 		$samples{$key} ||= {};
 		$samples{$key}->{$row->[3]} = $row->[2];
@@ -1055,7 +1058,7 @@ sub getSampleMapDisplay {
 	my $max = 0;
 	my $min = 50;
 	$cntr = 0;
-	for my $sa ( sort( keys( %samples ) ) ) {
+	for my $sa ( sort { "\L$a" cmp "\L$b" } ( keys( %samples ) ) ) {
 	  my $col = 0;
 		my ( $name, $id ) = split "::::", $sa;
     $array_def .= "    data.setValue( $row, $col, '$name' );\n";
@@ -1083,6 +1086,7 @@ sub getSampleMapDisplay {
   ~;
 
 	$args{header_text} = ( $args{header_text} ) ? "<TR $trinfo><TD ALIGN=CENTER CLASS=section_description>$args{header_text}</TD></TR>" : '';
+	$args{second_header} = ( $args{second_header} ) ? "<TR $trinfo><TD ALIGN=CENTER CLASS=info_text>$args{second_header}</TD></TR>" : '';
 	my $content = qq~
   <script type="text/javascript" src="https://www.google.com/jsapi"></script>
   <script type="text/javascript">
@@ -1097,6 +1101,7 @@ sub getSampleMapDisplay {
 	$array_def
 
   $args{header_text}
+  $args{second_header}
 	<TR $trinfo><TD> <DIV ID="heatmapContainer"></DIV>  </TD></TR>
 	~;
 
@@ -1105,6 +1110,48 @@ sub getSampleMapDisplay {
 
 } # end getSampleMapDisplay
 
+sub getBuildSelector {
+  my $self = shift;
+  my %args = @_;
+  my $build_id = $args{atlas_build_id};
+  my $accessible_builds = join( ',', $self->getAccessibleBuilds() );
+  my $accessible_projects = join( ',', $sbeams->getAccessibleProjects() );
+
+  # Get a hash of available atlas builds
+  my $sql = qq~
+  SELECT atlas_build_id, atlas_build_name
+  FROM $TBAT_ATLAS_BUILD
+  WHERE project_id IN ( $accessible_projects )
+  AND record_status!='D'
+  ORDER BY atlas_build_name
+  ~;
+  my @ordered_ids;
+  my %id2build;
+  my $sth = $sbeams->get_statement_handle->( $sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    push @ordered_ids, $row[0];
+    $id2build{$row[0]} = $row[1];
+    $build_id ||= $row[0];
+  }
+  my $build_selector =  $q->popup_menu( -name => "atlas_build_id",
+                                        -values => [ @ordered_ids ],
+                                        -labels => \%id2build,
+                                        -default => $build_id,
+                                        -onChange => 'switchAtlasBuild()' );
+  my $selector_widget = qq~
+    <form name=build_form id=build_form action=post>
+    $build_selector
+    <input type=submit></input>
+    </form>
+    <script LANGUAGE="Javascript">
+      function switchAtlasBuild() {
+        document.SearchForm.apply_action.value = "GO";
+        document.build_form.submit();
+      }
+    </script>
+  ~;
+  return $selector_widget;
+}
 
 sub getSampleMapDisplayMod {
   my $self = shift;
@@ -1214,6 +1261,7 @@ sub getSampleMapDisplayMod {
   ~;
 
 	$args{header_text} = ( $args{header_text} ) ? "<TR $trinfo><TD ALIGN=CENTER CLASS=section_description>$args{header_text}</TD></TR>" : '';
+	$args{second_header} = ( $args{second_header} ) ? "<TR $trinfo><TD ALIGN=CENTER CLASS=info_text>$args{second_header}</TD></TR>" : '';
 	my $content = qq~
   <script type="text/javascript" src="https://www.google.com/jsapi"></script>
   <script type="text/javascript">
@@ -1228,6 +1276,7 @@ sub getSampleMapDisplayMod {
 	$array_def
 
   $args{header_text}
+  $args{second_header}
 	<TR $trinfo><TD> <DIV ID="heatmapContainer"></DIV>  </TD></TR>
 	~;
 
@@ -1372,7 +1421,6 @@ sub getSampleDisplay {
     $sortable = $args{sortable};
   }
 
-
   unless( $args{sample_ids} ) {
     $log->error( "No samples passed to display samples" );
     return;
@@ -1382,14 +1430,14 @@ sub getSampleDisplay {
   return unless $in;
 
   my $sql = qq~
-    SELECT S.SAMPLE_ID,S.SAMPLE_TITLE, S.SAMPLE_DESCRIPTION, 
+    SELECT S.SAMPLE_ID,S.sample_tag, S.SAMPLE_DESCRIPTION, 
            PUB.PUBLICATION_NAME, PUB.ABSTRACT , PUB.URI
     FROM $TBAT_SAMPLE S
     LEFT JOIN $TBAT_SAMPLE_PUBLICATION SP ON SP.SAMPLE_ID = S.SAMPLE_ID
     LEFT JOIN $TBAT_PUBLICATION PUB ON PUB.PUBLICATION_ID = SP.PUBLICATION_ID
     WHERE S.SAMPLE_ID IN ( $in )
     AND S.RECORD_STATUS != 'D'
-    ORDER BY SAMPLE_TITLE ASC
+    ORDER BY sample_tag ASC
   ~;
 
   my @rows = $sbeams->selectSeveralColumns($sql);
@@ -1954,6 +2002,25 @@ sub get_what_is_new {
   return $table;
 
 }
+
+sub get_scroll_table {
+  my $self = shift || die ("self not passed");
+  my %args = ( width => 900,
+               bold => 1,
+               key_width => 20,
+               @_ );
+
+  for my $arg ( qw( sql headings ) ) {
+    die "Missing required argument $arg" if !defined $args{$arg};
+  }
+
+  $sbeams = $self->getSBEAMS();
+  my $sth = $sbeams->get_statement_handle->( $args{sql} );
+  while ( my @row = $sth->fetchrow_array() ) {
+  }
+
+}
+
 
 1;
 
