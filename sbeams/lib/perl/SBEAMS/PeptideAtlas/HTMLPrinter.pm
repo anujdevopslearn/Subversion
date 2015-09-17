@@ -1114,6 +1114,8 @@ sub getBuildSelector {
   my $self = shift;
   my %args = @_;
   my $build_id = $args{atlas_build_id};
+  my $sbeams = $self->getSBEAMS();
+
   my $accessible_builds = join( ',', $self->getAccessibleBuilds() );
   my $accessible_projects = join( ',', $sbeams->getAccessibleProjects() );
 
@@ -1127,7 +1129,7 @@ sub getBuildSelector {
   ~;
   my @ordered_ids;
   my %id2build;
-  my $sth = $sbeams->get_statement_handle->( $sql );
+  my $sth = $sbeams->get_statement_handle( $sql );
   while ( my @row = $sth->fetchrow_array() ) {
     push @ordered_ids, $row[0];
     $id2build{$row[0]} = $row[1];
@@ -1139,13 +1141,11 @@ sub getBuildSelector {
                                         -default => $build_id,
                                         -onChange => 'switchAtlasBuild()' );
   my $selector_widget = qq~
-    <form name=build_form id=build_form action=post>
+    <form name=build_form id=build_form>
     $build_selector
-    <input type=submit></input>
     </form>
     <script LANGUAGE="Javascript">
       function switchAtlasBuild() {
-        document.SearchForm.apply_action.value = "GO";
         document.build_form.submit();
       }
     </script>
