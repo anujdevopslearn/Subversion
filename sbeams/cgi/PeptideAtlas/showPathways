@@ -79,8 +79,6 @@ $|++;
                                                   );
   $kegg_organism = $keggmap->getOrganismCode( organism_id => $organism );
 
-  $log->info( "Kegg organism is  $kegg_organism in showPathways" );
-
   $params->{apply_action} ||= 'list_pathways';
 
   #### Get the HTML to display the tabs
@@ -89,11 +87,20 @@ $|++;
     program_name => $script_name,
   );
   my $content = '';
-  $content = $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+  if ( $sbeams->output_mode() eq 'html' ) {
+    $content = $tabMenu->asHTML(); 
+  }
 
   # Decision block, what type of page are we going to display?
   if ( $params->{apply_action} eq 'list_pathways' ) {
-    $content .= list_pathways( $params );
+    if ( $kegg_organism ) {
+      $content .= '<br>' . add_build_selector( $atlas_build_id );
+      $content .= list_pathways( $params );
+    } else {
+      my $txt = $sbeams->makeInfoText("No KEGG map information available for the current atlas build, please select another to continue.");
+      $content .= "<br>$txt<br><br>\n";
+      $content .= add_build_selector( $atlas_build_id );
+    }
   } elsif ( $params->{apply_action} eq 'pathway_details' ) {
 
     # Until caching is available, will print out as we go.
@@ -113,6 +120,26 @@ $|++;
   $atlas->printPageFooter( close_tables=>'NO');
 
 } # end Main
+
+sub add_build_selector {
+  my $build_id = shift;
+
+  my $selector = qq~
+  <table>
+   <tr>
+    <td align=right valign=top><b>Select Atlas Build:</b>
+    </td>
+    <td align=left valign=top>
+  ~;
+  $selector .= $atlas->getBuildSelector( atlas_build_id => $atlas_build_id );
+  $selector .= qq~
+    </td>
+   </tr>
+  </table>
+  <script language=javascript>function hideTimerInfo() {} </script>
+  ~;
+  return $selector;
+}
 
 #+
 # Routine to list all available pathways for current organism
@@ -242,8 +269,6 @@ sub pathway_details {
   print <<"  END";
   <SCRIPT LANGUAGE='javascript'>
   function hideTimerInfo() {
-//    var info = document.getElementById( '1234321' );
-//    info.className = 'hidden';
       toggle_stats();
       var link = document.getElementById( 'path_link' );
       link.innerHTML = '$path_link'
