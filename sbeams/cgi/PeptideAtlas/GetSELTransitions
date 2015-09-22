@@ -464,11 +464,10 @@ sub handle_request {
 
 
   #### Build ROWCOUNT constraint
-  $parameters{row_limit} = 5000
-    unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
+  $parameters{row_limit} = 5000 unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
   my $limit_clause = "TOP $parameters{row_limit}";
   #### Disable row limits
-  $limit_clause = "";
+  #$limit_clause = "";
 
 
   #### Define the desired columns in the query
@@ -703,8 +702,8 @@ sub handle_request {
 
       #### Show the SQL that will be or was executed
       $sbeams->display_sql(
-	sql=>$sql,
-	use_tabbed_panes=> '1',
+				sql=>$sql,
+				use_tabbed_panes=> '1',
       ) if ($show_sql);
 
       #### Fetch the results from the database server
@@ -729,7 +728,7 @@ sub handle_request {
         resultset_ref=>$resultset_ref,
         query_parameters_ref=>\%parameters,
         column_titles_ref=>\@column_titles,
-	colnameidx_ref=>\%colnameidx,
+				colnameidx_ref=>\%colnameidx,
       ) if ($parameters{display_options} !~ /ShowEachIsotype/i);
 
 
@@ -779,6 +778,10 @@ sub handle_request {
       base_url=>$base_url,
       use_tabbed_panes=>'1',
     );
+
+   if ($parameters{row_limit}){
+    print $sbeams->makeInfoText( "Maximum query size (" . $parameters{row_limit} . ") is set, results will be truncated if exceed the limit." );
+   }
 
     #### Display the resultset controls
     $sbeams->displayResultSetControls(
