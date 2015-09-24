@@ -457,8 +457,8 @@ sub handle_request {
     $atlas_build_ids = $atlas_build_id;
     $atlas_build_column =  ["atlas_build","AB.atlas_build_name","Build Name"];
     $atlas_build_clause = qq~
-         JOIN $TBAT_ATLAS_BUILD AB
-              ON ( SKL.atlas_build_id = AB.atlas_build_id)
+         JOIN $TBAT_ATLAS_BUILD DAB
+              ON ( SKL.atlas_build_id = DAB.atlas_build_id)
     ~;
 
   #### ... or, typical CGI/command-line specification of an atlas build type
