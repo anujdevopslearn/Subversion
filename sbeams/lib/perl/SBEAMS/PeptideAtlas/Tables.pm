@@ -156,6 +156,10 @@ use vars qw(@ISA @EXPORT
     
     $TBAT_PTM_SUMMARY
     $TBAT_ATLAS_SNPS
+
+    $TBAT_NEXTPROT_MAPPING
+    $TBAT_NEXTPROT_CHROMOSOME_MAPPING
+    $TBAT_NEXTPROT_CHPP_SUMMARY
 );
 
 
@@ -306,6 +310,11 @@ require Exporter;
 
     $TBAT_PTM_SUMMARY
     $TBAT_ATLAS_SNPS
+
+    $TBAT_NEXTPROT_MAPPING
+    $TBAT_NEXTPROT_CHROMOSOME_MAPPING
+    $TBAT_NEXTPROT_CHPP_SUMMARY
+
 );
 
 
@@ -465,3 +474,8 @@ $TBAT_DIA_LIBRARY_SET               = "${mod}dia_library_set";
 
 $TBAT_PTM_SUMMARY                   =  "${mod}ptm_summary";
 $TBAT_ATLAS_SNPS                    =  "${mod}atlas_snps";
+
+$TBAT_NEXTPROT_MAPPING              = "${mod}nextprot_mapping";
+$TBAT_NEXTPROT_CHROMOSOME_MAPPING   = "${mod}nextprot_chromosome_mapping";
+$TBAT_NEXTPROT_CHPP_SUMMARY         = "${mod}nextprot_chpp_summary";
+
