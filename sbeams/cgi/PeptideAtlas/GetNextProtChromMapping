@@ -146,28 +146,11 @@ sub handle_request {
     || die "ref_parameters not passed";
   my %parameters = %{$ref_parameters};
 
-  ### get current public build id
-  #my $sql = qq~
-	#	SELECT atlas_build_id
-	#	FROM $TBAT_DEFAULT_ATLAS_BUILD
-	#	WHERE DEFAULT_ATLAS_BUILD_ID = 4
-  #~;
-  #my @ids = $sbeams->selectOneColumn($sql);
-  #my $atlas_build_id = $ids[0];
-
-  #### Get the current atlas_build_id based on parameters or session
-  my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
-    parameters_ref => \%parameters,
-  );
-  if (defined($atlas_build_id) && $atlas_build_id < 0) {
-    return;
-  }
-  $parameters{atlas_build_id} = $atlas_build_id;
-
+  my ($nextprot_mapping_id,$atlas_build_id);
 
   #### Show current user context information
   print "<BR>\n" if ($sbeams->output_mode() eq 'html');
-  #$sbeams->printUserContext();
+
 
   #### Get the HTML to display the tabs
   my $tabMenu = $sbeamsMOD->getTabMenu(
@@ -199,7 +182,6 @@ sub handle_request {
 
   my %input_types = 
     $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
-
 
   #### Read the input parameters for each column
   my $n_params_found = $sbeams->parse_input_parameters(
@@ -258,6 +240,35 @@ sub handle_request {
 
   #########################################################################
   #### Process all the constraints
+
+  #### If no atlas_build_id was selected, stop here
+  unless ($parameters{atlas_build_id} && $parameters{nextprot_mapping_id}) {
+    $sbeams->reportException(
+      state => 'ERROR',
+      type => 'INSUFFICIENT CONSTRAINTS',
+      message => 'You must select at least one nextprot mapping date and one Atlas Build',
+    );
+    return;
+  }
+
+    #### Build ATLAS_BUILD constraint
+  my $nextprot_mapping_id_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"NM.ID",
+    constraint_type=>"int_list",
+    constraint_name=>"neXtProt Mapping",
+    constraint_value=>$parameters{nextprot_mapping_id} );
+  return if ($nextprot_mapping_id_clause eq '-1');
+
+  #### Build ATLAS_BUILD constraint
+  my $atlas_build_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"NM.atlas_build_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Atlas Build",
+    constraint_value=>$parameters{atlas_build_id} );
+  return if ($atlas_build_clause eq '-1');
+
+  #########################################################################
+  #### Process all the constraints
   my %protein_hash;
   if ( $parameters{upload_file} )
   {
@@ -288,48 +299,152 @@ sub handle_request {
     %{$parameters{protein_hash}} = %protein_hash;
   } # if upload file
 
+  my $gene_name_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"NCM.Gene_Name",
+    constraint_type=>"plain_text",
+    constraint_name=>"Gene Name Constraint",
+    constraint_value=>$parameters{biosequence_gene_name_constraint});
+  return if ($atlas_build_clause eq '-1');
 
-  #### Define some variables needed to build the query
-  my @column_titles = ( 'Gene Name', 
-                        'neXtProt AC',
-                        'Ensembl Gene',
-                        'RefSeq',  
-                        'Chromosome',
-                        'Start', 
-                        'Stop',
-                        'N Chromosomal Location',
-                        'neXtProt Protein Evidence', 
-                        'PeptideAtlas', 
-                        'Obs', 
-                        'Description');
-  my %colnameidx = ();
-  my $idx = 0;
-  foreach  (@column_titles){
-    $colnameidx{$_} = $idx;
-    $idx++;
+  my $ensembl_name_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"NCM.Ensembl_Accession",
+    constraint_type=>"plain_text",
+    constraint_name=>"Ensembl Gene Name Constraint",
+    constraint_value=>$parameters{ensembl_gene_name_constraint});
+  return if ($ensembl_name_clause eq '-1');
+
+  my $refseq_name_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"NCM.RefSeq_Accession",
+    constraint_type=>"plain_text",
+    constraint_name=>"RefSeq Name Constraint",
+    constraint_value=>$parameters{refseq_name_constraint});
+  return if ($refseq_name_clause eq '-1');
+
+
+  my $description_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"NCM.Description",
+    constraint_type=>"plain_text",
+    constraint_name=>"Description Constraint",
+    constraint_value=>$parameters{biosequence_desc_constraint});
+  return if ($description_clause eq '-1');
+
+  my $n_obs_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"NCM.n_obs",
+    constraint_type=>"flexible_int",
+    constraint_name=>"Number of Observations Constraint",
+    constraint_value=>$parameters{n_observations_constraint});
+  return if ($n_obs_clause eq '-1');
+
+
+  my $protein_evidence_level_clause = '';
+  if ($parameters{protein_evidence_level_constraint}){
+    my @ids = split(",", $parameters{protein_evidence_level_constraint});
+    my %protein_level = (
+       1 => 'homology',
+       2 => 'predicted', 
+       3 => 'protein level',
+       4 => 'transcript level',  
+       5 => 'uncertain'
+     );
+     $protein_evidence_level_clause = "AND NCM.protein_existence in ( ";
+     foreach my $n (@ids){
+       $protein_evidence_level_clause .= "'$protein_level{$n}',";
+     }
+     $protein_evidence_level_clause =~ s/,$//;
+     $protein_evidence_level_clause .= ")";
   }
+  my $peptideatlas_category_clause = '';
+  if ($parameters{peptideatlas_category_constraint}){
+    my $level_sql = qq~ 
+      SELECT  PROTEIN_PRESENCE_LEVEL_ID, LEVEL_NAME
+      FROM $TBAT_PROTEIN_PRESENCE_LEVEL
+    ~;
+    my %protein_level = $sbeams->selectTwoColumnHash($level_sql);
+    my @ids = split(",", $parameters{peptideatlas_category_constraint});
+    $peptideatlas_category_clause = 'AND (';
+     foreach my $n (@ids){
+       $peptideatlas_category_clause .= "NCM.peptideatlas_category like '$protein_level{$n}\%' or ";
+     }
+     $peptideatlas_category_clause =~ s/or\s+$//;
+     $peptideatlas_category_clause .= ")";
+  }
+  my $chromosome_start_clause = '';
+  my $chromosome_end_clause = '';
+  if ($parameters{start_in_chromosome}){
+    if ($parameters{start_in_chromosome} =~ /\D/){
+       print $q->header("\"Start Position in Chromosome\" cann't have non-digit value"); 
+       exit;
+    }
+    $chromosome_start_clause = "AND NCM.Start >= $parameters{start_in_chromosome}";
+  }
+  if ($parameters{end_in_chromosome}){
+    if ($parameters{end_in_chromosome} =~ /\D/){
+       print $q->header("\"End Position in Chromosome\" cann't have non-digit value");
+       exit;
+    }
+
+    $chromosome_end_clause = "AND NCM.Stop >= $parameters{end_in_chromosome}";
+  }
+  my $chromosome_clause = ''; 
+  if($parameters{chromosome}){
+     $parameters{chromosome} =~ s/^0+//g;
+     $chromosome_clause = "AND (NCM.chromosome like '$parameters{chromosome}' or NCM.chromosome like '$parameters{chromosome}\[qp\]%')";
+  }
+
+  #### Define some variables needed to build the quere
+  my @column_array = (
+      ["Gene_Name","NCM.Gene_Name","Gene Name"],
+      ["nextprot_accession", "NCM.nextprot_accession","neXtProt AC"],
+      ["Ensembl_Accession", "NCM.Ensembl_Accession", "Ensembl Gene"],
+      ["RefSeq_Accession", "NCM.RefSeq_Accession", "RefSeq"],
+      ["Chromosome", "NCM.Chromosome","Chromosome"],
+      ["Start","NCM.Start", "Start"],
+      ["End","NCM.Stop", "End"],
+      ["n_neXtProt_entry", "NCM.n_neXtProt_entry", "N Chromosomal Location"],
+      ["Protein_existence", "NCM.Protein_existence", "neXtProt Protein Evidence"],
+      ["PeptideAtlas_Category", "NCM.PeptideAtlas_Category", "PeptideAtlas"],
+      ["nobs", "NCM.n_obs", "Obs"],
+    );
+
+
+  #### Build the columns part of the SQL statement
+  my %colnameidx = ();
+  my @column_titles = ();
+  my $columns_clause = $sbeams->build_SQL_columns_list(
+    column_array_ref=>\@column_array,
+    colnameidx_ref=>\%colnameidx,
+    column_titles_ref=>\@column_titles
+  );
+
+
+  my $sql = qq~
+		SELECT $columns_clause
+    FROM $TBAT_NEXTPROT_CHROMOSOME_MAPPING NCM
+		JOIN $TBAT_NEXTPROT_MAPPING NM  ON (NM.ID = NCM.NEXTPROT_MAPPING_ID) 
+		WHERE 1=1 
+   $nextprot_mapping_id_clause
+   $atlas_build_clause
+   $gene_name_clause
+   $ensembl_name_clause
+   $refseq_name_clause
+   $description_clause
+   $n_obs_clause
+   $chromosome_clause
+   $chromosome_start_clause
+   $chromosome_end_clause
+   $protein_evidence_level_clause
+   $peptideatlas_category_clause
+  ~;
+
+
+  #$sbeams->display_sql( sql => $sql, use_tabbed_panes => 1 );
 
   #### Certain types of actions should be passed to links
   my $pass_action = "QUERY";
   $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
 
-  #### set up display 
-  @{$resultset_ref->{column_list_ref}} = @column_titles;
-	$resultset_ref->{column_hash_ref} = \%colnameidx;
-	$resultset_ref->{row_pointer} = 0;
-	$resultset_ref->{row_counter} = 0;
-	$resultset_ref->{page_size} = 100;
-
-  foreach my $i (qw (0 1 2 3 4 8 9 11)){
-    $resultset_ref->{types_list_ref}->[$i] = 'string';
-    $resultset_ref->{precisions_list_ref}->[$i] =  255;
-  }
-  foreach my $i (qw (5 6 7 10)){
-    $resultset_ref->{types_list_ref}->[$i] = 'string';
-    $resultset_ref->{precisions_list_ref}->[$i] =  20;
-  }
   $url_cols{'PeptideAtlas'} = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=".$atlas_build_id."&apply_action=$pass_action&protein_name=\%1V"; 
-  $url_cols{'neXtProt AC'} = "http://www.nextprot.org/db/entry/NX_\%1V";
+  $url_cols{'neXtProt AC'} = "http://www.nextprot.org/db/entry/\%1V";
   $url_cols{'neXtProt AC_ATAG'} = qq~ TARGET=_neXtProt ONMOUSEOVER="window.status=\'View entry at neXtProt\'; return true;" ~;
 
   #########################################################################
@@ -341,12 +456,18 @@ sub handle_request {
     if ($apply_action =~ /QUERY/i) {
 
       #### Post process the resultset
-      getResultset(
-        rs_params_ref=>\%rs_params,
+      $sbeams->fetchResultSet(
+        sql_query=>$sql,
         resultset_ref=>$resultset_ref,
-        query_parameters_ref=>\%parameters,
-      ); 
-
+        use_caching => 0, 
+      );
+      if ($parameters{redundancy_constraint}){
+				postProcessResultset(
+					rs_params_ref=>\%rs_params,
+					resultset_ref=>$resultset_ref,
+					query_parameters_ref=>\%parameters,
+				); 
+      }
       #### Store the resultset and parameters to disk resultset cache
       $rs_params{set_name} = "SETME";
       $sbeams->writeResultSet(
@@ -479,178 +600,32 @@ sub evalSQL {
 
 
 ###############################################################################
-# getResultset
+# postProcessResultset
 #
 # Perform some additional processing on the resultset that would otherwise
 # be very awkward to do in SQL.
 ###############################################################################
-sub getResultset {
+sub postProcessResultset {
   my %args = @_;
-  my $atlas_build_id = $args{query_parameters_ref}->{atlas_build_id};
-  my $file = "/net/db/projects/PeptideAtlas/pipeline/../species/Human/NextProt/mapping-$atlas_build_id.txt";
-  open (IN, "<$file");
-
   #### Process the arguments list
   my $resultset_ref = $args{'resultset_ref'};
+  my $rs_params_ref = $args{'rs_params_ref'};
   my $query_parameters_ref = $args{'query_parameters_ref'};
-
-
+  my $column_titles_ref = $args{'column_titles_ref'};
+  my %rs_params = %{$rs_params_ref};
   my %parameters = %{$query_parameters_ref};
-  my %constraint = (
-			 '0'=>'biosequence_gene_name_constraint' ,
-			 '1'=>'biosequence_name_constraint' ,
-       '2'=>'ensembl_gene_name_constraint',
-       '3'=>'refseq_name_constraint',
-			 '4'=>'chromosome' ,
-			 '5'=>'start_in_chromosome' ,
-			 '6'=>'end_in_chromosome',
-       '7'=>'n_chromosomal_loc',
-       '8'=>'protein_evidence_level_constraint',
-			 '16'=>'peptideatlas_constraint' ,
-			 '17'=>'n_observations_constraint' ,
-			 '18'=>'biosequence_desc_constraint' ,
-       '19'=>'redundancy_constraint',
-  );
-
-  my $redundancy_constraint = $parameters{redundancy_constraint};
-
-  if (defined $parameters{peptideatlas_constraint}){
-    if ($parameters{peptideatlas_constraint} == 1){
-       $parameters{peptideatlas_constraint} = 'canonical';
-    }elsif($parameters{peptideatlas_constraint} == 2) {
-       $parameters{peptideatlas_constraint}= 'in PA';
-    }elsif($parameters{peptideatlas_constraint} == 3){
-      $parameters{peptideatlas_constraint} = 'in db';
+  my $n_rows = scalar(@{$resultset_ref->{data_ref}});
+  my $cols = $resultset_ref->{column_hash_ref};
+  my %accession_list = ();
+  my @new_result_set = ();
+  for (my $i=0; $i<$n_rows; $i++) {
+    my $nextprot_acc = $resultset_ref->{data_ref}->[$i]->[$cols->{nextprot_accession}];
+    if (not defined $accession_list{$nextprot_acc}){
+      push @new_result_set, $resultset_ref->{data_ref}->[$i];
+      $accession_list{$nextprot_acc} = 1;
     }
   }
+  $resultset_ref->{data_ref} = \@new_result_set;
 
-  my (%protein_hash, $n_protein);
-  if ( defined  $parameters{protein_hash}){
-    %protein_hash = %{$parameters{protein_hash}};
-    $n_protein = scalar keys %protein_hash;
-  }else{
-    $n_protein =0;
-    %protein_hash = ();
-  }
-  #foreach my $key (keys %parameters){
-  #  print "$key $parameters{$key}<BR>";
-  #}
-	#$parameters{strand_constraint} ;
-  my $idx = 0;
-  my @data = ();
-  my %proteins = ();
-  $resultset_ref->{data_ref} = \@data;
-
-  LOOP:while (my $line = <IN>){
-    chomp $line;
-    my @elms = split("\t", $line);
-    $elms[1] =~ s/NX_//;
-    if ($n_protein > 0){
-       next if (not defined $protein_hash{$elms[1]});
-    }
-
-    if ($redundancy_constraint eq 'on'){
-       #next if ( $elms[19] !~ /\d+-1$/);
-       if (defined $proteins{$elms[1]}){
-         next;
-       }else{
-         $proteins{$elms[1]} = 1;
-       }
-    }
-
-    foreach my $num ( qw(0 1 2 3 4 8 18)){
-       if ( defined $parameters{$constraint{$num}}){
-         next if ($parameters{$constraint{$num}} eq '');
-         my $pat = $parameters{$constraint{$num}};
-
-         $pat =~ s/\s+$//; $pat =~ s/^\s+//;
-         $pat =~ s/\s+/,/g;
-         $pat =~ s/,+/,/g;
-         $pat =~ s/\,/\|/g;
-         if ($num eq 4){
-           my $chrm  = $elms[$num] ;
-           $chrm =~ s/[a-z].*//;
-           $pat =~ s/^0//;
-           next LOOP if ($chrm !~ /^$pat$/i);
-         }else {
-
-	   #### Allow negation with a ! in front for certain constraints. This may not always work, for example with lists
-	   if ( $pat =~ /^!(.+)/ ) {
-	     my $nonpat = $1;
-	     next LOOP if ($elms[$num] =~ /($nonpat)/i);
-	   } else {
-	     next LOOP  if ($elms[$num] !~ /($pat)/i);
-	   }
-
-         }
-       }
-    }
-  
-    ## peptideatlas observation constraint
-    if ($parameters{peptideatlas_constraint}){
-      if ($parameters{peptideatlas_constraint} eq 'canonical' and $elms[16] !~ /canonical/i){
-        next;
-      }elsif ($parameters{peptideatlas_constraint} eq 'in PA' and ($elms[16] eq 'not observed' || $elms[16] eq 'not in PA reference database' )){
-        next;
-      }elsif ($parameters{peptideatlas_constraint} eq 'in db' and  $elms[16] eq 'not in PA reference database' ){
-        next;
-      } 
-    }
-      
-    ## chromosomal postion constraints
-    if ( defined $parameters{$constraint{5}} && $parameters{$constraint{5}} ne '' && $elms[6] < $parameters{$constraint{5}}){
-      next;
-    }
-    if ( defined $parameters{$constraint{6}} && $parameters{$constraint{6}} ne '' && $elms[5] > $parameters{$constraint{6}}){
-      next;
-    }
-    ## number of obervation constraints and n of chromosomal location 
-    #print $parameters{'n_observations_constraint'} , "<BR>";
-    foreach my $num ( qw(7 17)){
-		 if ( defined $parameters{$constraint{$num}}){
-				my $constraint = $parameters{$constraint{$num}};
-				chomp $constraint;
-				$constraint =~s/^\s+//;
-				$constraint =~ s/\s+$//;
-				my $m = $elms[$num];
-				if ($constraint ne ''){
-					if ($constraint =~ /^(\d+)$/) {
-						 next LOOP if($m ne $1);
-					} elsif ($constraint =~ /^(not )*between\s+(\d+)\s+and\s+(\d+)$/i) {
-						 next LOOP if($m >= $1 && $m <= $2); 
-					} elsif ($constraint =~ /^([\d]+)\s*\+\-\s*([\d]+)$/i) {
-						 my $lower = $1 - $2;
-						 my $upper = $1 + $2;
-						 next LOOP if( $m < $lower ||  $m > $upper );
-					} elsif ($constraint =~ /^([><=][=]*)\s*(\d+)$/) {
-							my $sign = $1;
-							my $num = $2;
-							if ($sign eq  '>'){
-								next LOOP if($m <= $num);
-							}elsif ($sign eq '<'){
-								next LOOP if($m >= $num);
-							}elsif($sign eq  '>='){
-								next LOOP if($m < $num);
-							}elsif ($sign eq '<='){
-								next LOOP if($m > $num);
-							}elsif($sign eq '='){
-								next LOOP if($m != $num);
-							}
-					} else {
-						print "<H4>Cannot parse peptideAtlas observations constraint ".
-							"'$constraint'!  Check syntax.</H4>\n\n";
-						return -1;
-					}
-			 }
-      }
-    }
-    foreach my $i (0..8){
-      $resultset_ref->{data_ref}->[$idx]->[$i] = $elms[$i];
-    }
-    foreach my $i (16..18){
-      $resultset_ref->{data_ref}->[$idx]->[$i-7] = $elms[$i];
-    }
-    $idx++;
-  }
 } # end postProcessResult
 
