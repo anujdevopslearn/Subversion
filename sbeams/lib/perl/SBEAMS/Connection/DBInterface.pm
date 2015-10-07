@@ -2391,16 +2391,16 @@ sub buildOptionList {
     my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
     my $rv  = $sth->execute;
     unless( $rv ) {
-	$log->printStack();
-	$log->error( "DBI ERR:\n" . $dbh->errstr . "\nSQL: $sql_query" );
-	$options = qq%<OPTION SELECTED VALUE="">--- NOT AVAILABLE ! ---</OPTION>\n%;
+      $log->printStack();
+      $log->error( "DBI ERR:\n" . $dbh->errstr . "\nSQL: $sql_query" );
+      $options = qq%<OPTION SELECTED VALUE="">--- NOT AVAILABLE ! ---</OPTION>\n%;
     } else {
 
-	while (my @row = $sth->fetchrow_array) {
+    while (my @row = $sth->fetchrow_array) {
 	    $selected_flag="";
 	    if ($selected_options{$row[0]}) {
-		$selected_flag=" SELECTED";
-		delete($selected_options{$row[0]});
+        $selected_flag=" SELECTED";
+    		delete($selected_options{$row[0]});
 	    }
 	    $options .= qq!<OPTION$selected_flag VALUE="$row[0]">$row[1]</OPTION>\n!;
 	} # end while
@@ -4326,6 +4326,9 @@ sub readResultSet {
 
     #### Read in the resultset
     $infile = "$RESULTSET_DIR/${resultset_file}.resultset";
+
+
+    $log->debug( "Reading resultset file $infile" );
 	  # This may fail due to older version of storable
 		eval {
     %{$resultset_ref} = %{retrieve($infile)};
@@ -4342,6 +4345,8 @@ sub readResultSet {
         %{$resultset_ref} = %{retrieve($infile)};
 			};
 			if ( $@ ) {
+        $log->error( "Unable to retrieve $infile" );
+        $log->error( $@ );
 				die $@;
 			}
 	    # reset value
@@ -4867,12 +4872,10 @@ sub display_input_form {
   my $self = shift;
   my %args = @_;
 
-
   #### If the output mode is not html, then we don't want a form
   if ($self->output_mode() ne 'html') {
     return;
   }
-
 
   #### Process the arguments list
   my $TABLE_NAME = $args{'TABLE_NAME'};
@@ -5108,6 +5111,7 @@ sub display_input_form {
 
   } # end foreach
 
+
   # Add CSS and javascript for popup column_text info (if configured) and full form fields show/hide toggle button
   print $self->getPopupDHTML();
 
@@ -5288,11 +5292,13 @@ sub display_input_form {
       !;
     }
 
+    my $initial_opt = ( $args{suppress_blank_option} ) ? '' : '<OPTION VALUE=""></OPTION>';
+
     if ($input_type eq "optionlist") {
       print qq~
         <TD><SELECT NAME="$column_name" $onChange>
+        $initial_opt
           <!-- $parameters{$default_column_name} -->
-        <OPTION VALUE=""></OPTION>
         $optionlists{$default_column_name}</SELECT></TD>
       ~;
     }
@@ -5300,7 +5306,7 @@ sub display_input_form {
     if ($input_type eq "scrolloptionlist") {
       print qq!
         <TD><SELECT NAME="$column_name" SIZE=$input_length $onChange>
-        <OPTION VALUE=""></OPTION>
+        $initial_opt
         $optionlists{$default_column_name}</SELECT></TD>
       !;
     }
@@ -5309,7 +5315,7 @@ sub display_input_form {
       print qq!
         <TD>$NOT_clause<SELECT NAME="$column_name" MULTIPLE SIZE=$input_length $onChange>
         $optionlists{$default_column_name}
-        <OPTION VALUE=""></OPTION>
+        $initial_opt
         </SELECT></TD>
       !;
     }
