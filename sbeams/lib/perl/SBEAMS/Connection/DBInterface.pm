@@ -2731,9 +2731,18 @@ sub fetchResultSet {
       if ( $cache_descriptor ) {
         my %params;
         $log->info( "using cached resultset $cache_descriptor" );
-        $self->readResultSet( resultset_file=>$cache_descriptor,
-                              resultset_ref => $resultset_ref,
-                              query_parameters_ref => \%params );
+        my $status = $self->readResultSet( resultset_file=>$cache_descriptor,
+                                           resultset_ref => $resultset_ref,
+                                    query_parameters_ref => \%params );
+        if ( !$status ) {
+          my $clear_cache_sql = qq~
+          DELETE FROM $TB_CACHED_RESULTSET WHERE sql_checksum = '$sql_mdsum'
+          ~;
+          $self->do( $clear_cache_sql );
+          $log->info( "Cleaned up problem cache" );
+          $self->fetchResultSet( %args, use_caching => 0 );
+          return;
+        }
 
         $resultset_ref->{from_cache}++;
         $resultset_ref->{cache_descriptor} = $cache_descriptor;
@@ -4305,6 +4314,9 @@ sub readResultSet {
 
     #### Read in the query parameters
     my $infile = "$RESULTSET_DIR/${resultset_file}.params";
+    if ( ! -e $infile ) {
+        return 0;
+    }
     open(INFILE,"$infile") || die "Cannot open $infile\n";
     my $indata = "";
     while (<INFILE>) { $indata .= $_; }
@@ -4325,13 +4337,17 @@ sub readResultSet {
     }
 
     #### Read in the resultset
-    $infile = "$RESULTSET_DIR/${resultset_file}.resultset";
+    my $rs_infile = "$RESULTSET_DIR/${resultset_file}.resultset";
+ 
+    if ( ! -e $rs_infile ) {
+        system(" rm $infile" );
+        return 0;
+    }
 
-
-    $log->debug( "Reading resultset file $infile" );
+    $log->debug( "Reading resultset file $rs_infile" );
 	  # This may fail due to older version of storable
 		eval {
-    %{$resultset_ref} = %{retrieve($infile)};
+    %{$resultset_ref} = %{retrieve($rs_infile)};
 		};
 
     # only if we have an error...
@@ -4342,12 +4358,14 @@ sub readResultSet {
 
 		  # Try again.
 			eval {
-        %{$resultset_ref} = %{retrieve($infile)};
+        %{$resultset_ref} = %{retrieve($rs_infile)};
 			};
 			if ( $@ ) {
-        $log->error( "Unable to retrieve $infile" );
+        $log->error( "Unable to retrieve $rs_infile" );
         $log->error( $@ );
-				die $@;
+        system(" rm $infile" );
+        system(" rm $rs_infile" );
+        return 0;
 			}
 	    # reset value
 		  $Storable::interwork_56_64bit = $tmp;
@@ -4409,6 +4427,7 @@ sub writeResultSet {
 
     if ( $resultset_ref->{from_cache} ) {
       $log->info( "Skipping write, rs $resultset_ref->{cache_descriptor} already in cache" );
+      $$resultset_file_ref = $resultset_ref->{cache_descriptor};
       return 1;
     }
 
