@@ -776,6 +776,50 @@ sub get_best_permission{
   # Select the lowest permission
   my $best_privilege = getMin( $default_privilege, @rows );
   $log->debug( "Best permission for $current_contact_id on project $current_project_id is $best_privilege" );
+
+  # Hack in second look using guest user if perms are 9999
+  if ( $best_privilege >= 50 ) {
+    my $username =  $self->getCurrent_username();
+
+    $log->debug( "Checking for guest privileges" );
+	  unless ( $self->isDeniedGuestPrivileges( $username )) {
+      my $guest_contact_id = $self->get_guest_contact_id();
+
+
+      $sql = qq~
+       SELECT MIN(CASE WHEN UWG.contact_id IS NULL THEN NULL ELSE GPP.privilege_id END) AS "best_group_privilege_id",
+              MIN(UPP.privilege_id) AS "best_user_privilege_id"
+       FROM $TB_PROJECT P
+       JOIN $TB_CONTACT C 
+        ON ( P.PI_contact_id = C.contact_id AND C.record_status != 'D' )
+       LEFT JOIN $TB_USER_LOGIN UL 
+        ON ( C.contact_id = UL.contact_id AND UL.record_status != 'D' )
+       LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
+        ON ( P.project_id = UPP.project_id AND UPP.contact_id='$guest_contact_id' AND UPP.record_status != 'D' )
+       LEFT JOIN $TB_GROUP_PROJECT_PERMISSION GPP
+        ON ( P.project_id = GPP.project_id AND GPP.record_status != 'D' )
+       LEFT JOIN $TB_PRIVILEGE PRIV
+        ON ( GPP.privilege_id = PRIV.privilege_id AND PRIV.record_status != 'D' )
+       LEFT JOIN $TB_USER_WORK_GROUP UWG
+        ON ( GPP.work_group_id = UWG.work_group_id AND UWG.contact_id='$guest_contact_id' AND UWG.record_status != 'D' )
+       LEFT JOIN $TB_WORK_GROUP WG
+        ON ( UWG.work_group_id = WG.work_group_id AND WG.record_status != 'D')
+       WHERE P.project_id = '$current_project_id'
+       AND P.record_status != 'D'
+       ~;
+
+       @rows = $self->selectSeveralColumns($sql);
+  
+       # Translate null values to 9999 (de facto null), iff there were any rows.
+       @rows = map { ( defined $_ ) ? $_ : 9999 } @{$rows[0]} if @rows; 
+
+       # Select the lowest permission
+       $best_privilege = getMin( @rows );
+
+      $log->debug( "Best priv including guest is $best_privilege" );
+  	}
+  }
+
   return( $best_privilege );
 }
 
@@ -1239,7 +1283,8 @@ sub calculateProjectPermission {
                             $self->getParentProject ( table_name => $args{table_name},
                                                       parameters_ref => \%args,
                                                       action => 'SELECT');
-                                               
+
+
   # This will signal that the item is not under project control, use only mode1
   return undef unless $parent_project_id;
 
