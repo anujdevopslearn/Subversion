@@ -121,7 +121,7 @@ sub main {
     my $project_id = $sbeamsMOD->getProjectID(
         atlas_build_id => $parameters{atlas_build_id}
         );
-
+ 
     $sbeamsMOD->display_page_header( project_id => $project_id, 
                                      use_tabbed_panes => 1
                                    );
@@ -646,6 +646,7 @@ sub handle_request {
       ["is_exon_spanning","PI.is_exon_spanning","Spans exons? (Y,N)"],
 
       ["is_subpeptide_of","PI.is_subpeptide_of","Peptides that include this sequence"],
+      ["enzyme_ids", "PI.enzyme_ids", "Enzyme ID"],
       ["atlas build name","AB.atlas_build_name","PeptideAtlas Name"],
       ["organism_full_name","O.full_name","Organism"],
     );
@@ -727,7 +728,7 @@ sub handle_request {
 
   #### Define the SQL statement
   $sql = qq~
-     SELECT $limit_clause $columns_clause
+     SELECT DISTINCT $limit_clause $columns_clause
        FROM $TBAT_PEPTIDE_INSTANCE PI
       INNER JOIN $TBAT_PEPTIDE P
             ON ( PI.peptide_id = P.peptide_id )
@@ -834,6 +835,9 @@ sub handle_request {
       'row_number' => 1,
   );
 
+  if (! $parameters{enzyme_ids}){
+    $hidden_cols{'Enzyme IDs'} = 1;
+  }
 
 
 
@@ -846,8 +850,12 @@ sub handle_request {
     if ($apply_action =~ /QUERY/i) {
 
       #### Show the SQL that will be or was executed
+      my $new_columns_clause = $columns_clause;
+      $new_columns_clause =~ s/row_number.*//; 
+      $new_columns_clause =~ s/,\s+?$//;
+      $new_columns_clause =~ s/.*AS//g;
       $sql = qq~
-          SELECT * 
+          SELECT distinct $new_columns_clause
           FROM 
           ($sql) A 
           WHERE row_number BETWEEN 1 and $MAX_ROW_NUMBER
