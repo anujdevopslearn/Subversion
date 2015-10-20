@@ -277,7 +277,8 @@ for my $spectrum_filepath (@specfiles) {
 
   #  check for run record using SQL
   my $sql = qq~
-    SELECT SELR.SEL_run_id FROM $TBAT_SEL_RUN SELR
+    SELECT SELR.SEL_run_id 
+    FROM $TBAT_SEL_RUN SELR
     WHERE SELR.SEL_experiment_id = '$SEL_experiment_id'
     AND SELR.spectrum_filename = '$spectrum_filename'
     AND SELR.record_status != 'D';
@@ -297,14 +298,14 @@ for my $spectrum_filepath (@specfiles) {
       $rowdata_ref->{'owner_group_id'} =  $current_work_group_id;
       $rowdata_ref->{'record_status'} = 'N';
       $SEL_run_id = $sbeams->updateOrInsertRow (
-	table_name => $TBAT_SEL_RUN,
-	rowdata_ref => $rowdata_ref,
-	return_PK => 1,
-	print_SQL => 0,
-	verbose => $VERBOSE,
-	testonly => $TESTONLY,
-	return_error => '',
-	insert => 1,
+				table_name => $TBAT_SEL_RUN,
+				rowdata_ref => $rowdata_ref,
+				return_PK => 1,
+				print_SQL => 0,
+				verbose => $VERBOSE,
+				testonly => $TESTONLY,
+				return_error => '',
+				insert => 1,
       );
       print " SEL_run_id = $SEL_run_id.\n" if $VERBOSE; 
     } else {
@@ -349,6 +350,7 @@ for my $spectrum_filepath (@specfiles) {
 
 $loader->map_peps_to_prots (
     SEL_experiment_id => $SEL_experiment_id,
+    transition_file => "$data_path/transition_list.tsv",
     glyco => $OPTIONS{'glyco'},
     verbose => $VERBOSE,
     quiet => $QUIET,

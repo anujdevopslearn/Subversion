@@ -246,10 +246,12 @@ sub get_SEL_run_id {
   my %args = @_;
   my $spec_file_basename = $args{spec_file_basename};
 
+  $spec_file_basename =~ s/_/[_]/g;
+
   my $sql = qq~
     SELECT SEL_run_id FROM $TBAT_SEL_RUN SELR
    WHERE SELR.spectrum_filename LIKE '$spec_file_basename.%'
-   AND SELR.record_status != 'D' ;
+   AND SELR.record_status != 'D' 
   ~;
   my @run_ids = $sbeams->selectOneColumn($sql);
   my $n_run_ids = scalar @run_ids;
@@ -974,136 +976,135 @@ sub store_mprophet_scores_in_transition_hash {
       print "Checking measured Q1 $measured_q1\n" if $VERBOSE > 2;
       my $matching_modpeps_href = $tx_map_href->{$measured_q1};
       for my $mod_pepseq (keys %{$matching_modpeps_href}) {
-	if ($matching_modpeps_href->{$mod_pepseq}->{'target_q1'} ==
-						      $target_q1) {
-	  print "DOES match Q1 for $mod_pepseq!\n" if $VERBOSE > 2;
-	  $found_matching_measured_q1 = 1;
-	  $modified_pepseq = $mod_pepseq;
-	  $matching_target_q3s_aref =
-	  $matching_modpeps_href->{$mod_pepseq}->{'matching_target_q3s_aref'};
-	  my @matching_target_q3s = @{$matching_target_q3s_aref};
+				if ($matching_modpeps_href->{$mod_pepseq}->{'target_q1'} == $target_q1) {
+					print "DOES match Q1 for $mod_pepseq!\n" if $VERBOSE > 2;
+					$found_matching_measured_q1 = 1;
+					$modified_pepseq = $mod_pepseq;
+					$matching_target_q3s_aref =
+					$matching_modpeps_href->{$mod_pepseq}->{'matching_target_q3s_aref'};
+					my @matching_target_q3s = @{$matching_target_q3s_aref};
 
-	  # Create stripped sequence, because this is sometimes (always?) what is used
-	  # to index into mProphet score hash
-	  # 02/07/12: TODO can't index by stripped seq with phospho data and
-	  # --mult_tg_per_q1.
-	  my $stripped_pepseq = 
-	  SBEAMS::PeptideAtlas::Annotations::strip_mods($modified_pepseq);
-	  print "Stripped = $stripped_pepseq Modseq = $modified_pepseq\n" if $VERBOSE > 1;
+					# Create stripped sequence, because this is sometimes (always?) what is used
+					# to index into mProphet score hash
+					# 02/07/12: TODO can't index by stripped seq with phospho data and
+					# --mult_tg_per_q1.
+					my $stripped_pepseq = 
+					SBEAMS::PeptideAtlas::Annotations::strip_mods($modified_pepseq);
+					print "Stripped = $stripped_pepseq Modseq = $modified_pepseq\n" if $VERBOSE > 1;
 
-	  my $sample_target_q3 = $matching_target_q3s[0];
-	  my $sample_tx_href = $transdata_href->{$target_q1}->{transitions}->
-	  {$sample_target_q3}->{mod_pepseq}->{$modified_pepseq};
+					my $sample_target_q3 = $matching_target_q3s[0];
+					my $sample_tx_href = $transdata_href->{$target_q1}->{transitions}->
+					{$sample_target_q3}->{mod_pepseq}->{$modified_pepseq};
 
 
-	  # Grab the mProphet score(s) for this Q1's transition group.
-	  my $charge = $sample_tx_href->{peptide_charge};
-	  my $isotype = $sample_tx_href->{isotype} || 'light';
-	  # Call this Q1 a decoy if all its Q3's are decoy
-	  my $decoy = 1;
-	  for my $q3_mz (@matching_target_q3s) {
-	    my $tx_href = $transdata_href->{$target_q1}->{transitions}->
-	    {$q3_mz}->{mod_pepseq}->{$modified_pepseq};
-	    $decoy = 0 if !$tx_href->{is_decoy};
-	  }
-	  print "Getting mQuest/mProphet scores for $spec_file_basename, $modified_pepseq, +$charge, $isotype, decoy=$decoy\n"
-	  if ($VERBOSE > 1);
-	  # For Ruth 2011 expt., mProphet file gives scores for only top peakgroup,
-	  # but for ruth_prelim it gives scores for all peakgroups.
-	  # Store them all.
-	  my $best_m_score = 0;
-	  my $best_d_score = 0;
-	  my $Tr = 0;
-	  my $log10_max_apex_intensity = 0;
-	  my $light_heavy_ratio_maxapex = 0;
-	  my $S_N = 0;
+					# Grab the mProphet score(s) for this Q1's transition group.
+					my $charge = $sample_tx_href->{peptide_charge};
+					my $isotype = $sample_tx_href->{isotype} || 'light';
+					# Call this Q1 a decoy if all its Q3's are decoy
+					my $decoy = 1;
+					for my $q3_mz (@matching_target_q3s) {
+						my $tx_href = $transdata_href->{$target_q1}->{transitions}->
+						{$q3_mz}->{mod_pepseq}->{$modified_pepseq};
+						$decoy = 0 if !$tx_href->{is_decoy};
+					}
+					print "Getting mQuest/mProphet scores for $spec_file_basename, $modified_pepseq, +$charge, $isotype, decoy=$decoy\n"
+					if ($VERBOSE > 1);
+					# For Ruth 2011 expt., mProphet file gives scores for only top peakgroup,
+					# but for ruth_prelim it gives scores for all peakgroups.
+					# Store them all.
+					my $best_m_score = 0;
+					my $best_d_score = 0;
+					my $Tr = 0;
+					my $log10_max_apex_intensity = 0;
+					my $light_heavy_ratio_maxapex = 0;
+					my $S_N = 0;
 
-	  # See if modified or stripped sequence is used in mpro_href hash.
-	  my $mpro_pepseq = '';
-	  if (defined $mpro_href->{$spec_file_basename}->{$modified_pepseq}) {
-	    $mpro_pepseq = $modified_pepseq;
-	# 11/30/12: this is getting us into trouble. We now store only under modseq.
-	#--------------------------------------------------
-	#   } elsif (defined $mpro_href->{$spec_file_basename}->{$stripped_pepseq}) {
-	#     $mpro_pepseq = $stripped_pepseq;
-	#-------------------------------------------------- 
-	  } elsif (! defined $mpro_href->{$spec_file_basename}) {
-	    print "\$mpro_href->{$spec_file_basename} not defined!\n" if $VERBOSE;
-	  } else {
-	    #print "\$mpro_href->{$spec_file_basename}->{pepseq} not defined for either modified pepseq |$modified_pepseq| or stripped pepseq |$stripped_pepseq|!\n" if $VERBOSE;
-	    print "\$mpro_href->{$spec_file_basename}->{pepseq} not defined for modified pepseq |$modified_pepseq|!\n" if $VERBOSE;
-	  }
-	  print "Hashing sequence |$mpro_pepseq|\n" if $DEBUG;
+					# See if modified or stripped sequence is used in mpro_href hash.
+					my $mpro_pepseq = '';
+					if (defined $mpro_href->{$spec_file_basename}->{$modified_pepseq}) {
+						$mpro_pepseq = $modified_pepseq;
+				# 11/30/12: this is getting us into trouble. We now store only under modseq.
+				#--------------------------------------------------
+				#   } elsif (defined $mpro_href->{$spec_file_basename}->{$stripped_pepseq}) {
+				#     $mpro_pepseq = $stripped_pepseq;
+				#-------------------------------------------------- 
+					} elsif (! defined $mpro_href->{$spec_file_basename}) {
+						print "\$mpro_href->{$spec_file_basename} not defined!\n" if $VERBOSE;
+					} else {
+						#print "\$mpro_href->{$spec_file_basename}->{pepseq} not defined for either modified pepseq |$modified_pepseq| or stripped pepseq |$stripped_pepseq|!\n" if $VERBOSE;
+						print "\$mpro_href->{$spec_file_basename}->{pepseq} not defined for modified pepseq |$modified_pepseq|!\n" if $VERBOSE;
+					}
+					print "Hashing sequence |$mpro_pepseq|\n" if $DEBUG;
 
-	  if ($VERBOSE > 2) {
-	    print "$spec_file_basename is in mpro_href\n"
-	    if defined  $mpro_href->{$spec_file_basename};
-	    print "$mpro_pepseq is in mpro_href\n"
-	    if defined $mpro_href->{$spec_file_basename}->{$mpro_pepseq};
-	    print "+$charge is in mpro_href\n"
-	    if defined $mpro_href->{$spec_file_basename}->{$mpro_pepseq}->{$charge};
-	    print "$isotype is in mpro_href\n"
-	    if defined $mpro_href->{$spec_file_basename}->{$mpro_pepseq}->{$charge}->
-	    {$isotype};
-	    print "is_decoy=$decoy is in mpro_href\n"
-	    if defined $mpro_href->{$spec_file_basename}->{$mpro_pepseq}->{$charge}->
-	    {$isotype}->{$decoy};
-	    print "peak_group 1 is in mpro_href\n"
-	    if defined $mpro_href->{$spec_file_basename}->{$mpro_pepseq}->{$charge}->
-	    {$isotype}->{$decoy}->{1};
-	  }
+					if ($VERBOSE > 2) {
+						print "$spec_file_basename is in mpro_href\n"
+						if defined  $mpro_href->{$spec_file_basename};
+						print "$mpro_pepseq is in mpro_href\n"
+						if defined $mpro_href->{$spec_file_basename}->{$mpro_pepseq};
+						print "+$charge is in mpro_href\n"
+						if defined $mpro_href->{$spec_file_basename}->{$mpro_pepseq}->{$charge};
+						print "$isotype is in mpro_href\n"
+						if defined $mpro_href->{$spec_file_basename}->{$mpro_pepseq}->{$charge}->
+						{$isotype};
+						print "is_decoy=$decoy is in mpro_href\n"
+						if defined $mpro_href->{$spec_file_basename}->{$mpro_pepseq}->{$charge}->
+						{$isotype}->{$decoy};
+						print "peak_group 1 is in mpro_href\n"
+						if defined $mpro_href->{$spec_file_basename}->{$mpro_pepseq}->{$charge}->
+						{$isotype}->{$decoy}->{1};
+					}
 
-	  # For each peak_group we have info on, get the scores.
-	  # First, create descending list of peak_group numbers.
-	  # Lower numbers are for better peak groups.
-	  # (before 02/28/12, we weren't sorting - aack!)
-	  my @pgs = sort {$b <=> $a}
-	    keys %{ $mpro_href->{$spec_file_basename}->{$mpro_pepseq}->
-	      {$charge}->{$isotype}->{$decoy}};
-	  for my $pg (@pgs) {
-	    print "Checking peakgroup $pg\n" if $VERBOSE > 2;
-	    my $mpro_pg_href =
-	    $mpro_href->{$spec_file_basename}->{$mpro_pepseq}->{$charge}->{$isotype}->{$decoy}->{$pg};
-	    my $m_score = $mpro_pg_href ->{m_score};
-	    my $d_score = $mpro_pg_href ->{d_score};
-	    print "Found m_score=$m_score\n" if ($VERBOSE > 2);
-	    my $max = $mpro_pg_href ->{max_apex_intensity};
-	    $light_heavy_ratio_maxapex =
-	      $mpro_pg_href->{light_heavy_ratio_maxapex};
-	    my $log_max = $max ? log10($max) : 0;  #avoid log(0).
-	    $log10_max_apex_intensity =
-	      $mpro_pg_href->{log10_max_apex_intensity} || $log_max;
-	    $Tr = $mpro_pg_href ->{Tr};
-	    $S_N = $mpro_pg_href ->{S_N};
-	    print "Found S_N=$S_N\n" if ($VERBOSE > 2);
+					# For each peak_group we have info on, get the scores.
+					# First, create descending list of peak_group numbers.
+					# Lower numbers are for better peak groups.
+					# (before 02/28/12, we weren't sorting - aack!)
+					my @pgs = sort {$b <=> $a}
+						keys %{ $mpro_href->{$spec_file_basename}->{$mpro_pepseq}->
+							{$charge}->{$isotype}->{$decoy}};
+					for my $pg (@pgs) {
+						print "Checking peakgroup $pg\n" if $VERBOSE > 2;
+						my $mpro_pg_href =
+						$mpro_href->{$spec_file_basename}->{$mpro_pepseq}->{$charge}->{$isotype}->{$decoy}->{$pg};
+						my $m_score = $mpro_pg_href ->{m_score};
+						my $d_score = $mpro_pg_href ->{d_score};
+						print "Found m_score=$m_score\n" if ($VERBOSE > 2);
+						my $max = $mpro_pg_href ->{max_apex_intensity};
+						$light_heavy_ratio_maxapex =
+							$mpro_pg_href->{light_heavy_ratio_maxapex};
+						my $log_max = $max ? log10($max) : 0;  #avoid log(0).
+						$log10_max_apex_intensity =
+							$mpro_pg_href->{log10_max_apex_intensity} || $log_max;
+						$Tr = $mpro_pg_href ->{Tr};
+						$S_N = $mpro_pg_href ->{S_N};
+						print "Found S_N=$S_N\n" if ($VERBOSE > 2);
 
-	    # 01/24/12: this is never used.
-	    $transdata_href->{$target_q1}->{peak_groups}->{$pg}->{m_score} = $m_score;
+						# 01/24/12: this is never used.
+						$transdata_href->{$target_q1}->{peak_groups}->{$pg}->{m_score} = $m_score;
 
-	    # Keep the m_score and d_score for the highest scoring peakgroup (should be #1)
-	    if ($m_score) {
-	      if (!$best_m_score || ($m_score < $best_m_score)) { $best_m_score = $m_score; }
-	      print '$mpro_href->{',$spec_file_basename,'}->{',$mpro_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$pg,'}->{m_score} = ', $m_score, "\n" if ($VERBOSE > 1);
-	    } else {
-	      print 'No m_score for $mpro_href->{',$spec_file_basename,'}->{',$mpro_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$pg,'}->{m_score}', "\n"  if ($VERBOSE > 1);
-	    }
-	    if ($d_score) {
-	      if (!$best_d_score || ($d_score > $best_d_score)) { $best_d_score = $d_score; }
-	      print '$mpro_href->{',$spec_file_basename,'}->{',$mpro_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$pg,'}->{d_score} = ', $d_score, "\n" if ($VERBOSE > 1);
-	    } else {
-	      print 'No d_score for $mpro_href->{',$spec_file_basename,'}->{',$mpro_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$pg,'}->{d_score}', "\n"  if ($VERBOSE > 1);
-	    }
-	  }
-	  # Store the max m_score. Store the most recent Tr, intensity 
-	  # (will be for the lowest numbered peak group, #1 except
-	  # in weird cases)
-	  $transdata_href->{$target_q1}->{$modified_pepseq}->{scores}->{$decoy}->{best_m_score} = $best_m_score;
-	  $transdata_href->{$target_q1}->{$modified_pepseq}->{scores}->{$decoy}->{best_d_score} = $best_d_score;
-	  #print "Storing best_m_score $best_m_score\n" if ($VERBOSE > 2);
-	  $transdata_href->{$target_q1}->{$modified_pepseq}->{scores}->{$decoy}->{Tr} = $Tr;
-          $transdata_href->{$target_q1}->{$modified_pepseq}->{scores}->{$decoy}->{S_N} = $S_N;
-          $transdata_href->{$target_q1}->{$modified_pepseq}->{scores}->{$decoy}->{log10_max_apex_intensity} = $log10_max_apex_intensity;
-          $transdata_href->{$target_q1}->{$modified_pepseq}->{scores}->{$decoy}->{light_heavy_ratio_maxapex} = $light_heavy_ratio_maxapex;
+						# Keep the m_score and d_score for the highest scoring peakgroup (should be #1)
+						if ($m_score) {
+							if (!$best_m_score || ($m_score < $best_m_score)) { $best_m_score = $m_score; }
+							print '$mpro_href->{',$spec_file_basename,'}->{',$mpro_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$pg,'}->{m_score} = ', $m_score, "\n" if ($VERBOSE > 1);
+						} else {
+							print 'No m_score for $mpro_href->{',$spec_file_basename,'}->{',$mpro_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$pg,'}->{m_score}', "\n"  if ($VERBOSE > 1);
+						}
+						if ($d_score) {
+							if (!$best_d_score || ($d_score > $best_d_score)) { $best_d_score = $d_score; }
+							print '$mpro_href->{',$spec_file_basename,'}->{',$mpro_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$pg,'}->{d_score} = ', $d_score, "\n" if ($VERBOSE > 1);
+						} else {
+							print 'No d_score for $mpro_href->{',$spec_file_basename,'}->{',$mpro_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$pg,'}->{d_score}', "\n"  if ($VERBOSE > 1);
+						}
+					}
+					# Store the max m_score. Store the most recent Tr, intensity 
+					# (will be for the lowest numbered peak group, #1 except
+					# in weird cases)
+					$transdata_href->{$target_q1}->{$modified_pepseq}->{scores}->{$decoy}->{best_m_score} = $best_m_score;
+					$transdata_href->{$target_q1}->{$modified_pepseq}->{scores}->{$decoy}->{best_d_score} = $best_d_score;
+					#print "Storing best_m_score $best_m_score\n" if ($VERBOSE > 2);
+					$transdata_href->{$target_q1}->{$modified_pepseq}->{scores}->{$decoy}->{Tr} = $Tr;
+								$transdata_href->{$target_q1}->{$modified_pepseq}->{scores}->{$decoy}->{S_N} = $S_N;
+								$transdata_href->{$target_q1}->{$modified_pepseq}->{scores}->{$decoy}->{log10_max_apex_intensity} = $log10_max_apex_intensity;
+								$transdata_href->{$target_q1}->{$modified_pepseq}->{scores}->{$decoy}->{light_heavy_ratio_maxapex} = $light_heavy_ratio_maxapex;
 
 	} else {
 	  print "Doesn't match Q1 for $mod_pepseq.\n" if $VERBOSE > 2;
@@ -1113,7 +1114,7 @@ sub store_mprophet_scores_in_transition_hash {
 
     if (!$found_matching_measured_q1) {
       print "Target Q1 $target_q1 not measured in this spec file; skipping\n"
-	if ! defined $modified_pepseq && $VERBOSE > 1;
+				if ! defined $modified_pepseq && $VERBOSE > 1;
     }
 
   } # end for each target Q1
@@ -1146,6 +1147,7 @@ sub map_peps_to_prots {
   my %args = @_;
   my $SEL_experiment_id = $args{'SEL_experiment_id'};
   my $glyco = $args{'glyco'};
+  my $transition_file = $args{'transition_file'};
   my $VERBOSE = $args{'verbose'} || 0;
   my $QUIET = $args{'quiet'} || 0;
   my $TESTONLY = $args{'testonly'} || 0;
@@ -1216,7 +1218,7 @@ sub map_peps_to_prots {
   # Create a hash of all peptide ions in this experiment,
   # mapping peptide sequence to SEL_peptide_ion_id
   my $sql = qq~
-  SELECT SELPI.stripped_peptide_sequence, SELPI.SEL_peptide_ion_id 
+  SELECT DISTINCT SELPI.stripped_peptide_sequence, SELPI.SEL_peptide_ion_id 
   FROM $TBAT_SEL_PEPTIDE_ION SELPI
   JOIN $TBAT_SEL_TRANSITION_GROUP SELTG
   ON SELTG.SEL_peptide_ion_id = SELPI.SEL_peptide_ion_id
@@ -1243,24 +1245,68 @@ sub map_peps_to_prots {
   print "Found $n_peps distinct peptide sequences.\n" if $VERBOSE;
 
 
-  # For each pepseq, use grep to map to prots.
+  # For each pepseq, if there is protein_name in transition list file, use that mapping, 
+  # otherwise use grep to map to prots.
   # Store mapping in $peps_href.
-  print "Using grep to map each pep to its prots.\n" if $VERBOSE;
-  for my $pepseq (@pepseqs) {
-    print "Mapping $pepseq\n" if $VERBOSE;
 
-    map_single_pep_to_prots(
-      pepseq => $pepseq,
-      prots_href => $prots_href,
-      peps_href => $peps_href,
-      preferred_patterns_aref => $preferred_patterns_aref,
-      glyco => $glyco,
-      verbose => $VERBOSE,
-      quiet => $QUIET,
-      testonly => $TESTONLY,
-      debug => $DEBUG,
-    );
+  if ( -e "$transition_file"){
+    print "use mapping in transition_file $transition_file\n" if $VERBOSE; 
+    open (T , "<$transition_file");
+  
+    my $line = <T>;
+    chomp $line;
+    my @header = split("\t", $line);
+    my ($idx_pep, $idx_prot);
+    for (my $i=0; $i<=$#header; $i++){
+      if ($header[$i] =~ /sequence/i){
+        $idx_pep = $i;
+      }elsif($header[$i] =~ /protein_name/i){
+        $idx_prot = $i;
+      }
+    }
+    if ($idx_pep eq '' || $idx_prot eq ''){
+      print "ERROR: no sequence|protein_name column\n";
+    }
+    while ($line = <T>){
+      chomp $line;
+      my @elms = split(/\t/, $line); 
+      if ($elms[$idx_prot]){
+        $peps_href->{$elms[$idx_pep]}->{accessions_string} = $elms[$idx_prot]; 
+      }else{
+        if ( not defined $peps_href->{$elms[$idx_pep]}){
+					map_single_pep_to_prots(
+						pepseq => $elms[$idx_pep],
+						prots_href => $prots_href,
+						peps_href => $peps_href,
+						preferred_patterns_aref => $preferred_patterns_aref,
+						glyco => $glyco,
+						verbose => $VERBOSE,
+						quiet => $QUIET,
+						testonly => $TESTONLY,
+						debug => $DEBUG,
+					 );
+         }
+      }
+    }
+  }else{
+		print "Using grep to map each pep to its prots.\n" if $VERBOSE;
+		for my $pepseq (@pepseqs) {
+			print "Mapping $pepseq\n" if $VERBOSE;
+
+			map_single_pep_to_prots(
+				pepseq => $pepseq,
+				prots_href => $prots_href,
+				peps_href => $peps_href,
+				preferred_patterns_aref => $preferred_patterns_aref,
+				glyco => $glyco,
+				verbose => $VERBOSE,
+				quiet => $QUIET,
+				testonly => $TESTONLY,
+				debug => $DEBUG,
+			);
+		}
   }
+
 
   # Load mapping!
   # For each peptide in hash
@@ -1268,66 +1314,64 @@ sub map_peps_to_prots {
   for my $pepseq (keys %{$peps_href}) {
     print "pep $pepseq\n" if $VERBOSE;
     # For each peptide_ion record (when multiple charge states)
-    for my $SEL_peptide_ion_id
-	(split (/,/, $peps_href->{$pepseq}->{SEL_peptide_ion_ids_string} )) {
-	  print " SEL_peptide_ion_id $SEL_peptide_ion_id\n" if $VERBOSE;
+    for my $SEL_peptide_ion_id (split (/,/, $peps_href->{$pepseq}->{SEL_peptide_ion_ids_string} )) {
+	    print " SEL_peptide_ion_id $SEL_peptide_ion_id\n" if $VERBOSE;
       # For each protein the peptide maps to
       # Cima/Schiess data -- we are not getting any acc's here!
-      print "   acc string: $peps_href->{$pepseq}->{accessions_string}\n"
-        if ($VERBOSE > 2);
+      print "   acc string: $peps_href->{$pepseq}->{accessions_string}\n" if ($VERBOSE > 2);
       for my $acc (split ( /,/, $peps_href->{$pepseq}->{accessions_string} ) ) {
-	print "  accession $acc\n" if $VERBOSE;
-	my $rowdata_ref;
-	$rowdata_ref->{protein_accession} = $acc;
-	$rowdata_ref->{SEL_peptide_ion_id} = $SEL_peptide_ion_id;
+				print "  accession $acc\n" if $VERBOSE;
+				my $rowdata_ref;
+				$rowdata_ref->{protein_accession} = $acc;
+				$rowdata_ref->{SEL_peptide_ion_id} = $SEL_peptide_ion_id;
 
-	# See if this mapping is already loaded
-	my $sql = qq~
-	SELECT * FROM $TBAT_SEL_PEPTIDE_ION_PROTEIN
-	WHERE protein_accession = '$acc'
-	AND SEL_peptide_ion_id = '$SEL_peptide_ion_id'
-	~;
-	my ($SEL_peptide_ion_protein_id) = $sbeams->selectOneColumn($sql);
+				# See if this mapping is already loaded
+				my $sql = qq~
+				SELECT * FROM $TBAT_SEL_PEPTIDE_ION_PROTEIN
+				WHERE protein_accession = '$acc'
+				AND SEL_peptide_ion_id = '$SEL_peptide_ion_id'
+				~;
+				my ($SEL_peptide_ion_protein_id) = $sbeams->selectOneColumn($sql);
 
-	# If we haven't already loaded a mapping between this ion 
-	# and this prot ...
-	if (! $SEL_peptide_ion_protein_id) {
-	  print "    loading SEL_peptide_ion_id $rowdata_ref->{SEL_peptide_ion_id}\n" if $VERBOSE;
-	  # if there are bioseq id's stored for this pepseq ...
-	  if ($peps_href->{$pepseq}->{bs_ids_string}) {
-	    my @bs_ids =  (split /,/, $peps_href->{$pepseq}->{bs_ids_string});
-	    # In table SEL_PEPTIDE_ION_PROTEIN,
-	    # store SEL_peptide_ion_id, biosequence_id (optional),
-	    # protein_accession
-	    for my $bs_id (@bs_ids) { # usually just one, but possibly more
-	      print "      bs_id $bs_id\n" if $VERBOSE;
-	      $rowdata_ref->{biosequence_id} = $bs_id;
-	      $SEL_peptide_ion_protein_id = $sbeams->updateOrInsertRow(
-		insert=>1,
-		table_name=>$TBAT_SEL_PEPTIDE_ION_PROTEIN,
-		rowdata_ref=>$rowdata_ref,
-		PK => 'SEL_peptide_ion_protein_id',
-		return_PK => 1,
-		verbose=>$VERBOSE,
-		testonly=>$TESTONLY,
-	      );
-	    }
-	  } else {   # insert record without bs_id
-	    print "      NO bs_id\n" if $VERBOSE;
-	    $SEL_peptide_ion_protein_id = $sbeams->updateOrInsertRow(
-	      insert=>1,
-	      table_name=>$TBAT_SEL_PEPTIDE_ION_PROTEIN,
-	      rowdata_ref=>$rowdata_ref,
-	      PK => 'SEL_peptide_ion_protein_id',
-	      return_PK => 1,
-	      verbose=>$VERBOSE,
-	      testonly=>$TESTONLY,
-	    );
-	  }
-	} else {
-	  print "    SEL_peptide_ion_id $SEL_peptide_ion_protein_id already loaded\n"
-	     if $VERBOSE;
-	}
+				# If we haven't already loaded a mapping between this ion 
+				# and this prot ...
+				if (! $SEL_peptide_ion_protein_id) {
+					print "    loading SEL_peptide_ion_id $rowdata_ref->{SEL_peptide_ion_id}\n" if $VERBOSE;
+					# if there are bioseq id's stored for this pepseq ...
+					if ($peps_href->{$pepseq}->{bs_ids_string}) {
+						my @bs_ids =  (split /,/, $peps_href->{$pepseq}->{bs_ids_string});
+						# In table SEL_PEPTIDE_ION_PROTEIN,
+						# store SEL_peptide_ion_id, biosequence_id (optional),
+						# protein_accession
+						for my $bs_id (@bs_ids) { # usually just one, but possibly more
+							print "      bs_id $bs_id\n" if $VERBOSE;
+							$rowdata_ref->{biosequence_id} = $bs_id;
+							$SEL_peptide_ion_protein_id = $sbeams->updateOrInsertRow(
+									insert=>1,
+									table_name=>$TBAT_SEL_PEPTIDE_ION_PROTEIN,
+									rowdata_ref=>$rowdata_ref,
+									PK => 'SEL_peptide_ion_protein_id',
+									return_PK => 1,
+									verbose=>$VERBOSE,
+									testonly=>$TESTONLY,
+											);
+						}
+					} else {   # insert record without bs_id
+						print "      NO bs_id\n" if $VERBOSE;
+						$SEL_peptide_ion_protein_id = $sbeams->updateOrInsertRow(
+							insert=>1,
+							table_name=>$TBAT_SEL_PEPTIDE_ION_PROTEIN,
+							rowdata_ref=>$rowdata_ref,
+							PK => 'SEL_peptide_ion_protein_id',
+							return_PK => 1,
+							verbose=>$VERBOSE,
+							testonly=>$TESTONLY,
+						);
+					}
+				} else {
+					print "    SEL_peptide_ion_id $SEL_peptide_ion_protein_id already loaded\n"
+						 if $VERBOSE;
+				}
       }
     }
   }
@@ -1524,9 +1568,8 @@ sub map_transition_data_to_spectrum_file_data {
 
   # For each Q1 measured in the current spectrum file, map
   for my $measured_q1 (keys %{$tx_measured_href}) {
-
     my @measured_q3s = keys %{$tx_measured_href->{$measured_q1}};
-    print "Measured Q1 $measured_q1\n" if $DEBUG;
+    print "Measured Q1 $measured_q1\n" if $VERBOSE;
 
     # Retrieve from the transition list the transition group that best matches
     # this measured Q1 and all the Q3s it was measured with.
@@ -1534,16 +1577,16 @@ sub map_transition_data_to_spectrum_file_data {
 
     my $matching_modpeps_href = 
       get_target_transitions_for_measured_Q1(
-	measured_q1=>$measured_q1,
-	measured_q3_aref=>\@measured_q3s,
-	transdata_href=>$transdata_href,
-	q1_tol=>$q1_tol,
-	q3_tol=>$q3_tol,
-	mult_tg_per_q1 => $mult_tg_per_q1,
-	verbose => $VERBOSE,
-	quiet => $QUIET,
-	testonly => $TESTONLY,
-	debug => $DEBUG,
+				measured_q1=>$measured_q1,
+				measured_q3_aref=>\@measured_q3s,
+				transdata_href=>$transdata_href,
+				q1_tol=>$q1_tol,
+				q3_tol=>$q3_tol,
+				mult_tg_per_q1 => $mult_tg_per_q1,
+				verbose => $VERBOSE,
+				quiet => $QUIET,
+				testonly => $TESTONLY,
+				debug => $DEBUG,
       );
     if ( ! (scalar keys %{$matching_modpeps_href}) ) {
       print "None of the measured transitions for Q1 $measured_q1 appears in the transition file.\n" if $VERBOSE;
@@ -2034,13 +2077,13 @@ sub get_target_transitions_for_measured_Q1 {
     # For all the corresponding target Q3s,
     # get all the matching target modpeps
     my $target_modpeps_href = get_matching_target_modpeps(
-	target_q1=>$target_q1,
-	measured_q3_aref=>\@measured_q3s,
-	transdata_href=>$transdata_href,
-	q3_tol=>$q3_tol,
-	verbose => $VERBOSE,
-	quiet => $QUIET,
-	debug => $DEBUG,
+				target_q1=>$target_q1,
+				measured_q3_aref=>\@measured_q3s,
+				transdata_href=>$transdata_href,
+				q3_tol=>$q3_tol,
+				verbose => $VERBOSE,
+				quiet => $QUIET,
+				debug => $DEBUG,
     );
 
     if ($mult_tg_per_q1) {
@@ -2632,7 +2675,7 @@ sub load_srm_run {
   }
 
   # if a spectrum_file was given, assume it's a path
-  if ($spectrum_file) {
+  if (! $SEL_run_id && $spectrum_file) {
     $_ = `basename $spectrum_file`;
     ($spec_file_basename, $extension) = /^(\S+)\.(\S+)$/;  #strip extension
     $spectrum_filepath = $spectrum_file;
@@ -2646,19 +2689,19 @@ sub load_srm_run {
   } elsif (defined $SEL_run_id) {
     ($spec_file_basename, $extension) =
       $self->get_spec_file_basename_and_extension (
-	SEL_run_id => $SEL_run_id,
+	      SEL_run_id => $SEL_run_id,
       );
     if (! $spec_file_basename) {
       die "No spectrum file for $SEL_run_id.";
     }
-    $spectrum_filepath = "$data_dir/$spec_file_basename.mzXML";
+    $spectrum_filepath = "$data_path/$spec_file_basename.mzML";
 
   # if still no spectrum file, assume base is same as transition file.
   } else {
     $spec_file_basename = $tran_file_basename;
     print "No spectrum filename given; assume same basename as transition file with .mzXML extension.\n";
-    $extension = 'mzXML';
-    $spectrum_filepath = "$data_dir/$spec_file_basename.mzXML";
+    $extension = 'mzML';
+    $spectrum_filepath = "$data_path/$spec_file_basename.mzML";
   }
 
   my $SEL_experiment_id = $self->get_SEL_experiment_id(
