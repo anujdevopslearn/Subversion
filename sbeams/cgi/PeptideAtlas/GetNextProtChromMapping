@@ -340,10 +340,10 @@ sub handle_request {
   if ($parameters{protein_evidence_level_constraint}){
     my @ids = split(",", $parameters{protein_evidence_level_constraint});
     my %protein_level = (
-       1 => 'homology',
-       2 => 'predicted', 
-       3 => 'protein level',
-       4 => 'transcript level',  
+       3 => 'homology',
+       4 => 'predicted', 
+       1 => 'protein level',
+       2 => 'transcript level',  
        5 => 'uncertain'
      );
      $protein_evidence_level_clause = "AND NCM.protein_existence in ( ";
@@ -387,8 +387,11 @@ sub handle_request {
   }
   my $chromosome_clause = ''; 
   if($parameters{chromosome}){
-     $parameters{chromosome} =~ s/^0+//g;
-     $chromosome_clause = "AND (NCM.chromosome like '$parameters{chromosome}' or NCM.chromosome like '$parameters{chromosome}\[qp\]%')";
+     my $chromosome = $parameters{chromosome};
+     $chromosome =~ s/^0+//g;
+
+     $chromosome_clause = "AND (NCM.chromosome like '$chromosome' or NCM.chromosome like '$chromosome\[qp\]%')";
+
   }
 
   #### Define some variables needed to build the quere
@@ -423,7 +426,6 @@ sub handle_request {
 		JOIN $TBAT_NEXTPROT_MAPPING NM  ON (NM.ID = NCM.NEXTPROT_MAPPING_ID) 
 		WHERE 1=1 
    $nextprot_mapping_id_clause
-   $atlas_build_clause
    $gene_name_clause
    $ensembl_name_clause
    $refseq_name_clause
