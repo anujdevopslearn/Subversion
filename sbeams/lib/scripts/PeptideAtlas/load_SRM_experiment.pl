@@ -350,7 +350,6 @@ for my $spectrum_filepath (@specfiles) {
 
 $loader->map_peps_to_prots (
     SEL_experiment_id => $SEL_experiment_id,
-    transition_file => "$data_path/transition_list.tsv",
     glyco => $OPTIONS{'glyco'},
     verbose => $VERBOSE,
     quiet => $QUIET,

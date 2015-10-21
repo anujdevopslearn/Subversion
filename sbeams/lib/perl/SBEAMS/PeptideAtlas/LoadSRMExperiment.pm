@@ -783,7 +783,7 @@ sub read_transition_list {
     my %header_lookup;
     for my $header (keys %possible_headers) {
       for my $s (@{$possible_headers{$header}}) {
-	$header_lookup{$s} = $header;
+				$header_lookup{$s} = $header;
       }
     }
 
@@ -791,14 +791,15 @@ sub read_transition_list {
     # transition file.
     my $line = <TRAN_FILE>;
     chomp $line;
+    $line =~ s/[\r\n]//g;
     my @fields = split($sep, $line);
     my $i = 0;
     for my $field (@fields) {
       my $header;
       # if this header is recognized ...
       if ($header = $header_lookup{lc $field}) {
-	$idx{$header} = $i;
-	print "$header $i\n" if $DEBUG;
+				$idx{$header} = $i;
+				print "$header $i\n" if $DEBUG;
       }
       $i++;
     }
@@ -1147,7 +1148,6 @@ sub map_peps_to_prots {
   my %args = @_;
   my $SEL_experiment_id = $args{'SEL_experiment_id'};
   my $glyco = $args{'glyco'};
-  my $transition_file = $args{'transition_file'};
   my $VERBOSE = $args{'verbose'} || 0;
   my $QUIET = $args{'quiet'} || 0;
   my $TESTONLY = $args{'testonly'} || 0;
@@ -1169,11 +1169,21 @@ sub map_peps_to_prots {
   }
 
   # Get ID for latest BSS for this organism
-  my $sql = qq~
-  SELECT BSS.biosequence_set_id FROM $TBAT_BIOSEQUENCE_SET BSS
-  WHERE BSS.organism_id = '$organism_id'
-  AND BSS.record_status != 'D';
-  ~;
+  my $sql = '';
+  if ($organism_id  == 2){
+    $sql = qq~
+			SELECT BSS.biosequence_set_id FROM $TBAT_BIOSEQUENCE_SET BSS
+			WHERE BSS.organism_id = '$organism_id'
+ 			AND BSS.record_status != 'D'
+      AND SET_DESCRIPTION LIKE '%ENS%'
+			~;
+   }else{
+    $sql = qq~
+      SELECT BSS.biosequence_set_id FROM $TBAT_BIOSEQUENCE_SET BSS
+      WHERE BSS.organism_id = '$organism_id'
+      AND BSS.record_status != 'D';
+      ~;
+   }
   my @bss_ids = $sbeams->selectOneColumn($sql);
   if (! scalar @bss_ids) {
     print "Can't map peptides to proteins for organism ${organism_id}; no biosequence set.\n";
@@ -1195,6 +1205,7 @@ sub map_peps_to_prots {
     prot_file => $set_path,
     store_biosequence_id => 0,
     swissprot_only => 0,
+    organism_id => $organism_id,
     verbose => $VERBOSE,
     quiet => $QUIET,
     testonly => $TESTONLY,
@@ -1249,63 +1260,21 @@ sub map_peps_to_prots {
   # otherwise use grep to map to prots.
   # Store mapping in $peps_href.
 
-  if ( -e "$transition_file"){
-    print "use mapping in transition_file $transition_file\n" if $VERBOSE; 
-    open (T , "<$transition_file");
-  
-    my $line = <T>;
-    chomp $line;
-    my @header = split("\t", $line);
-    my ($idx_pep, $idx_prot);
-    for (my $i=0; $i<=$#header; $i++){
-      if ($header[$i] =~ /sequence/i){
-        $idx_pep = $i;
-      }elsif($header[$i] =~ /protein_name/i){
-        $idx_prot = $i;
-      }
-    }
-    if ($idx_pep eq '' || $idx_prot eq ''){
-      print "ERROR: no sequence|protein_name column\n";
-    }
-    while ($line = <T>){
-      chomp $line;
-      my @elms = split(/\t/, $line); 
-      if ($elms[$idx_prot]){
-        $peps_href->{$elms[$idx_pep]}->{accessions_string} = $elms[$idx_prot]; 
-      }else{
-        if ( not defined $peps_href->{$elms[$idx_pep]}){
-					map_single_pep_to_prots(
-						pepseq => $elms[$idx_pep],
-						prots_href => $prots_href,
-						peps_href => $peps_href,
-						preferred_patterns_aref => $preferred_patterns_aref,
-						glyco => $glyco,
-						verbose => $VERBOSE,
-						quiet => $QUIET,
-						testonly => $TESTONLY,
-						debug => $DEBUG,
-					 );
-         }
-      }
-    }
-  }else{
-		print "Using grep to map each pep to its prots.\n" if $VERBOSE;
-		for my $pepseq (@pepseqs) {
-			print "Mapping $pepseq\n" if $VERBOSE;
-
-			map_single_pep_to_prots(
-				pepseq => $pepseq,
-				prots_href => $prots_href,
-				peps_href => $peps_href,
-				preferred_patterns_aref => $preferred_patterns_aref,
-				glyco => $glyco,
-				verbose => $VERBOSE,
-				quiet => $QUIET,
-				testonly => $TESTONLY,
-				debug => $DEBUG,
-			);
-		}
-  }
+	print "Using grep to map each pep to its prots.\n" if $VERBOSE;
+	for my $pepseq (@pepseqs) {
+		print "Mapping $pepseq\n" if $VERBOSE;
+		map_single_pep_to_prots(
+			pepseq => $pepseq,
+			prots_href => $prots_href,
+			peps_href => $peps_href,
+			preferred_patterns_aref => $preferred_patterns_aref,
+			glyco => $glyco,
+			verbose => $VERBOSE,
+			quiet => $QUIET,
+			testonly => $TESTONLY,
+			debug => $DEBUG,
+		);
+	}
 
 
   # Load mapping!
@@ -1649,97 +1618,95 @@ sub load_transition_data {
 
       my @matching_target_q3s = @{$matching_target_q3s_aref};
 
-      if (scalar @matching_target_q3s == 0) {
-	print "None of the measured transitions for Q1 $measured_q1 appears in the transition file.\n" if $VERBOSE;
-	next;
-      }
+				if (scalar @matching_target_q3s == 0) {
+		print "None of the measured transitions for Q1 $measured_q1 appears in the transition file.\n" if $VERBOSE;
+		next;
+				}
 
-      # See if this peptide ion was measured as a decoy and/or as a real pep.
-      my $q3_decoy_aref = [];
-      my $q3_real_aref = [];
-      my $measured_as_decoy = 0;
-      my $measured_as_real = 0;
+				# See if this peptide ion was measured as a decoy and/or as a real pep.
+				my $q3_decoy_aref = [];
+				my $q3_real_aref = [];
+				my $measured_as_decoy = 0;
+				my $measured_as_real = 0;
 
       # For all the matching target Q3s, see if decoy or real.
       for my $q3_mz (@matching_target_q3s) {
-	my $tx_href = $transdata_href->{$target_q1}->{transitions}->{$q3_mz}->
-	{mod_pepseq}->{$modified_peptide_sequence};
-	if ($tx_href->{is_decoy}) {
-	  $measured_as_decoy = 1;
-	  push (@{$q3_decoy_aref}, $q3_mz);
-	} else {
-	  $measured_as_real = 1;
-	  push (@{$q3_real_aref}, $q3_mz);
-	}
+				my $tx_href = $transdata_href->{$target_q1}->{transitions}->{$q3_mz}->
+				{mod_pepseq}->{$modified_peptide_sequence};
+				if ($tx_href->{is_decoy}) {
+					$measured_as_decoy = 1;
+					push (@{$q3_decoy_aref}, $q3_mz);
+				} else {
+					$measured_as_real = 1;
+					push (@{$q3_real_aref}, $q3_mz);
+				}
       }
 
       for my $is_decoy ( 1 , 0 ) {    # for each possible decoy state
 
-	my $is_decoy_char = $is_decoy ? 'Y' : 'N' ;
+				my $is_decoy_char = $is_decoy ? 'Y' : 'N' ;
 
-	# If this Q1 was measured for this decoy state, load stuff.
-	if ( ( $is_decoy_char eq 'Y' && $measured_as_decoy) ||
-	  ( $is_decoy_char eq 'N' && $measured_as_real) )    {
+				# If this Q1 was measured for this decoy state, load stuff.
+				if ( ( $is_decoy_char eq 'Y' && $measured_as_decoy) ||
+					( $is_decoy_char eq 'N' && $measured_as_real) )    {
 
-	  # Get a sample Q3 depending on decoy state, to get hash records
-	  my $q3_mz = ($is_decoy_char eq 'Y') ? $q3_decoy_aref->[0] :
-	  $q3_real_aref->[0] ;
+					# Get a sample Q3 depending on decoy state, to get hash records
+					my $q3_mz = ($is_decoy_char eq 'Y') ? $q3_decoy_aref->[0] :
+					$q3_real_aref->[0] ;
 
-	  # I don't know how this line got here, but I think it was a
-	  # mistake. TMF 01/12
-	  #for my $q3_mz (@matching_target_q3s) {
+					# I don't know how this line got here, but I think it was a
+					# mistake. TMF 01/12
+					#for my $q3_mz (@matching_target_q3s) {
 
-	  # Load peptide ion, if not already loaded. One peptide ion per
-	  #  modified_peptide_sequence + peptide_charge + is_decoy.
-	  # Also store stripped_peptide_sequence, monoisotopic_peptide_mass
-	  # (calc'd), and Q1_mz (calculated)
-	  $rowdata_ref = {};  #reset
-	  my $tx_href = $transdata_href->{$target_q1}->{transitions}->{$q3_mz}->
-	  {mod_pepseq}->{$modified_peptide_sequence};
-	  $rowdata_ref->{modified_peptide_sequence} = $modified_peptide_sequence;
-	  $rowdata_ref->{stripped_peptide_sequence} = $tx_href->{stripped_peptide_sequence};
-	  $rowdata_ref->{peptide_charge} = $tx_href->{peptide_charge};
-	  # In peptide_ion, store calculated m/z, not the one used in the
-	  # transition list, because this ion might be used by several experiments
-	  # and we want the value to be identical, with identical precision.
-	  $rowdata_ref->{q1_mz} = $calculator->getPeptideMass(
-	    sequence => $rowdata_ref->{modified_peptide_sequence},
-	    mass_type => 'monoisotopic',
-	    charge => $rowdata_ref->{peptide_charge},
-	  );
-	  $rowdata_ref->{monoisotopic_peptide_mass} = $calculator->getPeptideMass(
-	    sequence => $rowdata_ref->{modified_peptide_sequence},
-	    mass_type => 'monoisotopic',
-	  );
+					# Load peptide ion, if not already loaded. One peptide ion per
+					#  modified_peptide_sequence + peptide_charge + is_decoy.
+					# Also store stripped_peptide_sequence, monoisotopic_peptide_mass
+					# (calc'd), and Q1_mz (calculated)
+					$rowdata_ref = {};  #reset
+					my $tx_href = $transdata_href->{$target_q1}->{transitions}->{$q3_mz}->
+					{mod_pepseq}->{$modified_peptide_sequence};
+					$rowdata_ref->{modified_peptide_sequence} = $modified_peptide_sequence;
+					$rowdata_ref->{stripped_peptide_sequence} = $tx_href->{stripped_peptide_sequence};
+					$rowdata_ref->{peptide_charge} = $tx_href->{peptide_charge};
+					# In peptide_ion, store calculated m/z, not the one used in the
+					# transition list, because this ion might be used by several experiments
+					# and we want the value to be identical, with identical precision.
+					$rowdata_ref->{q1_mz} = $calculator->getPeptideMass(
+						sequence => $rowdata_ref->{modified_peptide_sequence},
+						mass_type => 'monoisotopic',
+						charge => $rowdata_ref->{peptide_charge},
+					);
+					$rowdata_ref->{monoisotopic_peptide_mass} = $calculator->getPeptideMass(
+						sequence => $rowdata_ref->{modified_peptide_sequence},
+						mass_type => 'monoisotopic',
+					);
 
-	  $rowdata_ref->{is_decoy} = $is_decoy_char;
+					$rowdata_ref->{is_decoy} = $is_decoy_char;
 
-	  my $sql =qq~
-	  SELECT SEL_peptide_ion_id
-	  FROM $TBAT_SEL_PEPTIDE_ION
-	  WHERE stripped_peptide_sequence = '$rowdata_ref->{stripped_peptide_sequence}'
-	  AND modified_peptide_sequence = '$rowdata_ref->{modified_peptide_sequence}'
-	  AND q1_mz = '$rowdata_ref->{q1_mz}'
-	  AND is_decoy = '$rowdata_ref->{is_decoy}'
-	  ~;
+					my $sql =qq~
+					SELECT SEL_peptide_ion_id
+					FROM $TBAT_SEL_PEPTIDE_ION
+					WHERE stripped_peptide_sequence = '$rowdata_ref->{stripped_peptide_sequence}'
+					AND modified_peptide_sequence = '$rowdata_ref->{modified_peptide_sequence}'
+					AND q1_mz = '$rowdata_ref->{q1_mz}'
+					AND is_decoy = '$rowdata_ref->{is_decoy}'
+					~;
 
-	  my @existing_peptide_ions = $sbeams->selectOneColumn($sql);
-	  my $n_existing_pi = scalar @existing_peptide_ions;
+					my @existing_peptide_ions = $sbeams->selectOneColumn($sql);
+					my $n_existing_pi = scalar @existing_peptide_ions;
 
-	  my $peptide_ion_id;
-	  if ( $load_peptide_ions &&
-	       ! $n_existing_pi &&
-	       ! $load_scores_only) {
-	    $peptide_ion_id = $sbeams->updateOrInsertRow(
-	      insert=>1,
-	      table_name=>$TBAT_SEL_PEPTIDE_ION,
-	      rowdata_ref=>$rowdata_ref,
-	      PK => 'SEL_peptide_ion_id',
-	      return_PK => 1,
-	      verbose=>$VERBOSE,
-	      testonly=>$TESTONLY,
-	    );
-	  } else {
+					my $peptide_ion_id;
+					if ( $load_peptide_ions && ! $n_existing_pi && ! $load_scores_only) {
+						$peptide_ion_id = $sbeams->updateOrInsertRow(
+							insert=>1,
+							table_name=>$TBAT_SEL_PEPTIDE_ION,
+							rowdata_ref=>$rowdata_ref,
+							PK => 'SEL_peptide_ion_id',
+							return_PK => 1,
+							verbose=>$VERBOSE,
+							testonly=>$TESTONLY,
+						);
+					} else {
 	    if ($n_existing_pi > 1) {
 	      print "WARNING: $n_existing_pi peptide ions found for q1 $rowdata_ref->{q1_mz}, $rowdata_ref->{modified_peptide_sequence}, is_decoy = $is_decoy_char; using last\n" unless ($QUIET);
 	      $peptide_ion_id = $existing_peptide_ions[$n_existing_pi-1];
@@ -1761,10 +1728,8 @@ sub load_transition_data {
 	    $rowdata_ref->{SEL_run_id} = $SEL_run_id;
 	    $rowdata_ref->{collision_energy} = $tx_href->{collision_energy};
 	    $rowdata_ref->{isotype} = $tx_href->{isotype};
-	    $rowdata_ref->{isotype_delta_mass} =
-	      $tx_href->{isotype_delta_mass};
-	    $rowdata_ref->{experiment_protein_name} =
-	      $tx_href->{protein_name};
+	    $rowdata_ref->{isotype_delta_mass} = $tx_href->{isotype_delta_mass};
+	    $rowdata_ref->{experiment_protein_name} = $tx_href->{protein_name};
 	  }
 
 	  # Score data
@@ -2006,17 +1971,17 @@ sub load_transition_data {
 	    }
 	    if ($load_transitions && ! $n_existing_tr) {
 	      if (! $load_scores_only) {
-		$transition_id = $sbeams->updateOrInsertRow(
-		  insert=>1,
-		  table_name=>$TBAT_SEL_TRANSITION,
-		  rowdata_ref=>$rowdata_ref,
-		  PK => 'SEL_transition_id',
-		  return_PK => 1,
-		  verbose => $VERBOSE,
-		  testonly=> $TESTONLY,
-		);
-	      } else {
-		print "ERROR: no transition loaded for TG_id $transition_group_id, Q3 $q3_mz\n" if $VERBOSE > 2;
+					$transition_id = $sbeams->updateOrInsertRow(
+						insert=>1,
+						table_name=>$TBAT_SEL_TRANSITION,
+						rowdata_ref=>$rowdata_ref,
+						PK => 'SEL_transition_id',
+						return_PK => 1,
+						verbose => $VERBOSE,
+						testonly=> $TESTONLY,
+					);
+							} else {
+					print "ERROR: no transition loaded for TG_id $transition_group_id, Q3 $q3_mz\n" if $VERBOSE > 2;
 	      }
 	    }
 	  } # end load Tx record for each Q3 measured for this Q1 & decoy state
@@ -2089,28 +2054,28 @@ sub get_target_transitions_for_measured_Q1 {
     if ($mult_tg_per_q1) {
       # Store all of these transition groups
       for my $modpep (keys %{$target_modpeps_href}) {
-	$matching_modpeps_href->{$modpep}->{'target_q1'} =
-	  $target_q1;
-	my @matching_q3s = keys %{$target_modpeps_href->{$modpep}};
-	$matching_modpeps_href->{$modpep}->{'matching_target_q3s_aref'} =
-	  \@matching_q3s;
+				$matching_modpeps_href->{$modpep}->{'target_q1'} =
+					$target_q1;
+				my @matching_q3s = keys %{$target_modpeps_href->{$modpep}};
+				$matching_modpeps_href->{$modpep}->{'matching_target_q3s_aref'} =
+					\@matching_q3s;
       }
     } else {
       # Find best target modpep:
       # For each target modpep in hash just created
       for my $target_modpep (keys %{$target_modpeps_href}) {
-	print "Looking at target modpep $target_modpep\n" if $DEBUG;
-	# If it has more Q3s than any previous, save as best
-	my @matching_q3s = keys %{$target_modpeps_href->{$target_modpep}};
-	my $n_q3s = scalar @matching_q3s;
-	print "  Has $n_q3s matching Q3s.\n" if $DEBUG;
-	if ($n_q3s > $max_q3_per_modpep_count) {
-	  print "  Better than previous max of $max_q3_per_modpep_count!\n" if $DEBUG;
-	  $max_q3_per_modpep_count = $n_q3s;
-	  $best_modpep = $target_modpep;
-	  @max_matching_q3s = @matching_q3s;
-	  $best_target_q1 = $target_q1;
-	}
+				print "Looking at target modpep $target_modpep\n" if $DEBUG;
+				# If it has more Q3s than any previous, save as best
+				my @matching_q3s = keys %{$target_modpeps_href->{$target_modpep}};
+				my $n_q3s = scalar @matching_q3s;
+				print "  Has $n_q3s matching Q3s.\n" if $DEBUG;
+				if ($n_q3s > $max_q3_per_modpep_count) {
+					print "  Better than previous max of $max_q3_per_modpep_count!\n" if $DEBUG;
+					$max_q3_per_modpep_count = $n_q3s;
+					$best_modpep = $target_modpep;
+					@max_matching_q3s = @matching_q3s;
+					$best_target_q1 = $target_q1;
+				}
       }
     }
   }
@@ -2120,11 +2085,9 @@ sub get_target_transitions_for_measured_Q1 {
     my $n_q1s = scalar @target_q1s;
     print "Storing $n_q1s target Q1s, $n_modpeps modified peptides for measured Q1 $measured_q1\n" if $DEBUG;
   } else {
-  print "Best target Q1 $best_target_q1 Q3s $max_q3_per_modpep_count modpep $best_modpep for measured Q1 $measured_q1\n" if $DEBUG;
-
-  $matching_modpeps_href->{$best_modpep}->{'target_q1'} = $best_target_q1;
-  $matching_modpeps_href->{$best_modpep}->{'matching_target_q3s_aref'} =
-     \@max_matching_q3s;
+			print "Best target Q1 $best_target_q1 Q3s $max_q3_per_modpep_count modpep $best_modpep for measured Q1 $measured_q1\n" if $DEBUG;
+			$matching_modpeps_href->{$best_modpep}->{'target_q1'} = $best_target_q1;
+			$matching_modpeps_href->{$best_modpep}->{'matching_target_q3s_aref'} = \@max_matching_q3s;
    }
 
   return $matching_modpeps_href;
@@ -2145,18 +2108,18 @@ sub get_target_transitions_for_measured_Q1 {
       print "  Looking at target Q3 $target_q3\n" if $DEBUG;
       # For each measured Q3 matching within tolerance
       for my $measured_q3 (@measured_q3s) {
-	print "    Looking at measured Q3 $measured_q3\n" if $DEBUG;
-	if (($measured_q3 > $target_q3-$q3_tol) &&
-	  ($measured_q3 < $target_q3+$q3_tol)) {
-	  print "      MATCH!\n" if $DEBUG;
-	  # For each target modpep for this target Q1/Q3 (one or a very few)
-	  for my $target_modpep (keys %{$transdata_href->{$target_q1}->
-	      {'transitions'}->{$target_q3}->{'mod_pepseq'}}) {
-	    print "      Hashing target modpep $target_modpep\n" if $DEBUG;
-	    # Add target Q3 to a hash for that target modpep
-	    $target_modpeps_href->{$target_modpep}->{$target_q3} = 1;
-	  }
-	}
+				print "    Looking at measured Q3 $measured_q3\n" if $DEBUG;
+				if (($measured_q3 > $target_q3-$q3_tol) &&
+					($measured_q3 < $target_q3+$q3_tol)) {
+					print "      MATCH!\n" if $DEBUG;
+					# For each target modpep for this target Q1/Q3 (one or a very few)
+					for my $target_modpep (keys %{$transdata_href->{$target_q1}->
+							{'transitions'}->{$target_q3}->{'mod_pepseq'}}) {
+						print "      Hashing target modpep $target_modpep\n" if $DEBUG;
+						# Add target Q3 to a hash for that target modpep
+						$target_modpeps_href->{$target_modpep}->{$target_q3} = 1;
+					}
+				}
       }
     }
     return $target_modpeps_href;
@@ -2472,6 +2435,7 @@ sub read_prots_into_hash {
   my $prot_file = $args{'prot_file'};
   my $store_biosequence_id = $args{'store_biosequence_id'} || 0;
   my $swissprot_only = $args{'swissprot_only'} || 0;
+  my $organism_id = $args{'organism_id'};
   my $VERBOSE = $args{'verbose'} || 0;
   my $QUIET = $args{'quiet'} || 0;
   my $TESTONLY = $args{'testonly'} || 0;
@@ -2480,6 +2444,7 @@ sub read_prots_into_hash {
   my $prots_href;
   my $line;
   my $acc;
+  my $desc;
   my $n_seq = 0;
   my $current_seq = '';
 
@@ -2497,26 +2462,35 @@ sub read_prots_into_hash {
       $line = '>dummy';
       $done = 1;
     }
-
-    $line =~ s/[\r\n]+//g;
+    $line =~ s/[\r\n]//g;
     if ($line =~ /\>/) {
-      if ($line =~ /^>\s*(\S+)/) {
-	my $next_acc = $1;
-	if ( $current_seq &&     # check for Swiss-Prot accession
-	    ( ( ! $swissprot_only ) ||
-              ( $acc =~ /^[ABOPQ]\w{5}$/ ) ||
-	      ( $acc =~ /^[ABCOPQ]\w{5}-\d{1,2}$/ ) ) ) {
-	  if ($prots_href->{$current_seq}) {
-	    $prots_href->{$current_seq}->{accessions_string} .= ",$acc";
-	  } else {
-	    $prots_href->{$current_seq}->{accessions_string} = $acc;
-	  }
-	}
-	$current_seq = '';
-	$acc = $next_acc;
-	$n_seq++;
+      if ($line =~ /^>(\S+)\s+(.*)/) {
+				my $next_acc = $1;
+        my $next_desc = $2;
+				if ($current_seq &&     # check for Swiss-Prot accession
+					  (( ! $swissprot_only )||($acc =~ /^[ABOPQ]\w{5}$/ )||($acc =~ /^[ABCOPQ]\w{5}-\d{1,2}$/))){
+          if ($organism_id == 2){ ## use only nP20K and SPnotNP 
+             if ($desc =~ /( nP20K | SPnotNP )/i){
+              if ($prots_href->{$current_seq}) {
+								$prots_href->{$current_seq}->{accessions_string} .= ",$acc";
+							} else {
+								$prots_href->{$current_seq}->{accessions_string} = $acc;
+							}
+            }
+          }else{
+						if ($prots_href->{$current_seq}) {
+							$prots_href->{$current_seq}->{accessions_string} .= ",$acc";
+						} else {
+							$prots_href->{$current_seq}->{accessions_string} = $acc;
+						}
+          }
+				}
+				$current_seq = '';
+				$acc = $next_acc;
+        $desc = $next_desc;
+				$n_seq++;
       } else {
-	print "ERROR in header of $acc!!!\n";
+				print "ERROR in header of $acc!!!\n";
       }
     } else {
       $current_seq .= $line;
@@ -2529,10 +2503,10 @@ sub read_prots_into_hash {
     print " Getting biosequence ID for each prot ...\n" if $VERBOSE;
     for my $biosequence (@biosequences) {
       my $sql = qq~
-	SELECT BS.biosequence_id 
-	  FROM $TBAT_BIOSEQUENCE BS
-	  WHERE BS.biosequence_name =
-	  '$prots_href->{$biosequence}->{accessions_string}';
+				SELECT BS.biosequence_id 
+					FROM $TBAT_BIOSEQUENCE BS
+					WHERE BS.biosequence_name =
+					'$prots_href->{$biosequence}->{accessions_string}';
       ~;
       my @bs_ids = $sbeams->selectOneColumn($sql);
       my $bss_id_string = join (",", @bs_ids);
