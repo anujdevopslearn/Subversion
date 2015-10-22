@@ -298,13 +298,20 @@ sub handle_request {
     }
     %{$parameters{protein_hash}} = %protein_hash;
   } # if upload file
-
+  
   my $gene_name_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"NCM.Gene_Name",
     constraint_type=>"plain_text",
     constraint_name=>"Gene Name Constraint",
     constraint_value=>$parameters{biosequence_gene_name_constraint});
-  return if ($atlas_build_clause eq '-1');
+  return if ($gene_name_clause eq '-1');
+
+  my $biosequence_name_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"NCM.neXtProt_Accession",
+    constraint_type=>"plain_text",
+    constraint_name=>"Protein Name Constraint",
+    constraint_value=>$parameters{biosequence_name_constraint});
+  return if ($biosequence_name_clause eq '-1');
 
   my $ensembl_name_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"NCM.Ensembl_Accession",
@@ -406,7 +413,8 @@ sub handle_request {
       ["n_neXtProt_entry", "NCM.n_neXtProt_entry", "N Chromosomal Location"],
       ["Protein_existence", "NCM.Protein_existence", "neXtProt Protein Evidence"],
       ["PeptideAtlas_Category", "NCM.PeptideAtlas_Category", "PeptideAtlas"],
-      ["nobs", "NCM.n_obs", "Obs"],
+      ["nobs", "NCM.n_obs", "N Distince Peptides"],
+      ["Description", "NCM.Description", "Description"]
     );
 
 
@@ -436,6 +444,7 @@ sub handle_request {
    $chromosome_end_clause
    $protein_evidence_level_clause
    $peptideatlas_category_clause
+   $biosequence_name_clause
   ~;
 
 
@@ -445,8 +454,9 @@ sub handle_request {
   my $pass_action = "QUERY";
   $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
 
-  $url_cols{'PeptideAtlas'} = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=".$atlas_build_id."&apply_action=$pass_action&protein_name=\%1V"; 
-  $url_cols{'neXtProt AC'} = "http://www.nextprot.org/db/entry/\%1V";
+  $url_cols{'PeptideAtlas'} = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=".$parameters{atlas_build_id}
+                              ."&apply_action=$pass_action&protein_name=\%1V"; 
+  $url_cols{'neXtProt AC'} = "http://www.nextprot.org/db/entry/NX_\%1V";
   $url_cols{'neXtProt AC_ATAG'} = qq~ TARGET=_neXtProt ONMOUSEOVER="window.status=\'View entry at neXtProt\'; return true;" ~;
 
   #########################################################################
