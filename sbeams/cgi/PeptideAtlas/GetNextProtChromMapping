@@ -462,7 +462,7 @@ sub handle_request {
   ~;
 
 
-  $sbeams->display_sql( sql => $sql, use_tabbed_panes => 1 );
+  #$sbeams->display_sql( sql => $sql, use_tabbed_panes => 1 );
 
   #### Certain types of actions should be passed to links
   my $pass_action = "QUERY";
