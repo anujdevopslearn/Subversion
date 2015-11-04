@@ -1,19 +1,23 @@
 #!/usr/local/bin/perl 
 
 ###############################################################################
-# Program     : load_RTcatalog_scores.pl
-# Author      : zsun <zsun@systemsbiology.org>
-# 
+# Program     :
+# Author      : 
 #
-# Description : This script load the database for RTcatalog values
+# Description : 
 #
 ###############################################################################
 
 use strict;
 use Getopt::Long;
 use File::Basename;
-    use Data::Dumper;
+use Data::Dumper;
 use FindBin;
+use Spreadsheet::Read;
+use Spreadsheet::ParseXLSX;
+use Spreadsheet::ParseExcel;
+
+
 #### Set up SBEAMS modules
 use lib "$FindBin::Bin/../../perl";
 use SBEAMS::Connection qw($q);
@@ -40,7 +44,7 @@ $PROG_NAME = basename( $0 );
 
 ## Process options
 GetOptions( \%opts,"verbose:s","quiet","debug:s","testonly", 'list_file:s', 
-            'domain_list_id:i', 'help', 'force' ) 
+            'domain_list_id:i', 'help', 'force', 'mode=s', 'project_id:i' ) 
             || usage( "Error processing options" );
 
 $VERBOSE = $opts{"verbose"} || 0;
@@ -49,7 +53,7 @@ $DEBUG = $opts{"debug"} || 0;
 $TESTONLY = $opts{"testonly"} || 0;
  
 my $mia;
-for my $opt ( qw( domain_list_id list_file ) ) {
+for my $opt ( qw( list_file mode project_id ) ) {
   if ( !defined ( $opts{$opt} ) ) {
     $mia = ( $mia ) ? $mia . ',' . $opt : "Missing required option(s): $opt";
   }
@@ -88,16 +92,77 @@ sub main {
 
   if ( $opts{domain_list_id} ) {
     check_list( $opts{domain_list_id} );
-
-  } else {
-    die "Must provide domain_list_id\n";
   }
 
-  print "Fill table\n";
-  fillTable(  );
+
+  if ( $opts{mode} =~ /new/i ) {
+
+    my $list_data = parse_list( $opts{list_file} );
+
+    print STDERR "insert list record\n";
+    createList($list_data);
+
+    print "Fill table\n";
+    fillTable($list_data);
+  } elsif ( $opts{mode} =~ /tsv_old/ ) {
+    fillTableTSV();
+  } else {
+    print STDERR "Unknown mode $opts{mode}\n";
+    exit;
+  }
+
+    
   return;
 
 } # end main
+
+sub parse_list {
+  my $file = shift || die;
+  my $book = ReadData( $file );
+
+
+  # First read the List info sheet
+  my %list;
+  if ( $book->[1]->{label} ne 'ListInformation' ) {
+    if ( $opts{force} ) {
+      print STDERR "Allowing Mis-labeled info sheet $book->[1]->{label}";
+    } else {
+      die "Mis-labeled info sheet $book->[1]->{label}";
+    }
+  }
+  for ( my $idx = $book->[1]->{minrow}; $idx <= $book->[1]->{maxrow}; $idx++ ) {
+    my @row = Spreadsheet::Read::row( $book->[1], $idx );
+    next if $row[0] eq 'Field';
+    $list{$row[0]} = $row[1];
+  }
+
+
+  if ( $book->[2]->{label} ne 'ListProteins' ) {
+    if ( $opts{force} ) {
+      print STDERR "Allowing Mis-labeled info sheet $book->[1]->{label}";
+    } else {
+      die "Mis-labeled info sheet $book->[1]->{label}";
+    }
+  }
+
+  my @list_proteins;
+  my @keys;
+  for ( my $idx = $book->[2]->{minrow}; $idx <= $book->[2]->{maxrow}; $idx++ ) {
+    my @row = Spreadsheet::Read::row( $book->[2], $idx );
+    if ( $row[0] eq 'uniprot_accession' && !scalar( @keys ) ) {
+      @keys = @row;
+      next;
+    }
+    next if $row[0] =~ /Uniprot accession/;
+    my %prot;
+    last if !$row[0];
+    for ( my $idx = 0; $idx <= $#keys; $idx++ ) {
+      $prot{$keys[$idx]} = $row[$idx];
+    }
+    push @list_proteins, \%prot;
+  }
+  return ( { list_info => \%list, list_proteins => \@list_proteins } );
+}
 
 sub check_list {
   my $list_id = shift;
@@ -123,11 +188,65 @@ sub check_list {
 
 }
 
+sub createList {
+  my $list_data =  shift || die;
+  my $list_info = $list_data->{list_info};
+  $list_info->{Title} = $list_info->{'List Name'};
+  $list_info->{pubmed_id} = $list_info->{'Pubmed ID'};
+  $list_info->{Abstract} =~ s/[^[:ascii:]]//g;
+  $list_info->{image_path} = $list_info->{image};
+  $list_info->{n_proteins} = scalar( @{$list_data->{list_proteins}} );
 
-###############################################################################
-# fillTable, fill $TBAT_elution_time table
-###############################################################################
-sub fillTable{
+  for my $element ( 'List Name', 'Pubmed ID', 'image' ) {
+    delete( $list_info->{$element} );
+  }
+  $list_info->{owner_contact_id} = $sbeams->getCurrent_contact_id();
+  $list_info->{project_id} = $opts{project_id};
+
+  my $id = $sbeams->updateOrInsertRow( insert => 1,
+                                  table_name  => $TBAT_DOMAIN_PROTEIN_LIST,
+                                  rowdata_ref => $list_info,
+                                    return_PK => 1,
+                                      verbose => $VERBOSE,
+                                  testonly    => $TESTONLY );
+
+  $list_data->{list_id} = $id;
+}
+
+sub fillTable {
+
+  my $list_data = shift || die;
+  my $list_proteins = $list_data->{list_proteins};
+  my $list_id = $list_data->{list_id};
+
+ 
+  for my $prot ( @{$list_proteins} ) {
+    $prot->{priority} = ( $prot->{'popularity rank'} < 1 ) ? 1 :
+                        ( $prot->{'popularity rank'} > 5 ) ? 5 : $prot->{'popularity rank'};
+    $prot->{protein_full_name} = $prot->{protein_name};
+    $prot->{protein_symbol} ||= '';
+    $prot->{original_name} ||= '';
+    $prot->{original_accession} ||= '';
+    $prot->{protein_list_id} = $list_id;
+    for my $element ( 'popularity rank', 'protein_name', 'citations' ) {
+      delete( $prot->{$element} );
+    }
+
+    $sbeams->updateOrInsertRow( insert => 1,
+                           table_name  => $TBAT_DOMAIN_LIST_PROTEIN,
+                           rowdata_ref => $prot, 
+                               verbose => $VERBOSE,
+                              testonly => $TESTONLY );
+
+
+  }
+
+} # end fillTable
+
+
+##################
+
+sub fillTableTSV {
 
   my %valid = ( original_name => 1,
                 original_accession  => 1,
