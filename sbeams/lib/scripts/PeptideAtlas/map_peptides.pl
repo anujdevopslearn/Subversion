@@ -109,7 +109,7 @@ while( my $line = <PEPS> ) {
         if ( $matched ) {
           $matching_seq = $alt_pepseq;
           $stats{nxst_rescued}++;
-        } else {
+        } elsif( !$opts->{suppress_brute} ) {
           # Did work the first time, so...
           $matched = map_peptide( $pepseq, 1 );
           if ( !$matched ) {
