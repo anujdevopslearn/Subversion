@@ -208,7 +208,8 @@ sub get_list_overview {
 
   my $sql = qq~
   SELECT DPL.title AS list_title, description, n_proteins, original_file, url,
-         image_path, abstract, contributors, protein_list_id, image_caption
+         image_path, abstract, contributors, protein_list_id, image_caption, 
+         pubmed_id
   FROM $TBAT_DOMAIN_PROTEIN_LIST DPL
   WHERE protein_list_id > 0
   AND DPL.record_status <> 'D'
@@ -248,15 +249,21 @@ sub get_list_overview {
                              value => "<A HREF='$info->{url}'>$info->{url}</A>", vspan => 3 ) . "\n";
       $url =~ s/NOWRAP/>$tab<\/TD><TD NOWRAP/;
     }
+    my $pmed = '';
+    if ( $info->{pubmed_id} ) {
+      $pmed = $atlas->encodeSectionItem( key   => 'Pub Med Link', 
+                key   => 'PubMed Link', 
+                value => "<A HREF='http://www.ncbi.nlm.nih.gov/pubmed/$info->{pubmed_id}'>$info->{pubmed_id}</A>", 
+                vspan => 3 ) . "\n";
+      $pmed =~ s/NOWRAP/>$tab<\/TD><TD NOWRAP/;
+    }
 
-
-    $log->info($url);
-  
-    $table .= "<TR><TD colspan=3> <div style='font-family:Helvetica, Arial, sans-serif;font-size:120%;font-weight:bold;color:#FF8700' id=heading>$info->{list_title}&nbsp;&nbsp;<a href=proteinList?protein_list_id=$info->{protein_list_id} title='Search proteins in the $info->{list_title} HPP B/D List'><img src=/devDC/sbeams/images/search_icon_small.png></img></a></div> </TD></TR>\n";
+    $table .= "<TR><TD colspan=3> <div style='font-family:Helvetica, Arial, sans-serif;font-size:120%;font-weight:bold;color:#FF8700' id=heading>$info->{list_title}&nbsp;&nbsp;<a href=proteinList?protein_list_id=$info->{protein_list_id} title='Search proteins in the $info->{list_title} HPP B/D List'> View list <img src=/devDC/sbeams/images/search_icon_small.png></img></a></div> </TD></TR>\n";
     my $sub_table = "<table>\n";
     $sub_table .= "$contributor\n";
     $sub_table .= "$nprot\n";
     $sub_table .= "$url\n";
+    $sub_table .= "$pmed\n";
     $sub_table .= "</table>\n";
     $log->info( $sub_table);
     

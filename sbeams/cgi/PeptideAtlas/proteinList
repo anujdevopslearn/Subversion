@@ -3,7 +3,7 @@
 ###############################################################################
 # $Id: $
 #
-# SBEAMS is Copyright (C) 2000-2014 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2016 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -292,7 +292,7 @@ sub get_list_table {
   SELECT list_protein_id, uniprot_accession, protein_symbol, original_name, protein_full_name, gene_symbol, comment, priority
   FROM $TBAT_DOMAIN_LIST_PROTEIN
   WHERE protein_list_id = $params->{protein_list_id}
-  ORDER BY uniprot_accession ASC
+  ORDER BY priority ASC, uniprot_accession ASC
   END
 
   my @samples;
@@ -300,7 +300,7 @@ sub get_list_table {
   while( my @row = $sth->fetchrow_array() ) {
     $row[0] = "<input type='checkbox' name=protein_ids id=protein_ids value=$row[0] onclick=cnt_checked('protein_list_table')></input>";
     $row[3] ||= $row[1];
-    $row[7] = $sbeams->makeInfoText( "n/a" );
+    $row[7] ||= $sbeams->makeInfoText( "n/a" );
     $row[4] = $sbeams->truncateStringWithMouseover( string => $row[4], len => 60, nowrap => 1 );
     $row[6] = $sbeams->truncateStringWithMouseover( string => $row[6], len => 60 );
     push @samples, \@row;
