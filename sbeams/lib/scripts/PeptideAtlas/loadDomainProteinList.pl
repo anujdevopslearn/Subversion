@@ -28,43 +28,27 @@ use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 
-use vars qw ($sbeams $atlas $q $current_username $PROG_NAME $USAGE %opts
-             $QUIET $VERBOSE $DEBUG $TESTONLY $TESTVARS $CHECKTABLES );
+use vars qw ( $PROG_NAME $USAGE $QUIET $VERBOSE $DEBUG $TESTONLY );
 
 # don't buffer output
 $|++;
 
 ## Globals
-$sbeams = new SBEAMS::Connection;
-$atlas = new SBEAMS::PeptideAtlas;
+my $sbeams = new SBEAMS::Connection;
+my $atlas = new SBEAMS::PeptideAtlas;
 $atlas->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 $PROG_NAME = basename( $0 );
 ## Set up environment
 
-## Process options
-GetOptions( \%opts,"verbose:s","quiet","debug:s","testonly", 'list_file:s', 
-            'domain_list_id:i', 'help', 'force', 'mode=s', 'project_id:i' ) 
-            || usage( "Error processing options" );
 
-$VERBOSE = $opts{"verbose"} || 0;
-$QUIET = $opts{"quiet"} || 0;
-$DEBUG = $opts{"debug"} || 0;
-$TESTONLY = $opts{"testonly"} || 0;
- 
-my $mia;
-for my $opt ( qw( list_file mode project_id ) ) {
-  if ( !defined ( $opts{$opt} ) ) {
-    $mia = ( $mia ) ? $mia . ',' . $opt : "Missing required option(s): $opt";
-  }
-}
-usage( $mia ) if $mia;
+my $opts = get_options();
 
-if($opts{"help"}){
- usage();
-}
-
-
+# Legacy
+$VERBOSE = $opts->{"verbose"} || 0;
+$QUIET = $opts->{"quiet"} || 0;
+$DEBUG = $opts->{"debug"} || 0;
+$TESTONLY = $opts->{"testonly"} || 0;
 if ($DEBUG) {
   print "Options settings:\n";
   print "  VERBOSE = $VERBOSE\n";
@@ -72,11 +56,8 @@ if ($DEBUG) {
 }
 
 
-
-###############################################################################
-# Set Global Variables and execute main()
-###############################################################################
 main();
+
 exit(0);
 
 
@@ -88,26 +69,27 @@ exit(0);
 sub main {
 
   #### Do the SBEAMS authentication and exit if a username is not returned
-  $current_username = $sbeams->Authenticate( work_group=>'PeptideAtlas_admin' ) || exit;
+  my $current_username = $sbeams->Authenticate( work_group=>'PeptideAtlas_admin' ) || exit;
 
-  if ( $opts{domain_list_id} ) {
-    check_list( $opts{domain_list_id} );
+  if ( $opts->{domain_list_id} ) {
+    check_list( $opts->{domain_list_id} );
   }
 
+  if ( $opts->{mode} =~ /new/i ) {
 
-  if ( $opts{mode} =~ /new/i ) {
-
-    my $list_data = parse_list( $opts{list_file} );
+    my $list_data = parse_list( $opts->{list_file} );
 
     print STDERR "insert list record\n";
-    createList($list_data);
+    create_list($list_data);
 
     print "Fill table\n";
-    fillTable($list_data);
-  } elsif ( $opts{mode} =~ /tsv_old/ ) {
-    fillTableTSV();
+    fill_table($list_data);
+  } elsif ( $opts->{mode} =~ /tsv_old/ ) {
+    fill_table_tsv();
+  } elsif ( $opts->{mode} =~ /update/ ) {
+    update_list();
   } else {
-    print STDERR "Unknown mode $opts{mode}\n";
+    print STDERR "Unknown mode $opts->{mode}\n";
     exit;
   }
 
@@ -124,7 +106,7 @@ sub parse_list {
   # First read the List info sheet
   my %list;
   if ( $book->[1]->{label} ne 'ListInformation' ) {
-    if ( $opts{force} ) {
+    if ( $opts->{force} ) {
       print STDERR "Allowing Mis-labeled info sheet $book->[1]->{label}";
     } else {
       die "Mis-labeled info sheet $book->[1]->{label}";
@@ -138,7 +120,7 @@ sub parse_list {
 
 
   if ( $book->[2]->{label} ne 'ListProteins' ) {
-    if ( $opts{force} ) {
+    if ( $opts->{force} ) {
       print STDERR "Allowing Mis-labeled info sheet $book->[1]->{label}";
     } else {
       die "Mis-labeled info sheet $book->[1]->{label}";
@@ -164,7 +146,102 @@ sub parse_list {
   return ( { list_info => \%list, list_proteins => \@list_proteins } );
 }
 
+sub show_lists {
+  my $sql = qq~
+  SELECT protein_list_id, title 
+  FROM $TBAT_DOMAIN_PROTEIN_LIST
+  WHERE record_status = 'N'
+  ORDER BY protein_list_id ASC
+  ~;
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while ( my @row = $sth->fetchrow_array ) {
+    print join( "\t", @row ) . "\n";
+  }
+  exit;
+}
+
 sub check_list {
+
+  my $list_id = shift;
+
+  my $sql = "SELECT title FROM $TBAT_DOMAIN_PROTEIN_LIST WHERE protein_list_id = $list_id";
+  my $result = $sbeams->selectrow_arrayref( $sql );
+  if ( $result->[0] ) {
+    print "Found domain list: $result->[0]\n";
+  } else {
+    print "Unable to find domain list with ID $list_id, try --show option\n";
+    exit;
+  }
+
+}
+
+
+
+
+sub update_list {
+
+  my $list_id = shift || $opts->{domain_list_id};
+  die "No list_id " unless $list_id;
+
+  my $files_dir = $UPLOAD_DIR . '/AT_domain_protein_list';
+
+  # For now we will just add a primary or secondary file.
+  my $list_file = "$files_dir/${list_id}_original_file.dat";
+  if ( $opts->{list_file} ) {
+    my $new_filename = basename( $opts->{list_file} );
+
+    print "Adding or updating list file with $new_filename\n";
+
+    if ( -e $list_file ) {
+      print "File $list_file exists\n";
+      my $version = time();
+
+      my $sql = qq~
+      SELECT original_file FROM $TBAT_DOMAIN_PROTEIN_LIST 
+      WHERE protein_list_id = $list_id
+      ~;
+      my $row = $sbeams->selectrow_arrayref( $sql );
+      $row->[0] ||= 'unknown';
+
+      my $new_name = "$list_file.$version.$row->[0]";
+
+      `mv $list_file $new_name`;
+
+      if ( -e $list_file ) {
+        print STDERR "Unknown error renaming file $list_file\n";
+        exit;
+      } elsif ( -e $new_name ) {
+
+        `cp $opts->{list_file} $list_file`;
+
+        my $sql = qq~
+        UPDATE $TBAT_DOMAIN_PROTEIN_LIST 
+        SET original_file = '$opts->{list_file}' 
+        WHERE protein_list_id = $list_id
+        ~;
+        $sbeams->do( $sql );
+
+      } else {
+        print STDERR "Unknown error renaming file $list_file\n";
+      }
+
+    } else {
+      print "no existing file for $list_id, creating new\n";
+      `cp $opts->{list_file} $list_file`;
+      my $sql = qq~
+      UPDATE $TBAT_DOMAIN_PROTEIN_LIST 
+      SET original_file = '$opts->{list_file}' 
+      WHERE protein_list_id = $list_id
+      ~;
+      $sbeams->do( $sql );
+    }
+  }
+  exit;
+
+}
+
+sub delete_list {
   my $list_id = shift;
 
   my $sql = "SELECT COUNT(*) FROM $TBAT_DOMAIN_PROTEIN_LIST WHERE protein_list_id = $list_id";
@@ -173,7 +250,7 @@ sub check_list {
     my $sql = "SELECT COUNT(*) FROM $TBAT_DOMAIN_LIST_PROTEIN WHERE protein_list_id = $list_id";
     my $result = $sbeams->selectrow_arrayref( $sql );
     if ( $result->[0] ) {
-      if ( !$opts{force} ) {
+      if ( !$opts->{force} ) {
         usage( "This domain protein list already has data, use --force option to purge and load new records" );
       } else {
         $sbeams->do( "DELETE FROM $TBAT_DOMAIN_LIST_PROTEIN WHERE protein_list_id = $list_id" );
@@ -188,7 +265,7 @@ sub check_list {
 
 }
 
-sub createList {
+sub create_list {
   my $list_data =  shift || die;
   my $list_info = $list_data->{list_info};
   $list_info->{Title} = $list_info->{'List Name'};
@@ -200,8 +277,8 @@ sub createList {
   for my $element ( 'List Name', 'Pubmed ID', 'image' ) {
     delete( $list_info->{$element} );
   }
-  $list_info->{owner_contact_id} = $sbeams->getCurrent_contact_id();
-  $list_info->{project_id} = $opts{project_id};
+  $list_info->{owner_contact_id} = $opts->{contact_id} || $sbeams->getCurrent_contact_id();
+  $list_info->{project_id} = $opts->{project_id};
 
   my $id = $sbeams->updateOrInsertRow( insert => 1,
                                   table_name  => $TBAT_DOMAIN_PROTEIN_LIST,
@@ -211,9 +288,13 @@ sub createList {
                                   testonly    => $TESTONLY );
 
   $list_data->{list_id} = $id;
+
+  update_list($id);
+
+
 }
 
-sub fillTable {
+sub fill_table {
 
   my $list_data = shift || die;
   my $list_proteins = $list_data->{list_proteins};
@@ -246,7 +327,7 @@ sub fillTable {
 
 ##################
 
-sub fillTableTSV {
+sub fill_table_tsv {
 
   my %valid = ( original_name => 1,
                 original_accession  => 1,
@@ -260,7 +341,7 @@ sub fillTableTSV {
 
 
 
-  open LIST, $opts{list_file} || die;
+  open LIST, $opts->{list_file} || die;
   my %headings;
   my $cnt;
   my %keep_fields;
@@ -282,7 +363,7 @@ sub fillTableTSV {
     for my $key ( keys( %keep_fields ) ) {
       $rowdata{$key} = $line[$keep_fields{$key}];
     }
-    $rowdata{protein_list_id} = $opts{domain_list_id};
+    $rowdata{protein_list_id} = $opts->{domain_list_id};
 
     for my $id ( keys( %valid ) ) {
       $rowdata{$id} = '' if !defined $rowdata{$id};
@@ -304,7 +385,7 @@ sub fillTableTSV {
 
   }
 
-} # end fillTable
+} # end fill_table
 
 sub usage {
   my $msg = shift || '';
@@ -318,9 +399,15 @@ sub usage {
   Usage: $PROG_NAME [opts]
   Options:
 
-    --list_file            Name of file 
-    --domain_list_id       ID of domain_list, already added via ManageTable (numeric);                  
-
+    --list_file            Name of primary file 
+    --aux_file             Name of auxilary file(s) 
+    --domain_list_id       ID of domain_list, required for update operations
+    --mode                 main purpose of a given script run.  One of:
+                              new - add new list, requires list_file, project_id
+                              update - update existing record, requires id 
+                              delete - delete existing list, requires id
+    --show_lists           Output list names and ids, helpful for update mode
+    --contact_id           contact_id of list owner 
     --verbose n            Set verbosity level.  default is 0
     --quiet                Set flag to print nothing at all except errors
     --debug n              Set debug flag
@@ -332,5 +419,43 @@ sub usage {
   EOU
   exit;
 }
+
+
+# Process options
+sub get_options {
+
+  my %opts = ( aux_files => [] );
+  GetOptions( \%opts,"verbose:s","quiet","debug:s","testonly", 'list_file:s', 
+              'domain_list_id:i', 'help', 'force', 'mode=s', 'project_id:i', 
+              "aux_files=s@", "show_lists", "contact_id=i" ) 
+              || usage( "Error processing options" );
+  
+  # Check params
+  if ( $opts{help} ) {
+    usage();
+  } elsif ( $opts{show_lists} ) {
+    show_lists();
+  } elsif ( !$opts{mode} ) {
+    usage( "Missing required parameter 'mode'" );
+  } elsif ( $opts{mode} eq 'new' ) {
+    unless ( $opts{project_id} && $opts{list_file} ) {
+      usage( "'new' mode requires project_id and list_file" );
+    }
+  } elsif ( $opts{mode} eq 'update' ) {
+    unless ( $opts{domain_list_id} ) {
+      usage( "'update' mode requires domain_list_id" );
+    } 
+  } elsif ( $opts{mode} eq 'delete' ) {
+    unless ( $opts{domain_list_id} ) {
+      usage( "'delete' mode requires domain_list_id" );
+    } 
+    usage( "'delete' mode not yet enabled'" );
+  } else {
+    usage( "unknown mode '$opts{mode}'" );
+  }
+  return \%opts;
+
+}
+
 
 __DATA__
