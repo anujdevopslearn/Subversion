@@ -161,7 +161,9 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
   );
   $atlas->display_page_header(project_id => $project_id);
 
-  my $restricted_proteins = '';
+  my $restricted_protein_clause = '';
+  my $restricted_peptide_clause = '';
+
   my $bad_build_specified = 0;
 
   if ( $parameters{pabst_build_id} && $parameters{pabst_build_id} != $pabst_build_id ) {
@@ -174,7 +176,7 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
     if ( $guest && !$super_guest && $SRMAuth && $parameters{pabst_build_id} == 146 ) {
 
       # This mechanism supercedes the restricted proteins mechanism
-      $restricted_proteins = '';
+      $restricted_protein_clause = '';
 
       if ( -e "$auth_path/$SRMAuth" ) {
         $isAuthorized++;
@@ -248,9 +250,16 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
        !is_srma_preview_site()        &&
        $pl_auth  ) {
 
+    $log->info( Dumper( $protein_list_info ) );
     # Could be allowed via a protein list
-    $restricted_proteins = " AND biosequence_name IN ( '" . join( "','", keys( %{$protein_list_info->{proteins}} ) ) . " ' ) \n";
-    $log->info( "Allowed access for $current_username to build $pabst_build_id proteins $restricted_proteins" );
+    if ( scalar( keys( %{$protein_list_info->{proteins}} ) ) ) {
+      $restricted_protein_clause = " AND biosequence_name IN ( '" . join( "','", keys( %{$protein_list_info->{proteins}} ) ) . " ' ) \n";
+      $log->info( "Allowed access for $current_username to build $pabst_build_id proteins $restricted_protein_clause" );
+    }
+    if ( scalar( keys( %{$protein_list_info->{peptides}} ) ) ) {
+      $restricted_peptide_clause = " AND peptide_sequence IN ( '" . join( "','", keys( %{$protein_list_info->{peptides}} ) ) . " ' ) \n";
+      $log->info( "Allowed access for $current_username to build $pabst_build_id peptides $restricted_peptide_clause" );
+    }
     $bad_build_specified = 0;
   }
 
@@ -510,7 +519,7 @@ function get_agreement() {
 
   if ( $parameters{action} && $parameters{action} eq 'QUERY' && !$err ) {
     $log->debug( "  Going to fetch transitions"  . time());
-    fetch_transitions( %parameters, restricted => $restricted_proteins );  
+    fetch_transitions( %parameters, restricted_proteins => $restricted_protein_clause, restricted_peptides => $restricted_peptide_clause );  
     $log->debug( "  Done fetching transitions"  . time());
   }
   $atlas->display_page_footer( close_tables => 0 ) if $guest;
@@ -1124,7 +1133,8 @@ sub fetch_transitions {
   # Historical, don't ask.
   my %parameters = %args;
 
-  my $restricted_proteins = $args{restricted} || '';
+  my $restricted_proteins = $args{restricted_proteins} || '';
+  my $restricted_peptides = $args{restricted_peptides} || '';
 
   my $content = '';
 
@@ -1516,6 +1526,7 @@ sub fetch_transitions {
   $best_probability_clause
   $peptide_length_clause
   $restricted_proteins
+  $restricted_peptides
   $biosequence_name_clause
   $namespace_clause
   ~;
