@@ -216,6 +216,7 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
   }
 
   my $protein_list_info = $atlas->getProteinListInfo( username => $current_username, build_id => $parameters{pabst_build_id} );
+
   my $pl_auth = 0;
   if ( $protein_list_info->{build_ok} && ( !$guest || $super_guest ) ) {
     $restricted_build_js = qq~
@@ -245,11 +246,12 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
   if ( $protein_list_info->{build_ok} &&
        $pabst_build_id == 146         &&
        !is_srma_preview_site()        &&
-       !$pl_auth  ) {
+       $pl_auth  ) {
 
     # Could be allowed via a protein list
     $restricted_proteins = " AND biosequence_name IN ( '" . join( "','", keys( %{$protein_list_info->{proteins}} ) ) . " ' ) \n";
-#    $log->info( "Allowed access for $current_username to build $pabst_build_id proteins $restricted_proteins" );
+    $log->info( "Allowed access for $current_username to build $pabst_build_id proteins $restricted_proteins" );
+    $bad_build_specified = 0;
   }
 
   # Decide what action to take based on information so far
@@ -2769,12 +2771,17 @@ sub get_bad_qqq {
 
 sub isIRT {
   my $build_resources = shift || return 0;
+  my $rt_type_clause = '';
+  if ( $parameters{rt_type} && $parameters{rt_type} =~ /^\d+$/ ) {
+    $rt_type_clause = " AND ET.elution_time_type_id = $parameters{rt_type}";
+  }
   my $et = join( ',', keys( %{$build_resources->{elution_time_set}} ) );
   my $et_sql = qq~
   SELECT elution_time_type
   FROM $TBAT_ELUTION_TIME ET join $TBAT_ELUTION_TIME_TYPE ETT
     ON ET.elution_time_type_id = ETT.elution_time_type_id
-  WHERE ET.elution_time_set IN ( $et );
+  WHERE ET.elution_time_set IN ( $et )
+  $rt_type_clause
   ~;
   my $sth = $sbeams->get_statement_handle($et_sql);
 
