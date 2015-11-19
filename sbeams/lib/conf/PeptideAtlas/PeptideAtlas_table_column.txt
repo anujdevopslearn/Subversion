@@ -1243,3 +1243,8 @@ AT_NeXtProt_CHPP_Summary	6	n_uncertain		int	4	0	N		Y			Y
 AT_NeXtProt_CHPP_Summary	7	n_redundant		int	4	0	N		Y			Y									
 AT_NeXtProt_CHPP_Summary	8	n_not_observed		int	4	0	N		Y			Y									
 AT_NeXtProt_CHPP_Summary	9	NeXtProt_Mapping_id		int	4	0	N		Y		Y	Y									
+AT_domain_list_resource	1	list_resource_id	Domain list resource ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_domain_list_resource	2	protein_list_id	Protein List ID	int	4	0	N		N	domain_protein_list	protein_list_id					N	N				 
+AT_domain_list_resource	3	type	Type	varchar	255	0	N		N	 	 	Y	text			Y	Y	N	 	 	
+AT_domain_list_resource	4	name	Name	varchar	255	0	N		N	 	 	Y	file			Y	Y	N	 	 	
+AT_domain_list_resource	5	Description	Description	varchar	255	0	Y		N		 	N	textarea	5		Y	Y	N	 	 	

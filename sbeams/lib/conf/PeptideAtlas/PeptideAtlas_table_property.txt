@@ -93,7 +93,7 @@ AT_public_data_repository	Public Data Repository	PeptideAtlas_infrastructure	YES
 AT_fragmentation_type	fragmentation type 	PeptideAtlas_infrastructure	YES	$TBAT_FRAGMENTATION_TYPE	fragmentation_type_id		ManageTable.cgi?TABLE_NAME=AT_fragmentation_type 		
 AT_uniprot_db	Get PTP Peptides	PeptideAtlas_infrastructure	NO	$TBAT_UNIPROT_DB	uniprot_db_id				
 AT_uniprot_db_entry	Get PTP Peptides	PeptideAtlas_infrastructure	NO	$TBAT_UNIPROT_DB_ENTRY	uniprot_db_entry_id				
-AT_domain_protein_list	Domain Protein List	PeptideAtlas_infrastructure	YES	$TBAT_DOMAIN_PROTEIN_LIST	protein_list_id		ManageTable.cgi?TABLE_NAME=AT_Domain_Protein_list		
+AT_domain_protein_list	Domain Protein List	PeptideAtlas_infrastructure	YES	$TBAT_DOMAIN_PROTEIN_LIST	protein_list_id		ManageTable.cgi?TABLE_NAME=AT_domain_protein_list		
 AT_domain_list_protein	Domain List Protein	PeptideAtlas_infrastructure	NO	$TBAT_DOMAIN_LIST_PROTEIN	list_protein_id				
 AT_proteases	Proteases	PeptideAtlas_infrastructure	YES	$TBAT_PROTEASES	id		ManageTable.cgi?TABLE_NAME=AT_proteases		
 AT_dia_library	DIA Library	PeptideAtlas_infrastructure	YES	$TBAT_DIA_LIBRARY	consensus_library_id		ManageTable.cgi?TABLE_NAME=AT_dia_library		
@@ -101,3 +101,4 @@ AT_GetDIALibs	Get DIA Libraries	QUERY	YES				GetDIALibs
 AT_ExploreIonLibrary	Explore Ion Library	QUERY	YES				ExploreIonLibrary		
 AT_sample_category	Sample Category	PeptideAtlas_infrastructure	YES	$TBAT_SAMPLE_CATEGORY	id		ManageTable.cgi?TABLE_NAME=AT_sample_category		
 AT_GetAtlasVariants	Get Atlas Variants	QUERY	YES				GetAtlasVariants		
+AT_domain_list_resource	Domain List Resource	PeptideAtlas_infrastructure	YES	$TBAT_DOMAIN_LIST_RESOURCE	domain_list_resource_id		ManageTable.cgi?TABLE_NAME=AT_domain_list_resource		
