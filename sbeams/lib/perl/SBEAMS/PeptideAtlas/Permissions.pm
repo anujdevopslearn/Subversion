@@ -555,8 +555,7 @@ sub getCurrentAtlasBuildID {
   } else {
     my $cached_atlas_build_id = $sbeams->getSessionAttribute(
       key => $build_key,
-    );
-
+    ) || 0;
     if ($cached_atlas_build_id != $this_atlas_build_id) {
       $sbeams->setSessionAttribute(
         key => $build_key,
@@ -671,6 +670,7 @@ sub getCurrentAtlasOrganism {
     return  ( $rows[0] =~ /Human/ ) ? 'hsa' :
             ( $rows[0] =~ /Yeast/ ) ? 'sce' :
             ( $rows[0] =~ /Mouse/ ) ? 'mmu' :
+            ( $rows[0] =~ /Pig/ ) ? 'ssc' :
             ( $rows[0] =~ /Drosophila/ ) ? 'dme' : $rows[0];
   } elsif  ( $args{type} && $args{type} eq 'organism_id' ) {
     return $rows[1];
