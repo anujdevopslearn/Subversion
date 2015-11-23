@@ -239,6 +239,7 @@ sub process_options {
   $options{frag_min_mz} ||= $options{prec_min_mz};
   $options{frag_max_mz} ||= $options{prec_max_mz};
   $options{overlap} ||= 0;
+  $options{format} ||= 'peakview';
 
   if ( $options{print_swaths} && !$options{input_file} && $options{output_file} ) {
     calculate_swath_bins();
@@ -315,6 +316,9 @@ sub get_bin {
   my $min;
   my $max;
   my $prev;
+  if ( !scalar( %swath_bins ) ) {
+    die "No SWATH bins set";
+  }
   for my $start ( sort {$a <=> $b } keys( %swath_bins ) ) {
     if ( $start > $q ) {
       return [ $prev => $swath_bins{$prev} ];
