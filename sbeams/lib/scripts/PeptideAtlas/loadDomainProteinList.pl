@@ -11,6 +11,7 @@
 use strict;
 use Getopt::Long;
 use File::Basename;
+use Cwd qw( abs_path );
 use Data::Dumper;
 use FindBin;
 use Spreadsheet::Read;
@@ -237,6 +238,38 @@ sub update_list {
       $sbeams->do( $sql );
     }
   }
+
+  if ( $opts->{aux_files} ) {
+    for my $file ( @{$opts->{aux_files}} ) {
+      if ( ! -e $file ) {
+        print STDERR "No file found for $file, skipping\n";
+        next;
+      }
+
+      my $base_name = basename( $file );
+      my $abs_name = abs_path( $file );
+      my $sql = qq~
+      INSERT INTO $TBAT_DOMAIN_LIST_RESOURCE 
+      ( protein_list_id, name, type, description ) VALUES
+      ( $list_id, '$base_name', 'File', 'Aux file $abs_name' )
+      ~;
+      $sbeams->do( $sql );
+      my $fetch_sql = qq~
+      SELECT MAX( list_resource_id ) FROM
+      $TBAT_DOMAIN_LIST_RESOURCE 
+      WHERE protein_list_id = $list_id
+      AND type = 'File'
+      AND name = '$base_name'
+      ~;
+
+      my ( $id ) = $sbeams->selectrow_array( $fetch_sql );
+      my $aux_file = "$UPLOAD_DIR/AT_domain_list_resource/${id}_name.dat";
+      `cp $file $aux_file`;
+      `chmod a+r $aux_file`;
+      print STDERR "ID is $id for $base_name\n";
+    }
+  }
+
   exit;
 
 }
