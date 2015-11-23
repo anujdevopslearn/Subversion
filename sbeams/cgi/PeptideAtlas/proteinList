@@ -234,7 +234,7 @@ sub get_list_overview {
   my $redundant_abs = 0;
   $redundant_abs++ if $info->{abstract} eq $info->{description};
 
-  my $file_url = "$CGI_BASE_DIR/PeptideAtlas/ManageTable.cgi/$info->{original_file}?TABLE_NAME=AT_Domain_Protein_list;ForceDownload=1;protein_list_id=" . $info->{protein_list_id} . ";GetFile=original_file";
+  my $file_url = "$CGI_BASE_DIR/PeptideAtlas/ManageTable.cgi/$info->{original_file}?TABLE_NAME=AT_domain_protein_list;ForceDownload=1;protein_list_id=" . $info->{protein_list_id} . ";GetFile=original_file";
   my $file_link = "<a href='$file_url'>$info->{original_file}</a>";
 
   my $spc = $sbeams->getGifSpacer(500);
@@ -257,6 +257,20 @@ sub get_list_overview {
     $abstract =~ s/\n/<br>/g;
   }
 
+  my $aux_files = '';
+  my $aux_sql = qq~
+  SELECT name, list_resource_id 
+  FROM $TBAT_DOMAIN_LIST_RESOURCE 
+  WHERE protein_list_id = $params->{protein_list_id}
+  AND type = 'File'
+  ~;
+  my $dbh = $sbeams->get_statement_handle( $aux_sql );
+  while ( my @row = $dbh->fetchrow_array() ) {
+    my $file_url = "$CGI_BASE_DIR/PeptideAtlas/ManageTable.cgi/$row[0]?TABLE_NAME=AT_domain_list_resource;ForceDownload=1;list_resource_id=$row[1];GetFile=name";
+    my $file_link = "<a href='$file_url'>$row[0]</a></br>";
+    $aux_files .= $file_link
+
+  }
 
   $table .= $atlas->encodeSectionItem( key   => 'List Name', tr_info => $tr,
                             value => $info->{title} . $spc, vspan => 3 ) . "\n";
@@ -268,6 +282,8 @@ sub get_list_overview {
                             value => $info->{n_proteins}, vspan => 3 ) . "\n";
   $table .= $atlas->encodeSectionItem( key   => 'Original File', tr_info => $tr,
                             value => $file_link, vspan => 3 ) . "\n";
+  $table .= $atlas->encodeSectionItem( key   => 'Auxillary File(s)', tr_info => $tr,
+                            value => $aux_files, vspan => 3 ) . "\n" if $aux_files;
 
   $table .= "<tr><td>$img</td><td>$caption</td></tr>";
   $table .= "<tr><td colspan=2>$abstract</td></tr>" unless $redundant_abs;
