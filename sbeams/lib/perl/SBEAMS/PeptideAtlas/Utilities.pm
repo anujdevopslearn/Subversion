@@ -1380,8 +1380,8 @@ sub assess_protein_peptides {
                use_ssr => 1,
                min_ssr => 10,
                max_ssr => 60,
-               use_signal => 0,
-               use_tm => 0,
+               use_sig => 1,
+               use_tm => 1,
                @_ );
   my $sbeams = $self->getSBEAMS();
 
@@ -1419,38 +1419,73 @@ sub assess_protein_peptides {
   my %fail = ( len => 0, ssr => 0 );
   my $peps = $self->do_tryptic_digestion( aa_seq => $args{seq} ); 
 #  die Dumper( $peps );
+  my $swiss = $args{swiss} || {};
 
+  my %tm;
+  if ( $swiss->{TRANSMEM} ) {
+    for my $tm ( @{$swiss->{TRANSMEM}} ) {
+      next unless ( $tm->{start} && $tm->{end} );
+      die "ugh" unless ( $tm->{start} < $tm->{end} );
+      for ( my $site = $tm->{start}; $site <= $tm->{end}; $site++ ) {
+        $tm{$site}++;
+      }
+    }
+  }
+
+  my %sig;
+  if ( $swiss->{SIGNAL} ) {
+    for my $sig ( @{$swiss->{SIGNAL}} ) {
+      next unless ( $sig->{start} && $sig->{end} );
+      die "ugh" unless ( $sig->{start} < $sig->{end} );
+      for ( my $site = $sig->{start}; $site <= $sig->{end}; $site++ ) {
+        $sig{$site}++ if $args{use_sig};
+      }
+    }
+  }
+
+  
   my %len_ok;
+  my %len; # failing len peptides
   for my $pep ( @{$peps} ) {
     my $plen = length( $pep );
     if ( $plen >= $args{min_len} && $plen <= $args{max_len} ) {
       $len_ok{$pep}++;
     } else {
-      $fail{len}++ if $args{use_len};
+      if( $args{use_len} ) {
+        $len{$pep}++;
+        $fail{len}++;
+      }
     }
   }
 
   my $calc = $self->getSSRCalculator();
   my %ssr_ok;
+  my %ssr;
   my %ssr_seen;
+  my %all_ssr;
   if ( $args{use_ssr} ) {
     for my $pep ( @{$peps} ) {
-      next if ( $args{use_len} && !$len_ok{$pep} );
+#      next if ( $args{use_len} && !$len_ok{$pep} );
       next if $ssr_seen{$pep}++;
       if ($calc->checkSequence($pep) ){
         my $ssr ||= $calc->TSUM3($pep);
-        print STDERR "SSR for $pep is $ssr\n";
+        $all_ssr{$pep} = $ssr;
         if ( $ssr >= $args{min_ssr} && $ssr <= $args{max_ssr} ) {
           $ssr_ok{$pep}++;
         } else {
           $fail{ssr}++;
+          $ssr{$pep}++;
         }
       }
     }
   }
 
+  my %tm_peps;
+  my %sig_peps;
+  my %fail_status;
   my @pepinfo;
   my %passing;
+  my %failing;
   my $total = 0;
   my $passing = 0;
   my $likely_str = '';
@@ -1459,26 +1494,80 @@ sub assess_protein_peptides {
     my $start = $total + 1;
     $total += length( $pep );
     my $end = $total;
+    my $tallied = 0; # Just once
     if ( $args{use_len} && !$len_ok{$pep} ) {
-      $likely_str .= 0 x length( $pep );
-      $status = 'Length';
-    } elsif ( $args{use_ssr} && !$ssr_ok{$pep} ) {
-      $likely_str .= 0 x length( $pep );
-      $status = 'SSR';
+      $likely_str .= 0 x length( $pep ) unless $tallied++;
+      $status ||= 'Length';
+      $fail_status{Length}++;
+    } 
+
+    if ( $args{use_sig} && ($sig{$start} || $sig{$end}) ) {
+      $likely_str .= 0 x length( $pep ) unless $tallied++;
+      $status ||= 'SIG';
+      $fail_status{SIG}++;
+      $sig_peps{$pep}++;
+      
     } else {
-      $passing += length( $pep );
-      $passing{$pep}++;
-      $likely_str .= 1 x length( $pep );
+      for my $pos ( sort { $a <=> $b } ( keys( %sig ) ) ) {
+        if ( $pos >= $start && $pos <= $end ) {
+          $likely_str .= 0 x length( $pep ) unless $tallied++;
+          $status ||= 'SIG';
+          $fail_status{SIG}++;
+          $sig_peps{$pep}++;
+          last;
+        }
+      }
     }
-    push @pepinfo, { seq => $pep, start => $start, end => $end, status => $status };
+    if ( $args{use_tm} && ($tm{$start} || $tm{$end}) ) {
+      $likely_str .= 0 x length( $pep ) unless $tallied++;
+      $status ||= 'TM';
+      $fail_status{TM}++;
+      $tm_peps{$pep}++;
+    } else {
+      for my $pos ( sort { $a <=> $b } ( keys( %tm ) ) ) {
+        if ( $args{use_tm} && $pos >= $start && $pos <= $end ) {
+          $likely_str .= 0 x length( $pep ) unless $tallied++;
+          $status ||= 'SIG';
+          $fail_status{SIG}++;
+          $tm_peps{$pep}++;
+          last;
+        }
+      }
+    } 
+    if ( $args{use_ssr} && !$ssr_ok{$pep} ) {
+      $likely_str .= 0 x length( $pep ) unless $tallied++;
+      $status ||= 'SSR';
+    } 
+    if ( !$tallied ){
+      $passing += length( $pep );
+      $likely_str .= 1 x length( $pep );
+      $passing{$pep}++;
+    } else {
+      $failing{$pep}++;
+    }
+    push @pepinfo, { seq => $pep, 
+                   start => $start, 
+                     end => $end, 
+                  status => $status,
+                    len => length( $pep ),
+                    ssr => $all_ssr{$pep} || 0
+                     };
   }
   
+  my @passing = keys( %passing );
+  my @failing = keys( %failing );
   return ( { peptides => \@pepinfo,
              pass_len => $passing,
-             failure =>  \%fail,
+              failure =>  \%fail,
             total_len => $total,
-              passing => [ keys( %passing ) ],
+              passing => \%passing,
+              failing => \%failing,
+          num_passing => scalar( @passing ),
            likely_str => $likely_str,
+                  ssr => \%ssr,
+                  len => \%len,
+                   tm => \%tm_peps,
+                  sig => \%sig_peps, 
        percent_likely => sprintf( "%0.1f", 100*($passing/$total)) } );
 }
 
@@ -1500,7 +1589,7 @@ sub get_html_seq_vars {
   my $seq = $args{seq} || return '';
 
   my $ruler = '';
-  my $ruler_cnt = ' ';
+ my $ruler_cnt = ' ';
   my $acnt = 1;
   for my $aa ( split //, $seq ) {
     if ( $acnt % 10 ) {
@@ -1627,7 +1716,7 @@ sub get_html_seq_vars {
     $div_txt{$seq_type} = $divs{$seq_type};
     for my $a ( @{$values{$seq_type}} ) {
       next unless ref($a);
-      next unless ref($a) == 'ARRAY';
+      next unless ref($a) eq 'ARRAY';
       $div_txt{$seq_type} .= join( "", @{$a} );
     }
     $div_txt{$seq_type} .= '</DIV>';
@@ -1685,21 +1774,21 @@ sub get_html_seq_vars {
   }
   $return{seq_display} = $str;
 
-  my $swiss = {};
-  if ( $args{accession} ) {
-    $swiss = $self->get_uniprot_annotation( %args );
+  if ( $args{swiss} ) {
+    $self->{_swiss} = $args{swiss};
+  } else {
+    $self->{_swiss} = $self->get_uniprot_annotation( %args );
   }
+  my $swiss = $self->{_swiss};
 
   # Or if there are no variants.
   return \%return unless $swiss->{success};
 
-
   my $is_html = ( $self->getSBEAMS()->output_mode() eq 'html' ) ? 1 : 0;
   if ( $swiss->{fasta_seq} ne $args{seq} ) {
     $log->error( "Drift detected between biosequence and uniprot_db tables" );
+    $log->error( "$args{accession}, $args{build_id}" );
   }
-
-
   $return{has_variants} = $swiss->{has_variants};
   $return{has_modres} = $swiss->{has_modres};
 
@@ -1724,7 +1813,7 @@ sub get_html_seq_vars {
                         SIGNAL => 'Signal',
                         PROPEP => 'Propep',
                        PEPTIDE => 'Chain',
-                      CONFLICT => 'SeqConflict' );
+                      );
 
   # Removed CONFLICT peptides.
   my @obs;
@@ -2119,7 +2208,7 @@ sub get_uniprot_variant_seq {
 #      $log->debug( "Skipping CONFLICT $args{info} because $original and $altered are different!" );
       next;
     }
-    if ( length( $original ) > 1 || length( $altered ) > 1 )  {
+    if ( $original && length( $original ) > 1 || length( $altered ) > 1 )  {
 #      $log->debug( "Skipping $args{info} because $original or $altered are > 1" );
       next;
     }
@@ -2190,6 +2279,7 @@ sub get_uniprot_variant_seq {
         $c_context .= '-' x length( $pep );
       }
     }
+    $snp_seq ||= '';
     $seq->{seq} = $n_context . $snp_seq . $c_context;
 
   } elsif ( $args{type} eq 'SIGNAL' ) { # Sequence is signal start->end 
@@ -2238,6 +2328,11 @@ sub get_uniprot_annotation {
 
   my $entry = $self->read_uniprot_dat_entry( path => $results[0],
                                            offset => $results[1] );
+
+  if ( !$entry ) {
+    return \%annot;
+  }
+  $annot{success}++;
 
   # Read the entry
   if ( $entry ) {
@@ -2297,9 +2392,13 @@ sub get_uniprot_annotation {
           } elsif ( $var->[0] ne 'CONFLICT' ) { # Not yet using these
             $annot{has_variants}++;
           }
-          $annot{success}++;
         }
       }
+    }
+    if ( $swiss->{PE} ) {
+      $swiss->{PE}->{text} =~ /^\s*(\d):\s*(.*)$/;
+      $annot{PE}->{value} = $1;
+      $annot{PE}->{text} = $2;
     }
   }
   return \%annot;
@@ -2674,7 +2773,7 @@ sub get_qqq_unscheduled_transition_list {
   $opts{calc_rt} = $opts{params}->{calc_rt} || 0;
 
   my $method = qq~MRM
-Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Dwell	Fragmentor	Collision Energy	Cell Accelerator Voltage	Polarity	Ion type
+Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Dwell	Fragmentor	Collision Energy	Cell Accelerator Voltage	Polarity
 ~;
 
   my $w = 'Wide';
@@ -2701,7 +2800,7 @@ Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Dwell	Fragmentor	C
     my $ion = $q1c . $lbl . '-' . $q3c;
     
     my $rtd = 5;
-    my $name = $acc . '.' . $seq;
+    my $name = $seq . '.' . $acc . '.' . $ion;
 
     my $full_lbl = $lbl;
     $full_lbl .= '^' . $q3c if $q3c > 1;
@@ -2721,7 +2820,7 @@ Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Dwell	Fragmentor	C
     my $istd = 'False';
     $istd = 'True'  if $seq =~ /6\]$/;
 
-    $method .= join( "\t", $name, $istd, $q1, $w, $q3, $u, $d, $f, $curr_ce, $v, $p, $ion ) . "\n";
+    $method .= join( "\t", $name, $istd, $q1, $w, $q3, $u, $d, $f, $curr_ce, $v, $p ) . "\n";
 	}
   return $method;
 }
@@ -2738,7 +2837,7 @@ sub get_qqq_dynamic_transition_list {
 
   my $method = "Dynamic MRM\n";
 
-  my @headings = ( 'Compound Name', 'ISTD?', 'Precursor Ion', 'MS1 Res', 'Product Ion', 'MS2 Res', 'Fragmentor', 'Collision Energy', 'Cell Accelerator Voltage', 'Ret Time (min)', 'Delta Ret Time', 'Polarity', 'Ion type' );
+  my @headings = ( 'Compound Name', 'ISTD?', 'Precursor Ion', 'MS1 Res', 'Product Ion', 'MS2 Res', 'Fragmentor', 'Collision Energy', 'Cell Accelerator Voltage', 'Ret Time (min)', 'Delta Ret Time', 'Polarity' );
   
   if ( $opts{calc_rt} ) {
     push @headings, 'EstimatedRT';
@@ -2746,6 +2845,7 @@ sub get_qqq_dynamic_transition_list {
   $method .= join( "\t", @headings ) . "\n";
 
   my $u = 'Unit';
+  my $w = 'Wide';
   my $p = 'Positive';
 
   my %ce;
@@ -2770,7 +2870,7 @@ sub get_qqq_dynamic_transition_list {
     my $rt = $line[14];
     my $rtd = 5;
 
-    my $name = $acc . '.' . $seq;
+    my $name = $seq . '.' . $acc . '.' . $ion;
 
     my $full_lbl = $lbl;
     $full_lbl .= '^' . $q3c if $q3c > 1;
@@ -2791,7 +2891,7 @@ sub get_qqq_dynamic_transition_list {
     my $est_rt = sprintf( "%0.1f", ($line[13]*72.94461-122.83351)/60);
     my $istd = 'False';
     $istd = 'True' if $seq =~ /6\]$/;
-    my @rowdata = ( $name, $istd, $q1, $u, $q3, $u, 125, $curr_ce, 5, $rt, $rtd, $p, $ion );
+    my @rowdata = ( $name, $istd, $q1, $w, $q3, $u, 125, $curr_ce, 5, $rt, $rtd, $p );
     if ( $opts{calc_rt} ) {
       push @rowdata, $est_rt;
     }
@@ -2826,8 +2926,11 @@ sub get_qtrap_mrmms_method {
   my $sep = "\t";
   $sep = ",";
 
-  my $method = join($sep, qw(Q1 Q3 Dwell peptide.protein.Cso CE)) . "\r\n";
-  
+  # Headings removed per UKusebauch, 2015-11
+#  my $method = join($sep, qw(Q1 Q3 Dwell peptide.protein.Cso CE)) . "\r\n";
+  my $method;
+
+
 	my $dwell = 10;
   my %ce = {};
 	for my $row ( @{$tsv} ) {
@@ -2843,8 +2946,9 @@ sub get_qtrap_mrmms_method {
     my $q3 = $line[8];
     my $q3c = $line[9];
     my $lbl = $line[10];
-    my $label = $seq . '.' . $acc . '.' . $q1c . $lbl . $q3; 
-		$label .= '-' . $q3c if $q3c > 1;
+    my $label = $seq . '.' . $acc . '.' . $q1c . $lbl; 
+#		$label .= '-' . $q3c if $q3c > 1;
+		$label .= '-' . $q3c;
 
     my $ce_key = $seq . $q1c;
     $ce{$ce_key} ||= $self->calculate_abisciex_ce( mz => $q1, charge => $q1c );
@@ -2888,7 +2992,8 @@ sub get_qtrap_mrm_method {
     $ce{$ce_key} ||= $self->calculate_abisciex_ce( mz => $q1, charge => $q1c );
 
     my $label = $seq . '.' . $acc . '.' . $q1c . $lbl; 
-		$label .= '-' . $q3c if $q3c > 1;
+#		$label .= '-' . $q3c if $q3c > 1;
+		$label .= '-' . $q3c;
     $method .= join($sep, $q1, $q3, $rt, $label, $ce{$ce_key} ) . "\r\n";
   }
   return $method;
