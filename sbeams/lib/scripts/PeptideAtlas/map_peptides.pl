@@ -586,9 +586,13 @@ sub read_fasta {
     $acc2seq{$def} = $seq;
 
     unless( $opts->{grep_only} ) {
+
+      my $min_len = $opts->{length_min} || 6;
+      my $max_len = $opts->{length_max} || 300;
+
       my $tryptic = $atlas->do_tryptic_digestion( aa_seq => $seq,
-                                                 min_len => 6,
-                                                 max_len => 300 );
+                                                 min_len => $min_len,
+                                                 max_len => $max_len );
 
       my $tp_cnt = 0;
       for my $tp ( @{$tryptic} ) {
@@ -651,7 +655,8 @@ sub get_options {
              'show_degen', 'show_mia', 'nocount_degen', 'show_nomap', 'show_himap=i',
              'show_proteo', 'show_all_pep', 'omit_match_seq', 'suppress_brute',
              'key_calc', 'show_all_flanking', "min_nomap=i", 'c_term_cnt', 'n_term_cnt',
-             'print_context', 'i_to_l_convert', 'acc_sep_char=s', 'd2n_force', 'met_trim' );
+             'print_context', 'i_to_l_convert', 'acc_sep_char=s', 'd2n_force', 'met_trim',
+             'length_min:i', 'length_max:i' );
 
   print_usage() if $opts{help};
 
