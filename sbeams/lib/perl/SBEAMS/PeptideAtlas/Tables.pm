@@ -130,6 +130,7 @@ use vars qw(@ISA @EXPORT
 
     $TBAT_DOMAIN_PROTEIN_LIST
     $TBAT_DOMAIN_LIST_PROTEIN
+    $TBAT_DOMAIN_LIST_RESOURCE
 
     $TBAT_SEL_EXPERIMENT
     $TBAT_SEL_RUN
@@ -285,6 +286,7 @@ require Exporter;
 
     $TBAT_DOMAIN_PROTEIN_LIST
     $TBAT_DOMAIN_LIST_PROTEIN
+    $TBAT_DOMAIN_LIST_RESOURCE
 
     $TBAT_SEL_EXPERIMENT
     $TBAT_SEL_RUN
@@ -447,6 +449,7 @@ $TBAT_PROTEIN_LIST_PROTEIN          = "${mod}protein_list_protein";
 
 $TBAT_DOMAIN_PROTEIN_LIST           = "${mod}domain_protein_list";
 $TBAT_DOMAIN_LIST_PROTEIN           = "${mod}domain_list_protein";
+$TBAT_DOMAIN_LIST_RESOURCE          = "${mod}domain_list_resource";
 
 $TBAT_SEL_EXPERIMENT                = "${mod}SEl_experiment";
 $TBAT_SEL_RUN                       = "${mod}SEL_run";
