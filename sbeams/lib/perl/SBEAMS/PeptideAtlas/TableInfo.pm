@@ -16,6 +16,9 @@ use CGI::Carp qw(fatalsToBrowser croak);
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::Connection::Tables;
+use SBEAMS::Connection qw( $log );
+
+use Data::Dumper;
 
 
 ###############################################################################
@@ -245,6 +248,11 @@ sub returnTableInfo {
   #### Obtain main SBEAMS object and fall back to its TableInfo handler
   my $sbeams = $self->getSBEAMS();
   my @temp_result = $sbeams->returnTableInfo($table_name,$info_key);
+#  my $ret = "args: table_name = $table_name, info_key = $info_key\n";
+#  for my $r ( @temp_result ) {
+#    $ret .= " $r\n";
+#  }
+#  $log->info( $ret );
   return @temp_result;
 
 } # End returnTableInfo
