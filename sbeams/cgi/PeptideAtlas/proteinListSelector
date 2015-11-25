@@ -703,7 +703,7 @@ sub get_list_selector {
   my $help = qq~
        <div style="font-family:Helvetica, Arial, sans-serif;font-size:200%;font-weight:bold" id=heading> Protein List Selector </div>
    <br>
-   <div id=help style="width:800px"> Below are several lists of high-priority proteins from the various participating groups of the Biology/Disease-driven Human Proteome Project (B/D-HPP). Click on the search icon next to any list to bring up a tool that helps you select proteins to explore in PeptideAtlas or SRMAtlas.
+   <div id=help style="width:800px"> Below are several lists of high-priority proteins from the various participating groups of the Biology/Disease-driven Human Proteome Project (B/D-HPP). Click on the search icon next to any list to bring up a tool that helps you select proteins to explore in PeptideAtlas or SRMAtlas. A template file for submitting a protein list can be <a href=http://www.peptideatlas.org/download/template_files/HPP_B-D_ListTemplate.xlsx> downloaded here </a>
 
   </div>
 
