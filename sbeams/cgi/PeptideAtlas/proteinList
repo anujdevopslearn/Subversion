@@ -245,7 +245,7 @@ sub get_list_overview {
   if ( $info->{image_path} ) {
     my @path = split( /\//, $info->{image_path});
     my $web_path = "/devDC/sbeams/images/$path[$#path]";
-    $img = "$tab<img src=$web_path height=80 width=80></img>\n";
+    $img = "$tab <a href=https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/MapSearch?list_id=$info->{protein_list_id}><img src=$web_path height=80 width=80></img><a/>\n";
     $caption = $info->{image_caption} || '';
   }
 
