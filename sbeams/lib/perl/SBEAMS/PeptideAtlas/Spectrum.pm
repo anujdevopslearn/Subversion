@@ -1286,7 +1286,7 @@ sub get_fragmentation_type {
 	##  1 HR IT CID  (FTICR or Orbitrap)
 	##  2 HR IT ETD (FTICR or Orbitrap)
 	##  3 HR IT HCD (FTICR or Orbitrap)
-	##  4 HR Q-TOF  (Agilent Q-TOF or AB SCIEX 5600 or QSTAR)
+	##  4 HR Q-TOF  (Agilent Q-TOF or SCIEX 5600 or QSTAR)
 	##  5 LR IT CID (QTRAP 4000, 5500, LTQ, LCQ, Equire, etc.)
 	##  6 LR IT ETD (LTQ)
   my ($insconf,$insconfid);
