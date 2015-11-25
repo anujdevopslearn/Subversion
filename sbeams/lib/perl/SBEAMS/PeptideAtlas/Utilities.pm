@@ -2870,7 +2870,7 @@ sub get_qqq_dynamic_transition_list {
     my $rt = $line[14];
     my $rtd = 5;
 
-    my $name = $seq . '.' . $acc . '.' . $ion;
+    my $name = $seq . '.' . $acc . '.' . $q1c . $ion;
 
     my $full_lbl = $lbl;
     $full_lbl .= '^' . $q3c if $q3c > 1;
@@ -2928,7 +2928,7 @@ sub get_qtrap_mrmms_method {
 
   # Headings removed per UKusebauch, 2015-11
 #  my $method = join($sep, qw(Q1 Q3 Dwell peptide.protein.Cso CE)) . "\r\n";
-  my $method;
+  my $method = '';
 
 
 	my $dwell = 10;
@@ -2969,7 +2969,8 @@ sub get_qtrap_mrm_method {
   my $sep = "\t";
   $sep = ",";
 
-  my $method = join($sep, qw(Q1 Q3 RT peptide.protein.Cso CE)) . "\r\n";
+#  my $method = join($sep, qw(Q1 Q3 RT peptide.protein.Cso CE)) . "\r\n";
+  my $method = '';
 
   my %ce = {};
 	for my $row ( @{$tsv} ) {
