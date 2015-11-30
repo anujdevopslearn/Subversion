@@ -627,9 +627,9 @@ sub handle_request {
   
   ### Create ORDER BY clause & customize.
   $sql .= qq~
-  ORDER BY SELTG.stripped_peptide_sequence,
-           SELTG.modified_peptide_sequence,
-           SELTG.peptide_charge,
+  ORDER BY stripped_peptide_sequence,
+           modified_peptide_sequence,
+           peptide_charge,
 	   SELR.spectrum_filename,
 	   SELTG.isotype DESC
   ~;
