@@ -584,7 +584,7 @@ sub handle_request {
 
 
   #### Build ROWCOUNT constraint
-  $parameters{row_limit} = 1100000
+  $parameters{row_limit} = 1500000
     unless ($parameters{row_limit} > 0 );
   #$parameters{row_limit} = 100000 if ($parameters{row_limit} eq '');
   #my $limit_clause = "TOP $parameters{row_limit}";
