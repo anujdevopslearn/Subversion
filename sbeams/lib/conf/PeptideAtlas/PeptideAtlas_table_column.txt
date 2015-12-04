@@ -58,7 +58,20 @@ AT_sample	27	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP
 AT_sample	27	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 AT_sample	29	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 AT_sample	30	record_status	Record Status	char	1	0	N	N	N							N	N				
-AT_sample	31	repository_identifiers	Repository Identifiers	varchar	255	0	Y		N			N	textarea	3		Y	Y	N	Related database entries		
+AT_sample	31	repository_identifiers	Repository Identifiers	varchar	255	0	Y		N			N	textarea	2		Y	Y	N	Related database entries		
+AT_sample	32	labeling	Labeling	varchar	100	0	N		N			N	text	30		Y	Y	N			
+AT_sample	33	sample_preparation	Sample preparation	text	16	0	N		N			N	textarea	2		Y	Y	N			
+AT_sample	34	fractionation	Fractionation	varchar	255	0	N		N			N	textarea	1		Y	Y	N			
+AT_sample	35	enrichment	Enrichment	text	16	0	N		N			N	textarea	2		Y	Y	N			
+AT_sample	36	concentration_purification_desalting	Concentration/Purification/Desalting	text	16	0	N		N			N	textarea	2		Y	Y	N			
+AT_sample	37	caloha	Caloha	text	16	0	N		N			N	textarea	1		Y	Y	N	neXtProt caloha: human anatomical ontology		
+AT_sample	38	cellosaurus	Cellosaurus	text	16	0	N		N			N	textarea	1		Y	Y	N	a thesaurus of cell line		
+AT_sample	39	NCI_Thesaurus	NCI Thesaurus	text	16	0	N		N			N	textarea	1		Y	Y	N	reference terminology and biomedical ontology		
+AT_sample	40	tissue_cell_type	Tissue/Cell Type	text	16	0	N		N			N	textarea	1		Y	Y	N			
+AT_sample	41	cell_line	Cell Line	text	16	0	N		N			N	textarea	1		Y	Y	N			
+AT_sample	42	disease	Disease	text	16	0	N		N			N	textarea	1		Y	Y	N			
+AT_sample	43	biological_conditions	Biological Conditions	text	16	0	N		N			N	textarea	2		Y	Y	N			
+AT_sample	44	treatment_physiological_state	Treatment/Physiological state	text	16	0	N		N			N	textarea	2		Y	Y	N			
 AT_atlas_build_sample	1	atlas_build_sample_id	Atlas Build Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_atlas_build_sample	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id					N	N		Associated Atlas Build		
 AT_atlas_build_sample	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
