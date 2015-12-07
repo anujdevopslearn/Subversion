@@ -87,10 +87,27 @@ sub process_query {
     return SEL_Transitions_Run_Select();
   } elsif ( $params{source} eq 'GetProtein_VariantDisplay' ) {
     return GetProtein_VariantDisplay();
+  } elsif ( $params{source} eq 'GetDIALibs_LibrarySelect' ) {
+    return GetDIALibs_LibrarySelect();
   } else {
     return $params{source};
   }
 }
+
+sub GetDIALibs_LibrarySelect {
+
+  use SBEAMS::PeptideAtlas::DIALibrary;
+  my $dia = new SBEAMS::PeptideAtlas::DIALibrary;
+
+  # Build select list
+
+  my $select = $dia->get_library_select( as_array => 1, %params );
+
+  my $json_text = $json->encode( $select ); 
+
+  return $json_text;
+}
+
 
 
 # +
@@ -178,8 +195,7 @@ sub GetTransitions_NamespaceFilters {
   my $div_text = '&nbsp;' x 4; #  . $sbeams->makeInactiveText( 'N/A' );
 #  my $json_text = $json->encode( [$div_text] );
 #  return $json_text;
-  
-  if ( $params{pabst_build_id} && $params{pabst_build_id} =~ /^\d+$/ ) {
+  if ( $params{pabst_build_id} && ( $params{pabst_build_id} =~ /^\d+$/ || $params{pabst_build_id} =~ /special/ ) ) {
 
     my $sql = qq~
     SELECT organism_id
@@ -193,9 +209,10 @@ sub GetTransitions_NamespaceFilters {
 
       } elsif ( $row[0] == 2 ) {
   
-      for my $name ( qw( SwissProt Ensembl IPI neXtProt ) ) {
-        $div_text .= "<INPUT TYPE=checkbox NAME=$name $names{$name} id=$name onclick='chk_namespace(this)'> $name </INPUT>";
-      }
+        $div_text = '<INPUT TYPE=checkbox NAME=SwissProt checked> SwissProt </INPUT><INPUT TYPE=checkbox NAME=Ensembl > Ensembl </INPUT><INPUT TYPE=checkbox NAME=IPI > IPI </INPUT>';
+#      for my $name ( qw( SwissProt Ensembl IPI neXtProt ) ) {
+#        $div_text .= "<INPUT TYPE=checkbox NAME=$name $names{$name} id=$name onclick='chk_namespace(this)'> $name </INPUT>";
+#      }
 
       } elsif ( $row[0] == 3 ) {
         $div_text = '<INPUT TYPE=checkbox NAME=SGD checked  disabled> SGD </INPUT>';
