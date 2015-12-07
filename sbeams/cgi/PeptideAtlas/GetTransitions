@@ -173,7 +173,8 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
     clear_auth( $auth_path );
 
     $SRMAuth = $q->cookie( 'SRMAtlasAuthorized' );
-    if ( $guest && !$super_guest && $SRMAuth && $parameters{pabst_build_id} == 146 ) {
+    if ( $guest && !$super_guest && $SRMAuth && ($parameters{pabst_build_id} == 146 || $parameters{pabst_build_id} eq 'specialaccess' ) ) {
+      $parameters{pabst_build_id} = 146;
 
       # This mechanism supercedes the restricted proteins mechanism
       $restricted_protein_clause = '';
@@ -186,14 +187,16 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
         print qq~
         <p>
         <br>
-        <span class=info_box>You are being allowed access to the Complete Human SRM Atlas subject to the provisional license agreement</span>
+        <span class=info_box>You are being allowed access to the Complete Human SRMAtlas subject to the provisional license agreement</span>
         <br>
         </p>
         ~ if $is_html;
       } else {
+#        die "auth don't exist SRMA is $SRMAuth, auth path is $auth_path";
         $bad_build_specified++ unless $super_guest;
       }
     } else {
+#      die "not guest($guest) and not super($super_guest), etc.SRMA is $SRMAuth, auth path is $auth_path";
       $bad_build_specified++ unless $super_guest;
     }
   }
@@ -214,7 +217,7 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
 
   # provisional access issue
   if ( $parameters{pabst_build_id} && $parameters{pabst_build_id} !~ /^\d+$/ ){ 
-    die "illegal build specified";
+    die "illegal build specified: SGuest is $super_guest, $parameters{pabst_build_id}";
   }
 
   my $protein_list_info = $atlas->getProteinListInfo( username => $current_username, build_id => $parameters{pabst_build_id} );
@@ -250,7 +253,6 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
        !is_srma_preview_site()        &&
        $pl_auth  ) {
 
-    $log->info( Dumper( $protein_list_info ) );
     # Could be allowed via a protein list
     if ( scalar( keys( %{$protein_list_info->{proteins}} ) ) ) {
       $restricted_protein_clause = " AND biosequence_name IN ( '" . join( "','", keys( %{$protein_list_info->{proteins}} ) ) . " ' ) \n";
@@ -367,7 +369,7 @@ $(document).ready(function() {
 
     var build_option = document.getElementById( 'pabst_build_id' );
     if ( build_option[build_option.selectedIndex].value == 'specialaccess' ) {
-//      var confirmation = confirm( "The Complete Human SRM Atlas is being made available on a provisional basis. By selecting 'Yes', you are agreeing to the conditions on its use." ); 
+//      var confirmation = confirm( "The Complete Human SRMAtlas is being made available on a provisional basis. By selecting 'Yes', you are agreeing to the conditions on its use." ); 
     var dialog_div = document.getElementById( 'access_agreement' );
 
     // pre-fill email if they have already set it once
@@ -633,6 +635,7 @@ sub print_form {
         apply_uc_first => 1
     );
     my $form = $sbeams->fetchSTDOUT();
+    $form =~ s/PABST Build/SRMAtlas Build/gm;
 #      <TD><SELECT NAME="pabst_build_id" >
     $form =~ s/QTrap/QTRAP/gm;
 
@@ -642,7 +645,7 @@ sub print_form {
      `touch $auth_path/$akey`;
      close AUTH;
 
-     $form =~ s/<SELECT NAME="pabst_build_id" >/<SELECT NAME="pabst_build_id" >\n<option class=bold_red_italic_text value=specialaccess><div class=bold_red_italic_text>Complete Human SRM Atlas<\/div><\/option>\n/gm;
+     $form =~ s/<SELECT NAME="pabst_build_id" >/<SELECT NAME="pabst_build_id" >\n<option class=bold_red_italic_text value=specialaccess><div class=bold_red_italic_text>Complete Human SRMAtlas<\/div><\/option>\n/gm;
     }
     $form =~ s/(NAME="pabst_build_id")/$1 ID="pabst_build_id"/gm;
     $form =~ s/(NAME="source_instrument_type_id")/$1 ID="source_instrument_type_id"/gm;
@@ -1040,17 +1043,21 @@ sub get_cmod_radio {
 
 sub get_download_form {
 
-  my $form = '<FORM NAME=DWNLD ID=DWNLD ACTION=GetResultSet.cgi/PeptideData.tsv onSubmit="setMethodName()">';
+  my $form = '<FORM NAME=DWNLD ID=DWNLD ACTION=GetResultSet.cgi/SRMAtlasAssays.tsv onSubmit="setMethodName()">';
 
   my $select = qq~
     <SCRIPT TYPE=text/javascript>
     function setMethodName() {
       var selval = document.getElementById('download').value;
-      var selreg = /ABSCIEX/;
+      var selreg = /SCIEX/;
 
       if ( selreg.exec( selval ) ) {
         var action = document.getElementById('DWNLD').action;
         action = action.replace( '.tsv', '.csv' );
+        document.getElementById('DWNLD').action = action;
+      } else {
+        var action = document.getElementById('DWNLD').action;
+        action = action.replace( '.csv', '.tsv' );
         document.getElementById('DWNLD').action = action;
       }
     }
@@ -1060,8 +1067,8 @@ sub get_download_form {
       <OPTION VALUE='TSV_MRM' >TSV</OPTION>
       <OPTION VALUE='AgilentQQQ' >Agilent QQQ SRM</OPTION>
       <OPTION VALUE='AgilentQQQ_dynamic' >Agilent QQQ dynamic SRM</OPTION>
-      <OPTION VALUE='ABSCIEX_QTRAP_SRM' >AB SCIEX QTRAP SRM</OPTION>
-      <OPTION VALUE='ABSCIEX_QTRAP_SRMMSMS' >AB SCIEX QTRAP SRM-MS2</OPTION>
+      <OPTION VALUE='ABSCIEX_QTRAP_SRM' >SCIEX QTRAP Scheduled SRM</OPTION>
+      <OPTION VALUE='ABSCIEX_QTRAP_SRMMSMS' >SCIEX QTRAP SRM</OPTION>
       <OPTION VALUE='ThermoTSQ' >Thermo TSQ</OPTION>
       <OPTION VALUE='Skyline' >Skyline TSV</OPTION>
     </SELECT>
@@ -2138,7 +2145,7 @@ sub fetch_transitions {
         <A HREF='GetProtein?organism_name=$organism_name;protein_name=$prot;apply_action=GO&action=GO#Sequence%20Motifs' TARGET='_peptideatlas' title='Look up protein in the Peptide Atlas' class='popup'>$pa_img</A>
         ~;
         $srm_link = qq~
-        <A HREF='$recall_url' TARGET='_srmatlas' title='Find all peptides for this protein in SRM Atlas' class='popup'>$srm_img</A>
+        <A HREF='$recall_url' TARGET='_srmatlas' title='Find all peptides for this protein in SRMAtlas' class='popup'>$srm_img</A>
         ~;
 
         my $gene = $prot;
