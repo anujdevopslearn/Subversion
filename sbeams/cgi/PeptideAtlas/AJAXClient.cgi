@@ -203,7 +203,9 @@ sub GetTransitions_NamespaceFilters {
     WHERE pabst_build_id = $params{pabst_build_id}
     ~;
     my $sth = $sbeams->get_statement_handle( $sql );
+    $log->warn( " $sql" );
     while ( my @row = $sth->fetchrow_array() ) {
+      $log->warn( " ID is $row[0]" );
       if ( $row[0] == 6 ) {
         $div_text = '<INPUT TYPE=checkbox NAME=SwissProt checked> SwissProt </INPUT><INPUT TYPE=checkbox NAME=Ensembl checked> Ensembl </INPUT><INPUT TYPE=checkbox NAME=IPI checked> IPI </INPUT>';
 
@@ -231,6 +233,8 @@ sub GetTransitions_NamespaceFilters {
 sub GetTransitions_ElutionTimeSelect {
 
   my @select;
+
+  $params{pabst_build_id} = 146 if $params{pabst_build_id} == 'specialaccess';
 
   if ( $params{pabst_build_id} && $params{pabst_build_id} =~ /^\d+$/ ) {
 
