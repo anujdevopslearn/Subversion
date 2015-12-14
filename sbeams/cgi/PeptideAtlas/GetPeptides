@@ -646,7 +646,7 @@ sub handle_request {
       ["is_exon_spanning","PI.is_exon_spanning","Spans exons? (Y,N)"],
 
       ["is_subpeptide_of","PI.is_subpeptide_of","Peptides that include this sequence"],
-      ["enzyme_ids", "PI.enzyme_ids", "Enzyme ID"],
+      ["protease_ids", "PI.protease_ids", "Protease IDs"],
       ["atlas build name","AB.atlas_build_name","PeptideAtlas Name"],
       ["organism_full_name","O.full_name","Organism"],
     );
@@ -836,7 +836,7 @@ sub handle_request {
   );
 
   if (! $parameters{enzyme_ids}){
-    $hidden_cols{'Enzyme IDs'} = 1;
+    $hidden_cols{'Protease IDs'} = 1;
   }
 
 

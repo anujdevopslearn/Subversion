@@ -132,6 +132,9 @@ AT_peptide_mapping	8	end_in_chromosome	End Position in Chromosome	int	4	0	N		N		
 AT_peptide_mapping	9	strand	Strand	char	1	0	N		N			Y	text	10		Y	Y	N	"Strand (+,-) of the peptide in the chromosome"		
 AT_peptide_mapping	10	peptide_preceding_residue	Preceding Residue	char	1	0	N		N			Y	text	5		Y	Y	N	Residue (amino acid) immediately preceding the peptide		
 AT_peptide_mapping	11	peptide_following_residue 	Following Residue	char	1	0	N		N			Y	text	5		Y	Y	N	Residue (amino acid) immediately following the peptide		
+AT_peptide_instance	12	protease_ids	Enzyme ids	varchar	30	0	N		N			Y	text	3		Y	Y	N	Comma-separated list of protease ids		
+AT_peptide_instance	13	highest_n_enzymatic_termini	Higest Num of Enzyme Termini	int	4	0	N		N			Y	text	10		Y	Y	N	Higest Number of enzyme termini		
+AT_peptide_instance	14	lowest_n_missed_cleavages 	Lowest Num of Missed Cleavage	int	4	0	N		N			Y	text	10		Y	Y	N	Lowest Number of Missed Cleavage		
 AT_peptide_instance	1	peptide_instance_id	Peptide Instance ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_peptide_instance	2	atlas_build_id	Atlas Build	int	4	0	N		N	AT_atlas_build	atlas_build_id	Y	optionlist			Y	Y	Y	Associated Atlas Build		
 AT_peptide_instance	3	peptide_id	Peptide	int	4	0	N		N	AT_peptide	peptide_id	Y	optionlist			Y	Y	Y	Peptide		
@@ -156,7 +159,7 @@ AT_peptide_instance	21	predicted_proteotypic_score	Predicted Proteotypic Score	r
 AT_peptide_instance	22	n_natural_observations	Number of Natural Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in natural input samples		
 AT_peptide_instance	23	n_synthpep_observations	Number of Synthetic Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in synthetic input samples		
 AT_peptide_instance	24	n_recombinant_observations	Number of Artificial-protein Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in artificial protein samples		
-AT_peptide_instance	25	enzyme_ids	Enzyme ids	varchar	30	0	N		N			Y	text	3		Y	Y	N	Comma-separated list of protease ids		
+AT_peptide_instance	25	protease_ids	Enzyme ids	varchar	30	0	N		N			Y	text	3		Y	Y	N	Comma-separated list of protease ids		
 AT_peptide_instance	26	highest_n_enzymatic_termini	Higest Num of Enzyme Termini	int	4	0	N		N			Y	text	10		Y	Y	N	Higest Number of enzyme termini		
 AT_peptide_instance	27	lowest_n_missed_cleavages 	Lowest Num of Missed Cleavage	int	4	0	N		N			Y	text	10		Y	Y	N	Lowest Number of Missed Cleavage		
 AT_peptide_instance_sample	1	peptide_instance_sample_id	Peptide Instance Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
