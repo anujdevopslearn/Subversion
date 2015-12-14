@@ -96,6 +96,10 @@ sub main
   $atlas->processModuleParameters(parameters_ref=>\%parameters);
 
   $guest = $sbeams->isGuestUser();
+  if ( !$guest ) {
+    $parameters{pabst_build_id} ||= '';
+    $parameters{pabst_build_id} = 146 if $parameters{pabst_build_id} eq 'specialaccess';
+  }
   $parameters{apply_action_hidden} ||= '';
   my $referrer = $q->referer();
   if ( $referrer =~ /https*:\/\/db\.systemsbiology\./ &&
