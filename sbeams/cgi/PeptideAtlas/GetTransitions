@@ -169,6 +169,7 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
   my $restricted_peptide_clause = '';
 
   my $bad_build_specified = 0;
+  my $special_access_ok = 0;
 
   if ( $parameters{pabst_build_id} && $parameters{pabst_build_id} != $pabst_build_id ) {
     my $auth_path = get_auth_path();
@@ -195,6 +196,7 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
         <br>
         </p>
         ~ if $is_html;
+        $special_access_ok++;
       } else {
 #        die "auth don't exist SRMA is $SRMAuth, auth path is $auth_path";
         $bad_build_specified++ unless $super_guest;
@@ -268,6 +270,7 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
     }
     $bad_build_specified = 0;
   }
+  $restricted_protein_clause = '' if $special_access_ok;
 
   # Decide what action to take based on information so far
 
