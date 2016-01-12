@@ -97,23 +97,13 @@ my %model_map = ( QTrap4000 => '/net/db/projects/spectraComparison/FragModel_400
                   QTrap5500 => '/net/db/projects/spectraComparison/FragModel_QTRAP5500.fragmod', 
              );
 
-print "Loading fragment compare\n" if $args->{verbose};
 # Load spectrum comparer code
 my %fc;
-for my $model ( keys( %model_map ) ) {
-  print STDERR "loading model for $model\n" if $args->{verbose}; 
-  $fc{$model} = new FragmentationComparator;
-  $fc{$model}->loadFragmentationModel( filename => $model_map{$model} );
-  $fc{$model}->setUseBondInfo(1);
-  $fc{$model}->setNormalizationMethod(1);
-}
 
 my $build_nobs = {};
 if ( $args->{nobs_build} ) {
   $build_nobs = get_build_nobs( build_id => $args->{nobs_build} );
 }
-
-print "done\n" if $args->{verbose};
 
 my $dbh = $sbeams->getDBHandle();
 $dbh->{RaiseError}++;
@@ -124,12 +114,25 @@ $paranoid++ if $args->{verbose} > 1;
 
 my %stats;
 
+
 { # Main 
 
   if ( $args->{delete} ) {
     delete_pabst_build();
     exit;
   }
+  print "How I get here?\n";
+  exit;
+
+  print "Loading fragment compare\n" if $args->{verbose};
+  for my $model ( keys( %model_map ) ) {
+    print STDERR "loading model for $model\n" if $args->{verbose}; 
+    $fc{$model} = new FragmentationComparator;
+    $fc{$model}->loadFragmentationModel( filename => $model_map{$model} );
+    $fc{$model}->setUseBondInfo(1);
+    $fc{$model}->setNormalizationMethod(1);
+  }
+  print "done\n" if $args->{verbose};
 
   # Segregate input files
   my $time = time();
@@ -1038,25 +1041,23 @@ sub delete_pabst_build {
 
   check_build( $args->{'build_id'} );
 
-  my $database_name = $DBPREFIX{PeptideAtlas};
+  my $database_name = $DBPREFIX{SRMAtlas} || die "must define SRMAtlas as DBPREFIX";
   my $table_name = "pabst_build";
 
   my $full_table_name = "$database_name$table_name";
 
    my %table_child_relationship = (
-      pabst_tmp_build => 'pabst_tmp_peptide(C),pabst_tmp_build_file(C)',
-      pabst_tmp_peptide => 'pabst_tmp_peptide_ion(C),pabst_tmp_peptide_mapping(C)',
-      pabst_tmp_peptide_ion => 'pabst_tmp_transition(C),pabst_tmp_peptide_ion_instance(C)',
-      pabst_tmp_transition => 'pabst_tmp_transition_instance(C)'
+      pabst_build => 'pabst_peptide(C),pabst_build_file(C),pabst_build_resource(C),pabst_build_statistics(C)',
+      pabst_peptide => 'pabst_peptide_ion(C),pabst_peptide_mapping(C)',
+      pabst_peptide_ion => 'pabst_transition(C),pabst_peptide_ion_instance(C)',
+      pabst_transition => 'pabst_transition_instance(C)'
    );
-
-#      pabst_peptide => 'pabst_peptide_mapping(C)'
-#      pabst_peptide => 'pabst_transition(C)','pabst_peptide_mapping(C)'
 
   # recursively delete the child records of the atlas build
   my $result = $sbeams->deleteRecordsAndChildren(
          table_name => 'pabst_build',
          table_child_relationship => \%table_child_relationship,
+         table_PK_column_names => { pabst_build_resource => 'pabst_build_id', pabst_build_statistics => 'pabst_build_id' },
          delete_PKs => [ $args->{build_id} ],
          delete_batch => 1000,
          database => $database_name,
@@ -1064,7 +1065,8 @@ sub delete_pabst_build {
      verbose     => 0, 
          testonly => $args->{testonly},
       );
-
+  print "Done with deletion\n";
+  return 1;
 }
 
 
@@ -1148,7 +1150,7 @@ sub process_args {
               'show_builds', 'nobs_build=i', 'use_intensities', 'quash_bulk', 'mod_reject' );
 
   my $missing;
-  $args{bulk_update} = ( $args{quash_bulk} ) ? 0 : 1;
+  $args{bulk_update} = ( $args{quash_bulk} || $args{'delete'} ) ? 0 : 1;
 
   $args{mapping_build} ||= 0;
   $args{verbose} ||= 0;
