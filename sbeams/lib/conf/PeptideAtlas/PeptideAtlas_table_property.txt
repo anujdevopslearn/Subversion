@@ -57,16 +57,17 @@ AT_biosequence_relationship	Biosequence Relationship	PeptideAtlas_infrastructure
 AT_biosequence_relationship_type	Biosequence Relationship Type	PeptideAtlas_infrastructure	YES	$TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE	biosequence_relationship_type_id		ManageTable.cgi?TABLE_NAME=AT_biosequence_relationship_type		
 AT_GetTransitions	Get transition List	QUERY					GetTransitions		
 AT_SearchProteins	Search Proteins	QUERY					SearchProteins		
-AT_pabst_tmp_build	PABST Build	PeptideAtlas_infrastructure	YES	$TBAT_PABST_BUILD	pabst_build_id		ManageTable.cgi?TABLE_NAME=AT_PABST_build		
-AT_pabst_tmp_build_file	PABST Build File	PeptideAtlas_infrastructure	NO	$TBAT_PABST_BUILD_FILE	pabst_build_file_id				
+AT_pabst_build	PABST Build	PeptideAtlas_infrastructure	YES	$TBAT_PABST_BUILD	pabst_build_id		ManageTable.cgi?TABLE_NAME=AT_PABST_build		
+AT_pabst_build_file	PABST Build File	PeptideAtlas_infrastructure	NO	$TBAT_PABST_BUILD_FILE	pabst_build_file_id				
+AT_pabst_build_statistics	PABST Build Statistics	PeptideAtlas_infrastructure	NO	$TBAT_PABST_BUILD_STATISTICS	 				
 AT_pabst_build_resource	PABST Build Resource	PeptideAtlas_infrastructure	YES	$TBAT_PABST_BUILD_RESOURCE					
-AT_pabst_tmp_peptide	PABST Peptide	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE	pabst_peptide_id				
-AT_pabst_tmp_peptide_mapping	PABST Peptide Mapping	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE_MAPPING	"pabst_peptide_id, biosequence_id"				
-AT_pabst_tmp_peptide_ion	PABST Peptide Ion	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE_ION	pabst_peptide_ion_id				
-AT_pabst_tmp_peptide_ion_instance	PABST Peptide Ion Instance	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE_ION_INSTANCE	pabst_peptide_ion_instance_id				
-AT_pabst_tmp_transition	PABST Transition	PeptideAtlas_infrastructure	NO	$TBAT_PABST_TRANSITION	pabst_transition_id				
-AT_pabst_tmp_transition_instance	PABST Transition Instance	PeptideAtlas_infrastructure	NO	$TBAT_PABST_TRANSITION_INSTANCE	pabst_transition_instance_id				
-AT_pabst_tmp_source_priority	PABST Source Priority	PeptideAtlas_infrastructure	YES	$TBAT_PABST_SOURCE_PRIORITY	pabst_source_priority_id		ManageTable.cgi?TABLE_NAME=AT_source_priority		
+AT_pabst_peptide	PABST Peptide	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE	pabst_peptide_id				
+AT_pabst_peptide_mapping	PABST Peptide Mapping	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE_MAPPING	"pabst_peptide_id, biosequence_id"				
+AT_pabst_peptide_ion	PABST Peptide Ion	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE_ION	pabst_peptide_ion_id				
+AT_pabst_peptide_ion_instance	PABST Peptide Ion Instance	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE_ION_INSTANCE	pabst_peptide_ion_instance_id				
+AT_pabst_transition	PABST Transition	PeptideAtlas_infrastructure	NO	$TBAT_PABST_TRANSITION	pabst_transition_id				
+AT_pabst_transition_instance	PABST Transition Instance	PeptideAtlas_infrastructure	NO	$TBAT_PABST_TRANSITION_INSTANCE	pabst_transition_instance_id				
+AT_pabst_source_priority	PABST Source Priority	PeptideAtlas_infrastructure	YES	$TBAT_PABST_SOURCE_PRIORITY	pabst_source_priority_id		ManageTable.cgi?TABLE_NAME=AT_source_priority		
 AT_instrument_type	Instrument Type	PeptideAtlas_infrastructure	YES	$TBAT_INSTRUMENT_TYPE	instrument_type_id		ManageTable.cgi?TABLE_NAME=AT_instrument_type		
 AT_protein_list	Protein List	PeptideAtlas_infrastructure	YES	$TBAT_PROTEIN_LIST	protein_list_id		ManageTable.cgi?TABLE_NAME=AT_Protein_list		
 AT_protein_list_protein	Protein List Protein	PeptideAtlas_infrastructure	NO	$TBAT_PROTEIN_LIST_PROTEIN	protein_list_protein_id				
@@ -101,4 +102,4 @@ AT_GetDIALibs	Get DIA Libraries	QUERY	YES				GetDIALibs
 AT_ExploreIonLibrary	Explore Ion Library	QUERY	YES				ExploreIonLibrary		
 AT_sample_category	Sample Category	PeptideAtlas_infrastructure	YES	$TBAT_SAMPLE_CATEGORY	id		ManageTable.cgi?TABLE_NAME=AT_sample_category		
 AT_GetAtlasVariants	Get Atlas Variants	QUERY	YES				GetAtlasVariants		
-AT_domain_list_resource	Domain List Resource	PeptideAtlas_infrastructure	YES	$TBAT_DOMAIN_LIST_RESOURCE	domain_list_resource_id		ManageTable.cgi?TABLE_NAME=AT_domain_list_resource		
+AT_domain_list_resource	Domain List Resource	PeptideAtlas_infrastructure	YES	$TBAT_DOMAIN_LIST_RESOURCE	domain_list_id		ManageTable.cgi?TABLE_NAME=AT_domain_list_resource		

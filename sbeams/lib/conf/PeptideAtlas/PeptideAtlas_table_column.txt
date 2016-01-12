@@ -749,81 +749,94 @@ AT_GetPABSTList	9	n_highest_intensity_fragment_ions	Num of highest Inten Frag Io
 AT_GetPABSTList	10	n_peptides_per_protein	Number of peptides per protein constraint									N	text	5		Y	Y	N	"Number of peptides to return per protein, default 5."		
 AT_GetPABSTList	11	transition_source	Transition Source									N	multioptionlist	5		Y	Y	N	"Desired source(s) for picking transitions.  Can Ctrl-select multiple options, no selection allows all."	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'GetTransitions_Transition_Source' AND record_status != 'D' ORDER BY sort_order,option_value;"	
 AT_GetPABSTList	12	exclusion_range	Precursor Exclusion Range									N	text	10		Y	Y	N	"Exclude fragment ions within a window around precursor m/z.  By default, SpectraST enforces a window of 5 Th."		
-AT_pabst_tmp_build	1	pabst_build_id	PABST Build Id	int	4	0	N		Y			N						Y			
-AT_pabst_tmp_build	2	build_name	Build Name	varchar	255	0	Y		N			Y	text	24		Y	Y	N			
-AT_pabst_tmp_build	3	build_comment	Build Comment	varchar	2000	0	Y		N			Y	text	24		Y	Y	N			
-AT_pabst_tmp_build	4	parameter_string	Parameter String	varchar	255	0	Y		N			Y	text	24		Y	Y	N			
-AT_pabst_tmp_build	5	organism_id	Organism Id	int	4	0	Y		N	organism	organism_id	Y	optionlist			Y	Y	N			
-AT_pabst_tmp_build	6	parameter_file	Parameter File	text	16	0	Y		N			Y	text	24		Y	Y	N			
-AT_pabst_tmp_build	7	project_id	Project Id	int	4	0	Y		N	project	project_id	Y	optionlist			Y	Y	N			
-AT_pabst_tmp_build	8	build_date	Build Date	datetime	8	0	Y		N			N						N			
-AT_pabst_tmp_build	9	biosequence_set_id	Biosequence Set Id	int	4	0	Y		N			N						N			
-AT_pabst_tmp_build	10	is_default	Is Default	char	1	0	Y		N			N						N			
+AT_pabst_build	1	pabst_build_id	PABST Build Id	int	4	0	N		Y			N						Y			
+AT_pabst_build	2	build_name	Build Name	varchar	255	0	Y		N			Y	text	24		Y	Y	N			
+AT_pabst_build	3	build_comment	Build Comment	varchar	2000	0	Y		N			Y	text	24		Y	Y	N			
+AT_pabst_build	4	parameter_string	Parameter String	varchar	255	0	Y		N			Y	text	24		Y	Y	N			
+AT_pabst_build	5	organism_id	Organism Id	int	4	0	Y		N	organism	organism_id	Y	optionlist			Y	Y	N			
+AT_pabst_build	6	parameter_file	Parameter File	text	16	0	Y		N			Y	text	24		Y	Y	N			
+AT_pabst_build	7	project_id	Project Id	int	4	0	Y		N	project	project_id	Y	optionlist			Y	Y	N			
+AT_pabst_build	8	build_date	Build Date	datetime	8	0	Y		N			N						N			
+AT_pabst_build	9	biosequence_set_id	Biosequence Set Id	int	4	0	Y		N			N						N			
+AT_pabst_build	10	is_default	Is Default	char	1	0	Y		N			N						N			
+AT_pabst_build_statistics	1	build_id	PABST Build Id	int	4	0	N		N	AT_pabst_tmp_build	pabst_build_id	Y	optionlist			Y	Y	Y	PABST build with which file is associated		
+AT_pabst_build_statistics	2	instrument_type_id	Instrument type ID	int	4	0	N		N	AT_instrument_type	instrument_type_id	N	text	24		Y	Y	Y	Instrument type for this resource		
+AT_pabst_build_statistics	3	ref_db	Reference DB ID	int	4	0	N		N			N	text	24		Y	Y	N	Reference DB ID		
+AT_pabst_build_statistics	4	ref_db_cnt	Reference DB Count	int	4	0	N		N			N	text	24		Y	Y	N	Number of proteins in reference db		
+AT_pabst_build_statistics	5	cov_0	covered with 0 peptides	int	4	0	N		N			N	text	24		Y	Y	N	# proteins covered with 0 peptides		
+AT_pabst_build_statistics	6	cov_1	covered with 1 peptides	int	4	0	N		N			N	text	24		Y	Y	N	# proteins covered with 1 peptides		
+AT_pabst_build_statistics	7	cov_2	covered with 2 peptides	int	4	0	N		N			N	text	24		Y	Y	N	# proteins covered with 2 peptides		
+AT_pabst_build_statistics	8	cov_3	covered with 3 peptides	int	4	0	N		N			N	text	24		Y	Y	N	# proteins covered with 3 peptides		
+AT_pabst_build_statistics	9	cov_4	covered with 4 peptides	int	4	0	N		N			N	text	24		Y	Y	N	# proteins covered with 4 peptides		
+AT_pabst_build_statistics	10	cov_5	covered with 5 peptides	int	4	0	N		N			N	text	24		Y	Y	N	#  proteins covered with 5 peptides		
+AT_pabst_build_statistics	11	cov_any	covered with any peptides	int	4	0	N		N			N	text	24		Y	Y	N	# proteins covered with any peptides		
+AT_pabst_build_statistics	12	is_predicted	Is predicted	char	1	0	Y		N			N	text	24		Y	Y	N	Is predicted		
+AT_pabst_build_statistics	13	cov_any_predicted	covered with any peptides including predicted	int	4	0	N		N			N	text	24		Y	Y	N	# proteins covered with any peptides including predicted		
 AT_pabst_build_resource	1	pabst_build_id	PABST Build ID	int	4	0	N		N	AT_pabst_tmp_build	pabst_build_id	Y	optionlist			Y	Y	Y	PABST build with which resource is associated	"SELECT pabst_build_id, build_name FROM $TBAT_PABST_BUILD PB JOIN $TB_ORGANISM O ON O.organism_id = PB.organism_id WHERE is_default = 'T' AND project_id IN ( $accessible_project_ids ) order by build_name "	
-AT_pabst_build_resource	2	instrument_type_id	Instrument type ID	int	4	0	N		Y	AT_instrument_type	instrument_type_id	N	optionlist					Y	Instrument type for this resource	"SELECT instrument_type_id, instrument_type_name FROM $TBAT_INSTRUMENT_TYPE order by instrument_type_name "	
+AT_pabst_build_resource	2	instrument_type_id	Instrument type ID	int	4	0	N		Y	AT_instrument_type	instrument_type_id	Y	optionlist					Y	Instrument type for this resource	"SELECT instrument_type_id, instrument_type_name FROM $TBAT_INSTRUMENT_TYPE order by instrument_type_name "	
 AT_pabst_build_resource	3	resource_id	Resource ID	int	4	0	N		N			Y	text	24		Y	Y	Y	Primary key of linked resource		
 AT_pabst_build_resource	4	resource_type	Resource Name	varchar	36	0	N		N			Y	optionlist	24		Y	Y	N	"Name of resource, one of qtof_ce_set,instrument_type,spectral_lib,chromatogram_set,pabst_build,elution_set"	"SELECT DISTINCT( resource_type ), DISTINCT( resource_type) FROM $TBAT_PABST_BUILD_RESOURCE order by resource_type "	
-AT_pabst_tmp_build_file	1	pabst_build_file_id	PABST Build File Id	int	4	0	N		Y			N						Y	Primary Key		
-AT_pabst_tmp_build_file	2	pabst_build_id	PABST Build Id	int	4	0	N		N	AT_pabst_tmp_build	pabst_build_id	Y	optionlist			Y	Y	Y	PABST build with which file is associated	"SELECT pabst_build_id, build_name FROM $TBAT_PABST_BUILD PB JOIN $TB_ORGANISM O ON O.organism_id = PB.organism_id WHERE is_default = 'T' AND project_id IN ( $accessible_project_ids ) order by build_name "	
-AT_pabst_tmp_build_file	3	file_order	File Order	int	4	0	N		N			Y	text	24		Y	Y	Y	Order in which file was considered		
-AT_pabst_tmp_build_file	4	file_name	File Name	varchar	255	0	N		N			Y	text	24		Y	Y	N	file name		
-AT_pabst_tmp_build_file	5	file_path	File Path	varchar	2000	0	N		N			Y	text	24		Y	Y	N	path to file		
-AT_pabst_tmp_build_file	6	file_checksum	File Checksum	varchar	255	0	N		N			Y	text	24		Y	Y	N	md5 checksum of file		
-AT_pabst_tmp_build_file	7	source_instrument_type_id	Source Instrument ID	int	4	0	N		N	AT_source_instrument	source_instrument_type_id	Y	optionlist			Y	Y	Y	Source instrument 	"SELECT instrument_id, instrument_name FROM $TBAT_INSTRUMENT WHERE type='source'"	
-AT_pabst_tmp_peptide_mapping	1	pabst_peptide_mapping_id	PABST Peptide Mapping Id	int	4	0	N		Y			N						Y			
-AT_pabst_tmp_peptide_mapping	2	biosequence_id	Biosequence Id	int	4	0	Y		N	AT_biosequence	biosequence_id	N						N			
-AT_pabst_tmp_peptide_mapping	3	pabst_peptide_id	PABST Peptide Id	int	4	0	Y		N	AT_pabst_tmp_peptide	pabst_peptide_id	N						N			
-AT_pabst_tmp_peptide	1	pabst_peptide_id	PABST Peptide Id	int	4	0	N		Y			N						Y			
-AT_pabst_tmp_peptide	2	pabst_build_id	PABST Build Id	int	4	0	Y		N	AT_pabst_tmp_build	pabst_build_id	N						N			
-AT_pabst_tmp_peptide	3	preceding_residue	Preceding Residue	char	1	0	Y		N			N						N			
-AT_pabst_tmp_peptide	4	peptide_sequence	Peptide Sequence	varchar	255	0	Y		N			N						N			
-AT_pabst_tmp_peptide	5	following_residue	Following Residue	char	1	0	Y		N			N						N			
-AT_pabst_tmp_peptide	6	molecular_weight	Molecular Weight	float	8	0	Y		N			N						N			
-AT_pabst_tmp_peptide	7	n_protein_mappings	N Protein Mappings	int	4	0	Y		N			N						N			
-AT_pabst_tmp_peptide	8	n_genome_locations	N Genome Locations	int	4	0	Y		N			N						N			
-AT_pabst_tmp_peptide	9	SSRCalc_relative_hydrophobicity	SSRCalc Relative Hydrophobicity	float	8	0	Y		N			N						N			
-AT_pabst_tmp_peptide	10	best_probability	Best Probability	float	8	0	Y		N			N						N			
-AT_pabst_tmp_peptide	12	n_observations	N Observations	int	4	0	Y		N			N						N			
-AT_pabst_tmp_peptide	13	source_build	Source Build	int	4	0	Y		N			N						N			
-AT_pabst_tmp_peptide	14	empirical_proteotypic_score	Empirical Proteotypic Score	float	8	0	Y		N			N						N			
-AT_pabst_tmp_peptide	15	suitability_score	Suitability Score	float	8	0	Y		N			N						N			
-AT_pabst_tmp_peptide	16	predicted_suitability_score	Predicted Suitability Score	float	8	0	Y		N			N						N			
-AT_pabst_tmp_peptide	17	merged_score	Merged Score	float	8	0	Y		N			N						N			
-AT_pabst_tmp_peptide	18	synthesis_score	Synthesis Score	float	8	0	Y		N			N						N			
-AT_pabst_tmp_peptide	19	annotations	Annotations	varchar	255	0	Y		N			N						N			
-AT_pabst_tmp_peptide	20	synthesis_adjusted_score	Synthesis Adjusted Score	float	8	0	Y		N			N						N			
-AT_pabst_tmp_peptide_ion	1	pabst_peptide_ion_id	PABST Peptide Ion Id	int	4	0	N		Y			N						Y	Primary Key		
-AT_pabst_tmp_peptide_ion	2	pabst_peptide_id	PABST Peptide Id	int	4	0	Y		N	AT_pabst_tmp_peptide	pabst_peptide_id	N						N	Pabst peptide of which this is an instance		
-AT_pabst_tmp_peptide_ion	3	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	Y		N			N						N	Charge/Mass modified peptide ion sequence		
-AT_pabst_tmp_peptide_ion	4	peptide_charge	Peptide Charge	int	4	0	Y		N			N						N	charge of peptide		
-AT_pabst_tmp_peptide_ion	5	peptide_mz	Peptide MZ	float	8	0	Y		N			N						N	mz of peptide		
-AT_pabst_tmp_peptide_ion	6	n_observations	N Observations	int	4	0	Y		N			N						N	number of observations		
-AT_pabst_tmp_peptide_ion_instance	1	pabst_peptide_ion_instance_id	PABST Peptide Ion Instance Id	int	4	0	N		Y			N						Y	Primary Key		
-AT_pabst_tmp_peptide_ion_instance	2	pabst_peptide_ion_id	PABST Peptide Ion Id	int	4	0	Y		N	AT_pabst_tmp_peptide_ion	pabst_peptide_ion_id	N						N	Pabst peptide of which this is an instance		
-AT_pabst_tmp_peptide_ion_instance	3	source_instrument_type_id	Source Instrument Type Id	int	4	0	Y		N	AT_instrument_type	instrument_type_id	N						N			
-AT_pabst_tmp_peptide_ion_instance	4	n_observations	N Observations	int	4	0	Y		N			N						N	number of observations		
-AT_pabst_tmp_peptide_ion_instance	5	max_precursor_intensity	Max Precursor Intensity	real	4	0	Y		N			N						N	Maximum recorded intensity for precursor		
-AT_pabst_tmp_transition	1	pabst_transition_id	PABST Transition Id	int	4	0	N		Y			N						Y	Primary key		
-AT_pabst_tmp_transition	2	pabst_peptide_ion_id	PABST Peptide Ion Id	int	4	0	Y		N	AT_pabst_tmp_peptide_ion	pabst_peptide_ion_id	N						N	Key to pabst_peptide_ion table		
-AT_pabst_tmp_transition	3	precursor_ion_mz	Precursor Ion Mz	float	8	0	Y		N			N						N	m/z of precursor ion		
-AT_pabst_tmp_transition	4	precursor_ion_charge	Precursor Ion Charge	int	4	0	Y		N			N						N	charge of precursor ion		
-AT_pabst_tmp_transition	5	fragment_ion_mz	Fragment Ion Mz	float	8	0	Y		N			N						N	m/z of product ion		
-AT_pabst_tmp_transition	6	fragment_ion_charge	Fragment Ion Charge	int	4	0	Y		N			N						N	charge of product ion		
-AT_pabst_tmp_transition	7	fragment_ion_label	Fragment Ion Label	varchar	36	0	Y		N			N						N	"Ion label (e.g. y2, b5)"		
-AT_pabst_tmp_transition	8	precursor_ion_mz_crude	Precursor Ion Mz	int	4	0	Y		N			N						N	crude m/z of precursor ion	 	
-AT_pabst_tmp_transition	9	fragment_ion_mz_crude	Fragment Ion Mz	int	4	0	Y		N			N						N	crude m/z of product ion		
-AT_pabst_tmp_transition_instance	1	pabst_transition_instance_id	PABST Transition Instance Id	int	4	0	N		Y			N						Y			
-AT_pabst_tmp_transition_instance	2	pabst_transition_id	PABST Transition ID	int	4	0	Y		N	AT_pabst_tmp_transition	pabst_transition_id	N						N			
-AT_pabst_tmp_transition_instance	3	precursor_ion_mass	Precursor Ion Mass	float	8	0	Y		N			N						N			
-AT_pabst_tmp_transition_instance	4	ion_rank	Ion Rank	int	4	0	Y		N			N						N			
-AT_pabst_tmp_transition_instance	5	relative_intensity	Relative Intensity	float	8	0	Y		N			N						N			
-AT_pabst_tmp_transition_instance	6	source_instrument_type_id	Source Instrument Type	int	4	0	Y		N	AT_instrument_type	instrument_type_id	N						N			
-AT_pabst_tmp_transition_instance	7	observed_mz	Observed mz	float	8	0	Y		N			N									
-AT_pabst_tmp_transition_instance	8	collision_energy	Collision Energy	float	8	0	Y		N			N									
-AT_pabst_tmp_transition_instance	9	is_predicted	Is Predicted	char	1	0	Y		N			N									
+AT_pabst_build_file	1	pabst_build_file_id	PABST Build File Id	int	4	0	N		Y			Y						Y	Primary Key		
+AT_pabst_build_file	2	pabst_build_id	PABST Build Id	int	4	0	N		N	AT_pabst_tmp_build	pabst_build_id	Y	optionlist			Y	Y	Y	PABST build with which file is associated	"SELECT pabst_build_id, build_name FROM $TBAT_PABST_BUILD PB JOIN $TB_ORGANISM O ON O.organism_id = PB.organism_id WHERE is_default = 'T' AND project_id IN ( $accessible_project_ids ) order by build_name "	
+AT_pabst_build_file	3	file_order	File Order	int	4	0	N		N			Y	text	24		Y	Y	Y	Order in which file was considered		
+AT_pabst_build_file	4	file_name	File Name	varchar	255	0	N		N			Y	text	24		Y	Y	N	file name		
+AT_pabst_build_file	5	file_path	File Path	varchar	2000	0	N		N			Y	text	24		Y	Y	N	path to file		
+AT_pabst_build_file	6	file_checksum	File Checksum	varchar	255	0	N		N			Y	text	24		Y	Y	N	md5 checksum of file		
+AT_pabst_build_file	7	source_instrument_type_id	Source Instrument ID	int	4	0	N		N	AT_source_instrument	source_instrument_type_id	Y	optionlist			Y	Y	Y	Source instrument 	"SELECT instrument_id, instrument_name FROM $TBAT_INSTRUMENT WHERE type='source'"	
+AT_pabst_peptide_mapping	1	pabst_peptide_mapping_id	PABST Peptide Mapping Id	int	4	0	N		Y			N						Y			
+AT_pabst_peptide_mapping	2	biosequence_id	Biosequence Id	int	4	0	Y		N	AT_biosequence	biosequence_id	Y						N			
+AT_pabst_peptide_mapping	3	pabst_peptide_id	PABST Peptide Id	int	4	0	Y		N	AT_pabst_tmp_peptide	pabst_peptide_id	Y						N			
+AT_pabst_peptide	1	pabst_peptide_id	PABST Peptide Id	int	4	0	N		Y			N						Y			
+AT_pabst_peptide	2	pabst_build_id	PABST Build Id	int	4	0	Y		N	AT_pabst_tmp_build	pabst_build_id	Y						N			
+AT_pabst_peptide	3	preceding_residue	Preceding Residue	char	1	0	Y		N			Y						N			
+AT_pabst_peptide	4	peptide_sequence	Peptide Sequence	varchar	255	0	Y		N			Y						N			
+AT_pabst_peptide	5	following_residue	Following Residue	char	1	0	Y		N			Y						N			
+AT_pabst_peptide	6	molecular_weight	Molecular Weight	float	8	0	Y		N			Y						N			
+AT_pabst_peptide	7	n_protein_mappings	N Protein Mappings	int	4	0	Y		N			Y						N			
+AT_pabst_peptide	8	n_genome_locations	N Genome Locations	int	4	0	Y		N			N						N			
+AT_pabst_peptide	9	SSRCalc_relative_hydrophobicity	SSRCalc Relative Hydrophobicity	float	8	0	Y		N			N						N			
+AT_pabst_peptide	10	best_probability	Best Probability	float	8	0	Y		N			N						N			
+AT_pabst_peptide	12	n_observations	N Observations	int	4	0	Y		N			N						N			
+AT_pabst_peptide	13	source_build	Source Build	int	4	0	Y		N			N						N			
+AT_pabst_peptide	14	empirical_proteotypic_score	Empirical Proteotypic Score	float	8	0	Y		N			N						N			
+AT_pabst_peptide	15	suitability_score	Suitability Score	float	8	0	Y		N			N						N			
+AT_pabst_peptide	16	predicted_suitability_score	Predicted Suitability Score	float	8	0	Y		N			N						N			
+AT_pabst_peptide	17	merged_score	Merged Score	float	8	0	Y		N			N						N			
+AT_pabst_peptide	18	synthesis_score	Synthesis Score	float	8	0	Y		N			N						N			
+AT_pabst_peptide	19	annotations	Annotations	varchar	255	0	Y		N			N						N			
+AT_pabst_peptide	20	synthesis_adjusted_score	Synthesis Adjusted Score	float	8	0	Y		N			N						N			
+AT_pabst_peptide_ion	1	pabst_peptide_ion_id	PABST Peptide Ion Id	int	4	0	N		Y			N						Y	Primary Key		
+AT_pabst_peptide_ion	2	pabst_peptide_id	PABST Peptide Id	int	4	0	Y		N	AT_pabst_tmp_peptide	pabst_peptide_id	N						N	Pabst peptide of which this is an instance		
+AT_pabst_peptide_ion	3	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	Y		N			N						N	Charge/Mass modified peptide ion sequence		
+AT_pabst_peptide_ion	4	peptide_charge	Peptide Charge	int	4	0	Y		N			N						N	charge of peptide		
+AT_pabst_peptide_ion	5	peptide_mz	Peptide MZ	float	8	0	Y		N			N						N	mz of peptide		
+AT_pabst_peptide_ion	6	n_observations	N Observations	int	4	0	Y		N			N						N	number of observations		
+AT_pabst_peptide_ion_instance	1	pabst_peptide_ion_instance_id	PABST Peptide Ion Instance Id	int	4	0	N		Y			N						Y	Primary Key		
+AT_pabst_peptide_ion_instance	2	pabst_peptide_ion_id	PABST Peptide Ion Id	int	4	0	Y		N	AT_pabst_tmp_peptide_ion	pabst_peptide_ion_id	N						N	Pabst peptide of which this is an instance		
+AT_pabst_peptide_ion_instance	3	source_instrument_type_id	Source Instrument Type Id	int	4	0	Y		N	AT_instrument_type	instrument_type_id	N						N			
+AT_pabst_peptide_ion_instance	4	n_observations	N Observations	int	4	0	Y		N			N						N	number of observations		
+AT_pabst_peptide_ion_instance	5	max_precursor_intensity	Max Precursor Intensity	real	4	0	Y		N			N						N	Maximum recorded intensity for precursor		
+AT_pabst_transition	1	pabst_transition_id	PABST Transition Id	int	4	0	N		Y			N						Y	Primary key		
+AT_pabst_transition	2	pabst_peptide_ion_id	PABST Peptide Ion Id	int	4	0	Y		N	AT_pabst_tmp_peptide_ion	pabst_peptide_ion_id	N						N	Key to pabst_peptide_ion table		
+AT_pabst_transition	3	precursor_ion_mz	Precursor Ion Mz	float	8	0	Y		N			N						N	m/z of precursor ion		
+AT_pabst_transition	4	precursor_ion_charge	Precursor Ion Charge	int	4	0	Y		N			N						N	charge of precursor ion		
+AT_pabst_transition	5	fragment_ion_mz	Fragment Ion Mz	float	8	0	Y		N			N						N	m/z of product ion		
+AT_pabst_transition	6	fragment_ion_charge	Fragment Ion Charge	int	4	0	Y		N			N						N	charge of product ion		
+AT_pabst_transition	7	fragment_ion_label	Fragment Ion Label	varchar	36	0	Y		N			N						N	"Ion label (e.g. y2, b5)"		
+AT_pabst_transition	8	precursor_ion_mz_crude	Precursor Ion Mz	int	4	0	Y		N			N						N	crude m/z of precursor ion	 	
+AT_pabst_transition	9	fragment_ion_mz_crude	Fragment Ion Mz	int	4	0	Y		N			N						N	crude m/z of product ion		
+AT_pabst_transition_instance	1	pabst_transition_instance_id	PABST Transition Instance Id	int	4	0	N		Y			N						Y			
+AT_pabst_transition_instance	2	pabst_transition_id	PABST Transition ID	int	4	0	Y		N	AT_pabst_tmp_transition	pabst_transition_id	N						N			
+AT_pabst_transition_instance	3	precursor_ion_mass	Precursor Ion Mass	float	8	0	Y		N			N						N			
+AT_pabst_transition_instance	4	ion_rank	Ion Rank	int	4	0	Y		N			N						N			
+AT_pabst_transition_instance	5	relative_intensity	Relative Intensity	float	8	0	Y		N			N						N			
+AT_pabst_transition_instance	6	source_instrument_type_id	Source Instrument Type	int	4	0	Y		N	AT_instrument_type	instrument_type_id	N						N			
+AT_pabst_transition_instance	7	observed_mz	Observed mz	float	8	0	Y		N			N									
+AT_pabst_transition_instance	8	collision_energy	Collision Energy	float	8	0	Y		N			N									
+AT_pabst_transition_instance	9	is_predicted	Is Predicted	char	1	0	Y		N			N									
 AT_instrument_type	1	instrument_type_id	instrument_type_id	int	4	0	N		Y			N						Y			pkDEFAULT
-AT_instrument_type	2	instrument_type_name	instrument_type_name	varchar	255	0	N		N			Y	text	24		Y	Y	N			
-AT_instrument_type	3	instrument_type_description	instrument_type_description	varchar	255	0	Y		N			Y	text	24		Y	Y	N			
+AT_instrument_type	2	instrument_type_name	instrument_type_name	varchar	255	0	N		N			N	text	24		Y	Y	N			
+AT_instrument_type	3	instrument_type_description	instrument_type_description	varchar	255	0	Y		N			N	text	24		Y	Y	N			
 AT_instrument_type	4	is_source_instrument	is_source_instrument	char	1	0	Y		N			N	optionlist			Y	Y	N	Is this a source instrument type	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 AT_instrument_type	5	is_target_instrument	is_target_instrument	char	1	0	Y		N			N	optionlist			Y	Y	N	Is this a target instrument type	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 AT_instrument_type	6	sort_order	sort_order	int	4	0	Y		N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
@@ -832,86 +845,86 @@ AT_instrument_type	8	date_created	date_created	datetime	8	0	Y		N			N						N
 AT_instrument_type	9	created_by_id	created_by_id	int	4	0	Y		N			N						Y			
 AT_instrument_type	10	date_modified	date_modified	datetime	8	0	Y		N			N						N			
 AT_instrument_type	11	modified_by_id	modified_by_id	int	4	0	Y		N			N						Y			
-AT_instrument_type	12	owner_group_id	owner_group_id	int	4	0	Y		N			N						Y			
-AT_instrument_type	13	record_status	record_status	char	1	0	Y		N			N						N			
-AT_pabst_tmp_source_priority	1	pabst_source_priority_id	pabst_source_priority_id	int	4	0	N		Y			N						Y			
-AT_pabst_tmp_source_priority	2	source_instrument_type_id	Source instrument_type_id	int	4	0	Y		N			N						Y			
-AT_pabst_tmp_source_priority	3	target_instrument_type_id	Target instrument_type_id	int	4	0	Y		N			N						Y			
-AT_pabst_tmp_source_priority	4	is_predicted	is_predicted	char	1	0	Y		N			N						N			
-AT_pabst_tmp_source_priority	5	priority	Priority	Int	4	0	Y		N			N						N			
+AT_instrument_type	12	owner_group_id	owner_group_id	int	4	0	Y		N			Y						Y			
+AT_instrument_type	13	record_status	record_status	char	1	0	Y		N			Y						N			
+AT_pabst_source_priority	1	pabst_source_priority_id	pabst_source_priority_id	int	4	0	N		Y			N						Y			
+AT_pabst_source_priority	2	source_instrument_type_id	Source instrument_type_id	int	4	0	Y		N			N						Y			
+AT_pabst_source_priority	3	target_instrument_type_id	Target instrument_type_id	int	4	0	Y		N			N						Y			
+AT_pabst_source_priority	4	is_predicted	is_predicted	char	1	0	Y		N			N						N			
+AT_pabst_source_priority	5	priority	Priority	Int	4	0	Y		N			N						N			
 AT_protein_list	1	protein_list_id	Protein List ID	int	4	0	N		Y			N						Y	Primary Key		
-AT_protein_list	2	protein_list_name	Protein List Name	varchar	255	0	Y		N			Y	text	24		Y	Y	N	Name for Protein List		
-AT_protein_list	3	contributor_name	Contributor Name	varchar	255	0	Y		N			Y	text	24		Y	Y	N	Name of list contributor		
+AT_protein_list	2	protein_list_name	Protein List Name	varchar	255	0	Y		N			N	text	24		Y	Y	N	Name for Protein List		
+AT_protein_list	3	contributor_name	Contributor Name	varchar	255	0	Y		N			N	text	24		Y	Y	N	Name of list contributor		
 AT_protein_list	4	contributor_contact_id	Contributor Contact ID	int	4	0	Y		N	contact	contact_id	N	optionlist			Y	Y	N	Contact_id of list contributor	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
-AT_protein_list	5	protein_list_description	Protein List Description	varchar	2000	0	Y		N			Y	text	24		Y	Y	N	List Description		
-AT_protein_list	6	project_id	Project Id	int	4	0	Y		N	project	project_id	Y	optionlist			Y	Y	N	project_id	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
-AT_protein_list	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_protein_list	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_protein_list	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_protein_list	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_protein_list	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_protein_list	12	record_status	Record Status	char	1	0	N	N	N							N	N				
-AT_protein_list_protein	1	protein_list_protein_id	Protein List Protein ID	int	4	0	N		Y			N						Y	Primary Key		
-AT_protein_list_protein	2	protein_list_id	Protein List ID	int	4	0	N		N	AT_protein_list	AT_protein_list_id	Y	optionlist			Y	Y	N	Foreign key to protein list table	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
+AT_protein_list	5	protein_list_description	Protein List Description	varchar	2000	0	Y		N			N	text	24		Y	Y	N	List Description		
+AT_protein_list	6	project_id	Project Id	int	4	0	Y		N	project	project_id	N	optionlist			Y	Y	N	project_id	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
+AT_protein_list	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N				
+AT_protein_list	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N				
+AT_protein_list	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N				
+AT_protein_list	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	N				N	N				
+AT_protein_list	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N				
+AT_protein_list	12	record_status	Record Status	char	1	0	N	N	N			Y				N	N				
+AT_protein_list_protein	1	protein_list_protein_id	Protein List Protein ID	int	4	0	N		Y			Y						Y	Primary Key		
+AT_protein_list_protein	2	protein_list_id	Protein List ID	int	4	0	N		N	AT_protein_list	AT_protein_list_id	N	optionlist			Y	Y	N	Foreign key to protein list table	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
 AT_protein_list_protein	3	protein_name	Protein Name	varchar	255	0	N		N			Y	text	24		Y	Y	N	Protein Name		
 AT_protein_list_protein	4	key_accession	Key Accession	varchar	255	0	N		N			Y	text	24		Y	Y	N	"Key Accession, accession that unites related proteins in list"		
-AT_protein_list_protein	5	protein_list_description	Protein List Description	varchar	2000	0	Y		N			Y	text	24		Y	Y	N	Protein Description		
-AT_SEL_experiment	1	SEL_experiment_id	SEL Experiment ID	int	4	0	N		Y			N					N	Y	Primary Key		pkDEFAULT
+AT_protein_list_protein	5	protein_list_description	Protein List Description	varchar	2000	0	Y		N				text	24		Y	Y	N	Protein Description		
+AT_SEL_experiment	1	SEL_experiment_id	SEL Experiment ID	int	4	0	N		Y								N	Y	Primary Key		pkDEFAULT
 AT_SEL_experiment	2	sample_id	Sample ID	int	4	0	Y		N	AT_sample	sample_id		text	50		Y	Y		Sample for this experiment		
-AT_SEL_experiment	3	data_path	Data Path	varchar	255	0	N		N			Y	text	100		Y	Y	N	Path to the data		
-AT_SEL_experiment	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_SEL_experiment	3	data_path	Data Path	varchar	255	0	N		N				text	100		Y	Y	N	Path to the data		
+AT_SEL_experiment	4	comment	Comment	text	16	0	Y		N				textarea	4		Y	Y	N	Additional comments		
 AT_SEL_experiment	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_SEL_experiment	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_SEL_experiment	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_SEL_experiment	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_SEL_experiment	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_SEL_experiment	10	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_SEL_experiment	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N				
+AT_SEL_experiment	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			Y				N	N				
+AT_SEL_experiment	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	Y				N	N				
+AT_SEL_experiment	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	Y				N	N				
+AT_SEL_experiment	10	record_status	Record Status	char	1	0	N	N	N			Y				N	N				
 AT_SEL_experiment	11	experiment_title	Experiment Title	varchar	255	0	Y		N			N	text	50		Y	Y	N	Experiment Title		
-AT_SEL_experiment	12	project_id	Project Id	int	4	0	Y		N	project	project_id	Y	optionlist			Y	Y	N	project_id	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
-AT_SEL_experiment	13	mprophet_analysis	mProphet Analysis	char	1	0	Y		N			N	optionlist			Y	Y		Was this experiment analyzed using mProphet?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+AT_SEL_experiment	12	project_id	Project Id	int	4	0	Y		N	project	project_id		optionlist			Y	Y	N	project_id	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
+AT_SEL_experiment	13	mprophet_analysis	mProphet Analysis	char	1	0	Y		N			Y	optionlist			Y	Y		Was this experiment analyzed using mProphet?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 AT_SEL_experiment	14	heavy_label	Heavy Label	varchar	255	0	Y		N			N	text	100		Y	Y		"Heavy label used, if any"		
-AT_SEL_experiment	15	datasetIdentifier	Dataset Identifier	varchar	50	0	Y		N			N	text	20		Y	Y	Y	Foreign Key		
-AT_SEL_experiment	16	q1_tolerance	Q1 tolerance	float	8	0	Y		N			N	text	10		Y	Y	N	Tolerance for matching exact Q1 from transition list to rounded Q1 in spectrum file.		
-AT_SEL_experiment	17	q3_tolerance	Q3 tolerance	float	8	0	Y		N			N	text	10		Y	Y	N	Tolerance for matching exact Q3 from transition list to rounded Q3 in spectrum file.		
-AT_SEL_experiment	18	PX_identifier	ProteomeXchange Identifier	varchar	50	0	Y		N			N	text	20		Y	Y	Y	"ProtemeExchange identifier, e.g. PXD000105"		
-AT_SEL_run	1	SEL_run_id	SEL Run ID	int	4	0	N		Y			N					N	Y	Primary Key		pkDEFAULT
-AT_SEL_run	2	SEL_experiment_id	SEL Experiment ID	int	4	0	Y		N	AT_SEL_experiment	SEL_experiment_id	N	text	50		Y	Y	Y	Foreign key		
+AT_SEL_experiment	15	datasetIdentifier	Dataset Identifier	varchar	50	0	Y		N				text	20		Y	Y	Y	Foreign Key		
+AT_SEL_experiment	16	q1_tolerance	Q1 tolerance	float	8	0	Y		N				text	10		Y	Y	N	Tolerance for matching exact Q1 from transition list to rounded Q1 in spectrum file.		
+AT_SEL_experiment	17	q3_tolerance	Q3 tolerance	float	8	0	Y		N				text	10		Y	Y	N	Tolerance for matching exact Q3 from transition list to rounded Q3 in spectrum file.		
+AT_SEL_experiment	18	PX_identifier	ProteomeXchange Identifier	varchar	50	0	Y		N				text	20		Y	Y	Y	"ProtemeExchange identifier, e.g. PXD000105"		
+AT_SEL_run	1	SEL_run_id	SEL Run ID	int	4	0	N		Y								N	Y	Primary Key		pkDEFAULT
+AT_SEL_run	2	SEL_experiment_id	SEL Experiment ID	int	4	0	Y		N	AT_SEL_experiment	SEL_experiment_id		text	50		Y	Y	Y	Foreign key		
 AT_SEL_run	3	spectrum_filename	Spectrum Filename	varchar	255	0	Y		N			N	text	100		Y	Y	N	Spectrum filename		
-AT_SEL_run	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-AT_SEL_run	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_SEL_run	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_SEL_run	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_SEL_run	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_SEL_run	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_SEL_run	10	record_status	Record Status	char	1	0	N	N	N							N	N				
-AT_SEL_peptide_ion	1	SEL_peptide_ion_id	SEL Peptide Ion ID	int	4	0	N		Y			Y					N	Y	Primary Key		
+AT_SEL_run	4	comment	Comment	text	16	0	Y		N			Y	textarea	4		Y	Y	N	Additional comments		
+AT_SEL_run	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N				
+AT_SEL_run	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N				
+AT_SEL_run	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N				
+AT_SEL_run	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	N				N	N				
+AT_SEL_run	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N				
+AT_SEL_run	10	record_status	Record Status	char	1	0	N	N	N			N				N	N				
+AT_SEL_peptide_ion	1	SEL_peptide_ion_id	SEL Peptide Ion ID	int	4	0	N		Y			N					N	Y	Primary Key		
 AT_SEL_peptide_ion	2	stripped_peptide_sequence	Stripped Peptide Sequence	varchar	255	0	Y		N			N							Stripped peptide sequence (without modifications)		
 AT_SEL_peptide_ion	3	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	Y		N			N							Modified peptide sequence		
 AT_SEL_peptide_ion	4	monoisotopic_peptide_mass	Monoisotopic Neutral Peptide Mass	float	8	0	Y		N			N	text	10		Y	Y	N	Neutral peptide monoisotopic mass		
-AT_SEL_peptide_ion	5	peptide_charge	Peptide Precursor Charge	int	4	0	Y		N			N							Precursor charge		
-AT_SEL_peptide_ion	6	q1_mz	Ideal Q1 mz value	float	8	0	Y		N			N							Calculated Q1 mz value		
-AT_SEL_peptide_ion	7	is_decoy	Is Decoy	char	1	0	Y		N			N	optionlist			Y	Y	N	Is this a decoy peptide?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
-AT_SEL_peptide_ion_protein	1	SEL_peptide_ion_protein_id	SEL Peptide Ion Protein ID	int	4	0	N		Y			Y					N	Y	Primary Key		
-AT_SEL_peptide_ion_protein	2	SEL_peptide_ion_id	SEL Peptide Ion ID	int	4	0	N		N	AT_SEL_peptide_ion	SEL_peptide_ion_id	Y					N	Y	Foreign Key		
-AT_SEL_peptide_ion_protein	3	biosequence_id	BioSequence ID	int	4	0	Y		N	AT_biosequence	biosequence_id	Y				N	N	Y	Foreign Key		
-AT_SEL_peptide_ion_protein	4	protein_accession	Protein Accession	varchar	255	0	N		N			N	text	50		Y	Y	Y	Protein Accession (generally everything before the first space in a FASTA file header line)		
-AT_SEL_transition_group	1	SEL_transition_group_id	SEL Transition Group ID	int	4	0	N		Y			Y					N	Y	Primary Key		
-AT_SEL_transition_group	2	SEL_peptide_ion_id	SEL Peptide Ion ID	int	4	0	N		N			Y					N	Y	Foreign Key		
+AT_SEL_peptide_ion	5	peptide_charge	Peptide Precursor Charge	int	4	0	Y		N										Precursor charge		
+AT_SEL_peptide_ion	6	q1_mz	Ideal Q1 mz value	float	8	0	Y		N										Calculated Q1 mz value		
+AT_SEL_peptide_ion	7	is_decoy	Is Decoy	char	1	0	Y		N				optionlist			Y	Y	N	Is this a decoy peptide?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+AT_SEL_peptide_ion_protein	1	SEL_peptide_ion_protein_id	SEL Peptide Ion Protein ID	int	4	0	N		Y								N	Y	Primary Key		
+AT_SEL_peptide_ion_protein	2	SEL_peptide_ion_id	SEL Peptide Ion ID	int	4	0	N		N	AT_SEL_peptide_ion	SEL_peptide_ion_id						N	Y	Foreign Key		
+AT_SEL_peptide_ion_protein	3	biosequence_id	BioSequence ID	int	4	0	Y		N	AT_biosequence	biosequence_id					N	N	Y	Foreign Key		
+AT_SEL_peptide_ion_protein	4	protein_accession	Protein Accession	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Protein Accession (generally everything before the first space in a FASTA file header line)		
+AT_SEL_transition_group	1	SEL_transition_group_id	SEL Transition Group ID	int	4	0	N		Y			N					N	Y	Primary Key		
+AT_SEL_transition_group	2	SEL_peptide_ion_id	SEL Peptide Ion ID	int	4	0	N		N			N					N	Y	Foreign Key		
 AT_SEL_transition_group	3	SEL_run_id	SEL Run ID	int	4	0	Y		N	AT_SEL_run	SEL_run_id	N						Y	Foreign Key		
 AT_SEL_transition_group	4	q1_mz	Experiment Q1 mz value	float	8	0	Y		N			N							Experiment Q1 mz value		
 AT_SEL_transition_group	5	collision_energy	Collision Energy	float	8	0	Y		N			N							Collision energy applied to entire transition group		
 AT_SEL_transition_group	6	retention_time	Retention Time	float	8	0	Y		N			N	text	10		Y	Y	Y	Retention time in minutes of parent peptide		
-AT_SEL_transition_group	7	isotype	Isotype	varchar	255	0	Y		N			N							"Isotype (heavy, light)"		
-AT_SEL_transition_group	8	isotype_delta_mass	Isotype Delta Mass	float	8	0	Y		N			N	text	10		Y	Y	N	Additional mass for heavy isotype		
-AT_SEL_transition_group	9	experiment_protein_name	Experiment Protein Name	varchar	255	0	Y		N			N							Protein name provided by investigator		
+AT_SEL_transition_group	7	isotype	Isotype	varchar	255	0	Y		N			Y							"Isotype (heavy, light)"		
+AT_SEL_transition_group	8	isotype_delta_mass	Isotype Delta Mass	float	8	0	Y		N			Y	text	10		Y	Y	N	Additional mass for heavy isotype		
+AT_SEL_transition_group	9	experiment_protein_name	Experiment Protein Name	varchar	255	0	Y		N			Y							Protein name provided by investigator		
 AT_SEL_transition_group	10	fragment_ions	Fragment Ions	varchar	255	0	Y		N			N							"Fragment ions, comma separated"		
-AT_SEL_transition_group	11	d_score	mProphet d_score	real	8	0	Y		N			N						N	mProphet's d_score; higher is better		
-AT_SEL_transition_group	12	m_score	mProphet m_score	real	8	0	Y		N			N							mProphet's m_score; FDR for all ID's at least this good (lower is better)		
+AT_SEL_transition_group	11	d_score	mProphet d_score	real	8	0	Y		N			Y						N	mProphet's d_score; higher is better		
+AT_SEL_transition_group	12	m_score	mProphet m_score	real	8	0	Y		N			Y							mProphet's m_score; FDR for all ID's at least this good (lower is better)		
 AT_SEL_transition_group	13	S_N	Signal to Noise Ratio	real	8	0	Y		N			N					Y	N	Signal-to-noise ratio for highest ranking peak group		
 AT_SEL_transition_group	14	max_apex_intensity	Maximum Apex Intensity	real	8	0	Y		N			N					Y	N	Maximum apex intensity for highest ranking peak group; a measure of relative abundance		
 AT_SEL_transition_group	15	light_heavy_ratio_maxapex	Light Heavy Ratio Maximum Apex Intensity	real	8	0	Y		N			N					Y	N	mQuest ratio of maximum apex intensity vs. heavy standard; a measure of relative abundance		
-AT_SEL_transition	1	SEL_transition_id	SEL Transition ID	int	4	0	N		Y			Y					N	Y	Primary Key		
-AT_SEL_transition	2	SEL_transition_group_id	SEL Transition Group ID	int	4	0	N		N			Y						Y	Foreign Key		
+AT_SEL_transition	1	SEL_transition_id	SEL Transition ID	int	4	0	N		Y			N					N	Y	Primary Key		
+AT_SEL_transition	2	SEL_transition_group_id	SEL Transition Group ID	int	4	0	N		N			N						Y	Foreign Key		
 AT_SEL_transition	3	q3_mz	Q3 mz value	float	8	0	Y		N			N							Q3 mz value		
 AT_SEL_transition	4	frg_type	Fragment Type	char	1	0	Y		N			N							"Fragment type (b, y, etc.)"		
 AT_SEL_transition	5	frg_nr	Fragment Number	int	4	0	Y		N			N							Fragment number		
@@ -921,39 +934,39 @@ AT_SEL_transition	8	intensity_rank	Intensity Rank	int	4	0	Y		N			N	text	10		Y	Y	
 AT_SEL_transition	9	collision_energy	Collision Energy	float	8	0	Y		N			N							Collision energy applied to individual transition		
 AT_SEL_transition	6	frg_loss	Fragment Neutral Loss	int	4	0	Y		N			N							"Fragment neutral loss, expressed as a negative number"		
 AT_SEL_chromatogram	1	SEL_chromatogram_id	SEL Chromatogram ID	int	4	0	N		Y			Y					N	Y	Primary Key		
-AT_SEL_chromatogram	2	SEL_transition_group_id	SEL Transition Group ID	int	4	0	Y		N	AT_SEL_transition_group	SEL_transition_group_id	N						Y	Foreign Key		
-AT_SEL_peak_group	1	SEL_peak_group_id	SEL Peak Group ID	int	4	0	N		Y			Y					N	Y	Primary Key		pkDEFAULT
-AT_SEL_peak_group	2	SEL_chromatogram_id	SEL Chromatogram ID	int	4	0	N		N	AT_SEL_chromatogram	SEL_chromatogram_id	Y					N	Y	Foreign Key		
+AT_SEL_chromatogram	2	SEL_transition_group_id	SEL Transition Group ID	int	4	0	Y		N	AT_SEL_transition_group	SEL_transition_group_id	Y						Y	Foreign Key		
+AT_SEL_peak_group	1	SEL_peak_group_id	SEL Peak Group ID	int	4	0	N		Y			N					N	Y	Primary Key		pkDEFAULT
+AT_SEL_peak_group	2	SEL_chromatogram_id	SEL Chromatogram ID	int	4	0	N		N	AT_SEL_chromatogram	SEL_chromatogram_id	N					N	Y	Foreign Key		
 AT_SEL_peak_group	3	m_score	mProphet m_score	real	8	0	Y		N			N							deprecated; now using m_score column in SEL_transition_group		
 AT_SEL_peak_group	4	Tr	Best Peakgroup Retention Time	real	8	0	Y		N			N						N	Retention time for center of peak group		
 AT_SEL_peak_group	5	max_apex_intensity	Maximum Apex Intensity	real	8	0	Y		N			N					Y	N	Maximum Apex Intensity (mProphet); a measure of abundance		
 AT_SEL_peak_group	6	rank	Rank	int	4	0	Y		N			N				Y	N	N	Rank of this peak group among all peak groups in chromatogram		
 AT_SEL_peak_group	7	number_of_peaks	Number of Peaks	int	4	0	Y		N			N					N		Number of peaks in this peak group		
 AT_SEL_peak_group	8	relative_pg_intensity	Relative Peakgroup Intensity	real	8	0	Y		N			N					N	N	Intensity relative to other peak groups in this chromatogram		
-AT_SEL_peak_group	9	weighted_xcorr_shape_score	Weighted Xcorr Shape Score	real	8	0	Y		N			N					N	N	mQuest score for the peakgroup shape		
+AT_SEL_peak_group	9	weighted_xcorr_shape_score	Weighted Xcorr Shape Score	real	8	0	Y		N			Y					N	N	mQuest score for the peakgroup shape		
 AT_SEL_peak_group	10	pre_discrimination_score	Pre-discrimination Score	real	8	0	Y		N			N					N	N	mQuest overall score relative to other peak groups in this chromatogram		
-AT_SEL_peak_group	11	S_N	Signal to Noise Ratio	real	8	0	Y		N			N					Y	N	Signal-to-noise ratio		
-AT_SEL_peak_group	12	target_prescore	Target Prescore	real	8	0	Y		N			N					N	N	mQuest score for target		
+AT_SEL_peak_group	11	S_N	Signal to Noise Ratio	real	8	0	Y		N			Y					Y	N	Signal-to-noise ratio		
+AT_SEL_peak_group	12	target_prescore	Target Prescore	real	8	0	Y		N			Y					N	N	mQuest score for target		
 AT_SEL_peak_group	13	reference_prescore	Reference Prescore	real	8	0	Y		N			N					N	N	mQuest score for reference		
 AT_SEL_peak_group	14	log10_total_xic	Log  Total XIC	real	8	0	Y		N			N					N	N	Base 10 log of total extracted ion current		
-AT_elution_time_type	1	elution_time_type_id	Elution Time Type ID	int	4	0	N		Y			Y					N	Y	Primary Key		pkDEFAULT
-AT_elution_time_type	2	elution_time_type	Elution Time Type	varchar	255	0	N		N			Y	text	20		Y	Y	N	"Type of elution time represented, SSRCalc, RTCatalog, etc"		
+AT_elution_time_type	1	elution_time_type_id	Elution Time Type ID	int	4	0	N		Y			N					N	Y	Primary Key		pkDEFAULT
+AT_elution_time_type	2	elution_time_type	Elution Time Type	varchar	255	0	N		N			N	text	20		Y	Y	N	"Type of elution time represented, SSRCalc, RTCatalog, etc"		
 AT_elution_time_type	3	source_instrument_type_id	Source Instrument Type ID	int	4	0	Y		N	AT_instrument_type	instrument_type_id	N	optionlist			Y	Y	Y	"type of intrument observed on, foreign key to instrument type table"	"select instrument_type_id, instrument_type_name from $TBAT_INSTRUMENT_TYPE"	
-AT_elution_time_type	4	is_observed	Is Observed	char	1	0	Y		N			Y	optionlist			Y	Y	N	Whether this is an observed type (T/F)	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+AT_elution_time_type	4	is_observed	Is Observed	char	1	0	Y		N			N	optionlist			Y	Y	N	Whether this is an observed type (T/F)	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 AT_elution_time_type	5	date_created	date_created	datetime	8	0	Y		N			N					Y	N			
 AT_elution_time_type	6	created_by_id	created_by_id	int	4	0	Y		N			N					Y	N			
 AT_elution_time_type	7	date_modified	date_modified	datetime	8	0	Y		N			N					Y	N			
 AT_elution_time_type	8	modified_by_id	modified_by_id	int	4	0	Y		N			N					Y	N			
 AT_elution_time_type	9	owner_group_id	owner_group_id	int	4	0	Y		N			N					Y	N			
 AT_elution_time_type	10	record_status	record_status	char	1	0	Y		N			N					Y	N			
-AT_elution_time	1	elution_time_id	Elution Time ID	int	4	0	N		Y			N						Y	Primary Key		
-AT_elution_time	2	elution_time_type_id	Elution Time Type ID	int	4	0	N		N	AT_elution_time_type	elution_time_type_id	N						Y	"Elution time source type, foreign key to elution_time_type table"		
+AT_elution_time	1	elution_time_id	Elution Time ID	int	4	0	N		Y			Y						Y	Primary Key		
+AT_elution_time	2	elution_time_type_id	Elution Time Type ID	int	4	0	N		N	AT_elution_time_type	elution_time_type_id	Y						Y	"Elution time source type, foreign key to elution_time_type table"		
 AT_elution_time	3	elution_time	Elution Time	float	4	0	Y		N			N						N	Elution time in minutes		
-AT_elution_time	4	peptide_sequence	Peptide Sequence	varchar	255	0	Y		N			N						N	Stripped peptide sequence		
+AT_elution_time	4	peptide_sequence	Peptide Sequence	varchar	255	0	Y		N			Y						N	Stripped peptide sequence		
 AT_elution_time	5	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	Y		N			N						N	Charge/Mass modified peptide sequence		
 AT_elution_time	6	elution_time_set	Elution Time Set	int	4	0	Y		N			N						N	"Individual Elution set, e.g. RT Catalog"		
 AT_elution_time	7	SIQR	SIQR	int	4	0	Y		N			N						N	Semi-interquartile range value (SIQR)		
-AT_GetTransitions	1	pabst_build_id	PABST Build									Y	optionlist	4		Y	Y	N	"Select desired PABST Build to search, required."	"SELECT pabst_build_id, build_name FROM $TBAT_PABST_BUILD PB JOIN $TB_ORGANISM O ON O.organism_id = PB.organism_id WHERE is_default = 'T' AND project_id IN ( $accessible_project_ids ) order by build_name "	
+AT_GetTransitions	1	pabst_build_id	PABST Build									N	optionlist	4		Y	Y	N	"Select desired PABST Build to search, required."	"SELECT pabst_build_id, build_name FROM $TBAT_PABST_BUILD PB JOIN $TB_ORGANISM O ON O.organism_id = PB.organism_id WHERE is_default = 'T' AND project_id IN ( $accessible_project_ids ) order by build_name "	
 AT_GetTransitions	2	protein_name_constraint	Protein Accession 									N	text	40		Y	Y	N	"Constraint for the Protein Accession (SwissProt, Ensembl, IPI, SGD, etc.). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.  supersedes protein file upload input."		
 AT_GetTransitions	3	protein_file	Upload File Of Proteins	varchar	255	0	Y		N			N	file	40		Y	Y	N	"Upload text file with list of Protein names, one per line, limit 1000.  superseded by Protein Accession text box."		
 AT_GetTransitions	4	peptide_sequence_constraint	Peptide Sequence 									N	text	40		Y	Y	N	Constraint for the Peptide Sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT. supersedes peptide file upload input.		
@@ -963,52 +976,52 @@ AT_GetTransitions	7	n_highest_intensity_fragment_ions	Num of highest Inten Frag 
 AT_GetTransitions	8	n_peptides_per_protein	Number of peptides per protein constraint									N	text	5		Y	Y	N	"Number of peptides to return per protein,  default 5."		
 AT_GetTransitions	9	target_instrument	Target Instrument 									N	optionlist	5		Y	Y	N	"Target instrument for transition analysis, will define precedence of sources: QQQ=>QQQ,QTOF,QTrap5500,QTrap4000,IonTrap,Predicted;  QTOF=>QTOF,QQQ,QTrap5500,QTrap4000,IonTrap,Predicted;  QTrap4000=>QTrap4000,QTrap5500,QQQ,QTOF,IonTrap,Predicted;  QTrap5500=>QTrap5500,QTrap4000,QTOF,QQQ,IonTrap,Predicted;  TSQ=>QTOF,QQQ,QTrap5500,QTrap4000,IonTrap,Predicted"	"select instrument_type_id, CASE WHEN instrument_type_name = 'QQQ' THEN 'Agilent QQQ' ELSE instrument_type_name END from $TBAT_INSTRUMENT_TYPE WHERE is_target_instrument = 'Y'"	
 AT_GetTransitions	10	source_instrument_type_id	Transition Source									N	multioptionlist	5		Y	Y	N	"Desired source(s) for picking transitions.  Can Ctrl-select multiple options, no selection allows all.  Can use to limit list used for target instrument."	"select instrument_type_id, CASE WHEN instrument_type_name = 'QQQ' THEN 'Agilent QQQ' ELSE instrument_type_name END from $TBAT_INSTRUMENT_TYPE WHERE is_source_instrument = 'Y'"	
-AT_PASS_submitter	1	submitter_id	Submitter	int	4	0	N		Y							N	N				pkDEFAULT
-AT_PASS_submitter	2	firstName	First Name	varchar	50	0	N		N			Y	text	50		Y	Y	N	First name of the submitter		
-AT_PASS_submitter	3	lastName	Last Name	varchar	50	0	N		N			Y	text	50		Y	Y	N	Last name of the submitter		
-AT_PASS_submitter	4	emailAddress	Email Address	varchar	100	0	N		N			Y	text	50		Y	Y	Y	Email address of the submitter		
-AT_PASS_submitter	5	password	Password	varchar	100	0	N		N			Y	password	30		N	N	N	Password of the submitter		
-AT_PASS_submitter	6	emailReminders	Email Reminders?	varchar	10	0	N		N			Y	text	10		Y	Y	N	Send the submitter email notifications of submissions?		
-AT_PASS_submitter	7	emailPasswords	Email Passwords?	varchar	10	0	N		N			Y	text	10		Y	Y	N	Include passwords in the email notifications?		
+AT_PASS_submitter	1	submitter_id	Submitter	int	4	0	N		Y			Y				N	N				pkDEFAULT
+AT_PASS_submitter	2	firstName	First Name	varchar	50	0	N		N			N	text	50		Y	Y	N	First name of the submitter		
+AT_PASS_submitter	3	lastName	Last Name	varchar	50	0	N		N			N	text	50		Y	Y	N	Last name of the submitter		
+AT_PASS_submitter	4	emailAddress	Email Address	varchar	100	0	N		N			N	text	50		Y	Y	Y	Email address of the submitter		
+AT_PASS_submitter	5	password	Password	varchar	100	0	N		N			N	password	30		N	N	N	Password of the submitter		
+AT_PASS_submitter	6	emailReminders	Email Reminders?	varchar	10	0	N		N			N	text	10		Y	Y	N	Send the submitter email notifications of submissions?		
+AT_PASS_submitter	7	emailPasswords	Email Passwords?	varchar	10	0	N		N			N	text	10		Y	Y	N	Include passwords in the email notifications?		
 AT_PASS_submitter	8	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-AT_PASS_submitter	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_PASS_submitter	10	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+AT_PASS_submitter	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N				
+AT_PASS_submitter	10	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id	N				N	N				
 AT_PASS_submitter	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_PASS_submitter	12	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-AT_PASS_submitter	13	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-AT_PASS_submitter	14	record_status	Record Status	char	1	0	N	N	N							N	N				
-AT_PASS_dataset	1	dataset_id	Dataset	int	4	0	N		Y							N	N				pkDEFAULT
+AT_PASS_submitter	12	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id	Y				N	N				
+AT_PASS_submitter	13	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id	Y				N	N				
+AT_PASS_submitter	14	record_status	Record Status	char	1	0	N	N	N			Y				N	N				
+AT_PASS_dataset	1	dataset_id	Dataset	int	4	0	N		Y			Y				N	N				pkDEFAULT
 AT_PASS_dataset	2	submitter_id	Submitter	int	4	0	N		N			Y	optionlist			Y	Y	N	Submitter of the dataset	"SELECT submitter_id,lastName+', '+firstName+' <'+emailAddress+'>' FROM $TBAT_PASS_SUBMITTER ORDER BY lastName,firstName,emailAddress"	
 AT_PASS_dataset	3	datasetIdentifier	Dataset Identifier	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Identifier of the dataset in standard format PASS000001		
-AT_PASS_dataset	4	datasetType	Dataset Type	varchar	20	0	N		N			Y	text	20		Y	Y	N	Dataset type		
-AT_PASS_dataset	5	datasetPassword	Dataset Password	varchar	50	0	N		N			Y	text	20		Y	Y	N	Password for this dataset		
-AT_PASS_dataset	6	datasetTag	Dataset Tag	varchar	50	0	N		N			Y	text	30		Y	Y	N	Short tag (name) for this dataset. Limited to 20 characters		
-AT_PASS_dataset	7	datasetTitle	Dataset Title	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Title for this dataset		
-AT_PASS_dataset	8	publicReleaseDate	Public Release Date	datetime	8	0	N		N			Y	text	20		Y	Y	N	Date on which the data becomes publicly available		
-AT_PASS_dataset	9	finalizedDate	Finalized Date	datetime	8	0	Y		N			N	text	20		Y	Y	N	Datetime when the submitter declared the upload finalized		
-AT_PASS_dataset	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_PASS_dataset	4	datasetType	Dataset Type	varchar	20	0	N		N			N	text	20		Y	Y	N	Dataset type		
+AT_PASS_dataset	5	datasetPassword	Dataset Password	varchar	50	0	N		N				text	20		Y	Y	N	Password for this dataset		
+AT_PASS_dataset	6	datasetTag	Dataset Tag	varchar	50	0	N		N				text	30		Y	Y	N	Short tag (name) for this dataset. Limited to 20 characters		
+AT_PASS_dataset	7	datasetTitle	Dataset Title	varchar	255	0	N		N				textarea	3		Y	Y	N	Title for this dataset		
+AT_PASS_dataset	8	publicReleaseDate	Public Release Date	datetime	8	0	N		N				text	20		Y	Y	N	Date on which the data becomes publicly available		
+AT_PASS_dataset	9	finalizedDate	Finalized Date	datetime	8	0	Y		N				text	20		Y	Y	N	Datetime when the submitter declared the upload finalized		
+AT_PASS_dataset	10	comment	Comment	text	16	0	Y		N				textarea	4		Y	Y	N	Additional comments		
 AT_PASS_dataset	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_PASS_dataset	12	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-AT_PASS_dataset	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_PASS_dataset	14	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-AT_PASS_dataset	15	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-AT_PASS_dataset	16	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_PASS_dataset	12	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id	Y				N	N				
+AT_PASS_dataset	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			Y				N	N				
+AT_PASS_dataset	14	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id	Y				N	N				
+AT_PASS_dataset	15	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id	Y				N	N				
+AT_PASS_dataset	16	record_status	Record Status	char	1	0	N	N	N			Y				N	N				
 AT_PASS_dataset	17	submitter_organization	Submitter Organization	varchar	255	0	N		N			Y	text	80		Y	Y	N	Organization of data submitter		
 AT_PASS_dataset	18	lab_head_full_name	Lab Head Full Name	varchar	255	0	N		N			Y	text	80		Y	Y	N	Name of lab head		
-AT_PASS_dataset	19	lab_head_email	Lab Head Email	varchar	50	0	N		N			Y	text	80		Y	Y	N	Email for lab head		
-AT_PASS_dataset	20	lab_head_organization	Lab Head Organization	varchar	255	0	N		N			Y	text	80		Y	Y	N	Organization of lab head		
-AT_PASS_dataset	21	lab_head_country	Lab Head Country	varchar	50	0	N		N			Y	text	80		Y	Y	N	Country of lab head's organization		
-AT_GetPTPPeptides	1	organism_id	Organism	int	4	0	N	2	N			Y	optionlist			Y	Y	N	Organism for which this default applies. 	"SELECT organism_id, organism_name FROM $TB_ORGANISM where organism_name in ( 'human', 'mouse', 'yeast' ) ORDER BY organism_name "	
-AT_GetPTPPeptides	2	biosequence_name_constraint	Protein Name Constraint									N	text	40		Y	Y	N	Constraint for the Protein Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
-AT_GetPTPPeptides	3	upload_file	Upload File Of Proteins	varchar	255	0	Y		N			N	file	40		Y	Y	N	"Path to file with list of Protein Names, one per line, to be uploaded via the web interface (NOTE: if proteins are not found, search defaults to printing all proteins of the selected Atlas build)"		
-AT_GetPTPPeptides	4	peptide_sequence_constraint	Peptide Sequence Constraint									N	text	40		Y	Y	N	Constraint for the Peptide Sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
-AT_GetPTPPeptides	6	peptide_length_constraint	Peptide Length Contraint									N	text	10		Y	Y	N	"Constraint for Peptide Length. Only Peptides with length between 6 and 50 have  predicted score. Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
-AT_GetPTPPeptides	7	n_peptide_per_protein_constraint	Number of Peptides Per Protein Constraint									N	text	10		Y	Y	N	"Constraint for Number of peptides Per Protein. Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
-AT_GetPTPPeptides	8	combined_score_constraint	Combined Score Constraint									N	text	15		Y	Y	N	"Constraint for the combined predictor score for a peptide. Between 0 and 1. Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", between n.n and n.n"""", """"n.n +- n.n"""""""		
-AT_GetPTPPeptides	9	ps_score_constraint	PeptideSieve Score Constraint									N	text	15		Y	1	N	"Constraint for the PeptideSieve score for a peptide. Between 0 and 1.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", between n.n and n.n"""", """"n.n +- n.n"""""""		
-AT_GetPTPPeptides	10	espp_score_constraint	ESPP Score Constraint									N	text	15		Y	1	N	"Constraint for the  ESPP score for a peptide.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", between n.n and n.n"""", """"n.n +- n.n"""""""		
-AT_GetPTPPeptides	11	dp_score_constraint	Detectability Predictor Score Constraint									N	text	15		Y	1	N	"Constraint for the Detectability Predictor score for a peptide. Between 0 and 1. Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", between n.n and n.n"""", """"n.n +- n.n"""""""		
-AT_GetPTPPeptides	12	stepp_score_constraint	STEPP Score Constraint									N	text	15		Y	1	N	"Constraint for the STEPP score for a peptide.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", between n.n and n.n"""", """"n.n +- n.n"""""""		
+AT_PASS_dataset	19	lab_head_email	Lab Head Email	varchar	50	0	N		N			N	text	80		Y	Y	N	Email for lab head		
+AT_PASS_dataset	20	lab_head_organization	Lab Head Organization	varchar	255	0	N		N			N	text	80		Y	Y	N	Organization of lab head		
+AT_PASS_dataset	21	lab_head_country	Lab Head Country	varchar	50	0	N		N				text	80		Y	Y	N	Country of lab head's organization		
+AT_GetPTPPeptides	1	organism_id	Organism	int	4	0	N	2	N				optionlist			Y	Y	N	Organism for which this default applies. 	"SELECT organism_id, organism_name FROM $TB_ORGANISM where organism_name in ( 'human', 'mouse', 'yeast' ) ORDER BY organism_name "	
+AT_GetPTPPeptides	2	biosequence_name_constraint	Protein Name Constraint										text	40		Y	Y	N	Constraint for the Protein Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
+AT_GetPTPPeptides	3	upload_file	Upload File Of Proteins	varchar	255	0	Y		N				file	40		Y	Y	N	"Path to file with list of Protein Names, one per line, to be uploaded via the web interface (NOTE: if proteins are not found, search defaults to printing all proteins of the selected Atlas build)"		
+AT_GetPTPPeptides	4	peptide_sequence_constraint	Peptide Sequence Constraint										text	40		Y	Y	N	Constraint for the Peptide Sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
+AT_GetPTPPeptides	6	peptide_length_constraint	Peptide Length Contraint										text	10		Y	Y	N	"Constraint for Peptide Length. Only Peptides with length between 6 and 50 have  predicted score. Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
+AT_GetPTPPeptides	7	n_peptide_per_protein_constraint	Number of Peptides Per Protein Constraint									Y	text	10		Y	Y	N	"Constraint for Number of peptides Per Protein. Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
+AT_GetPTPPeptides	8	combined_score_constraint	Combined Score Constraint									Y	text	15		Y	Y	N	"Constraint for the combined predictor score for a peptide. Between 0 and 1. Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", between n.n and n.n"""", """"n.n +- n.n"""""""		
+AT_GetPTPPeptides	9	ps_score_constraint	PeptideSieve Score Constraint									Y	text	15		Y	1	N	"Constraint for the PeptideSieve score for a peptide. Between 0 and 1.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", between n.n and n.n"""", """"n.n +- n.n"""""""		
+AT_GetPTPPeptides	10	espp_score_constraint	ESPP Score Constraint									Y	text	15		Y	1	N	"Constraint for the  ESPP score for a peptide.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", between n.n and n.n"""", """"n.n +- n.n"""""""		
+AT_GetPTPPeptides	11	dp_score_constraint	Detectability Predictor Score Constraint									Y	text	15		Y	1	N	"Constraint for the Detectability Predictor score for a peptide. Between 0 and 1. Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", between n.n and n.n"""", """"n.n +- n.n"""""""		
+AT_GetPTPPeptides	12	stepp_score_constraint	STEPP Score Constraint									Y	text	15		Y	1	N	"Constraint for the STEPP score for a peptide.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", between n.n and n.n"""", """"n.n +- n.n"""""""		
 AT_GetPTPPeptides	13	apex_score_constraint	APEX Score Constraint									N	text	15		Y	1	N	"Constraint for the APEX score for a peptide.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", between n.n and n.n"""", """"n.n +- n.n"""""""		
 AT_GetPTPPeptides	14	n_sp_mapping_constraint	Number of Swiss Prot Primary Protein Mapping Constraint									N	text	10		Y	Y	N	"Constraint for Number of Swiss Prot Primary Protein Mapping. Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
 AT_GetPTPPeptides	15	n_spvar_mapping_constraint	Number of Swiss Prot VarSplic Protein Mapping Constraint									N	text	10		Y	Y	N	"Constraint for Number of Swiss Prot VarSplic Protein Mapping. Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
@@ -1017,60 +1030,60 @@ AT_GetPTPPeptides	17	n_ensp_mapping_constraint	Number of Ensembl Protein Mapping
 AT_GetPTPPeptides	18	n_ensg_mapping_constraint	Number of Ensembl Gene Mapping Constraint									N	text	10		Y	Y	N	"Constraint for Number of Ensembl Gene Mapping. Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
 AT_GetPTPPeptides	19	n_ipi_mapping_constraint	Number of IPI Protein Mapping Constraint									N	text	10		Y	Y	N	"Constraint for Number of IPI Protein Mapping. Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
 AT_GetPTPPeptides	20	n_sgd_mapping_constraint	Number of SGD Protein Mapping Constraint									N	text	10		Y	Y	N	"Constraint for Number of SGD Protein Mapping. Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
-AT_proteotypic_peptide_xspecies_mapping	1	proteotypic_peptide_xspecies_mapping_id	Proteotypic Peptide Cross Species Mapping ID	int	4	0	N		Y												
-AT_proteotypic_peptide_xspecies_mapping	2	proteotypic_peptide_mapping_id	Proteotypic Peptide Mapping ID	int	4	0	N		N	At_PROTEOTYPIC_PEPTIDE_MAPPING 	PROTEOTYPIC_PEPTIDE_MAPPING_ID								Foreign Key		
-AT_proteotypic_peptide_xspecies_mapping	3	biosequence_set_ids	biosequence set ids	varchar	100	0	N		N										"Biosequence set ids used to do the mapping, currently need three numbers "		
-AT_proteotypic_peptide_xspecies_mapping	4	n_human_mapping	Number of Human Protein Mapping 	int	4	0	Y		N										Number of distinct accession numbers (proteins) for peptide in Human		
-AT_proteotypic_peptide_xspecies_mapping	5	n_mouse_mapping	Number of Mouse Protein Mapping 	int	4	0	Y		N										Number of distinct accession numbers (proteins) for peptide in Mouse		
-AT_proteotypic_peptide_xspecies_mapping	6	n_yeast_mapping	Number of Yeast Protein Mapping 	int	4	0	Y		N										Number of distinct accession numbers (proteins) for peptide in Yeast		
-AT_GetNextProtChromMapping	2	nextprot_mapping_id	neXtProt Mapping									Y	optionlist	4		Y	Y	N	Select desired neXtProt mapping date	"SELECT ID, convert (char (10), PA_MAPPING_DATE,20) as mapping_time FROM $TBAT_NEXTPROT_MAPPING where atlas_build_id = $parameters{atlas_build_id} ORDER BY ID DESC"	
-AT_GetNextProtChromMapping	1	atlas_build_id	Atlas Build									Y	optionlist	4	refreshDocument()	Y	Y	N	Select desired Atlas Build to include in query.	"select distinct NM.atlas_build_id , A.atlas_build_name FROM $TBAT_NEXTPROT_MAPPING NM  join $TBAT_ATLAS_BUILD A on(A.atlas_build_id = NM.atlas_build_id) order by NM.atlas_build_id desc "	
+AT_proteotypic_peptide_xspecies_mapping	1	proteotypic_peptide_xspecies_mapping_id	Proteotypic Peptide Cross Species Mapping ID	int	4	0	N		Y			N									
+AT_proteotypic_peptide_xspecies_mapping	2	proteotypic_peptide_mapping_id	Proteotypic Peptide Mapping ID	int	4	0	N		N	At_PROTEOTYPIC_PEPTIDE_MAPPING 	PROTEOTYPIC_PEPTIDE_MAPPING_ID	N							Foreign Key		
+AT_proteotypic_peptide_xspecies_mapping	3	biosequence_set_ids	biosequence set ids	varchar	100	0	N		N			N							"Biosequence set ids used to do the mapping, currently need three numbers "		
+AT_proteotypic_peptide_xspecies_mapping	4	n_human_mapping	Number of Human Protein Mapping 	int	4	0	Y		N			N							Number of distinct accession numbers (proteins) for peptide in Human		
+AT_proteotypic_peptide_xspecies_mapping	5	n_mouse_mapping	Number of Mouse Protein Mapping 	int	4	0	Y		N			N							Number of distinct accession numbers (proteins) for peptide in Mouse		
+AT_proteotypic_peptide_xspecies_mapping	6	n_yeast_mapping	Number of Yeast Protein Mapping 	int	4	0	Y		N			N							Number of distinct accession numbers (proteins) for peptide in Yeast		
+AT_GetNextProtChromMapping	2	nextprot_mapping_id	neXtProt Mapping									N	optionlist	4		Y	Y	N	Select desired neXtProt mapping date	"SELECT ID, convert (char (10), PA_MAPPING_DATE,20) as mapping_time FROM $TBAT_NEXTPROT_MAPPING where atlas_build_id = $parameters{atlas_build_id} ORDER BY ID DESC"	
+AT_GetNextProtChromMapping	1	atlas_build_id	Atlas Build									N	optionlist	4	refreshDocument()	Y	Y	N	Select desired Atlas Build to include in query.	"select distinct NM.atlas_build_id , A.atlas_build_name FROM $TBAT_NEXTPROT_MAPPING NM  join $TBAT_ATLAS_BUILD A on(A.atlas_build_id = NM.atlas_build_id) order by NM.atlas_build_id desc "	
 AT_GetNextProtChromMapping	3	biosequence_name_constraint	Protein Name Constraint									N	text	40		Y	Y	N	Constraint for the Protein Name (accession). 		
 AT_GetNextProtChromMapping	4	upload_file	Upload File Of Proteins	varchar	255	0	Y		N			N	file	40		Y	Y	N	"Path to file with list of Protein Names, one per line, to be uploaded via the web interface (NOTE: if proteins are not found, search defaults to printing all proteins of the selected Atlas build)"		
-AT_GetNextProtChromMapping	5	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the  Gene Name. 		
-AT_GetNextProtChromMapping	6	ensembl_gene_name_constraint	Ensembl Gene Name Constraint									N	text	40		Y	N	N	Constraint for the Ensembl Gene Name. 		
-AT_GetNextProtChromMapping	7	refseq_name_constraint	RefSeq Name Constraint									N	text	40		Y	N	N	Constraint for the RefSeq Name. 		
-AT_GetNextProtChromMapping	8	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the Protein description		
-AT_GetNextProtChromMapping	9	n_chromosomal_loc	Number of  Chromosomal Location Constraint									N	text	10		Y	N	N	"Constraint for the number of chromosomal locations for this gene.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
-AT_GetNextProtChromMapping	10	n_observations_constraint	Number of Observations Constraint									N	text	10		Y	Y	N	"Constraint for the number of distinct peptides observed in PeptideAtals for each gene.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
-AT_GetNextProtChromMapping	11	chromosome	Chromosome										optionlist	4		Y	Y	N	Constrain to gene mapping to a particular chromosome	"select '01' ,'1' union select '02','2'  union select '03','3' union select '04','4' union select '05','5' union select '06','6' union select '07','7' union select '08','8' union select '09','9' union select '10','10' union select '11' ,'11'union select '12','12' union select '13','13' union select '14','14' union select '15','15' union select '16','16' union select '17','17' union select '18','18' union select '19','19' union select '20',  '20' union select '21', '21' union select '22', '22' union select 'X', 'X'union select 'Y','Y' union select 'MT','MT' union select 'NA','NA' "	
-AT_GetNextProtChromMapping	12	start_in_chromosome	Start Position in Chromosome	int	4	0	N		N			N	text	20		Y	Y	N	Constrain to proteins whose genes start at a particular region of the chromosome		
+AT_GetNextProtChromMapping	5	biosequence_gene_name_constraint	Gene Name Constraint										text	40		Y	Y	N	Constraint for the  Gene Name. 		
+AT_GetNextProtChromMapping	6	ensembl_gene_name_constraint	Ensembl Gene Name Constraint										text	40		Y	N	N	Constraint for the Ensembl Gene Name. 		
+AT_GetNextProtChromMapping	7	refseq_name_constraint	RefSeq Name Constraint										text	40		Y	N	N	Constraint for the RefSeq Name. 		
+AT_GetNextProtChromMapping	8	biosequence_desc_constraint	Description Constraint										text	40		Y	Y	N	Constraint for the Protein description		
+AT_GetNextProtChromMapping	9	n_chromosomal_loc	Number of  Chromosomal Location Constraint										text	10		Y	N	N	"Constraint for the number of chromosomal locations for this gene.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
+AT_GetNextProtChromMapping	10	n_observations_constraint	Number of Observations Constraint										text	10		Y	Y	N	"Constraint for the number of distinct peptides observed in PeptideAtals for each gene.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
+AT_GetNextProtChromMapping	11	chromosome	Chromosome									Y	optionlist	4		Y	Y	N	Constrain to gene mapping to a particular chromosome	"select '01' ,'1' union select '02','2'  union select '03','3' union select '04','4' union select '05','5' union select '06','6' union select '07','7' union select '08','8' union select '09','9' union select '10','10' union select '11' ,'11'union select '12','12' union select '13','13' union select '14','14' union select '15','15' union select '16','16' union select '17','17' union select '18','18' union select '19','19' union select '20',  '20' union select '21', '21' union select '22', '22' union select 'X', 'X'union select 'Y','Y' union select 'MT','MT' union select 'NA','NA' "	
+AT_GetNextProtChromMapping	12	start_in_chromosome	Start Position in Chromosome	int	4	0	N		N			Y	text	20		Y	Y	N	Constrain to proteins whose genes start at a particular region of the chromosome		
 AT_GetNextProtChromMapping	13	end_in_chromosome	End Position in Chromosome	int	4	0	N		N			N	text	20		Y	Y	N	Constrain to proteins whose genes end at a particular region of the chromosome		
 AT_GetNextProtChromMapping	14	protein_evidence_level_constraint	Protein Evidence Level Constraint									N	multioptionlist	4		Y	Y	N	Constraint for the Protein Evidence Level.  	"select '3','PE=3 Homology' union select '4','PE=4 Predicted' union select '1','PE=1 Protein level' union select '2','PE=2 Transcript level' union select '5','PE=5 Uncertain'"	
 AT_GetNextProtChromMapping	15	peptideatlas_category_constraint	PeptideAtlas Category									N	multioptionlist	4		Y	Y	N	"<a href=""http://www.peptideatlas.org/docs/protein_ident_terms.php"">Protein Identification Terminology</a>"	"select   protein_presence_level_id , level_name from $TBAT_PROTEIN_PRESENCE_LEVEL ORDER BY LEVEL_NAME"	
 AT_GetNextProtChromMapping	16	redundancy_constraint	No Redundancy									N	checkbox	0		Y	Y	N	remove redundant nextprot accession entries		
-AT_spectrum_ptm_identification	1	spectrum_ptm_identification_id	Spectrum PTM Identification ID	int	4	0	N		Y			Y							spectrum_ptm_identification_id		
-AT_spectrum_ptm_identification	2	spectrum_identification_id	Spectrum Identification ID	int	4	0	N		N	AT_spectrum_identification	spectrum_identification_id	Y							spectrum_identification_id		
-AT_spectrum_ptm_identification	3	ptm_sequence	PTM sequence	varchar	255	0	N		N			Y							ptm_sequence		
-AT_putative_protein	1	putative_protein_id	PutativeProteinID	int	4	0	N		Y												pkDEFAULT
-AT_putative_protein	2	biosequence_id	BiosequenceID	int	4	0	N		N	AT_biosequence	biosequence_id	Y	text	20		Y	Y	N	biosequence_id		
+AT_spectrum_ptm_identification	1	spectrum_ptm_identification_id	Spectrum PTM Identification ID	int	4	0	N		Y			N							spectrum_ptm_identification_id		
+AT_spectrum_ptm_identification	2	spectrum_identification_id	Spectrum Identification ID	int	4	0	N		N	AT_spectrum_identification	spectrum_identification_id	N							spectrum_identification_id		
+AT_spectrum_ptm_identification	3	ptm_sequence	PTM sequence	varchar	255	0	N		N			N							ptm_sequence		
+AT_putative_protein	1	putative_protein_id	PutativeProteinID	int	4	0	N		Y			N									pkDEFAULT
+AT_putative_protein	2	biosequence_id	BiosequenceID	int	4	0	N		N	AT_biosequence	biosequence_id		text	20		Y	Y	N	biosequence_id		
 AT_putative_protein	3	spectrum_annotation_level_id	SpectrumAnnotationLevelID	int	4	0	Y		N	AT_spectrum_annotation_level	spectrum_annotation_level_id	N	optionlist			Y	Y	N	Confidence level		
 AT_putative_protein	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-AT_putative_protein	5	added_to_nextprot	AddedToNeXtProt	char	1	0	N	N	N			Y	optionlist			Y	Y	N	Has this protein been added to neXtProt?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
-AT_putative_peptide	1	putative_peptide_id	PutativePeptideID	int	4	0	N		Y												pkDEFAULT
-AT_putative_peptide	2	peptide_id	PeptideID	int	4	0	N		N	AT_peptide	peptide_id	Y	text	20		Y	Y	N	peptide_id		
-AT_putative_peptide	3	spectrum_annotation_level_id	SpectrumAnnotationLevelID	int	4	0	Y		N	AT_spectrum_annotation_level	spectrum_annotation_level_id	N	optionlist			Y	Y	N	Confidence level		
-AT_putative_peptide	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_putative_protein	5	added_to_nextprot	AddedToNeXtProt	char	1	0	N	N	N			N	optionlist			Y	Y	N	Has this protein been added to neXtProt?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+AT_putative_peptide	1	putative_peptide_id	PutativePeptideID	int	4	0	N		Y			N									pkDEFAULT
+AT_putative_peptide	2	peptide_id	PeptideID	int	4	0	N		N	AT_peptide	peptide_id	N	text	20		Y	Y	N	peptide_id		
+AT_putative_peptide	3	spectrum_annotation_level_id	SpectrumAnnotationLevelID	int	4	0	Y		N	AT_spectrum_annotation_level	spectrum_annotation_level_id	Y	optionlist			Y	Y	N	Confidence level		
+AT_putative_peptide	4	comment	Comment	text	16	0	Y		N			Y	textarea	4		Y	Y	N	Additional comments		
 AT_putative_peptide	5	added_to_nextprot	AddedToNeXtProt	char	1	0	N	N	N			Y	optionlist			Y	Y	N	Has a protein containing this peptide been added to neXtProt?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 AT_putative_protein_peptide	1	putative_protein_peptide_id	PutativeProteinPeptideID	int	4	0	N		Y												pkDEFAULT
 AT_putative_protein_peptide	2	putative_protein_id	PutativeProteinID	int	4	0	N		N	AT_putative_protein	putative_protein_id	Y	text	20		Y	Y	N	putative_protein_id		
-AT_putative_protein_peptide	3	peptide_id	PeptideID	int	4	0	N		N	AT_peptide	peptide_id	Y	text	20		Y	Y	N	peptide_id		
-AT_peptide_instance_annotation	1	peptide_instance_annotation_id	Spectrum Annotation ID	int	4	0	N		Y							N	N				pkDEFAULT
-AT_peptide_instance_annotation	2	peptide_instance_id	PeptideInstanceID	int	4	0	N		N	AT_peptide_instance	peptide_instance_id					Y	Y	Y	PeptideInstanceID		
-AT_peptide_instance_annotation	3	spectrum_annotation_level_id	Spectrum Annotation Level	int	4	0	Y		N	AT_spectrum_annotation_level	spectrum_annotation_level_id	N	optionlist	5		Y	Y	N	User annotation	"SELECT spectrum_annotation_level_id, level_name FROM $TB_SPECTRUM_ANNOTATION_LEVEL ORDER BY sort_order,level_name"	
-AT_peptide_instance_annotation	4	annotator_contact_id	Annotator Contact	int	4	0	N		N	contact	contact_id	N	optionlist			Y	Y	N	Full contact information of the annotator	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+AT_putative_protein_peptide	3	peptide_id	PeptideID	int	4	0	N		N	AT_peptide	peptide_id	N	text	20		Y	Y	N	peptide_id		
+AT_peptide_instance_annotation	1	peptide_instance_annotation_id	Spectrum Annotation ID	int	4	0	N		Y			N				N	N				pkDEFAULT
+AT_peptide_instance_annotation	2	peptide_instance_id	PeptideInstanceID	int	4	0	N		N	AT_peptide_instance	peptide_instance_id	Y				Y	Y	Y	PeptideInstanceID		
+AT_peptide_instance_annotation	3	spectrum_annotation_level_id	Spectrum Annotation Level	int	4	0	Y		N	AT_spectrum_annotation_level	spectrum_annotation_level_id		optionlist	5		Y	Y	N	User annotation	"SELECT spectrum_annotation_level_id, level_name FROM $TB_SPECTRUM_ANNOTATION_LEVEL ORDER BY sort_order,level_name"	
+AT_peptide_instance_annotation	4	annotator_contact_id	Annotator Contact	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	N	Full contact information of the annotator	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
 AT_peptide_instance_annotation	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-AT_peptide_instance_annotation	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_peptide_instance_annotation	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_peptide_instance_annotation	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N				
+AT_peptide_instance_annotation	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	Y				N	N				
 AT_peptide_instance_annotation	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_peptide_instance_annotation	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_peptide_instance_annotation	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_peptide_instance_annotation	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	Y				N	N				
+AT_peptide_instance_annotation	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	Y				N	N				
 AT_peptide_instance_annotation	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_protein_identification_annotation	1	protein_identification_annotation_id	ProteinIdentificationAnnotationID	int	4	0	N		Y							N	N				pkDEFAULT
-AT_protein_identification_annotation	2	protein_identification_id	ProteinIdentificationID	int	4	0	N		N	AT_protein_identification	protein_identification_id					Y	Y	Y	ProteinIdentificationID		
-AT_protein_identification_annotation	3	spectrum_annotation_level_id	Spectrum Annotation Level	int	4	0	N		N	AT_spectrum_annotation_level	spectrum_annotation_level_id	Y	optionlist	5		Y	Y	N	User annotation	"SELECT spectrum_annotation_level_id, level_name FROM $TB_SPECTRUM_ANNOTATION_LEVEL ORDER BY sort_order,level_name"	
+AT_protein_identification_annotation	2	protein_identification_id	ProteinIdentificationID	int	4	0	N		N	AT_protein_identification	protein_identification_id	N				Y	Y	Y	ProteinIdentificationID		
+AT_protein_identification_annotation	3	spectrum_annotation_level_id	Spectrum Annotation Level	int	4	0	N		N	AT_spectrum_annotation_level	spectrum_annotation_level_id	N	optionlist	5		Y	Y	N	User annotation	"SELECT spectrum_annotation_level_id, level_name FROM $TB_SPECTRUM_ANNOTATION_LEVEL ORDER BY sort_order,level_name"	
 AT_protein_identification_annotation	4	annotator_contact_id	Annotator Contact	int	4	0	N		N	contact	contact_id	N	optionlist			Y	Y	N	Full contact information of the annotator	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
-AT_protein_identification_annotation	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_protein_identification_annotation	5	comment	Comment	text	16	0	Y		N				textarea	4		Y	Y	N	Additional comments		
 AT_protein_identification_annotation	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 AT_protein_identification_annotation	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
 AT_protein_identification_annotation	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -1079,132 +1092,132 @@ AT_protein_identification_annotation	10	owner_group_id	Owner Group ID	int	4	0	N	
 AT_protein_identification_annotation	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_public_data_repository	1	dataset_id	Dataset	int	4	0	N		Y							N	Y				pkDEFAULT
 AT_public_data_repository	2	dataset_identifier	Dataset Identifier	varchar	20	0	N		N			Y	text			Y	Y	N	source idenfier		
-AT_public_data_repository	3	source_repository	Source	varchar	100	0	N		N			Y	text			Y	Y	N	source repository		
-AT_public_data_repository	4	species	Species	varchar	100	0	N		N			Y	text	40		Y	Y	N	Species		
+AT_public_data_repository	3	source_repository	Source	varchar	100	0	N		N			N	text			Y	Y	N	source repository		
+AT_public_data_repository	4	species	Species	varchar	100	0	N		N			N	text	40		Y	Y	N	Species		
 AT_public_data_repository	5	classfication	Classfication	char	1	0	N	N	N				optionlist			Y	Y	N		"select '1' ,  'Should process' union  select '2' ,  'Not interesting' union  select '3' , 'Has been processed' union select '4', 'Unclassified'"	
-AT_public_data_repository	6	pa_sample_accession	Peptide Atlas Sample Accession	text	16	0	Y		N			N	textarea	3		Y	Y	N	stable accession identifier for the sample (e.g. PAe000001)		
-AT_public_data_repository	7	local_data_location	dataset location	varchar	255	0	N		N			N	text	50		Y	Y	N	Absolute or relative location of the data		
-AT_public_data_repository	8	datasetTitle	Dataset Title	varchar	255	0	N		N			Y	text	40		Y	Y	N	Title for this dataset		
-AT_public_data_repository	9	datasetType	Dataset Type	varchar	20	0	N		N			Y	text	3		Y	Y	N	Dataset type		
-AT_public_data_repository	10	instrument	Instrument	varchar	1000	0	Y		N			N	text	20		Y	Y	N	Instrument		
-AT_public_data_repository	11	datasetDescription	Dataset Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional Description		
+AT_public_data_repository	6	pa_sample_accession	Peptide Atlas Sample Accession	text	16	0	Y		N				textarea	3		Y	Y	N	stable accession identifier for the sample (e.g. PAe000001)		
+AT_public_data_repository	7	local_data_location	dataset location	varchar	255	0	N		N				text	50		Y	Y	N	Absolute or relative location of the data		
+AT_public_data_repository	8	datasetTitle	Dataset Title	varchar	255	0	N		N				text	40		Y	Y	N	Title for this dataset		
+AT_public_data_repository	9	datasetType	Dataset Type	varchar	20	0	N		N				text	3		Y	Y	N	Dataset type		
+AT_public_data_repository	10	instrument	Instrument	varchar	1000	0	Y		N				text	20		Y	Y	N	Instrument		
+AT_public_data_repository	11	datasetDescription	Dataset Description	text	16	0	Y		N				textarea	4		Y	Y	N	Additional Description		
 AT_public_data_repository	12	contributor	Contributor	varchar	255	0	Y		N			Y	text	40		Y	Y	N			
-AT_public_data_repository	13	publication	Publication	varchar	1000	0	Y		N				text	50		Y	Y	N	Publication		
-AT_public_data_repository	14	project_id	Owner Project	int	4	0	Y	NULL	N	project	project_id	N	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
-AT_public_data_repository	15	publicReleaseDate	Public Release Date	datetime	8	0	N		N			Y	text	20		Y	N	N	Date on which the data becomes publicly available		
-AT_public_data_repository	16	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_public_data_repository	13	publication	Publication	varchar	1000	0	Y		N			Y	text	50		Y	Y	N	Publication		
+AT_public_data_repository	14	project_id	Owner Project	int	4	0	Y	NULL	N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
+AT_public_data_repository	15	publicReleaseDate	Public Release Date	datetime	8	0	N		N				text	20		Y	N	N	Date on which the data becomes publicly available		
+AT_public_data_repository	16	record_status	Record Status	char	1	0	N	N	N			N				N	N				
 AT_public_data_repository	17	date_created	date_created	datetime	8	0	Y		N			N					Y	N			
-AT_public_data_repository	18	created_by_id	created_by_id	int	4	0	Y		N			N					N	N			
-AT_public_data_repository	19	date_modified	date_modified	datetime	8	0	Y		N			N					N	N			
+AT_public_data_repository	18	created_by_id	created_by_id	int	4	0	Y		N			Y					N	N			
+AT_public_data_repository	19	date_modified	date_modified	datetime	8	0	Y		N			Y					N	N			
 AT_public_data_repository	20	modified_by_id	modified_by_id	int	4	0	Y		N			N					N	N			
 AT_public_data_repository	21	owner_group_id	owner_group_id	int	4	0	Y		N			N					N	N			
-AT_public_data_repository	22	related_database_entries	related_database_entries	text	16	0	N		N			N	textarea	3		Y	Y	N	"Comma-separated identifiers from, e.g., ProteomeExchange"		
-AT_fragmentation_type	1	fragmentation_type_id	Fragmentation Type ID	int	4	0	Y		Y			Y					N	Y	Primary Key		pkDEFAULT
-AT_fragmentation_type	2	fragmentation_type	Fragmentation Type	varchar	255	0	N		N			Y	text	20		Y	Y	N	Type of Fragmentation		
-AT_fragmentation_type	3	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-AT_fragmentation_type	4	date_created	date_created	datetime	8	0	Y		N			N					Y	N			
+AT_public_data_repository	22	related_database_entries	related_database_entries	text	16	0	N		N			Y	textarea	3		Y	Y	N	"Comma-separated identifiers from, e.g., ProteomeExchange"		
+AT_fragmentation_type	1	fragmentation_type_id	Fragmentation Type ID	int	4	0	Y		Y								N	Y	Primary Key		pkDEFAULT
+AT_fragmentation_type	2	fragmentation_type	Fragmentation Type	varchar	255	0	N		N			N	text	20		Y	Y	N	Type of Fragmentation		
+AT_fragmentation_type	3	comment	Comment	text	16	0	Y		N			Y	textarea	4		Y	Y	N	Additional comments		
+AT_fragmentation_type	4	date_created	date_created	datetime	8	0	Y		N								Y	N			
 AT_fragmentation_type	5	created_by_id	created_by_id	int	4	0	Y		N			N					Y	N			
 AT_fragmentation_type	6	date_modified	date_modified	datetime	8	0	Y		N			N					Y	N			
 AT_fragmentation_type	7	modified_by_id	modified_by_id	int	4	0	Y		N			N					Y	N			
 AT_fragmentation_type	8	owner_group_id	owner_group_id	int	4	0	Y		N			N					Y	N			
 AT_fragmentation_type	9	record_status	record_status	char	1	0	Y		N			N					Y	N			
-AT_uniprot_db	1	uniprot_db_id	Uniprot db ID	int	4	0	N		Y							N	N				pkDEFAULT
-AT_uniprot_db	2	md5sum	md5 Checksum	varchar	64	0	Y		N				text	32		Y	Y	N	md5 checksum of uniprot dat file		
-AT_uniprot_db	3	file_path	File Path	varchar	255	0	y		N				text	50		Y	Y	N	Path to Uniprot dat file		
-AT_uniprot_db	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		Date created		
-AT_uniprot_db_entry	1	uniprot_db_entry_id	Uniprot DB Entry ID	int	4	0	N		Y							N	N				pkDEFAULT
-AT_uniprot_db_entry	2	uniprot_db_id	Uniprot DB ID	int	4	0	N		N	AT_uniprot_db	uniprot_db_id	Y				N	N	Y	Uniprot db ID		
-AT_uniprot_db_entry	3	entry_accession	Entry Accession	varchar	255	0	N		N			Y	text	50		Y	Y	N	Entry Accession		
+AT_uniprot_db	1	uniprot_db_id	Uniprot db ID	int	4	0	N		Y			N				N	N				pkDEFAULT
+AT_uniprot_db	2	md5sum	md5 Checksum	varchar	64	0	Y		N			Y	text	32		Y	Y	N	md5 checksum of uniprot dat file		
+AT_uniprot_db	3	file_path	File Path	varchar	255	0	y		N			Y	text	50		Y	Y	N	Path to Uniprot dat file		
+AT_uniprot_db	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N		Date created		
+AT_uniprot_db_entry	1	uniprot_db_entry_id	Uniprot DB Entry ID	int	4	0	N		Y			N				N	N				pkDEFAULT
+AT_uniprot_db_entry	2	uniprot_db_id	Uniprot DB ID	int	4	0	N		N	AT_uniprot_db	uniprot_db_id	N				N	N	Y	Uniprot db ID		
+AT_uniprot_db_entry	3	entry_accession	Entry Accession	varchar	255	0	N		N			N	text	50		Y	Y	N	Entry Accession		
 AT_uniprot_db_entry	4	entry_name	Entry Name	varchar	255	0	Y		N			N	text	50		Y	Y	N	Entry Name		
 AT_uniprot_db_entry	5	entry_offset	Entry Offset	bigint	8	0	N		N			N				Y	Y	N	File offset of Entry record		
-AT_domain_protein_list	1	protein_list_id	Protein List ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_domain_protein_list	1	protein_list_id	Protein List ID	int	4	0	N		Y			N				N	N				pkDEFAULT
 AT_domain_protein_list	2	Title	Title	varchar	255	0	N		N		 		text			Y	Y	Y	 		
-AT_domain_protein_list	3	Description	Description	varchar	2056	0	Y		N		 	N	textarea	5		Y	Y	N	 	 	
-AT_domain_protein_list	4	owner_contact_id	Owner Contact ID	int	4	0	N		N	contact	contact_id	N	optionlist			Y	Y	N	Full contact information of the annotator	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
-AT_domain_protein_list	5	project_id	Owner Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
-AT_domain_protein_list	6	original_file	Original File	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of list file to be uploaded via the web interface		
+AT_domain_protein_list	3	Description	Description	varchar	2056	0	Y		N		 		textarea	5		Y	Y	N	 	 	
+AT_domain_protein_list	4	owner_contact_id	Owner Contact ID	int	4	0	N		N	contact	contact_id		optionlist			Y	Y	N	Full contact information of the annotator	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+AT_domain_protein_list	5	project_id	Owner Project	int	4	0	N		N	project	project_id		optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
+AT_domain_protein_list	6	original_file	Original File	varchar	255	0	Y		N				file	40		Y	Y	N	File path of list file to be uploaded via the web interface		
 AT_domain_protein_list	7	N_Proteins	Number of proteins	int	4	0	Y		N	 	 	Y	text			Y	Y	N	 	 	
-AT_domain_protein_list	8	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_domain_protein_list	8	comment	Comment	text	16	0	Y		N			Y	textarea	4		Y	Y	N	Additional comments		
 AT_domain_protein_list	9	abstract	Abstract	text	16	0	Y		N			N	textarea	4		Y	Y		Abstract describing list		
 AT_domain_protein_list	10	contributors	Contributors	varchar	256	0	Y		N			N	text	40		Y	Y		Contributors to the creation and/or maintenance of the list		
-AT_domain_protein_list	11	Image_caption	Image Caption	varchar	2000	0	Y		N			N	text	40		Y	Y		Caption for image representing list		
-AT_domain_protein_list	12	image_path	Image Path	varchar	2000	0	Y		N			N	text	40		Y	Y		Path to image representing list		
+AT_domain_protein_list	11	Image_caption	Image Caption	varchar	2000	0	Y		N				text	40		Y	Y		Caption for image representing list		
+AT_domain_protein_list	12	image_path	Image Path	varchar	2000	0	Y		N				text	40		Y	Y		Path to image representing list		
 AT_domain_protein_list	13	url	URL	varchar	256	0	Y		N			N	text	40		Y	Y		URL associated with project		
-AT_domain_protein_list	14	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			Y	 	 		N	N				
-AT_domain_protein_list	15	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_domain_protein_list	16	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_domain_protein_list	17	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_domain_protein_list	18	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_domain_protein_list	19	record_status	Record Status	char	1	0	N	N	N							N	N				
-AT_domain_list_protein	1	list_protein_id	Domain list protein ID	int	4	0	N		Y							N	N				pkDEFAULT
-AT_domain_list_protein	2	protein_list_id	Protein List ID	int	4	0	N		N	domain_protein_list	protein_list_id					N	N				pkDEFAULT
+AT_domain_protein_list	14	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N	 	 		N	N				
+AT_domain_protein_list	15	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	Y				N	N				
+AT_domain_protein_list	16	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N				
+AT_domain_protein_list	17	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	Y				N	N				
+AT_domain_protein_list	18	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N				
+AT_domain_protein_list	19	record_status	Record Status	char	1	0	N	N	N			N				N	N				
+AT_domain_list_protein	1	list_protein_id	Domain list protein ID	int	4	0	N		Y			N				N	N				pkDEFAULT
+AT_domain_list_protein	2	protein_list_id	Protein List ID	int	4	0	N		N	domain_protein_list	protein_list_id	N				N	N				pkDEFAULT
 AT_domain_list_protein	3	original_name	Original Name	varchar	255	0	N		N	contact	contact_id	N	optionlist			Y	Y	N	Full contact information of the annotator	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
-AT_domain_list_protein	4	original_accession	Original Accession	varchar	255	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
-AT_domain_list_protein	5	uniprot_accession	UniProt Accession	varchar	255	0	Y		N		 	N	textarea	5		Y	Y	N	 	 	
-AT_domain_list_protein	6	protein_symbol	Protein Symbol	varchar	36	0	N		N	 	 	N	text			Y	Y	N	Full contact information of the annotator	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
-AT_domain_list_protein	7	gene_symbol	Gene Symbol	varchar	36	0	N		N	 	 	Y	text			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
-AT_domain_list_protein	8	protein_full_name	Protein Full Name	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of list file to be uploaded via the web interface		
-AT_domain_list_protein	9	priority	Priority	int	4	0	Y		N	 	 	Y	text			Y	Y	N	 	 	
-AT_domain_list_protein	10	comment	Comment	varchar	1024	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_domain_list_protein	4	original_accession	Original Accession	varchar	255	0	N		N	project	project_id	N	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
+AT_domain_list_protein	5	uniprot_accession	UniProt Accession	varchar	255	0	Y		N		 	Y	textarea	5		Y	Y	N	 	 	
+AT_domain_list_protein	6	protein_symbol	Protein Symbol	varchar	36	0	N		N	 	 		text			Y	Y	N	Full contact information of the annotator	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+AT_domain_list_protein	7	gene_symbol	Gene Symbol	varchar	36	0	N		N	 	 		text			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
+AT_domain_list_protein	8	protein_full_name	Protein Full Name	varchar	255	0	Y		N				file	40		Y	Y	N	File path of list file to be uploaded via the web interface		
+AT_domain_list_protein	9	priority	Priority	int	4	0	Y		N	 	 		text			Y	Y	N	 	 	
+AT_domain_list_protein	10	comment	Comment	varchar	1024	0	Y		N				textarea	4		Y	Y	N	Additional comments		
 AT_proteases	1	id	id	int	4	0	N		Y							N	Y	Y			pkDEFAULT
-AT_proteases	2	name	Name	varchar	100	0	N		N			Y	text	20		Y	Y	N	Protease Name		
-AT_proteases	3	cleavage_specificity	Cleavage Specificity	varchar	255	0	Y		N			Y	textarea	4		Y	Y	N	Cleavage Specificity		
-AT_proteases	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_proteases	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_proteases	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_proteases	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_proteases	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_proteases	9	record_status	Record Status	char	1	0	N	N	N							N	N				
-AT_dia_library	1	dia_library_id	DIA Library ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_proteases	2	name	Name	varchar	100	0	N		N				text	20		Y	Y	N	Protease Name		
+AT_proteases	3	cleavage_specificity	Cleavage Specificity	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Cleavage Specificity		
+AT_proteases	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			Y				N	N				
+AT_proteases	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N				
+AT_proteases	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N				
+AT_proteases	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	Y				N	N				
+AT_proteases	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N				
+AT_proteases	9	record_status	Record Status	char	1	0	N	N	N			Y				N	N				
+AT_dia_library	1	dia_library_id	DIA Library ID	int	4	0	N		Y			N				N	N				pkDEFAULT
 AT_dia_library	2	dia_library_name	DIA Library Name	varchar	100	0	N		N				text			Y	Y		DIA Library Name		
-AT_dia_library	3	dia_library_tag	DIA Library Tag	varchar	36	0	N		N				text			Y	Y		DIA Library Tag		
-AT_dia_library	4	instrument_type_id	Instrument type ID	int	4	0	N		N	AT_instrument_type	instrument_type_id	N	optionlist					Y	Instrument type for this resource	"SELECT instrument_type_id, instrument_type_name FROM $TBAT_INSTRUMENT_TYPE order by instrument_type_name "	
-AT_dia_library	5	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	N	Organism for which this default applies.  Leave empty for overall default	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
-AT_dia_library	6	project_id	Project	int	4	0	Y		N	project	project_id	N	optionlist			Y	Y	N	Project under which this entity is organized and for which user privileges is controlled	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
-AT_dia_library	7	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_dia_library	3	dia_library_tag	DIA Library Tag	varchar	36	0	N		N			Y	text			Y	Y		DIA Library Tag		
+AT_dia_library	4	instrument_type_id	Instrument type ID	int	4	0	N		N	AT_instrument_type	instrument_type_id	Y	optionlist					Y	Instrument type for this resource	"SELECT instrument_type_id, instrument_type_name FROM $TBAT_INSTRUMENT_TYPE order by instrument_type_name "	
+AT_dia_library	5	organism_id	Organism	int	4	0	Y		N	organism	organism_id		optionlist			Y	Y	N	Organism for which this default applies.  Leave empty for overall default	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+AT_dia_library	6	project_id	Project	int	4	0	Y		N	project	project_id		optionlist			Y	Y	N	Project under which this entity is organized and for which user privileges is controlled	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+AT_dia_library	7	comment	Comment	text	16	0	Y		N				textarea	4		Y	Y	N	Additional comments		
 AT_dia_library	8	md5sum	md5 Checksum	varchar	64	0	Y		N				text	32		Y	Y	N	md5 checksum of spectral library file		
 AT_dia_library	9	file_path	File Path	varchar	255	0	y		N				text	50		Y	Y	N	"Path to spectral library file, used to extract spectra"		
 AT_dia_library	10	file_format	File Format	varchar	36	0	y		N				text	50		Y	Y	N	"Format of DIA library file, one of sptxt, TraML, openswath, or Peakview"		
 AT_dia_library	11	is_master	Is Master	char	1	0	y		N				text	1		Y	Y	N	"Is master library, able to be subsetted"		
 AT_dia_library	12	consensus_library_id	Consensus library id	int	4	0	y		N	AT_consensus_library	consensus_library_id		optionlist	 		Y	Y	N	"Consensus library id, pertains only to sptxt files that are loaded into sbeams"		
 AT_dia_library	13	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_dia_library	14	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_dia_library	15	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_dia_library	16	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_dia_library	17	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_dia_library	14	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N				
+AT_dia_library	15	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N				
+AT_dia_library	16	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	N				N	N				
+AT_dia_library	17	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N				
 AT_dia_library	18	record_status	Record Status	char	1	0	N	N	N							N	N				
-AT_GetDIALibs	1	dia_library_id	DIA Library									Y	optionlist	4		Y	Y	N	Select desired DIA library	"SELECT DISTINCT dia_library_id, comment FROM $TBAT_DIA_LIBRARY WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids ) ORDER BY comment"	
-AT_GetDIALibs	2	organism_id	Organism									Y	mulitoptionlist	20		Y	Y	N	Limit by desired organism	"SELECT DISTINCT O.organism_id, organism_name FROM $TB_ORGANISM O JOIN $TBAT_DIA_LIBRARY DL ON O.organism_id = DL.organism_id WHERE O.record_status = 'N' AND project_id IN (  $accessible_project_ids )"	
-AT_GetDIALibs	3	protein_name_constraint	Protein Accession Constraint									N	text	40		Y	Y	N	"Constraint for the Protein Accession (SwissProt, Ensembl, IPI, SGD, etc.). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT."		
-AT_GetDIALibs	4	upload_protein_file	Upload File of Proteins	 	 	 	 		 			N	file	40		Y	Y	N	"Path to file with list of Protein Names, one per line, to be uploaded via the web interface "		
-AT_GetDIALibs	5	peptide_sequence_constraint	Peptide Sequence Constraint									N	text	40		Y	Y	N	Constraint for the Peptide Sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
-AT_GetDIALibs	6	upload_peptide_file	Upload File of Peptides	 	 	 	 		 			N	file	40		Y	Y	N	"Path to file with list of peptide sequences, one per line, to be uploaded via the web interface"		
-AT_GetDIALibs	7	intrument_type	Instrument Type									N	optionlist	20		Y	Y	N	Instrument type 	"SELECT DISTINCT I.instrument_type_id, instrument_type_name FROM $TBAT_INSTRUMENT_TYPE I JOIN $TBAT_DIA_LIBRARY DL ON I.instrument_type_id = DL.instrument_type_id WHERE DL.record_status = 'N' AND project_id IN (  $accessible_project_ids )"	
-AT_GetDIALibs	8	n_peptides_per_protein	Number of peptides per protein constraint									N	text	5		Y	Y	N	"Number of peptides to return per protein, defaults to 3."		
-AT_ExploreIonLibrary	1	consensus_library_id	Ion Library									Y	optionlist	4		Y	Y	N	"Select consensus Library to include in query, required.  Names are structures as Organism _ Instrument Type _ [ Motif _ ] Source, where motif is optional.  For example, Sc_IT_NIST is a yeast (saccharomyces Cer.) ion-trap library from NIST"	"SELECT CL.consensus_library_id,consensus_library_name FROM $TBAT_CONSENSUS_LIBRARY CL JOIN $TBAT_DIA_LIBRARY DL ON DL.consensus_library_id = CL.consensus_library_id  WHERE CL.record_status = 'N' AND CL.project_id IN (  $accessible_project_ids )"	
-AT_ExploreIonLibrary	2	protein_name_constraint	Protein Accession Constraint									N	text	40		Y	Y	N	"Constraint for the Protein Accession (SwissProt, Ensembl, IPI, SGD, etc.). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT."		
-AT_ExploreIonLibrary	3	upload_file	Upload File Of Proteins	varchar	255	0	Y		N			N	file	40		Y	Y	N	"Path to file with list of Protein Names, one per line, to be uploaded via the web interface (NOTE: if proteins are not found, search defaults to printing all proteins of the selected Atlas build)"		
-AT_ExploreIonLibrary	4	peptide_sequence_constraint	Peptide Sequence Constraint									N	text	40		Y	Y	N	Constraint for the Peptide Sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
-AT_sample_category	1	id	Sample Category ID	int	4	0	Y		Y			Y					N	Y	Primary Key		pkDEFAULT
-AT_sample_category	2	name	Sample Category Name	varchar	255	0	N		N			Y	text	20		Y	Y	N	Sample Category		
+AT_GetDIALibs	1	dia_library_id	DIA Library										optionlist	4		Y	Y	N	Select desired DIA library	"SELECT DISTINCT dia_library_id, comment FROM $TBAT_DIA_LIBRARY WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids ) ORDER BY comment"	
+AT_GetDIALibs	2	organism_id	Organism										mulitoptionlist	20		Y	Y	N	Limit by desired organism	"SELECT DISTINCT O.organism_id, organism_name FROM $TB_ORGANISM O JOIN $TBAT_DIA_LIBRARY DL ON O.organism_id = DL.organism_id WHERE O.record_status = 'N' AND project_id IN (  $accessible_project_ids )"	
+AT_GetDIALibs	3	protein_name_constraint	Protein Accession Constraint										text	40		Y	Y	N	"Constraint for the Protein Accession (SwissProt, Ensembl, IPI, SGD, etc.). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT."		
+AT_GetDIALibs	4	upload_protein_file	Upload File of Proteins	 	 	 	 		 				file	40		Y	Y	N	"Path to file with list of Protein Names, one per line, to be uploaded via the web interface "		
+AT_GetDIALibs	5	peptide_sequence_constraint	Peptide Sequence Constraint										text	40		Y	Y	N	Constraint for the Peptide Sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
+AT_GetDIALibs	6	upload_peptide_file	Upload File of Peptides	 	 	 	 		 				file	40		Y	Y	N	"Path to file with list of peptide sequences, one per line, to be uploaded via the web interface"		
+AT_GetDIALibs	7	intrument_type	Instrument Type										optionlist	20		Y	Y	N	Instrument type 	"SELECT DISTINCT I.instrument_type_id, instrument_type_name FROM $TBAT_INSTRUMENT_TYPE I JOIN $TBAT_DIA_LIBRARY DL ON I.instrument_type_id = DL.instrument_type_id WHERE DL.record_status = 'N' AND project_id IN (  $accessible_project_ids )"	
+AT_GetDIALibs	8	n_peptides_per_protein	Number of peptides per protein constraint										text	5		Y	Y	N	"Number of peptides to return per protein, defaults to 3."		
+AT_ExploreIonLibrary	1	consensus_library_id	Ion Library										optionlist	4		Y	Y	N	"Select consensus Library to include in query, required.  Names are structures as Organism _ Instrument Type _ [ Motif _ ] Source, where motif is optional.  For example, Sc_IT_NIST is a yeast (saccharomyces Cer.) ion-trap library from NIST"	"SELECT CL.consensus_library_id,consensus_library_name FROM $TBAT_CONSENSUS_LIBRARY CL JOIN $TBAT_DIA_LIBRARY DL ON DL.consensus_library_id = CL.consensus_library_id  WHERE CL.record_status = 'N' AND CL.project_id IN (  $accessible_project_ids )"	
+AT_ExploreIonLibrary	2	protein_name_constraint	Protein Accession Constraint										text	40		Y	Y	N	"Constraint for the Protein Accession (SwissProt, Ensembl, IPI, SGD, etc.). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT."		
+AT_ExploreIonLibrary	3	upload_file	Upload File Of Proteins	varchar	255	0	Y		N			Y	file	40		Y	Y	N	"Path to file with list of Protein Names, one per line, to be uploaded via the web interface (NOTE: if proteins are not found, search defaults to printing all proteins of the selected Atlas build)"		
+AT_ExploreIonLibrary	4	peptide_sequence_constraint	Peptide Sequence Constraint									Y	text	40		Y	Y	N	Constraint for the Peptide Sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
+AT_sample_category	1	id	Sample Category ID	int	4	0	Y		Y			N					N	Y	Primary Key		pkDEFAULT
+AT_sample_category	2	name	Sample Category Name	varchar	255	0	N		N			N	text	20		Y	Y	N	Sample Category		
 AT_sample_category	3	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 AT_sample_category	4	date_created	date_created	datetime	8	0	Y		N			N					Y	N			
 AT_sample_category	5	created_by_id	created_by_id	int	4	0	Y		N			N					Y	N			
 AT_sample_category	6	date_modified	date_modified	datetime	8	0	Y		N			N					Y	N			
-AT_sample_category	7	modified_by_id	modified_by_id	int	4	0	Y		N			N					Y	N			
+AT_sample_category	7	modified_by_id	modified_by_id	int	4	0	Y		N			Y					Y	N			
 AT_sample_category	8	owner_group_id	owner_group_id	int	4	0	Y		N			N					Y	N			
 AT_sample_category	9	record_status	record_status	char	1	0	Y		N			N					Y	N			
-AT_ptm_summary	1	id	ptm summary id	int	4	0	N		Y							N	N	Y			pkDEFAULT
+AT_ptm_summary	1	id	ptm summary id	int	4	0	N		Y			N				N	N	Y			pkDEFAULT
 AT_ptm_summary	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	atlas_build	atlas_build_id	Y				N	N	N			
 AT_ptm_summary	3	biosequence_id	Biosequence ID	int	4	0	N		N	biosequence	biosequence_id	Y				N	N	N			
-AT_ptm_summary	4	offset	Protein offset	int	4	0	N		N			Y				N	N	N			
-AT_ptm_summary	5	residue	Residue	char	1	0	N		N			Y				N	N	N			
-AT_ptm_summary	6	nObs	Number of Observation	int	4	0	N		N			Y				N	N	N			
-AT_ptm_summary	7	one_site	Only one PTM site in  each peptide	int	4	0	N		N			Y				N	N	N			
-AT_ptm_summary	8	two_sites	Only two PTM sites in each peptide	int	4	0	N		N			Y				N	N	N			
-AT_ptm_summary	9	over_two_sites	More than two PTM sites in each peptide	int	4	0	N		N			Y				N	N	N			
-AT_ptm_summary	10	nP01	P < 0.1  	int	4	0	N		N			Y				N	N	N			
-AT_ptm_summary	11	nP05	0.1 =< P < 0.5  	int	4	0	N		N			Y				N	N	N			
+AT_ptm_summary	4	offset	Protein offset	int	4	0	N		N			N				N	N	N			
+AT_ptm_summary	5	residue	Residue	char	1	0	N		N			N				N	N	N			
+AT_ptm_summary	6	nObs	Number of Observation	int	4	0	N		N			N				N	N	N			
+AT_ptm_summary	7	one_site	Only one PTM site in  each peptide	int	4	0	N		N			N				N	N	N			
+AT_ptm_summary	8	two_sites	Only two PTM sites in each peptide	int	4	0	N		N			N				N	N	N			
+AT_ptm_summary	9	over_two_sites	More than two PTM sites in each peptide	int	4	0	N		N			N				N	N	N			
+AT_ptm_summary	10	nP01	P < 0.1  	int	4	0	N		N			N				N	N	N			
+AT_ptm_summary	11	nP05	0.1 =< P < 0.5  	int	4	0	N		N							N	N	N			
 AT_ptm_summary	12	nP19	0.5 =< P < 0.19  	int	4	0	N		N			Y				N	N	N			
 AT_ptm_summary	13	nP81	0.19 =< P < 0.81	int	4	0	N		N			Y				N	N	N			
 AT_ptm_summary	14	nP95	0.81 =< P < 0.95  	int	4	0	N		N			Y				N	N	N			
@@ -1213,33 +1226,33 @@ AT_ptm_summary	16	nP100	0.99 =< P	int	4	0	N		N			Y				N	N	N
 AT_ptm_summary	17	isInUniProt      	Uniprot Annotated	char	3	0	N		N			Y				N	N	N			
 AT_ptm_summary	18	isInNeXtProt 	NextProt Annotated	char	3	0	N		N			Y				N	N	N			
 AT_ptm_summary	19	most_observed_ptm_peptide	Most Frequently Observed PTM Peptide	char	100	0	N		N			Y				N	N	N			
-AT_GetAtlasVariants	1	atlas_build_id	Atlas Build									N	optionlist			Y	Y	N	Atlas build in which to search for SNPs	"SELECT atlas_build_id,atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids )  AND atlas_build_id IN (SELECT distinct atlas_build_id FROM $TBAT_ATLAS_SNPS)"	
-AT_GetAtlasVariants	2	snp_source	SNP Source	 	 	 	 	 	 			N	optionlist			Y	Y	N	"SNP source, one of Swiss Prot, NeXtProt, or both"	"SELECT option_value,option_key FROM $TBAT_QUERY_OPTION WHERE option_type='GetAtlasVariants_source'"	
-AT_GetAtlasVariants	3	protein_name	Protein Name Constraint									N	text	40		Y	Y	N	Constraint for the Protein Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.	 	
-AT_GetAtlasVariants	4	protein_file	Upload File Of Proteins									N	file	40		Y	Y	N	"Path to file with list of Protein Names, one per line, to be uploaded via the web interface (NOTE: if proteins are not found, search defaults to printing all proteins of the selected Atlas build)"		
-AT_GetAtlasVariants	5	original_aa	Original AA	 	 	 	 		 			N	text	10		Y	Y	N	Original amino acid		
-AT_GetAtlasVariants	6	variant_aa	Variant AA									N	text	10		Y	Y	N	Variant amino acid		
-AT_GetAtlasVariants	7	n_observations	N Observations									N	text	10		Y	Y	N	Number of times SNP version was seen		
-AT_GetAtlasVariants	8	n_uniq_observations	N Unique Observations									N	text	10		Y	Y	N	Number of times SNP version was seen by peptides that cannot be ascribed to another protein in the target proteome		
-AT_GetAtlasVariants	9	expression_ratio	Expression percentage									N	text	10		Y	Y	N	Percentage of PSM which observed the variant amion acid		
-AT_GetAtlasVariants	10	category	Category									N	text	10		Y	Y	N	"Category of SNP, one of XNUE (no unique evidence) XAMBI (ambiguous, e.g. I -> L), XHV (High-value), XEXCL (Exclusively as SNP)"		
+AT_GetAtlasVariants	1	atlas_build_id	Atlas Build									Y	optionlist			Y	Y	N	Atlas build in which to search for SNPs	"SELECT atlas_build_id,atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids )  AND atlas_build_id IN (SELECT distinct atlas_build_id FROM $TBAT_ATLAS_SNPS)"	
+AT_GetAtlasVariants	2	snp_source	SNP Source	 	 	 	 	 	 			Y	optionlist			Y	Y	N	"SNP source, one of Swiss Prot, NeXtProt, or both"	"SELECT option_value,option_key FROM $TBAT_QUERY_OPTION WHERE option_type='GetAtlasVariants_source'"	
+AT_GetAtlasVariants	3	protein_name	Protein Name Constraint									Y	text	40		Y	Y	N	Constraint for the Protein Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.	 	
+AT_GetAtlasVariants	4	protein_file	Upload File Of Proteins									Y	file	40		Y	Y	N	"Path to file with list of Protein Names, one per line, to be uploaded via the web interface (NOTE: if proteins are not found, search defaults to printing all proteins of the selected Atlas build)"		
+AT_GetAtlasVariants	5	original_aa	Original AA	 	 	 	 		 			Y	text	10		Y	Y	N	Original amino acid		
+AT_GetAtlasVariants	6	variant_aa	Variant AA									Y	text	10		Y	Y	N	Variant amino acid		
+AT_GetAtlasVariants	7	n_observations	N Observations									Y	text	10		Y	Y	N	Number of times SNP version was seen		
+AT_GetAtlasVariants	8	n_uniq_observations	N Unique Observations									Y	text	10		Y	Y	N	Number of times SNP version was seen by peptides that cannot be ascribed to another protein in the target proteome		
+AT_GetAtlasVariants	9	expression_ratio	Expression percentage									Y	text	10		Y	Y	N	Percentage of PSM which observed the variant amion acid		
+AT_GetAtlasVariants	10	category	Category									Y	text	10		Y	Y	N	"Category of SNP, one of XNUE (no unique evidence) XAMBI (ambiguous, e.g. I -> L), XHV (High-value), XEXCL (Exclusively as SNP)"		
 AT_GetAtlasVariants	11	original_peptide_sequence	Original Peptide Sequence									N	text	40		Y	Y	N	Original peptide sequence(s)		
 AT_GetAtlasVariants	12	variant_peptide_sequence	Variant Peptide Sequence									N	text	40		Y	Y	N	Variant peptide sequence(s)		
-AT_NeXtProt_Mapping	1	id	NextProt Mapping ID	int	4	0	N		Y			Y				N	N	N			
-AT_NeXtProt_Mapping	2	atlas_build_id	Atlas Build	int	4	0	N		N			Y				N	N	N	source Atlas build		
-AT_NeXtProt_Mapping	3	nextprot_release_date	NextProt Release Date	datetime	8	0	N		N			Y				N	N	N	NextProt Release Date		
-AT_NeXtProt_Mapping	4	pa_mapping_date	Mapping Date	datetime	8	0	N		N			Y				N	N	N	Mapping Date		
-AT_NeXtProt_Chromosome_Mapping	1	id	NextProt Mapping ID	int	4	0	N		Y			Y				N	N	N			
+AT_NeXtProt_Mapping	1	id	NextProt Mapping ID	int	4	0	N		Y			N				N	N	N			
+AT_NeXtProt_Mapping	2	atlas_build_id	Atlas Build	int	4	0	N		N			N				N	N	N	source Atlas build		
+AT_NeXtProt_Mapping	3	nextprot_release_date	NextProt Release Date	datetime	8	0	N		N			N				N	N	N	NextProt Release Date		
+AT_NeXtProt_Mapping	4	pa_mapping_date	Mapping Date	datetime	8	0	N		N			N				N	N	N	Mapping Date		
+AT_NeXtProt_Chromosome_Mapping	1	id	NextProt Mapping ID	int	4	0	N		Y			N				N	N	N			
 AT_NeXtProt_Chromosome_Mapping	2	Gene_Name	Gene Name	varchar	255	0	Y		N			N									
 AT_NeXtProt_Chromosome_Mapping	3	neXtProt_Accession	neXtProt Accession	varchar	255	0	N		N			N									
 AT_NeXtProt_Chromosome_Mapping	4	Ensembl_Accession	Ensembl Accession	varchar	255	0	Y		N			N									
 AT_NeXtProt_Chromosome_Mapping	5	RefSeq_Accession	RefSeq Accession	varchar	255	0	Y		N			N									
 AT_NeXtProt_Chromosome_Mapping	6	Chromosome	Chromosome	varchar	50	0	Y		N			N									
-AT_NeXtProt_Chromosome_Mapping	7	Start	Start Position in Chromosome	int	4	0	Y		N			N									
-AT_NeXtProt_Chromosome_Mapping	8	Stop	End Position in Chromosome	int	4	0	Y		N			N									
-AT_NeXtProt_Chromosome_Mapping	9	Protein_existence	Protein Existence	varchar	50	0	Y		N			N									
-AT_NeXtProt_Chromosome_Mapping	10	Proteomics	Proteomics	varchar	10	0	Y		N			N									
-AT_NeXtProt_Chromosome_Mapping	11	AntiBody	AntiBody	varchar	10	0	Y		N			N									
+AT_NeXtProt_Chromosome_Mapping	7	Start	Start Position in Chromosome	int	4	0	Y		N			Y									
+AT_NeXtProt_Chromosome_Mapping	8	Stop	End Position in Chromosome	int	4	0	Y		N			Y									
+AT_NeXtProt_Chromosome_Mapping	9	Protein_existence	Protein Existence	varchar	50	0	Y		N			Y									
+AT_NeXtProt_Chromosome_Mapping	10	Proteomics	Proteomics	varchar	10	0	Y		N			Y									
+AT_NeXtProt_Chromosome_Mapping	11	AntiBody	AntiBody	varchar	10	0	Y		N			Y									
 AT_NeXtProt_Chromosome_Mapping	12	ThreeD	3D	varchar	10	0	Y		N			N									
 AT_NeXtProt_Chromosome_Mapping	13	Disease	Disease	varchar	10	0	Y		N			N									
 AT_NeXtProt_Chromosome_Mapping	14	Isoforms	Isoforms	int	4	0	Y		N			N									
@@ -1249,18 +1262,28 @@ AT_NeXtProt_Chromosome_Mapping	17	Description	Description	varchar	500	0	Y		N			N
 AT_NeXtProt_Chromosome_Mapping	18	n_neXtProt_entry	Number of neXtProt Entry	int	4	0	N		N			N									
 AT_NeXtProt_Chromosome_Mapping	19	PeptideAtlas_Category	PeptideAtlas Category	varchar	255	0	N		N			N									
 AT_NeXtProt_Chromosome_Mapping	20	n_obs	Number of Peptide Observation	int	4	0	N		n			N									
-AT_NeXtProt_Chromosome_Mapping	21	NeXtProt_Mapping_id	NextProt Mapping ID	int	4	0	N		N		Y										
-AT_NeXtProt_CHPP_Summary	1	id	ID	int	4	0	N		Y			Y									
+AT_NeXtProt_Chromosome_Mapping	21	NeXtProt_Mapping_id	NextProt Mapping ID	int	4	0	N		N		Y	N									
+AT_NeXtProt_CHPP_Summary	1	id	ID	int	4	0	N		Y			N									
 AT_NeXtProt_CHPP_Summary	2	Chromosome	Chromosome	varchar	50	0	N		N			N									
 AT_NeXtProt_CHPP_Summary	3	PE	PE Level	varchar	10	0	N		N			N									
-AT_NeXtProt_CHPP_Summary	4	n_nextprot_entries		int	4	0	N		Y			Y									
-AT_NeXtProt_CHPP_Summary	5	n_canonical		int	4	0	N		Y			Y									
-AT_NeXtProt_CHPP_Summary	6	n_uncertain		int	4	0	N		Y			Y									
-AT_NeXtProt_CHPP_Summary	7	n_redundant		int	4	0	N		Y			Y									
-AT_NeXtProt_CHPP_Summary	8	n_not_observed		int	4	0	N		Y			Y									
-AT_NeXtProt_CHPP_Summary	9	NeXtProt_Mapping_id		int	4	0	N		Y		Y	Y									
+AT_NeXtProt_CHPP_Summary	4	n_nextprot_entries		int	4	0	N		Y			N									
+AT_NeXtProt_CHPP_Summary	5	n_canonical		int	4	0	N		Y			N									
+AT_NeXtProt_CHPP_Summary	6	n_uncertain		int	4	0	N		Y			N									
+AT_NeXtProt_CHPP_Summary	7	n_redundant		int	4	0	N		Y			N									
+AT_NeXtProt_CHPP_Summary	8	n_not_observed		int	4	0	N		Y			N									
+AT_NeXtProt_CHPP_Summary	9	NeXtProt_Mapping_id		int	4	0	N		Y		Y	N									
 AT_domain_list_resource	1	list_resource_id	Domain list resource ID	int	4	0	N		Y							N	N				pkDEFAULT
-AT_domain_list_resource	2	protein_list_id	Protein List ID	int	4	0	N		N	domain_protein_list	protein_list_id					N	N				 
-AT_domain_list_resource	3	type	Type	varchar	255	0	N		N	 	 	Y	text			Y	Y	N	 	 	
-AT_domain_list_resource	4	name	Name	varchar	255	0	N		N	 	 	Y	file			Y	Y	N	 	 	
-AT_domain_list_resource	5	Description	Description	varchar	255	0	Y		N		 	N	textarea	5		Y	Y	N	 	 	
+AT_domain_list_resource	2	protein_list_id	Protein List ID	int	4	0	N		N	domain_protein_list	protein_list_id	Y				N	N				 
+AT_domain_list_resource	3	type	Type	varchar	255	0	N		N	 	 	N	text			Y	Y	N	 	 	
+AT_domain_list_resource	4	name	Name	varchar	255	0	N		N	 	 	N	file			Y	Y	N	 	 	
+AT_domain_list_resource	5	Description	Description	varchar	255	0	Y		N		 	Y	textarea	5		Y	Y	N	 	 	
+												Y									
+												Y									
+												Y									
+												Y									
+												Y									
+																					
+																					
+												Y									
+												Y									
+												N									
