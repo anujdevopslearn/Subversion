@@ -180,7 +180,7 @@ sub handle_request {
 
   $content_type = "Content-type: text/tab-separated-values\n\n" if $parameters{tsv_output};
 
-  if ( $download && $download =~ /ABSCIEX/ ) {
+  if ( $download && $download =~ /SCIEX/ ) {
     $content_type = "Content-type: text/comma-separated-values\n\n";
   }
 
