@@ -134,12 +134,26 @@ while ( my $line = <INFILE>) {
       if ( $nprot > 1 ) {
         my @prots = split( /\//, $pstr );
         for my $prot ( @prots ) {
+          
           if ( $proteins{$prot} ) {
             $ok++;
             last;
           }
         }
         next unless $ok;
+      } else {
+        if ( $proteins{$pstr} ) {
+          $ok++;
+        }  
+        if ( !$ok ) {  # O Schubert hack
+          my @parts = split( /_/, $pstr );
+          if ( $parts[0] && $parts[1] && ( $parts[0] eq $parts[1] ) ) {
+            $pstr = $parts[0];
+            if ( $proteins{$pstr} ) {
+              $ok++;
+            }  
+          }
+        }
       }
     } else {
       $ok++;
