@@ -115,7 +115,9 @@ sub parse_list {
   }
   for ( my $idx = $book->[1]->{minrow}; $idx <= $book->[1]->{maxrow}; $idx++ ) {
     my @row = Spreadsheet::Read::row( $book->[1], $idx );
+
     next if $row[0] eq 'Field';
+    next if $row[0] =~ /Please fill in/;
     $list{$row[0]} = $row[1];
   }
 
@@ -270,6 +272,17 @@ sub update_list {
     }
   }
 
+  if ( $opts->{add_proteins} && $opts->{list_file} ) {
+    my $list_data = parse_list( $opts->{list_file} );
+
+    print "Fill table\n";
+
+    $list_data->{list_id} = $list_id;
+
+    fill_table($list_data);
+  
+  }
+
   exit;
 
 }
@@ -301,13 +314,13 @@ sub delete_list {
 sub create_list {
   my $list_data =  shift || die;
   my $list_info = $list_data->{list_info};
-  $list_info->{Title} = $list_info->{'List Name'};
+  $list_info->{Title} = $list_info->{'List Title'};
   $list_info->{pubmed_id} = $list_info->{'Pubmed ID'};
   $list_info->{Abstract} =~ s/[^[:ascii:]]//g;
   $list_info->{image_path} = $list_info->{image};
   $list_info->{n_proteins} = scalar( @{$list_data->{list_proteins}} );
 
-  for my $element ( 'List Name', 'Pubmed ID', 'image' ) {
+  for my $element ( 'List Name', 'Pubmed ID', 'image', 'List Title' ) {
     delete( $list_info->{$element} );
   }
   $list_info->{owner_contact_id} = $opts->{contact_id} || $sbeams->getCurrent_contact_id();
@@ -339,6 +352,7 @@ sub fill_table {
                         ( $prot->{'popularity rank'} > 5 ) ? 5 : $prot->{'popularity rank'};
     $prot->{protein_full_name} = $prot->{protein_name};
     $prot->{protein_symbol} ||= '';
+    $prot->{gene_symbol} ||= '';
     $prot->{original_name} ||= '';
     $prot->{original_accession} ||= '';
     $prot->{protein_list_id} = $list_id;
@@ -460,7 +474,7 @@ sub get_options {
   my %opts = ( aux_files => [] );
   GetOptions( \%opts,"verbose:s","quiet","debug:s","testonly", 'list_file:s', 
               'domain_list_id:i', 'help', 'force', 'mode=s', 'project_id:i', 
-              "aux_files=s@", "show_lists", "contact_id=i" ) 
+              "aux_files=s@", "show_lists", "contact_id=i", 'add_proteins' ) 
               || usage( "Error processing options" );
   
   # Check params
