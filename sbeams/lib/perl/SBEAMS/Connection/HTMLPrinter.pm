@@ -1930,6 +1930,34 @@ sub updateStatusWidget {
   return $self->getStatusWidget( add_container => 0, @_ );
 }
 
+sub get_form_fields {
+  my $self = shift;
+  my %args = ( params => {},
+               @_ );
+
+  return '' unless $args{type};
+  return '' unless $args{fields};
+
+  my %fields;
+  if ( $args{type} =~ /^text$/ ) {
+    my $size = $args{size} || 10;
+    for my $field ( @{$args{fields}} ) {
+      my $val = ( defined $args{params}->{$field} ) ? $args{params}->{$field} : '';
+      $fields{$field} = "<tr><td align=right><b>$field</b></td><td align=left><input type='text' value='$val' size=$size id=$field name=$field /></td></tr>\n";
+    }
+  }
+  if ( $args{type} =~ /^radio$/ ) {
+    my $size = $args{size} || 10;
+    for my $field ( @{$args{fields}} ) {
+      my $val = ( defined $args{params}->{$field} ) ? $args{params}->{$field} : '';
+      $fields{$field} = "<tr><td align=right><b>$field</b></td><td align=left><input type=radio value='0' name=$field>No  < input type=radio  name=$field value='1'>Yes</td></tr> \n";
+    }
+  }
+  return \%fields;
+}
+
+
+
 ###############################################################################
 
 1;
