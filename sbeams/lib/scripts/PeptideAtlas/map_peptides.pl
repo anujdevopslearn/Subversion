@@ -84,10 +84,23 @@ while( my $line = <PEPS> ) {
   if ( $opts->{ZtoC} ) {
     $pepseq =~ s/Z/C/g;
   }
+  if ( $opts->{strip_mods} ) {
+    $pepseq =~ s/\[\d+\]//g;
+  }
+
   my $matching_seq = $pepseq;
  
   unless ( $pepseq ) {
-    die "Error, no peptide in $line\n";
+    if( $opts->{blank_skip} ) {
+      if ( $opts->{mapping_out} ) {
+        print OUT join( "\t", @line ) . "\n";
+      } else {
+        print join( "\t", @line ) . "\n";
+      }
+      next;
+    } else {
+      die "Error, no peptide in $line\n";
+    }
   }
   $stats{total}++;
 
@@ -656,7 +669,7 @@ sub get_options {
              'show_proteo', 'show_all_pep', 'omit_match_seq', 'suppress_brute',
              'key_calc', 'show_all_flanking', "min_nomap=i", 'c_term_cnt', 'n_term_cnt',
              'print_context', 'i_to_l_convert', 'acc_sep_char=s', 'd2n_force', 'met_trim',
-             'length_min:i', 'length_max:i' );
+             'length_min:i', 'length_max:i', 'strip_mods', 'blank_skip' );
 
   print_usage() if $opts{help};
 
