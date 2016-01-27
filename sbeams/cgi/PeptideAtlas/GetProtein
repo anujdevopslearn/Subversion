@@ -1050,7 +1050,7 @@ sub handle_request {
 #    ["peptide_accession","P.peptide_accession","Accession DIV"],
 #
   my $group_by_clause = '';
-  my @labels = ( 'Accession', 'Pre AA', 'Sequence', 'Fol AA', 'ESS','Best Prob', 'Best Adj Prob', 'N Obs', 'EOS', 'SSRT', 'N Prot Map', 'N Gen Loc', 'N Samples', 'Subpep of' );
+  my @labels = ( 'Accession', 'Pre AA', 'Sequence', 'Fol AA', 'ESS','NET', 'NMC','Best Prob', 'Best Adj Prob', 'N Obs', 'EOS', 'SSRT', 'N Prot Map', 'N Gen Loc', 'N Samples', 'Subpep of' );
   push @labels, 'Avg Eval' if $parameters{'ann'};
 
   my @column_array = (
@@ -1059,6 +1059,8 @@ sub handle_request {
     ["peptide_sequence","P.peptide_sequence","<DIV TITLE='Amino Acid sequence of this peptide'>Sequence</DIV>"],
     ["following_residue","PI.following_residue","<DIV TITLE='Following (towards the C terminus) amino acid'>Fol AA</DIV>"],
     ["suitability_score","0.0001","<DIV TITLE='Score derived from peptide probability, EOS, and sequence characteristics such as missed cleavage(MC) or semi-tryptic(ST); these are annotated in red.'>ESS</DIV>"],
+    ["highest_n_enzymatic_termini","''","<DIV TITLE='Highest # of enzymatic termini'>NET</DIV>"],
+    ["lowest_n_missed_cleavages","''","<DIV TITLE='Lowest # of missed cleavage'>NMC</DIV>"],
     ["best_probability","STR(PI.best_probability,7,3)","<DIV TITLE='Highest PeptideProphet probability for this observed sequence'>Best Prob</DIV>"],
     ["best_adjusted_probability","STR(PI.best_adjusted_probability,7,3)","<DIV TITLE=''>Best Adj Prob</DIV>"],
   );
@@ -1147,6 +1149,9 @@ sub handle_request {
 	  $group_by_clause
     ORDER BY P.peptide_accession
   ~;
+
+  #$sbeams->display_sql(sql=>$sql);
+
   #### Define the hypertext links for columns that need them
   %url_cols = (
     'Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
@@ -1493,6 +1498,43 @@ sub handle_request {
     #### huge, otherwise the user may not see all peptides
     $rs_params{page_size} = 500;
 
+    #### get correct flanking AA info
+    $sql = qq~
+       SELECT DISTINCT
+           P.peptide_accession AS "peptide_accession",
+           COALESCE(PM.peptide_preceding_residue,PI.preceding_residue) As "preceding_residue",
+           P.peptide_sequence AS "peptide_sequence",
+           COALESCE(PM.peptide_following_residue,PI.following_residue) AS "following_residue",
+           PM.highest_n_enzymatic_termini,
+           PM.lowest_n_missed_cleavages
+			FROM $TBAT_PEPTIDE_INSTANCE PI
+			INNER JOIN $TBAT_PEPTIDE P
+						ON ( PI.PEPTIDE_ID = P.PEPTIDE_ID )
+			 LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
+						ON ( PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID )
+			INNER JOIN $TBAT_ATLAS_BUILD AB
+						ON ( PI.ATLAS_BUILD_ID = AB.ATLAS_BUILD_ID )
+			 LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
+						ON ( AB.BIOSEQUENCE_SET_ID = BSS.BIOSEQUENCE_SET_ID )
+			 LEFT JOIN $TBAT_BIOSEQUENCE BS
+						ON ( PM.MATCHED_BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID )
+			WHERE 1 = 1
+						AND AB.atlas_build_id IN ( $atlas_build_id )
+						AND BS.biosequence_id = $biosequence_id
+			ORDER BY P.PEPTIDE_ACCESSION
+    ~;
+    my @rows = $sbeams->selectSeveralColumns($sql);
+    my %peptide_info = ();
+    foreach my $row(@rows){
+      my ($peptide_accession,$preceding_residue,$peptide_sequence,$following_residue,
+          $highest_n_enzymatic_termini,$lowest_n_missed_cleavages) = @$row;
+      push @{$peptide_info{$peptide_accession}{preceding_residue}}, $preceding_residue;
+      push @{$peptide_info{$peptide_accession}{following_residue}}, $following_residue;
+      $peptide_info{$peptide_accession}{highest_n_enzymatic_termini} = $highest_n_enzymatic_termini;
+      $peptide_info{$peptide_accession}{lowest_n_missed_cleavages} = $lowest_n_missed_cleavages;
+    }
+
+
     #### Calculate the best peptides to use
     my $best_peptide_information = $bestPeptideSelector->getBestPeptides(
       atlas_build_id => $atlas_build_id,
@@ -1501,6 +1543,7 @@ sub handle_request {
       resultset_ref => $resultset_ref,
       column_titles_ref=>\@column_titles,
       is_trypsin_build => $is_trypsin_build,
+      peptide_info => \%peptide_info,
       no_escape => 1
     );
 #    $log->debug( Dumper( $best_peptide_information ) );
@@ -1509,10 +1552,10 @@ sub handle_request {
     my %instance_ids;
     my $max_peptides = 40;
     my $pep_cnt;
-    for my $row ( sort { $b->[7] <=> $a->[7] } @{$resultset_ref->{data_ref}} ) {
+    for my $row ( sort { $b->[9] <=> $a->[9] } @{$resultset_ref->{data_ref}} ) {
       $pep_cnt++;
       last if $pep_cnt >= $max_peptides;
-			$instance_ids{$row->[14]}++;
+			$instance_ids{$row->[16]}++;
     }
 
 
@@ -1522,36 +1565,43 @@ sub handle_request {
     for my $row ( @{$resultset_ref->{data_ref}} ) {
       push @pa_accessions, $row->[0];
 			my $ntt = 0;
-			if ( $row->[1] =~ /[-RK]/ ) {
-				$ntt++;
-			}
-			if ( $row->[2] =~ /[RK]$/ || $row->[3] eq '-' ) {
-				$ntt++;
-			}
-
+      if ($row->[5] ne ''){
+        $ntt = $row->[5];
+      }else{
+				if ( $row->[1] =~ /[-RK]/ ) {
+					$ntt++;
+				}
+				if ( $row->[2] =~ /[RK]$/ || $row->[3] eq '-' ) {
+					$ntt++;
+				}
+      }
 			my $mc = 0;
-			if ( $row->[2] =~ /[RK][^P]/ ) {
-				$mc++;
-			}
+      if ($row->[6] ne ''){
+        $mc = $row->[6];
+      }else{
+				if ( $row->[2] =~ /[RK][^P]/ ) {
+					$mc++;
+				}
+      }
+
 			my $mgl = 0;
-			if ( $row->[11] > 1 ) {
+			if ( $row->[13] > 1 ) {
 				$mgl++;
 			}
 
-      #  Oh please please please!  No again, sigh!
-#      if ($sbeams->output_mode() eq 'html') { 
-        push @sample_list, [ $row->[0], $row->[12] ];
-        for my $idx ( 12, 13 ) {
+      push @sample_list, [ $row->[0], $row->[$resultset_ref->{column_hash_ref}{'sample_ids'}] ];
+    
+      for my $idx ($resultset_ref->{column_hash_ref}{'sample_ids'},
+                   $resultset_ref->{column_hash_ref}{'is_subpeptide_of'} ) {
           $row->[$idx] =~ s/\s//g;
           my @samples = split( /,/, $row->[$idx] );
-          if ( $idx == 12 ) {
+          if ( $idx == $resultset_ref->{column_hash_ref}{'sample_ids'} ) {
             my $cnt = scalar( @samples );
             $row->[$idx] = ( $htmlmode ) ? "<A HREF='$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$row->[0]&action=QUERY#samples' TITLE='$row->[$idx]'> $cnt </A>" : $cnt;
           } else {
             $row->[$idx] = scalar( @samples );
           }
         }
-#      }
 
       my %sample_list = @sample_list;
 			my @errs;

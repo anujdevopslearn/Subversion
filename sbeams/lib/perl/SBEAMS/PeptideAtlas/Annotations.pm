@@ -419,6 +419,8 @@ sub get_column_defs {
     'Source' => 'Source from which transitions were obtained', 
     'Fol AA' =>'Following (towards the C terminus) amino acid',
     'Peptide Length' => 'Length of peptide', 
+    'NET' => 'Highest number of enzymatic termini',
+    'NMC' => 'Lowest number of missed cleavage',
     'ESS' => 'Empirical suitability score, derived from peptide probability, EOS, and the number of times observed.  This is then adjusted sequence characteristics such as missed cleavage <SUP><FONT COLOR=RED>[MC]</FONT></SUP> or semi-tryptic <SUP><FONT COLOR=RED>[ST]</FONT></SUP>, or <BR> multiple genome locations <SUP><FONT COLOR=RED>[MGL]</FONT></SUP>.', 
     'PSS' => 'Predicted suitability score, derived from combining publicly available algorithms (Peptide Sieve, STEPP, ESPP, APEX, Detectability Predictor)', 
 

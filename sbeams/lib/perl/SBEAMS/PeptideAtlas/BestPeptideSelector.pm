@@ -147,6 +147,7 @@ sub getBestPeptides {
 
   my $n_rows = scalar(@{$resultset_ref->{data_ref}});
   my $cols = $resultset_ref->{column_hash_ref};
+  my $peptide_info = $args{peptide_info} || {};
 
   #### Loop over all rows, calculating some max stats of certain columns
   my $max_n_observations = 0;
@@ -166,6 +167,7 @@ sub getBestPeptides {
 
   #### Loop over all rows, calculating a suitability score
   for (my $i=0; $i<$n_rows; $i++) {
+    my $peptide_accession = $resultset_ref->{data_ref}->[$i]->[$cols->{peptide_accession}];
     my $n_observations = $resultset_ref->{data_ref}->[$i]->[$cols->{n_observations}];
     my $best_probability = $resultset_ref->{data_ref}->[$i]->[$cols->{best_probability}];
     my $n_protein_mappings = $resultset_ref->{data_ref}->[$i]->[$cols->{n_protein_mappings}];
@@ -174,7 +176,18 @@ sub getBestPeptides {
     my $preceding_residue = $resultset_ref->{data_ref}->[$i]->[$cols->{preceding_residue}];
     my $following_residue = $resultset_ref->{data_ref}->[$i]->[$cols->{following_residue}];
     my $peptide_sequence = $resultset_ref->{data_ref}->[$i]->[$cols->{peptide_sequence}];
-
+    my $highest_n_enzymatic_termini = ''; 
+    my $lowest_n_missed_cleavages  =  '';
+    if ($peptide_info){
+      if (defined $peptide_info->{$peptide_accession}{highest_n_enzymatic_termini}){
+        $highest_n_enzymatic_termini = $peptide_info->{$peptide_accession}{highest_n_enzymatic_termini};
+        $lowest_n_missed_cleavages = $peptide_info->{$peptide_accession}{lowest_n_missed_cleavages};
+        $resultset_ref->{data_ref}->[$i]->[$cols->{preceding_residue}] = join(",", @{$peptide_info->{$peptide_accession}{preceding_residue}});
+        $resultset_ref->{data_ref}->[$i]->[$cols->{following_residue}] = join(",", @{$peptide_info->{$peptide_accession}{following_residue}});
+        $resultset_ref->{data_ref}->[$i]->[$cols->{highest_n_enzymatic_termini}] = $highest_n_enzymatic_termini;
+        $resultset_ref->{data_ref}->[$i]->[$cols->{lowest_n_missed_cleavages}] =$lowest_n_missed_cleavages;
+      }
+    }
     my @annot; # array of sequence annotations
     next if(! $n_observations);
 
@@ -186,15 +199,12 @@ sub getBestPeptides {
     if ($max_empirical_observability_score == 0) {
       $divisor = 2;
     } else {
-      $empirical_observability_fraction = 
-	$empirical_observability_score / $max_empirical_observability_score;
+      $empirical_observability_fraction = $empirical_observability_score/$max_empirical_observability_score;
     }
 
     my $suitability_score = (
-      $n_observations / $max_n_observations +
-      ( $best_probability - 0.9 ) / 0.1 +
-      $empirical_observability_fraction
-    ) / $divisor;
+      $n_observations/$max_n_observations+($best_probability - 0.9 ) / 0.1 +
+      $empirical_observability_fraction)/$divisor;
     $suitability_score *= $args{ss_adjust};
 
     if ($n_protein_mappings > 1) {
@@ -206,40 +216,53 @@ sub getBestPeptides {
 
     ## Penalty if not fully tryptic 
     # Fixed? 2010-06-21
+
 #    unless ($preceding_residue =~ /[KR\-]/ && 
 #             ($peptide_sequence =~ /[KR]$/ || $following_residue eq '-') ) {
 #      $suitability_score *= 0.2;
 #      push @annot, 'ST';
 #    }
 #
-    if($args{is_trypsin_build} eq 'Y'){
-			my $ntt = 0;
-			# N Terminal side
-			if ( $preceding_residue =~ /[RK]/ && $peptide_sequence !~ /^P/ ) {
-				$ntt++;
-			} elsif ( $preceding_residue =~ /-/ ) {
-				$ntt++;
-			}
+     
+    if ($highest_n_enzymatic_termini ne ''){
+      if ($highest_n_enzymatic_termini < 2){
+        $suitability_score *= 0.2;
+        push @annot, 'ST';
+      }
+      if ($lowest_n_missed_cleavages > 0){
+        $suitability_score *= 0.67;
+         push @annot, 'MC';
+      }
+    }else{
+			if($args{is_trypsin_build} eq 'Y'){
+				my $ntt = 0;
+				# N Terminal side
+				if ( $preceding_residue =~ /[RK]/ && $peptide_sequence !~ /^P/ ) {
+					$ntt++;
+				} elsif ( $preceding_residue =~ /-/ ) {
+					$ntt++;
+				}
 
-				# CTerminal side
-			if ( $following_residue eq '-' ) {
-				$ntt++;
-			} elsif ( $peptide_sequence =~ /[RK]$/ && $following_residue ne 'P' ) {
-				$ntt++;
-			}
+					# CTerminal side
+				if ( $following_residue eq '-' ) {
+					$ntt++;
+				} elsif ( $peptide_sequence =~ /[RK]$/ && $following_residue ne 'P' ) {
+					$ntt++;
+				}
 
-			## Penalty for ntt < 2 
-			unless ( $ntt == 2 ) {
-				$suitability_score *= 0.2;
-				push @annot, 'ST';
-			}
+				## Penalty for ntt < 2 
+				unless ( $ntt == 2 ) {
+					$suitability_score *= 0.2;
+					push @annot, 'ST';
+				}
 
-			## Penalty for missed cleavage
-			if ( $peptide_sequence =~ /([KR][^P])/) {
-				$suitability_score *= 0.67;
-				push @annot, 'MC';
-			}
-    } ## if not trypsin build skip, this step. 
+				## Penalty for missed cleavage
+				if ( $peptide_sequence =~ /([KR][^P])/) {
+					$suitability_score *= 0.67;
+					push @annot, 'MC';
+				}
+			} ## if not trypsin build skip, this step. 
+    }
 
     if ( $args{build_weight} ) {
       my $build_id = $resultset_ref->{data_ref}->[$i]->[$cols->{atlas_build}];
