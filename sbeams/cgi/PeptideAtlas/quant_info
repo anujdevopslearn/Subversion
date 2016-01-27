@@ -6,7 +6,7 @@
 #
 # Description : This script displays details about a single quant SRM Atlas peptide
 #
-# SBEAMS is Copyright (C) 2000-2013 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2016 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -21,6 +21,7 @@ use vars qw ($q $sbeams $atlas $PROG_NAME
 use lib qw (../../lib/perl);
 use CGI::Carp qw(fatalsToBrowser croak);
 use Statistics::LineFit;
+  use Data::Dumper;
 
 use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::DataTable;
@@ -41,6 +42,9 @@ $atlas->setSBEAMS($sbeams);
 # Global Variables
 ###############################################################################
 $PROG_NAME = 'quant_info';
+my $aslog = 'true';
+my $showline = 1;
+my $avg_type = 'log';
 main();
 
 
@@ -80,6 +84,9 @@ sub main
     $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 #    $sbeams->printCGIParams($q);
 
+    $aslog = ( $parameters{plottype} && $parameters{plottype} eq 'linear' ) ? 'false' : 'true';
+    $showline = ( defined $parameters{showline} ) ? $parameters{showline} : 1;
+    $avg_type = ( defined $parameters{avg_type} && $parameters{avg_type} eq 'linear' ) ? 'linear' : 'log';
 
     #### Decide what action to take based on information so far
     if ($parameters{action} eq "???") {
@@ -153,8 +160,7 @@ sub handle_request {
     my $ppt = $parameters{'ppt'} || 0;
     my $table_width = $parameters{'width'} || 800;
 
-    my $aslog = ( $parameters{plottype} && $parameters{plottype} eq 'linear' ) ? 'false' : 'true';
-    $aslog ||= 'true';
+    $aslog = ( $parameters{plottype} && $parameters{plottype} eq 'linear' ) ? 'false' : 'true';
     my $expt_id = $parameters{expt_id} || 1;
 
     #### Get a list of accessible project_ids
@@ -327,6 +333,7 @@ sub handle_request {
     $line_info{$mz}->{slope} ||= $row[11]; 
     $line_info{$mz}->{intercept} ||= $row[12]; 
     $line_info{$mz}->{points} ||= $row[13]; 
+    $line_info{$mz}->{points} = 6; 
 
 #    push @data, [ $mz, $area, $row[3], $dil{$row[3]}, $conc, $row[5] ];
     $data{$mz} ||= {};
@@ -334,10 +341,16 @@ sub handle_request {
     $data{$mz}->{$conc}->{$rep} = $area;
     $cnt++;
 	}
-  use Data::Dumper;
 	return unless %data; 
+#  die Dumper( %data );
 
-  my ( $div_strings, $chart_functions, $chart_callbacks ) = get_avg_plot( \%avg, \%line_info );
+  my ( $div_strings, $chart_functions, $chart_callbacks );
+  if ( $avg_type eq 'log' ) {
+    ( $div_strings, $chart_functions, $chart_callbacks ) = get_avg_plot_log_fit( \%avg, \%line_info );
+  } else {
+    ( $div_strings, $chart_functions, $chart_callbacks ) = get_avg_plot_linear_fit( \%avg, \%line_info );
+  }
+
 
 	for my $frag ( sort{ $a <=> $b } keys( %data ) ) {
     my $js_data = '';
@@ -354,7 +367,11 @@ sub handle_request {
         for my $rep ( @reps ) {
           $js_data .= ", 'rep_$rep'";
         }
-        $js_data .= ",'Fit']";
+        if ( $showline ) {
+          $js_data .= ",'Fit']";
+        } else {
+          $js_data .= ",'']";
+        }
       }
 
       my @areas;
@@ -377,9 +394,12 @@ sub handle_request {
 #      my $avg = int( abs($tot/$cnt) );
 #      $avg ||= 1;
 #      push @areas, $avg;
-	  	$js_data .= ",\n[$conc," . join( ',', @areas ) . ']';
+	  	$js_data .= ",\n[$conc," . join( ',', @areas ) . ']' . "\n";
     }
-#    die Dumper( $js_data );
+#    print "<pre>";
+#    print Dumper( $js_data );
+#    print "</pre>";
+
 
   		my $div_name = $sbeams->getRandomString( num_chars => 20 );
 
@@ -400,7 +420,7 @@ sub handle_request {
 					pointSize:  3,
 					hAxis: {title: 'Femtomoles on Column', logScale: $aslog   },
 					vAxis: {title: 'Intensity (area under chromatogram)', logScale: $aslog },
-					series: [{ pointSize: 4 },{ pointSize: 4 },{ pointSize: 4 },{ pointSize: 4 },{ pointSize: 4 },  { pointSize: 0, lineWidth: 1, visibleInLegend: true}]
+					series: [{ pointSize: 4 },{ pointSize: 4 },{ pointSize: 4 },{ pointSize: 4 },{ pointSize: 4 },  { pointSize: 0, lineWidth: $showline, visibleInLegend: true}]
         };
 
         var chart = new google.visualization.ScatterChart(document.getElementById('$div_name'));
@@ -409,6 +429,7 @@ sub handle_request {
 		~;
 	}
 
+#					series: [{ pointSize: 4 },{ pointSize: 4 },{ pointSize: 4 },{ pointSize: 4 },{ pointSize: 4 },  { pointSize: 0, lineWidth: 1, visibleInLegend: true}]
   print qq~
     $div_strings
     <script type="text/javascript" src="https://www.google.com/jsapi"></script>
@@ -423,18 +444,154 @@ sub handle_request {
 
 } # end showMainPage
 
-sub get_avg_plot {
+# Get avg plot with log-log fitted transition lines
+sub get_avg_plot_log_fit {
   my $avg = shift;
   my $line = shift;
   
-  my $aslog = 'true';
+  my @quant;
+  my $frag;
+
+  my @lconcs;
+  my %log_areas;
+  my $pcnt = 0;
+
+  # Loop over concentrations, calculating line fit in log-log space
+  for my $conc ( sort { $b <=> $a } keys( %{$avg} ) ) {
+    $pcnt++;
+    last if $pcnt > $line->{Sum}->{points};
+    push @lconcs, log($conc)/log(10);
+    for my $pt ( keys( %{$avg->{$conc}} ) ) {
+      $log_areas{$pt} ||= [];
+      push @{$log_areas{$pt}}, log( ($avg->{$conc}->{$pt}/5 ) )/log(10) if $pcnt <= $line->{$pt}->{points};
+    }
+  }
+
+
+  my %fits;
+  for my $pt ( keys( %log_areas ) ) {
+    my $lineFit = Statistics::LineFit->new();
+    $lineFit->setData (\@lconcs, \@{$log_areas{$pt}} ) or die "Invalid data";
+    my ($intercept, $slope) = $lineFit->coefficients();
+    my $rSquared = $lineFit->rSquared();
+    my @lpred = $lineFit->predictedYs();
+    $fits{$pt} = { slope => sprintf( "%0.1f", $slope ),
+                   intercept => sprintf( "%0.1f", $intercept ),
+                   rSquared => sprintf( "%0.4f", $rSquared ),
+                   predicted_ys => \@lpred };
+  }
+
+  my $points;
+  my $sep = '';
+  for my $frag ( sort( keys( %{$line} ) ) ) {
+    $points .= "$sep$frag: $line->{$frag}->{points}";
+    $sep = ',&nbsp;&nbsp;';
+  }
+
+#  print Dumper( $line );
+  my $js_data;
+  my @data_pts;
+  my $titles = "['Conc',";
+  my $h_seen = 0;
+  my $conc_idx = 0;
+
+
+  $pcnt = 0;
+  for my $conc ( sort { $b <=> $a } keys( %{$avg} ) ) {
+    $pcnt++;
+    my $sep = '';
+    my $data_pt = "[$conc,";
+    for my $pt ( sort { $a <=> $b } keys( %{$avg->{$conc}} ) ) {
+
+      my $response = int( $conc * $line->{$pt}->{slope} + $line->{$pt}->{intercept} );
+      
+      $avg->{$conc}->{$pt} ||= 5;
+      my $val = int( $avg->{$conc}->{$pt} / 5 );
+
+      my $short_pt = $pt;
+      unless( $short_pt eq 'Sum' ) {
+        $short_pt = sprintf( "%0.2f", $pt );
+      }
+      $titles .= $sep . "'$short_pt'" unless $h_seen;
+      $data_pt .= $sep . "$val";
+      $sep ||= ',';
+
+      $titles .= $sep . "'Linear'" unless $h_seen;
+      $data_pt .= $sep . "$response";
+
+      my $log_response = int(10**$fits{$pt}->{predicted_ys}->[$conc_idx] );
+      $titles .= $sep . "'Log Fit'" unless $h_seen;
+      $data_pt .= $sep . $log_response;
+    }
+    $titles .= "],\n" unless $h_seen;
+    $data_pt .= "]";
+    push @data_pts, $data_pt;
+    $h_seen++;
+    $conc_idx++;
+  }
+  $js_data = $titles . join( ",\n", @data_pts ) . "\n";
+
+
+  my $slope_js = "['',";
+
+  my $div_name = $sbeams->getRandomString( num_chars => 20 );
+
+  my $line_info = '';
+  my $div_strings .= qq~<BR><DIV style="border: 1px solid gray; width: 500px" > <div id="$div_name" style="width: 500px; height: 360px" > </div><CENTER>$line_info</CENTER></DIV>~;
+
+  my $chart_callbacks .= "google.setOnLoadCallback(draw_${div_name}_Chart);\n";
+  my $noline = 0;
+  my $chart_functions .= qq~
+  function draw_${div_name}_Chart() {
+    var data = google.visualization.arrayToDataTable([
+      $js_data
+    ]);
+
+    var options = {
+      title: "$quant[0] product ion $frag",
+      pointSize:  3,
+      hAxis: {title: 'Femtomoles on Column', logScale: $aslog   },
+      vAxis: {title: 'Intensity (area under chromatogram)', logScale: $aslog },
+      colors: [ 'green', 'green', 'green',
+                'yellow','yellow','yellow',
+                'purple', 'purple','purple', 
+                'blue', 'blue', 'blue', 
+                'orange', 'orange','orange', 
+                'black', 'black','black', 
+                'pink', 'pink', 'pink' ],
+      series: [{ pointSize: 5, lineWidth: 0 },{ pointSize: 0, lineWidth: $noline, visibleInLegend: false },{ pointSize: 0, lineWidth: 1, visibleInLegend: false },
+               { pointSize: 3, lineWidth: 0 },{ pointSize: 0, lineWidth: $noline, visibleInLegend: false },{ pointSize: 0, lineWidth: $showline, visibleInLegend: false },
+               { pointSize: 3, lineWidth: 0 },{ pointSize: 0, lineWidth: $noline, visibleInLegend: false },{ pointSize: 0, lineWidth: $showline, visibleInLegend: false },
+               { pointSize: 3, lineWidth: 0 },{ pointSize: 0, lineWidth: $noline, visibleInLegend: false },{ pointSize: 0, lineWidth: $showline, visibleInLegend: false },
+               { pointSize: 3, lineWidth: 0 },{ pointSize: 0, lineWidth: $noline, visibleInLegend: false },{ pointSize: 0, lineWidth: $showline, visibleInLegend: false },
+               { pointSize: 3, lineWidth: 0 },{ pointSize: 0, lineWidth: $noline, visibleInLegend: false },{ pointSize: 0, lineWidth: $showline, visibleInLegend: false },
+             ]
+    };
+
+    var chart = new google.visualization.ScatterChart(document.getElementById('$div_name'));
+    chart.draw(data, options);
+
+
+    var div = document.getElementById('$div_name');
+//    div.innerHTML = div.innerHTML + '$points';
+  }
+~;
+  return( $div_strings, $chart_callbacks, $chart_functions );
+}
+
+
+
+sub get_avg_plot_linear_fit {
+  my $avg = shift;
+  my $line = shift;
+  
   my @quant;
   my $frag;
 
   my @lconcs;
   my @lareas;
   my $pcnt = 0;
-#  die Dumper( $line );
+#die Dumper( $line );
   for my $conc ( sort { $b <=> $a } keys( %{$avg} ) ) {
     $pcnt++;
     next if $pcnt > $line->{Sum}->{points};
@@ -451,6 +608,9 @@ sub get_avg_plot {
   $slope = sprintf( "%0.1f", $slope );
   $rSquared = sprintf( "%0.4f", $rSquared );
 
+  $intercept = $line->{Sum}->{intercept};
+  $slope = $line->{Sum}->{slope};
+
   my $points;
   my $sep = '';
   for my $frag ( sort( keys( %{$line} ) ) ) {
@@ -458,6 +618,7 @@ sub get_avg_plot {
     $sep = ',&nbsp;&nbsp;';
   }
 
+#  print Dumper( $line );
   my $js_data;
   my @data_pts;
   my $titles = "['Conc',";
@@ -486,12 +647,13 @@ sub get_avg_plot {
       $data_pt .= $sep . "$response";
 
       if ( $pt eq 'Sum' ) {
-        my $log_response = int(10**$lpred[$conc_idx] );
-        $titles .= $sep . "'Log Fit'" unless $h_seen;
-        if ( $pcnt > $line->{$pt}->{points} ) {
-#          $log_response = 'null';
+        if ( $aslog eq 'true' ) {
+          $response = int(10**$lpred[$conc_idx] );
+          $titles .= $sep . "'Log Fit'" unless $h_seen;
+        } else {
+          $titles .= $sep . "'Fit'" unless $h_seen;
         }
-        $data_pt .= $sep . $log_response;
+        $data_pt .= $sep . $response;
       }
     }
     $titles .= "],\n" unless $h_seen;
@@ -501,7 +663,6 @@ sub get_avg_plot {
     $conc_idx++;
   }
   $js_data = $titles . join( ",\n", @data_pts ) . "\n";
-#  die Dumper( $js_data );
 
 
   my $slope_js = "['',";
@@ -523,19 +684,19 @@ sub get_avg_plot {
       pointSize:  3,
       hAxis: {title: 'Femtomoles on Column', logScale: $aslog   },
       vAxis: {title: 'Intensity (area under chromatogram)', logScale: $aslog },
-      colors: [ 'green', 'green', 'red',
+      colors: [ 'green', 'green', 'green',
                 'yellow','yellow',
                 'purple', 'purple', 
                 'blue', 'blue', 
                 'orange', 'orange', 
                 'black', 'black', 
                 'pink', 'pink' ],
-      series: [{ pointSize: 5, lineWidth: 0 },{ pointSize: 0, lineWidth: 1, visibleInLegend: false },{ pointSize: 0, lineWidth: 1 },
-               { pointSize: 3, lineWidth: 0 },{ pointSize: 0, lineWidth: 1, visibleInLegend: false },
-               { pointSize: 3, lineWidth: 0 },{ pointSize: 0, lineWidth: 1, visibleInLegend: false },
-               { pointSize: 3, lineWidth: 0 },{ pointSize: 0, lineWidth: 1, visibleInLegend: false },
-               { pointSize: 3, lineWidth: 0 },{ pointSize: 0, lineWidth: 1, visibleInLegend: false },
-               { pointSize: 3, lineWidth: 0 },{ pointSize: 0, lineWidth: 1, visibleInLegend: false },
+      series: [{ pointSize: 5, lineWidth: 0 },{ pointSize: 0, lineWidth: $showline, visibleInLegend: false },{ pointSize: 0, lineWidth: 1 },
+               { pointSize: 3, lineWidth: 0 },{ pointSize: 0, lineWidth: $showline, visibleInLegend: false },
+               { pointSize: 3, lineWidth: 0 },{ pointSize: 0, lineWidth: $showline, visibleInLegend: false },
+               { pointSize: 3, lineWidth: 0 },{ pointSize: 0, lineWidth: $showline, visibleInLegend: false },
+               { pointSize: 3, lineWidth: 0 },{ pointSize: 0, lineWidth: $showline, visibleInLegend: false },
+               { pointSize: 3, lineWidth: 0 },{ pointSize: 0, lineWidth: $showline, visibleInLegend: false },
              ]
     };
 
@@ -544,7 +705,7 @@ sub get_avg_plot {
 
 
     var div = document.getElementById('$div_name');
-    div.innerHTML = div.innerHTML + '$points';
+//    div.innerHTML = div.innerHTML + '$points';
   }
 ~;
   return( $div_strings, $chart_callbacks, $chart_functions );
