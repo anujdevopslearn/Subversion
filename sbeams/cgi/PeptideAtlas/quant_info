@@ -540,7 +540,7 @@ sub get_avg_plot_log_fit {
   my $div_strings .= qq~<BR><DIV style="border: 1px solid gray; width: 500px" > <div id="$div_name" style="width: 500px; height: 360px" > </div><CENTER>$line_info</CENTER></DIV>~;
 
   my $chart_callbacks .= "google.setOnLoadCallback(draw_${div_name}_Chart);\n";
-  my $noline = 0;
+  my $noline = ( $avg_type eq 'linear' ) ? 1 : 0;
   my $chart_functions .= qq~
   function draw_${div_name}_Chart() {
     var data = google.visualization.arrayToDataTable([
