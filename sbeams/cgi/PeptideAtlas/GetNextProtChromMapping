@@ -427,7 +427,7 @@ sub handle_request {
       ["n_neXtProt_entry", "NCM.n_neXtProt_entry", "N Chromosomal Location"],
       ["Protein_existence", "NCM.Protein_existence", "neXtProt Protein Evidence"],
       ["PeptideAtlas_Category", "NCM.PeptideAtlas_Category", "PeptideAtlas"],
-      ["nobs", "NCM.n_obs", "N Distince Peptides"],
+      ["nobs", "NCM.n_obs", "N Distinct Peptides"],
       ["Description", "NCM.Description", "Description"]
     );
 
