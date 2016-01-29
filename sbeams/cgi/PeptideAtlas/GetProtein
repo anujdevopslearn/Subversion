@@ -4239,6 +4239,11 @@ sub renderProteinAccessionAndStatus {
       $statusColor = "green";
       $statusMessage = "The status '$identification_status' means that there are peptides that map uniquely to a set of non-canonical proteins, thereby indicating that at least one of the proteins in the set must be present, but it cannot be determined which it is. The protein most highly regarded by UniProt (i.e. lowest PE value, lowest accession number) is selected as the '$identification_status' and the others are either indistinguishable or subsumed. For example, if PE=1 protein P12345 and PE=2 P12999 both shared the exact same 5 peptides, but were sequence distinct, P12345 would be '$identification_status' and P12999 would be indistinguishable.";
 
+    } elsif ($identification_status =~ /representative/) {
+      my $specificProteinMessage = "has been selected to be the representative to explain muliply-mapping peptides";
+      $statusColor = "orange";
+      $statusMessage = "The status '$identification_status' means that there are peptides that map uniquely to a set of non-canonical proteins, thereby indicating that at least one of the proteins in the set must be present, but it cannot be determined which it is. The protein most highly regarded by UniProt (i.e. lowest PE value, lowest accession number) is selected as the '$identification_status' and the others are either indistinguishable or subsumed.";
+
     } elsif ($identification_status =~ /indistinguishable from (.*)$/) {
       my $specificProteinMessage = "another protein entry with a different sequence, to which PeptideAtlas has assigned these peptides";
       $specificProteinMessage = "$1, which has a different sequence than this one, and to which PeptideAtlas has assigned these peptides" if ($1);
