@@ -30,15 +30,18 @@ use Data::Dumper;
 use XML::Writer;
 use IO;
 
+# Testing use of new freetds/DBDSybase
+#use lib( "/net/db/dcampbel/projects/programs/lib/x86_64-linux-thread-multi-ld/" );
+use DBI;
+use DBD::Sybase;
 
 use lib "$FindBin::Bin/../../perl";
 use vars qw ($sbeams
              $PROG_NAME %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
              $current_contact_id $current_username
-            );
-use vars qw ($content_handler);
-use vars qw ($table_info $post_update);
+             $content_handler $table_info );
 
+my $written_count = 0;
 
 #### Set up SBEAMS package
 use SBEAMS::Connection;
@@ -66,6 +69,11 @@ if ($DEBUG) {
 ###############################################################################
 # Set Global Variables and execute main()
 ###############################################################################
+#
+my $dbh = $sbeams->getDBHandle();
+$sbeams->setRaiseErrorOn();
+my %stmts;
+
 main();
 exit 0;
 
@@ -196,12 +204,15 @@ sub exportTableData {
 
   #### Process the arguments list
   my $table_handle = $args{'table_name'} || die "table_name not passed";
+
   my $qualifiers = $args{'qualifiers'} || '';
   my $writer = $args{'writer'} || die "writer not passed";
   my $cascade = $args{'cascade'} || 0;
   my $map_audit_user_to = $OPTIONS{"map_audit_user_to"} || '';
   my $map_audit_group_to = $OPTIONS{"map_audit_group_to"} || '';
 
+  my $fk_column = $args{fk_column} || '';
+  my $fk_value = $args{fk_value} || '';
 
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
@@ -218,28 +229,31 @@ sub exportTableData {
     die("Unable to get real_table_name from '$table_handle'");
   }
 
-
   #### Define the SQL statement to fetch the data
   $sql = "SELECT * FROM $real_table_name";
-  $sql .= " WHERE $qualifiers" if ($qualifiers);
+  $sql .= " WHERE $qualifiers \n" if ($qualifiers);
+  $sql .= " ORDER BY $args{fk_column} \n" if ($args{fk_column});
   $sql = evalSQL($sql);
 
 	if ( $OPTIONS{sql_only} ) {
 		print "$sql \n\n";
 		return;
 	}
+  
+  my $handle;
+  if ( $fk_column && $fk_value ) {
+    my $stmt_key = $real_table_name .  '_' . $fk_column;
+    $stmts{$stmt_key} ||= $dbh->prepare( "SELECT * FROM $real_table_name WHERE $fk_column = ?" );
+    $handle = $stmts{$stmt_key};
+    $handle->execute( $args{fk_value} );
+  } else {
+    $handle = $sbeams->get_statement_handle( $sql );
+  }
 
-
-  #### Fetch the appropriate rows from the database
-  #print "$sql\n";
-
-  #  This call creates 2 arrays of size = num_rows, changed DSC 11/2006
+  #  Original call creates 2 arrays of size = num_rows, changed DSC 11/2006
   #  my @rows = $sbeams->selectHashArray($sql);
-
-  my $hashref = $sbeams->get_statement_handle( $sql );
-
   #### Loop over each row, writing out the data
-  while ( my $row = $hashref->fetchrow_hashref() ) {
+  while ( my $row = $handle->fetchrow_hashref() ) {
   
     my $result = exportDataRow(
       table_name => $table_handle,
@@ -266,6 +280,11 @@ sub exportTableData {
 sub exportDataRow {
   my %args = @_;
 
+  unless ( $written_count % 10000 ) {
+    print STDERR "Memory at " . memusage() . " after $written_count\n" 
+  }
+  $written_count++;
+
   #### Process the arguments list
   my $table_handle = $args{'table_name'} || die "table_name not passed";
   my $writer = $args{'writer'} || die "writer not passed";
@@ -289,12 +308,10 @@ sub exportDataRow {
         "but did not!");
     }
     #### If we already wrote out this one, skip it
-    my $written_status =
-      $table_info->{$table_handle}->{written_records}->{$PK_value};
-    if ($written_status eq 'YES') {
+    my $written_status = $table_info->{$table_handle}->{written_records}->{$PK_value};
+    if ($written_status == 1) {
       return 1;
-    }
-    if ($written_status eq 'PENDING') {
+    } elsif ( $written_status == 99 ) {
       print "WARNING: $table_handle:$PK_value: Circular reference to ".
         "partially written record!\n" if ($VERBOSE>1);
       return -99;
@@ -330,8 +347,7 @@ sub exportDataRow {
     #### Remember that writing of this record is pending to detect
     #### circular references
     if ($PK_column_name && $PK_value) {
-      $table_info->{$table_handle}->{written_records}->{$PK_value} =
-        'PENDING';
+      $table_info->{$table_handle}->{written_records}->{$PK_value} = 99;
     }
 
     while ( ($key,$value) = each %{$row}) {
@@ -366,7 +382,7 @@ sub exportDataRow {
           #### If the written status of this one is PENDING, then trouble
           my $written_status = 
             $table_info->{$fk_table}->{written_records}->{$value};
-          if ($written_status eq 'PENDING') {
+          if ( $written_status == 99 ) {
             print "WARNING: $table_handle:$PK_value: Caught request to write ".
               "out an already pending record which is then circular.  Remedy ".
               "will be to write out the record as is but note that upon".
@@ -375,7 +391,7 @@ sub exportDataRow {
               if ($VERBOSE>1);
             #$row->{$key} = "1xxxxxxxxx($value)";
 
-          } elsif ($written_status eq 'YES') {
+          } elsif ($written_status == 1) {
             print "INFO: $table_handle:$PK_value: Already wrote ".
               "$key = '$value'\n" if ($VERBOSE>1);
             next;
@@ -386,6 +402,8 @@ sub exportDataRow {
               "$key = '$value'\n" if ($VERBOSE>1);
             my $result = exportTableData(
               table_name => $fk_table,
+              fk_column => $fk_column,
+              fk_value => $value,
               qualifiers => "$fk_column = '$value'",
               writer => $writer,
               cascade => $cascade,
@@ -400,7 +418,7 @@ sub exportDataRow {
   #### Remember that we wrote out this record
   if ($PK_column_name && $PK_value) {
     #print "Wrote $PK_column_name:$PK_value\n";
-    $table_info->{$table_handle}->{written_records}->{$PK_value} = 'YES';
+    $table_info->{$table_handle}->{written_records}->{$PK_value} = 1;
   }
 
 
@@ -468,6 +486,7 @@ sub getTableInfo {
   $sql = "SELECT *
             FROM $TB_TABLE_COLUMN
            WHERE table_name = '$table_name'
+           ORDER BY column_name ASC
   ";
   my @rows = $sbeams->selectHashArray($sql);
   my $nrows = scalar(@rows);
@@ -596,6 +615,21 @@ sub processOptions {
   }
   
   $OPTIONS{cascade} = $OPTIONS{recursive};
+}
+
+sub memusage {
+  my @results = `ps -o pmem,pid $$`;
+  my $mem = '';
+  for my $line  ( @results ) {
+    chomp $line;
+    my $pid = $$;
+    if ( $line =~ /\s*(\d+\.*\d*)\s+$pid/ ) {
+      $mem = $1;
+      last;
+    }
+  }
+  $mem .= '% (' . time() . ')';
+  return $mem;
 }
 
 sub printUsage {
