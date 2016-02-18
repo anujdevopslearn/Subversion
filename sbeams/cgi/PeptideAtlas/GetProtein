@@ -1653,7 +1653,7 @@ if ( 0 ) { # Not ready for prime time
     for my $row ( @{$resultset_ref->{data_ref}} ) {
       push @pa_accessions, $row->[0];
 			my $ntt = 0;
-      if ($row->[5] ne '') {
+      if ( defined $row->[5] && $row->[5] ne '') {
         $ntt = $row->[5];
       } else {
   			if ( $row->[1] =~ /[-RK]/ ) {
@@ -1663,13 +1663,15 @@ if ( 0 ) { # Not ready for prime time
 				  $ntt++;
 			  }
       }
+      $row->[5] = $ntt;
 
 			my $mc = 0;
-      if ($row->[6] ne ''){
+      if ( defined $row->[6] && $row->[6] ne ''){
         $mc = $row->[6];
       } elsif ( $row->[2] =~ /[RK][^P]/ ) {
 				$mc++;
 			}
+      $row->[6] = $mc;
 
 			my $mgl = 0;
 			if ( $row->[11] > 1 ) {
