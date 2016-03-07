@@ -6,7 +6,7 @@ AT_atlas_build	4	biosequence_set_id	Biosequence Set	int	4	0	N		N	AT_biosequence_
 AT_atlas_build	5	probability_threshold	Probability Threshold	real	4	0	Y		N			Y	text	10		Y	Y	N	Minimum probability threshold used for build (pre-2009 builds)		
 AT_atlas_build	6	APD_id	APD ID	int	4	0	Y		N			Y	text	10		Y	Y	N	The peptide_summary_id of the APD		
 AT_atlas_build	7	data_path	Data Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	Path to the data relative to base directory		
-AT_atlas_build	8	is_trypsin_build	Do most of samples use trypsin?	char	1	0	Y		N			Y	optionlist			Y	Y	N	Indicates whether most of datasets use trypsin	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+AT_atlas_build	8	is_trypsin_build	Do most of samples use trypsin?	char	1	0	Y		N				optionlist			Y	Y	N	Indicates whether most of datasets use trypsin	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 AT_atlas_build	9	build_date	Build Date	datetime	8	0	N	CURRENT_TIMESTAMP	N			Y	text	20		Y	Y	N	Date that this PeptideAtlas build was started		
 AT_atlas_build	10	atlas_build_description	Atlas Build Description	text	16	0	Y		N			N	textarea	10		Y	Y	N	Full description of this PeptideAtlas build		
 AT_atlas_build	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
@@ -59,19 +59,12 @@ AT_sample	27	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	
 AT_sample	29	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 AT_sample	30	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_sample	31	repository_identifiers	Repository Identifiers	varchar	255	0	Y		N			N	textarea	2		Y	Y	N	Related database entries		
-AT_sample	32	labeling	Labeling	varchar	100	0	N		N			N	text	30		Y	Y	N			
-AT_sample	33	sample_preparation	Sample preparation	text	16	0	N		N			N	textarea	2		Y	Y	N			
-AT_sample	34	fractionation	Fractionation	varchar	255	0	N		N			N	textarea	1		Y	Y	N			
-AT_sample	35	enrichment	Enrichment	text	16	0	N		N			N	textarea	2		Y	Y	N			
-AT_sample	36	concentration_purification_desalting	Concentration/Purification/Desalting	text	16	0	N		N			N	textarea	2		Y	Y	N			
-AT_sample	37	caloha	Caloha	text	16	0	N		N			N	textarea	1		Y	Y	N	neXtProt caloha: human anatomical ontology		
-AT_sample	38	cellosaurus	Cellosaurus	text	16	0	N		N			N	textarea	1		Y	Y	N	a thesaurus of cell line		
-AT_sample	39	NCI_Thesaurus	NCI Thesaurus	text	16	0	N		N			N	textarea	1		Y	Y	N	reference terminology and biomedical ontology		
-AT_sample	40	tissue_cell_type	Tissue/Cell Type	text	16	0	N		N			N	textarea	1		Y	Y	N			
-AT_sample	41	cell_line	Cell Line	text	16	0	N		N			N	textarea	1		Y	Y	N			
-AT_sample	42	disease	Disease	text	16	0	N		N			N	textarea	1		Y	Y	N			
-AT_sample	43	biological_conditions	Biological Conditions	text	16	0	N		N			N	textarea	2		Y	Y	N			
-AT_sample	44	treatment_physiological_state	Treatment/Physiological state	text	16	0	N		N			N	textarea	2		Y	Y	N			
+AT_sample	33	sample_preparation	Sample preparation	text	16	0	Y		N			N	textarea	2		Y	Y	N			
+AT_sample	40	tissue_cell_type	Tissue/Cell Type	text	16	0	Y		N			N	textarea	1		Y	Y	N			
+AT_sample	41	cell_line	Cell Line	text	16	0	Y		N			N	textarea	1		Y	Y	N			
+AT_sample	42	disease	Disease	text	16	0	Y		N			N	textarea	1		Y	Y	N			
+AT_sample	43	biological_conditions	Biological Conditions	text	16	0	Y		N			N	textarea	2		Y	Y	N			
+AT_sample	44	treatment_physiological_state	Treatment/Physiological state	text	16	0	Y		N			N	textarea	2		Y	Y	N			
 AT_atlas_build_sample	1	atlas_build_sample_id	Atlas Build Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_atlas_build_sample	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id					N	N		Associated Atlas Build		
 AT_atlas_build_sample	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
@@ -85,7 +78,7 @@ AT_atlas_build_search_batch	1	atlas_build_search_batch_id	Atlas Build Search Bat
 AT_atlas_build_search_batch	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id					N	N		Associated Atlas Build		
 AT_atlas_build_search_batch	3	atlas_search_batch_id	Atlas Search Batch ID	int	4	0	N		N	AT_atlas_search_batch	atlas_search_batch_id					N	N		Associated Atlas Search Batch (which can link to a Proteomics Search Batch)		
 AT_atlas_build_search_batch	4	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
-AT_atlas_build_search_batch	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_atlas_build_search_batch	5	date_created	Date Record Created	datetime	8	0	A	CURRENT_TIMESTAMP	N							N	N				
 AT_atlas_build_search_batch	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
 AT_atlas_build_search_batch	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 AT_atlas_build_search_batch	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
@@ -131,10 +124,10 @@ AT_peptide_mapping	7	start_in_chromosome	Start Position in Chromosome	int	4	0	N	
 AT_peptide_mapping	8	end_in_chromosome	End Position in Chromosome	int	4	0	N		N			Y	text	20		Y	Y	N	End position of the peptide in the chromosome which the peptide matches the biosequence		
 AT_peptide_mapping	9	strand	Strand	char	1	0	N		N			Y	text	10		Y	Y	N	"Strand (+,-) of the peptide in the chromosome"		
 AT_peptide_mapping	10	peptide_preceding_residue	Preceding Residue	char	1	0	N		N			Y	text	5		Y	Y	N	Residue (amino acid) immediately preceding the peptide		
-AT_peptide_mapping	11	peptide_following_residue 	Following Residue	char	1	0	N		N			Y	text	5		Y	Y	N	Residue (amino acid) immediately following the peptide		
-AT_peptide_instance	12	protease_ids	Enzyme ids	varchar	30	0	N		N			Y	text	3		Y	Y	N	Comma-separated list of protease ids		
-AT_peptide_instance	13	highest_n_enzymatic_termini	Higest Num of Enzyme Termini	int	4	0	N		N			Y	text	10		Y	Y	N	Higest Number of enzyme termini		
-AT_peptide_instance	14	lowest_n_missed_cleavages 	Lowest Num of Missed Cleavage	int	4	0	N		N			Y	text	10		Y	Y	N	Lowest Number of Missed Cleavage		
+AT_peptide_mapping	11	peptide_following_residue	Following Residue	char	1	0	N		N			Y	text	5		Y	Y	N	Residue (amino acid) immediately following the peptide		
+AT_peptide_mapping	12	protease_ids	Enzyme ids	varchar	30	0	N		N			Y	text	3		Y	Y	N	Comma-separated list of protease ids		
+AT_peptide_mapping	13	highest_n_enzymatic_termini	Higest Num of Enzyme Termini	int	4	0	N		N			Y	text	10		Y	Y	N	Higest Number of enzyme termini		
+AT_peptide_mapping	14	lowest_n_missed_cleavages 	Lowest Num of Missed Cleavage	int	4	0	N		N			Y	text	10		Y	Y	N	Lowest Number of Missed Cleavage		
 AT_peptide_instance	1	peptide_instance_id	Peptide Instance ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_peptide_instance	2	atlas_build_id	Atlas Build	int	4	0	N		N	AT_atlas_build	atlas_build_id	Y	optionlist			Y	Y	Y	Associated Atlas Build		
 AT_peptide_instance	3	peptide_id	Peptide	int	4	0	N		N	AT_peptide	peptide_id	Y	optionlist			Y	Y	Y	Peptide		
@@ -156,12 +149,12 @@ AT_peptide_instance	18	n_samples	Number of Samples Exhibiting Peptide	int	4	0	Y	
 AT_peptide_instance	19	n_protein_samples	Number of Samples Exhibiting Protein	int	4	0	Y		N			N	text	10		Y	Y	N	Number of samples/experiments in which the parent protein of this peptide was observed		
 AT_peptide_instance	20	empirical_proteotypic_score	Empirical Proteotypic Score	real	4	0	Y		N			N	text	10		Y	Y	N	Fraction of samples that exhibit this peptide divided by fraction of samples that exhibit the parent protein		
 AT_peptide_instance	21	predicted_proteotypic_score	Predicted Proteotypic Score	real	4	0	Y		N			N	text	10		Y	Y	N	Theoretically predicted proteotypic score following Mallick et al. 2006		
-AT_peptide_instance	22	n_natural_observations	Number of Natural Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in natural input samples		
-AT_peptide_instance	23	n_synthpep_observations	Number of Synthetic Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in synthetic input samples		
-AT_peptide_instance	24	n_recombinant_observations	Number of Artificial-protein Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in artificial protein samples		
-AT_peptide_instance	25	protease_ids	Enzyme ids	varchar	30	0	N		N			Y	text	3		Y	Y	N	Comma-separated list of protease ids		
-AT_peptide_instance	26	highest_n_enzymatic_termini	Higest Num of Enzyme Termini	int	4	0	N		N			Y	text	10		Y	Y	N	Higest Number of enzyme termini		
-AT_peptide_instance	27	lowest_n_missed_cleavages 	Lowest Num of Missed Cleavage	int	4	0	N		N			Y	text	10		Y	Y	N	Lowest Number of Missed Cleavage		
+AT_peptide_instance	22	n_natural_observations	Number of Natural Peptide Observations	int	4	0	Y		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in natural input samples		
+AT_peptide_instance	23	n_synthpep_observations	Number of Synthetic Peptide Observations	int	4	0	Y		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in synthetic input samples		
+AT_peptide_instance	24	n_recombinant_observations	Number of Artificial-protein Peptide Observations	int	4	0	Y		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in artificial protein samples		
+AT_peptide_instance	25	protease_ids	Enzyme ids	varchar	30	0	Y		N			Y	text	3		Y	Y	N	Comma-separated list of protease ids		
+AT_peptide_instance	26	highest_n_enzymatic_termini	Higest Num of Enzyme Termini	int	4	0	Y		N			Y	text	10		Y	Y	N	Higest Number of enzyme termini		
+AT_peptide_instance	27	lowest_n_missed_cleavages 	Lowest Num of Missed Cleavage	int	4	0	Y		N			Y	text	10		Y	Y	N	Lowest Number of Missed Cleavage		
 AT_peptide_instance_sample	1	peptide_instance_sample_id	Peptide Instance Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_peptide_instance_sample	2	peptide_instance_id	Peptide Instance ID	int	4	0	N		N	AT_peptide_instance	peptide_instance_id					N	N		Associated Atlas Build		
 AT_peptide_instance_sample	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
@@ -186,10 +179,10 @@ AT_modified_peptide_instance	1	modified_peptide_instance_id	Modified Peptide Ins
 AT_modified_peptide_instance	2	peptide_instance_id	Peptide Instance ID	int	4	0	N		N	AT_peptide_instance	peptide_instance_id	Y	text	10		Y	Y	Y	Parent peptide_instance_id		
 AT_modified_peptide_instance	3	modified_peptide_sequence	Modified Peptide Sequence	varchar	300	0	N		N			Y	text	50		Y	Y	Y	Sequence of the peptide including modification notations		
 AT_modified_peptide_instance	4	peptide_charge	Peptide Charge	int	4	0	N		N			Y	text	10		Y	Y	Y	Charge on the precursor ion		
-AT_modified_peptide_instance	5	monoisotopic_peptide_mass	Monoisotopic Neutral Peptide Mass	float	8	0	N		N			Y	text	10		Y	Y	N	Neutral peptide monoisotopic mass		
-AT_modified_peptide_instance	6	average_peptide_mass	Average Neutral Peptide Mass	float	8	0	N		N			Y	text	10		Y	Y	N	Neutral peptide average mass		
-AT_modified_peptide_instance	7	monoisotopic_parent_mz	Monoisotopic Parent m/z	float	8	0	N		N			Y	text	10		Y	Y	N	(M+H)+ charged parent ion monoisotopic mass		
-AT_modified_peptide_instance	8	average_parent_mz	Average Parent m/z	float	8	0	N		N			Y	text	10		Y	Y	N	(M+H)+ charged parent ion average mass		
+AT_modified_peptide_instance	5	monoisotopic_peptide_mass	Monoisotopic Neutral Peptide Mass	float	8	0	Y		N			Y	text	10		Y	Y	N	Neutral peptide monoisotopic mass		
+AT_modified_peptide_instance	6	average_peptide_mass	Average Neutral Peptide Mass	float	8	0	Y		N			Y	text	10		Y	Y	N	Neutral peptide average mass		
+AT_modified_peptide_instance	7	monoisotopic_parent_mz	Monoisotopic Parent m/z	float	8	0	Y		N			Y	text	10		Y	Y	N	(M+H)+ charged parent ion monoisotopic mass		
+AT_modified_peptide_instance	8	average_parent_mz	Average Parent m/z	float	8	0	Y		N			Y	text	10		Y	Y	N	(M+H)+ charged parent ion average mass		
 AT_modified_peptide_instance	9	best_probability	Monoisotopic Neutral Peptide Mass	real	4	0	N		N			Y	text	10		Y	Y	N	Best observed PeptideProphet probablity of being correct over all samples		
 AT_modified_peptide_instance	10	best_adjusted_probability	Best Adjusted Probability	real	4	0	Y		N			Y	text	10		Y	Y	N	Best probability observed as adjusted by ProteinProphet within all samples		
 AT_modified_peptide_instance	11	n_observations	Number of Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in the input samples		
@@ -263,7 +256,7 @@ AT_biosequence	6	biosequence_accession	BioSequence Accession	varchar	255	0	Y		N	
 AT_biosequence	7	organism_id	Organism	int	4	0	Y		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism to which this BioSequence belongs	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 AT_biosequence	8	polymer_type_id	Polymer Type	int	4	0	Y		N	BL_polymer_type	polymer_type_id	Y	optionlist			Y	Y	N	"Polymer type (e.g. protein, DNA, RNA) of this BioSequence"	"SELECT polymer_type_id, polymer_type_name FROM $TBBL_POLYMER_TYPE ORDER BY sort_order,polymer_type_name"	
 AT_biosequence	9	biosequence_desc	Biosequence Description	varchar	1024	0	N		N			Y	text	40		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
-AT_biosequence	10	biosequence_seq	Sequence	text	16	0	Y		N			N	file	40		Y	Y	N	Actual sequence of the BioSequence if known		
+AT_biosequence	10	biosequence_seq	Sequence	mediumtext	16	0	Y		N			N	file	40		Y	Y	N	Actual sequence of the BioSequence if known		
 AT_biosequence	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 AT_biosequence	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 AT_biosequence	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
@@ -473,8 +466,8 @@ AT_spectra_description_set	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_i
 AT_spectra_description_set	4	atlas_search_batch_id	Atlas Search Batch ID	int	4	0	N		N	AT_atlas_search_batch	atlas_search_batch_id					N	N		Associated Atlas Search Batch (which can link to a Proteomics Search Batch)		
 AT_spectra_description_set	5	instrument_model_id	Instrument Model ID	int	4	0	Y		N	PR_instrument	instrument_id	N	optionlist			Y	Y	N	Instrument (mass spectrometer) manufacturer model id	"SELECT instrument_id,instrument_name FROM $TBPR_INSTRUMENT WHERE record_status != 'D' ORDER BY instrument_name"	
 AT_spectra_description_set	6	instrument_model_name	Instrument Model Name	varchar	100	0	Y		N			N				Y	Y	N	Instrument (mass spectrometer) manufacturer model name		
-AT_spectra_description_set	7	conversion_software_name	Conversion Software Name	varchar	255	0	N		N							N	N		Name of software used in conversion to mzXML		
-AT_spectra_description_set	8	conversion_software_version	Conversion Software Version	varchar	50	0	N		N							N	N		Version of software used in conversion to mzXML		
+AT_spectra_description_set	7	conversion_software_name	Conversion Software Name	varchar	255	0	Y		N							N	N		Name of software used in conversion to mzXML		
+AT_spectra_description_set	8	conversion_software_version	Conversion Software Version	varchar	50	0	Y		N							N	N		Version of software used in conversion to mzXML		
 AT_spectra_description_set	9	mzXML_schema	mzXML Schema	varchar	1024	0	N		N							N	N		mzXML schema		
 AT_spectra_description_set	10	n_spectra	Number of Spectra	int	6	0	N		N							N	N		Number of spectra		
 AT_spectra_description_set	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
