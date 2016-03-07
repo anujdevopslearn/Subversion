@@ -94,7 +94,6 @@ sub getArticleInfo {
 			      );
   $parser->parse($xml);
 
-
   #### Generate a synthetic PublicationName based on AuthorList
   if ($info{AuthorList} && $info{PublishedYear}) {
 	$info{AuthorList} =~ s/^\,//;
@@ -134,7 +133,7 @@ sub start_element {
   my $handler = shift;
   my $element = shift;
   my %attrs = @_;
-
+   
   #### Push this element name onto a stack for later possible use
   push(@stack,$element);
 
@@ -142,8 +141,6 @@ sub start_element {
   return;
 
 }
-
-
 
 ###############################################################################
 # end_element
@@ -174,13 +171,11 @@ sub characters {
   my $handler = shift;
   my $string = shift;
   my $context = $handler->{Context}->[-1];
-	
-    
     
   my %element_type = (
     PMID => 'reg',
     ArticleTitle => 'reg',
-    AbstractText => 'reg',
+    AbstractText => 'append(AbstractText)',
     Volume => 'reg',
     Issue => 'reg',
     MedlinePgn => 'reg',
