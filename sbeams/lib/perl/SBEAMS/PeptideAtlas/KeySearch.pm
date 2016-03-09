@@ -179,7 +179,7 @@ sub InsertSearchKeyEntity {
     or die( "ERROR[$METHOD] Unable to find organism ID for $biosequence_set_id" );
 
   my $reference_directory;
-  if ($organism_name =~ /^Human$|^Mouse$|^COW$|^horse$|^zebrafish$|^pig$|Fission|^honeybee$/i ) {
+  if ($organism_name =~ /^chick|^Human$|^Mouse$|^COW$|^horse$|^zebrafish$|^pig$|Fission|^honeybee$/i ) {
     
     #my $GOA_directory = $args{GOA_directory}
     my $uc_organism_name = uc($organism_name);
@@ -410,12 +410,14 @@ sub buildGoaKeyIndex {
     biosequence_set_id => $biosequence_set_id,
   );
   print "$idMapping_file\n";
+  my %UniprotList = ();
   open (MAP, "gunzip -c $idMapping_file|" ) or print  "WARNING: no $idMapping_file";
   my %cols = (
      'UniProtKB' => 35,
 		 'Swiss-Prot' => 1,
      'UniProtKB/TrEMBL' => 54,
 		 'EntrezGene' => 37,
+     'GeneID' => 37,
 		 'RefSeq' => 39,
 		 'GI' => '46', 
 		 'PDB' => 13,
@@ -430,7 +432,6 @@ sub buildGoaKeyIndex {
      'Definition' => '',
      'Gene name' => '',
      'BEEBASE' => 45,
-     
    );
 
   while (my $line = <MAP>){
@@ -439,13 +440,26 @@ sub buildGoaKeyIndex {
     my $UniprotKB = $elms[0];
     my $db = $elms[1];
     my $value = $elms[2]; 
+    if (not defined $cols{$db}){
+       #print "$db not in table, skipping\n";
+       next;
+    }
     if ($db =~ /unigene/i){
        $value  =~ s/Dr\.//;
     }
     if($db =~ /Ensembl_PRO/){ $db = 'Ensembl Protein' ;}
-    if (defined $proteinList->{$UniprotKB} and defined $cols{$db}){
-      push @{$proteinList->{$UniprotKB}{$db}},$value;
+    if (defined $proteinList->{$UniprotKB}){
+			if (defined $cols{$db}){
+				push @{$UniprotList{$UniprotKB}{$db}},$value;
+				#P31946-1        RefSeq  NP_647539.1  
+				if ($db eq 'RefSeq' and $value =~ /\.\d+/){
+					$value =~ s/\..*//;
+					push @{$UniprotList{$UniprotKB}{$db}},$value;
+				}
+			}
+      $proteinList->{$UniprotKB}{flag} =1;
     }
+
   } 
   close MAP; 
   print "$GOA_file\n";
@@ -455,14 +469,14 @@ sub buildGoaKeyIndex {
     next if($line !~ /^(\S+)\s+(\S+)$/);
     my $UniprotKB = $1;
     my $IPI = $2;
-    if (defined $proteinList->{$UniprotKB}){
-      push @{$proteinList->{$UniprotKB}{IPI}}, $IPI;
+    if (defined $UniprotList{$UniprotKB}){
+      push @{$UniprotList{$UniprotKB}{IPI}}, $IPI;
     }
   }
   close INFILE;
 
   my $counter = 0;
-	foreach my $UniProtKB (keys %$proteinList){
+	foreach my $UniProtKB (keys %UniprotList){
 		$_= '' for my ($Database,$Accession,$UniProtSP,$UniProtTR);
     $UniProtKB =~ s/.*://;
 		$Accession = $UniProtKB;
@@ -475,21 +489,25 @@ sub buildGoaKeyIndex {
     my @links;
     if(defined $proteinList->{$UniProtKB}{dbxref_id}){
        if ($proteinList->{$UniProtKB}{dbxref_id} == 1){
-         push @{$proteinList->{$UniProtKB}{'Swiss-Prot'}}, $UniProtKB;
+         push @{$UniprotList{$UniProtKB}{'Swiss-Prot'}}, $UniProtKB;
        }elsif($proteinList->{$UniProtKB}{dbxref_id} == 54){
-         push @{$proteinList->{$UniProtKB}{Trembl}}, $UniProtKB;
+         push @{$UniprotList{$UniProtKB}{Trembl}}, $UniProtKB;
        }else{
          push @{$proteinList->{$UniProtKB}{UniProtKB}}, $UniProtKB;
        }
     }
 
     foreach my $db (keys %cols){
-      next if ( not defined $proteinList->{$UniProtKB}{$db});
-      my @list = @{$proteinList->{$UniProtKB}{$db}};
+      next if ( not defined $UniprotList{$UniProtKB}{$db});
+      my @list = @{$UniprotList{$UniProtKB}{$db}};
       foreach my $item ( @list ) {
-        my @tmp = ($db,$item,$cols{$db});
+        my $newdb =$db;
+        if ($db =~ /GeneID/){
+          $newdb = 'Entrez GeneID'; 
+        }
+        my @tmp = ($newdb,$item,$cols{$db});
         push(@links,\@tmp);
-        if(defined $proteinList->{$item}){
+        if(defined $UniprotList{$item}){
           $proteinList->{$item}{flag} = 1;
         }
       }
@@ -518,11 +536,11 @@ sub buildGoaKeyIndex {
 
 		#### Write the links for each Ensembl ID
     my @ENSIPI; 
-		if (defined $proteinList->{$UniProtKB}{IPI}){
-			 push @ENSIPI, @{$proteinList->{$UniProtKB}{IPI}};
+		if (defined $UniprotList{$UniProtKB}{IPI}){
+			 push @ENSIPI, @{$UniprotList{$UniProtKB}{IPI}};
 		}
-		if(defined $proteinList->{$UniProtKB}{'Ensembl Protein'}){
-       push @ENSIPI, @{$proteinList->{$UniProtKB}{'Ensembl Protein'}} ; 
+		if(defined $UniprotList{$UniProtKB}{'Ensembl Protein'}){
+       push @ENSIPI, @{$UniprotList{$UniProtKB}{'Ensembl Protein'}} ; 
 		}      
 		foreach my $ID (@ENSIPI) {
 			next if(not defined $proteinList->{$ID});
@@ -582,34 +600,62 @@ sub checkCompleteness{
 
   my %args = @_;
   my $proteinList = $args{proteinList} ;
-  my $counter = $args{count};
-
+  my $counter = $args{count}; 
+  my %rowdata=();
   foreach my $prot (keys %{$proteinList}){
-    if(! $proteinList->{$prot}{flag}){
-      my %rowdata = (
-        search_key_name => $prot,
-        search_key_type => 'Protein Accession',
-        resource_name => $prot,
-        resource_type => 'Protein Accession',
-        protein_alias_master => $prot,
-       );
-       $self->insertSearchKeyEntity( rowdata => \%rowdata);
-       next if ($proteinList->{$prot}{desc} eq '');
-       $proteinList->{$prot}{desc} =~ s/>$prot//g;
-       $proteinList->{$prot}{desc} =~ s/OS=.*//;
-       $proteinList->{$prot}{desc} =~ s/pep:known.*//;
-       $proteinList->{$prot}{desc} =~ s/\'//g;
-       %rowdata = (
-        search_key_name => $proteinList->{$prot}{desc},
-        search_key_type => 'Description',
-        resource_name => $prot,
-        resource_type => 'Description',
-        protein_alias_master => $prot,
-       );
-       $self->insertSearchKeyEntity( rowdata => \%rowdata);
-       $counter++;
-       print "$counter... " if ($counter/100 eq int($counter/100));
+    ### insert different form of refseq id
+    if ($prot =~ /^gi/){
+      if(! $proteinList->{$prot}{flag}){
+        $prot =~ /gi\|(\d+)\|(\w+)\|([^\.]+)\.(\d+)/;
+        my $gi = $1;
+        my $acc = $3;
+        my $ref = $2;
+        my $version = $4;
+        my @names = ();
+        push @names, "gi|$gi";
+        push @names, "$acc.$version";
+        push @names, $acc;
+        push @names, $prot;
+        foreach my $name (@names){
+          if(! $proteinList->{$prot}{flag}){
+							%rowdata = (
+								search_key_name => "$name",
+								search_key_type => 'RefSeq',
+								search_key_dbxref_id => 39,
+								resource_name => $name,
+								resource_type => 'RefSeq',
+							);
+					  insertSearchKeyEntity( rowdata => \%rowdata);
+          }
+       }
+      }
+    }else{
+			if(! $proteinList->{$prot}{flag}){
+				%rowdata = (
+					search_key_name => $prot,
+					search_key_type => 'Protein Accession',
+					resource_name => $prot,
+					resource_type => 'Protein Accession',
+					protein_alias_master => $prot,
+				 );
+				 $self->insertSearchKeyEntity( rowdata => \%rowdata);
+				 next if ($proteinList->{$prot}{desc} eq '');
+				 $proteinList->{$prot}{desc} =~ s/>$prot//g;
+				 $proteinList->{$prot}{desc} =~ s/OS=.*//;
+				 $proteinList->{$prot}{desc} =~ s/pep:known.*//;
+				 $proteinList->{$prot}{desc} =~ s/\'//g;
+				 %rowdata = (
+					search_key_name => $proteinList->{$prot}{desc},
+					search_key_type => 'Description',
+					resource_name => $prot,
+					resource_type => 'Description',
+					protein_alias_master => $prot,
+				 );
+				 $self->insertSearchKeyEntity( rowdata => \%rowdata);
+			}
     }
+    $counter++;
+    print "$counter... " if ($counter/100 eq int($counter/100));
   }
 }
 
@@ -2930,14 +2976,17 @@ sub getNProteinHits {
 #        GROUP BY biosequence_name
 #  ~;
   my $sql = qq~
-      SELECT B.BIOSEQUENCE_NAME, SUM(N_OBSERVATIONS) AS N_obs
+    SELECT RS.BIOSEQUENCE_NAME, SUM( RS.N_OBSERVATIONS) AS N_OBS 
+    FROM (
+      SELECT DISTINCT B.BIOSEQUENCE_NAME, PI.PEPTIDE_ID,  N_OBSERVATIONS  
       FROM $TBAT_BIOSEQUENCE B 
       LEFT JOIN $TBAT_PEPTIDE_MAPPING PIM  ON (B.BIOSEQUENCE_ID = PIM.MATCHED_BIOSEQUENCE_ID)
       LEFT JOIN $TBAT_PEPTIDE_INSTANCE PI ON (PIM.PEPTIDE_INSTANCE_ID = PI.PEPTIDE_INSTANCE_ID 
                                         AND PI.ATLAS_BUILD_ID = '$atlas_build_id')
       WHERE B.BIOSEQUENCE_SET_ID IN
       (SELECT A.BIOSEQUENCE_SET_ID FROM $TBAT_ATLAS_BUILD A WHERE A.ATLAS_BUILD_ID='$atlas_build_id')
-      GROUP BY B.BIOSEQUENCE_NAME
+    ) AS RS
+    GROUP BY RS.BIOSEQUENCE_NAME
   ~;
 
   my %proteins = $sbeams->selectTwoColumnHash($sql);
@@ -2965,6 +3014,9 @@ sub getProteinList {
          FROM $TBAT_BIOSEQUENCE B
          WHERE B.biosequence_set_id= $biosequence_set_id
          AND B.biosequence_name not like 'DECOY%'
+         --AND (B.biosequence_desc like '%np20k%' or 
+         --     B.biosequence_desc like '%uniprot other%' or 
+         --     B.biosequence_desc like '%CompleteProteome%' )
   ~;
 
   my @rows = $sbeams->selectSeveralColumns($sql);
