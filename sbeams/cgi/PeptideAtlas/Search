@@ -489,7 +489,7 @@ sub handle_request {
     $atlas_build_column,
     ["resource_name","SKL.resource_name","Identifier"],
     ["resource_type","SKE.resource_type","resource_type"],
-    ["resource_n_matches","SKL.resource_n_matches","N Peptide obs"],
+    ["resource_n_matches","SKL.resource_n_matches","N PSM obs"],
     ["resource_url","SKL.resource_url","resource_url"],
     ["organism_id","O.organism_id","organism_id"],
     ["organism_name","O.organism_name","organism_name"],
@@ -774,6 +774,7 @@ sub handle_request {
 								AND SKL.atlas_build_id IN ( $atlas_build_ids )
 							ORDER BY search_key_name
 					 ~;
+
 					$sbeams->fetchResultSet(
 							 sql_query=>$sql,
 							 resultset_ref=>$tmp_resultset_ref,
@@ -1026,7 +1027,7 @@ sub displayTable{
    ### one search key may have several search key type, we only keep one
    my %Distinct_SearchResult = ();
    ### keep the recored of maxium number of matched for row entry..
-   my %max_n_matches = 0;
+   my %max_n_matches = ();
 
    my $page_size = $rs_param_ref->{page_size} || 50;
    my $page_number = $rs_param_ref->{page_number} || 0;
@@ -1058,7 +1059,7 @@ sub displayTable{
 			 next if($rescource_name =~ /NO_ENS/);
        $resource_type = 'Peptide' if($row->[3] eq 'PeptideAtlas peptide');
 
-       if($max_n_matches{$resource_type}{$search_key}{$organism_name} < $resource_n_matches){
+       if($max_n_matches{$resource_type}{$search_key}{$organism_name}{n_obs} < $resource_n_matches){
          $max_n_matches{$resource_type}{$search_key}{$organism_name}{n_obs} = $resource_n_matches;
        }
        push @{$max_n_matches{$resource_type}{$search_key}{$organism_name}{data}}, $row;
@@ -1217,7 +1218,7 @@ sub displayTable{
 
 							 my $text = qq~$organism_name: $search_key_str - find <B>$n_resource_name</B> identifier$str in <B>$n_builds</B> build$str_build ~;
 							 if( $n_obs >= 1){ 
-									$text .= qq~, observed >= <B>$n_obs</B> times ~;
+									$text .= qq~, observed <= <B>$n_obs</B> times ~;
 							 }else{
 									$text .=  qq~, observed <B>0</B> time~;
 							 }
