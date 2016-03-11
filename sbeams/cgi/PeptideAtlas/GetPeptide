@@ -7,7 +7,7 @@
 # Description : Prints summary of a given peptide given selection
 #               atlas build, and peptide name or sequence.
 #
-# SBEAMS is Copyright (C) 2000-2014 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2016 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -1212,6 +1212,9 @@ if ($apply_action =~ /QUERY|GO/i ) {
       $ce_ids = $cs_obj->get_QTOF_stepping( seq => $peptide_sequence[0] ); 
     }
 
+    $q->delete( 'mod_seq' );
+    $q->delete( 'charge' );
+    my $spec_url = $q->self_url();
 
     #### Loops through resultset and do formatting
     for my $pep ( @mod_peps ) {
@@ -1309,12 +1312,15 @@ if ($apply_action =~ /QUERY|GO/i ) {
       $pep->[$prob_idx] = 1 if $pep->[$prob_idx] == 1; # huh?
       $pep->[$nsib_idx] = sprintf("%0.1f", $pep->[$nsib_idx]) if $pep->[$nsib_idx]; # number of siblings
       $pep->[$smpl_idx] = sample_view( $pep->[$smpl_idx] ); # Sample IDs, keep list under control
-      $pep->[$mseq_idx] = $sbeamsMOD->formatMassMods( $pep->[$mseq_idx] );
 
+      my $img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='View spectra for $pep->[$mseq_idx] (+$pep->[$chrg_idx])'>";
+      push @{$pep}, "<a href='$spec_url;charge=$pep->[$chrg_idx];mod_seq=$pep->[$mseq_idx]'>$img</a>";
+
+      $pep->[$mseq_idx] = $sbeamsMOD->formatMassMods( $pep->[$mseq_idx] );
     }
 
     #### Add table column headings
-    my $column_headings = ['Modified Sequence', 'Charge', 'Mono Parent m/z', 'Best Prob', '# Obs', '# Siblings', 'Sample IDs', 'Consensus Spectra' ];
+    my $column_headings = ['Modified Sequence', 'Charge', 'Mono Parent m/z', 'Best Prob', '# Obs', '# Siblings', 'Sample IDs', 'Consensus Spectra', '<div title="Filter applies to Individual Spectra section below">Spectrum Filter</div>' ];
     push @{$column_headings},  '<div title ="Synthetic Peptide Reference Spectra from SRM Atlas">Reference</div>' unless ($sbeams->isGuestUser() || $is_origene);
     push @{$column_headings},  'CE_range' unless ($sbeams->isGuestUser() || $is_origene);
     unshift @mod_peps, $column_headings;
@@ -1471,11 +1477,24 @@ if ($apply_action =~ /QUERY|GO/i ) {
    'link' => $link,
     bold => 1
   );
+
+  my $ispectra_clause = '';
+  my $section_text = 'Individual Spectra';
+  if ( $parameters{mod_seq} && $parameters{charge} ) {
+    $ispectra_clause = qq~
+    AND modified_peptide_sequence = '$parameters{mod_seq}'
+    AND MPI.peptide_charge = $parameters{charge}
+    ~;
+    $section_text .= ' (filtered)';
+  }
+
   my $modHTML .= $sbeamsMOD->encodeSectionHeader(
-    text => "Individual Spectra",
+    text => $section_text,
    'link' => $link,
     bold => 1
   );
+
+
   my $modSQL = qq~
   SELECT modified_peptide_sequence, MPI.peptide_charge,
          SMP.sample_id,I.instrument_name, SI.probability, S.spectrum_name,
@@ -1517,6 +1536,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
      $atlas_build_clause
      $peptide_name_clause
      $peptide_sequence_clause
+     $ispectra_clause
   GROUP BY modified_peptide_sequence, MPI.peptide_charge,
          SMP.sample_id,I.instrument_name, SI.probability, S.spectrum_name,
          SI.spectrum_identification_id, SMP.sample_tag, precursor_intensity, scan_time,
@@ -1878,7 +1898,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
                                                   rows => \@display_peps,
                                           rows_to_show => 10,
                                               max_rows => 500,
-                                              nowrap => [1],
+                                          truncate_msg => 'Use link in Modified Peptides section to filter results.',
+                                                nowrap => [1],
                                               );
 
 
