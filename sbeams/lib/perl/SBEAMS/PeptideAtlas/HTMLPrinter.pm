@@ -783,7 +783,7 @@ sub encodeSectionTable {
   my $bgcolor = '#C0D0C0';
   my $chg_idx;
   my $rcnt = ( $args{header} ) ? 1 : 0;
-  # Message regarding truncated rows.
+#
   my $msg = '';
   for my $row ( @{$args{rows}} ) {
     $num_cols = scalar( @$row ) unless $num_cols;
@@ -812,11 +812,15 @@ sub encodeSectionTable {
                                                      NAME => $prefix . '_toggle', 
                                                      CLASS => 'hidden' ); 
     }
+    # Message regarding truncated rows.
     if ( $args{max_rows} && $args{max_rows} <= $num_rows ) {
       my $span = scalar( @$row );
       $msg = "Table truncated at $args{max_rows} rows";
       if  ( $args{set_download} ) {
         $msg .= "(won't affect download, " . scalar( @{$args{rows}} ) . ' total rows)';
+      }
+      if ( $args{truncate_msg} ) {
+        $msg .= ". $args{truncate_msg}";
       }
       if ( !$args{truncate_msg_as_text} ) {
         $tab->addRow( [$sbeams->makeInfoText("<I>$msg</I>")] );
