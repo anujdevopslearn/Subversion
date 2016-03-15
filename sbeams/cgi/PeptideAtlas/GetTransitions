@@ -239,6 +239,8 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
     var last_idx = pb_select.length - 1;
     pb_select.selectedIndex=last_idx;
     ~;
+    $restricted_build_js = ''; 
+    # Protein list access superceded by preview access
 
     if ( !$parameters{pabst_build_id} ) {
       # Assume that this is the best build, unless they've specified another
@@ -349,6 +351,8 @@ $(document).ready(function() {
 
   $("select#pabst_build_id").change(function() {
 
+    var elution_time_option = document.getElementById( 'rt_type' );
+    elution_time_option.selectedIndex = 9999;
     $.getJSON("AJAXClient.cgi",{pabst_build_id: $(this).val(), source: 'GetTransitions_ElutionTimeSelect'}, function(j){
       var options = '';
       for (var i = 0; i < j.length; i++) {
@@ -479,7 +483,29 @@ function get_agreement() {
 </script>
 <div id=access_agreement>
 </div>
+
+<script type=text/javascript>
+function verify_build() {
+  var build_option = document.getElementById( 'pabst_build_id' );
+  var selected = build_option.selectedIndex;
+  var elution_time_option = document.getElementById( 'rt_type' );
+  // CHANGEME - remove the selected == 1 constraint along with HSRMA short-circuit
+  if ( typeof( selected ) == "undefined" || !build_option[selected].value  ) {
+    alert( "You must first select a valid build" );
+    elution_time_option.selectedIndex = 9999;
+    return false;
+  }
+  if ( elution_time_option.selectedIndex < 0 ) {
+    alert( "Elution time type not selected" );
+    return false;
+  }
+  return true;
+}
+</script>
+
   ~;
+    print "$restricted_build_js\n";
+
   }
 
   #### Get the HTML to display the tabs
@@ -639,6 +665,7 @@ sub print_form {
         input_types_ref=>\%input_types,
         mask_user_context=> '1',
         mask_query_constraints => 1,
+        onSubmit => 'ONSUBMIT="return verify_build()"',
         apply_uc_first => 1
     );
     my $form = $sbeams->fetchSTDOUT();
@@ -1596,6 +1623,7 @@ sub fetch_transitions {
   my $npeps = scalar( keys( %pep_ids ) );
 
   my $status_txt = "Running query with $nprots proteins and $npeps peptides ";
+
   if ( $nprots > 7 && $nprots < 16 ) {
     $status_txt = "Querying with $nprots proteins and $npeps peptides, could take up to a minute ";
   } elsif ( $nprots > 20 ) { 
@@ -1715,7 +1743,8 @@ sub fetch_transitions {
 
 #   die Dumper( %CONFIG_SETTINGS )
 #   print "<PRE>$lib_sql</PRE>\n";  
-  $log->info( $lib_sql );
+#  $log->info( $lib_sql );
+#  print "<PRE>$lib_sql</PRE>\n";
 
   my ( $ssr_type ) = $sbeams->selectOneColumn( "SELECT elution_time_type_id FROM $TBAT_ELUTION_TIME_TYPE WHERE elution_time_type = 'SSRCalc'" );
   $parameters{rt_type} ||= $ssr_type;
@@ -2512,7 +2541,9 @@ sub fetch_transitions {
                                                   rs_headings => \@headings,
                                                          rows => \@peptides,
                                                  rows_to_show => 20,
-                                                     max_rows => 500,
+                                                      colspan => 3,
+                                                     max_rows => 2500,
+                                               manual_widgets => 1,
                                                     help_text => $help_text,
                                                   chg_bkg_idx => $change_on, 
                                                  set_download => 'Download peptides', 
