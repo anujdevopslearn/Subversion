@@ -534,6 +534,7 @@ AT_spectrum	11	normalized_scan_time	Normalized Scan Time	real	4	0	Y		N			N				Y	
 AT_spectrum	12	collision_energy	Collision Energy	real	4	0	Y		N			N		 		Y	Y	N	Instrument collision energy 		
 AT_spectrum	13	ionization_energy	Ionization Energy	real	4	0	Y		N			N		 		Y	Y	N	Ionization Energy 		
 AT_spectrum	14	fragmentation_type_id	Fragmentation Type id	int	4	0	Y		N	AT_fragmentation_type	fragmentation_type_id	N					N	N	Fragmentation Type id		
+AT_spectrum	15	chimera_level	Chimera Level	int	4	0	Y		N			N				Y	Y		Chimera Level		
 AT_spectrum_peak	1	spectrum_peak_id	Spectrum Peak ID	int	4	0	N		Y							N	N				PkDEFAULT
 AT_spectrum_peak	2	spectrum_id	Spectrum ID	int	4	0	N		N	AT_spectrum	spectrum_id	Y	text	10		Y	Y		spectrum_id		
 AT_spectrum_peak	3	mz	M/Z	float	8	0	N		N			Y	text	10		Y	Y	N	Fragment ion M/Z		
