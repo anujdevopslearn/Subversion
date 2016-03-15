@@ -1357,116 +1357,18 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
     }
 
-
   $log->debug( "End modified peptides " . time() );
 
 
-  #############################################################################
-  #### Validated Transitions Section
 
-  # Widget to allow show/hide of modified peptides section
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprot_valid_trans',
-                                                visible => 1,
-                                                tooltip => 'Show/Hide Section',
-                                                imglink => 1,
-                                                sticky => 1 );
+   # Individual Spectra Placeholder
 
-  my $transitionHTML = $sbeamsMOD->encodeSectionHeader(
-    text => "Annotated Transitions",
-   'link' => $link,
-    bold => 1
-  );
-  my $annot_help = get_table_help( 'annotated_transitions' );
-
-  my $mrm_transitions = $sbeamsMOD->get_mrm_transitions( accessions => [$peptide_accession[0]] );
-
-  #### If a result is returned
-  if ( scalar @$mrm_transitions ) {
-#    $transitionHTML .= $sbeams->getPopupDHTML();
-
-    #### Loops through resultset and do formatting
-    for my $pep ( @$mrm_transitions ) {
-      my $accession = shift( @$pep );
-      $pep->[0] = $sbeamsMOD->formatMassMods( $pep->[0] );
-      $pep->[2] = sprintf("%0.2f", $pep->[2]); # . '&nbsp;';
-      $pep->[3] = sprintf("%0.2f", $pep->[3]); # . '&nbsp;';
-      $pep->[5] = sprintf("%0.1f", $pep->[5]); # . '&nbsp;';
-      $pep->[6] = sprintf("%0.0f", $pep->[6]); # . '&nbsp;';
-      $pep->[7] = sprintf("%0.1f", $pep->[7]); # . '&nbsp;';
-      $pep->[8] = sprintf("%0.1f", $pep->[8]); # . '&nbsp;';
-#      $pep->[1] .= '&nbsp;';
-#      $pep->[6] .= '&nbsp;';
-#      $pep->[7] .= '&nbsp;';
-
-      # trim off extra peak label stuff, like mass delta and alt annots.
-#      ($pep->[4]) = $pep->[4] =~ /^([a-zA-Z]\d+)/;
-      ($pep->[4]) = $pep->[4] =~ /^([^\/]+)\/*/;
-      
-      for my $idx ( 0..$#{$pep} ) {
-        $pep->[$idx] = $sbeams->makeInactiveText('n/a') if !defined $pep->[$idx];
-      }
-    }
-    my @labels = ( 'Sequence', 'Charge', 'q1_mz', 'q3_mz', 'Label', 'Intensity', 'CE', 'RT', 'SSRCalc', 'Instr', 'Annotator', 'Quality' );
-
-    #### Add table column headings
-    unshift @$mrm_transitions, \@labels;
-
-    #### Format table
-    $transitionHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
-                                                      tr_info => $tr,
-                                                        width => '600',
-                                                 set_download => 1,
-                                                  chg_bkg_idx => 2,
-                                                       align  => [qw(left center right right center right right right right left left left)],
-                                                         rows => $mrm_transitions );
-    #### Display table
-    print "<TABLE WIDTH=600><TR><TD COLSPAN=5>$annot_help</TD></TR><BR>$transitionHTML</TABLE>\n" if $#{$mrm_transitions};
-  }
-
-
-  my $marker_peptides = get_synthesized_peptides( $peptide_accession[0] );
-  my $markerHTML = $sbeamsMOD->encodeSectionHeader(
-    text => "Reference Peptides",
-   'link' => $link,
-    bold => 1
-  );
-
-  #### If a result is returned
-  if ( scalar @$marker_peptides ) {
-#    $transitionHTML .= $sbeams->getPopupDHTML();
-
-    #### Loops through resultset and do formatting
-    for my $pep ( @$marker_peptides ) {
-#      $pep->[2] = sprintf("%0.2f", $pep->[2]);
-#      $pep->[3] = sprintf("%0.2f", $pep->[3]);
-#      $pep->[4] = 1 if $pep->[4] == 1;
-       $pep->[4] = $sbeamsMOD->formatMassMods( $pep->[4] );
-       $pep->[2] = $sbeams->makeInactiveText('n/a') if !$pep->[2];
-    }
-    my @labels = ( 'Peptide Sequence', 'Type', 'Publication', 'Annotator', 'Modified Sequence' );
-
-    #### Add table column headings
-    unshift @$marker_peptides, \@labels;
-
-    #### Format table
-    $markerHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
-                                                      tr_info => $tr,
-                                                        width => '600',
-                                                       align  => [qw(left center left left center)],
-                                                         rows => $marker_peptides );
-    #### Display table
-    print "<TABLE WIDTH=600><BR>$markerHTML</TABLE>\n" if $#{$marker_peptides};
-  }
-
-
-  $log->debug( "End validated Trans " . time() );
 
 
   #############################################################################
   #### Spectra Section
 
-
-  # Widget to allow show/hide of modified peptides section
+  # Widget to allow show/hide of Individual spectra section
   my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprot_indiv_spec',
                                                 visible => 1,
                                                 tooltip => 'Show/Hide Section',
@@ -1488,10 +1390,11 @@ if ($apply_action =~ /QUERY|GO/i ) {
     $section_text .= ' (filtered)';
   }
 
-  my $modHTML .= $sbeamsMOD->encodeSectionHeader(
+  my $spectraHTML .= $sbeamsMOD->encodeSectionHeader(
     text => $section_text,
    'link' => $link,
-    bold => 1
+    bold => 1,
+    colspan => 3
   );
 
 
@@ -1621,7 +1524,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
   #### If a result is returned
   if ( scalar @mod_peps ) {
-    $modHTML .= $sbeams->getPopupDHTML();
+    $spectraHTML .= $sbeams->getPopupDHTML();
     #### Loops through resultset and do formatting
 
     my @display_peps;
@@ -1889,18 +1792,26 @@ if ($apply_action =~ /QUERY|GO/i ) {
        unshift @ptm_display_peps, [ @headings ];
        sort_ptm_peps(\@ptm_display_peps);
     }
+    my $help_me = get_table_help( 'individual_spectra' );
  
     #### Format table
-    $modHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
+    $spectraHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
                                                  width => '600',
                                                tr_info => $tr, 
+                                                dumpme => 0,
+                                                unified_widgets => 1,
+                                          set_download => 1,
+                                               colspan => 3,
+                                             help_text => $help_me,
                                                 align  => $align,
                                                   rows => \@display_peps,
                                           rows_to_show => 10,
-                                              max_rows => 500,
-                                          truncate_msg => 'Use link in Modified Peptides section to filter results.',
+                                              max_rows => 200,
+                                          truncate_msg => '  <b>Use link in Modified Peptides section to filter results</b>.',
                                                 nowrap => [1],
                                               );
+
+    print "<TABLE WIDTH=600 border=0><BR>$spectraHTML</TABLE>\n";
 
 
     if ($has_ptm_score){
@@ -1984,12 +1895,13 @@ if ($apply_action =~ /QUERY|GO/i ) {
 				</script>
 		END
     }
-    print "<TABLE WIDTH=600><BR>$modHTML</TABLE>\n";
   }
 
   $log->debug( "End spectra " . time() );
 
   #############################################################################
+
+
   #### User Annotations Section
 
   # TMF: remove this conditional if/when want to release this feature to production.
@@ -2004,6 +1916,110 @@ if ($apply_action =~ /QUERY|GO/i ) {
       form_fields => $hidden_form_fields
     );
   }
+
+
+
+  #############################################################################
+  #### Validated Transitions Section
+
+  # Widget to allow show/hide of modified peptides section
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprot_valid_trans',
+                                                visible => 1,
+                                                tooltip => 'Show/Hide Section',
+                                                imglink => 1,
+                                                sticky => 1 );
+
+  my $transitionHTML = $sbeamsMOD->encodeSectionHeader(
+    text => "Annotated Transitions",
+   'link' => $link,
+    bold => 1
+  );
+  my $annot_help = get_table_help( 'annotated_transitions' );
+
+  my $mrm_transitions = $sbeamsMOD->get_mrm_transitions( accessions => [$peptide_accession[0]] );
+
+  #### If a result is returned
+  if ( scalar @$mrm_transitions ) {
+#    $transitionHTML .= $sbeams->getPopupDHTML();
+
+    #### Loops through resultset and do formatting
+    for my $pep ( @$mrm_transitions ) {
+      my $accession = shift( @$pep );
+      $pep->[0] = $sbeamsMOD->formatMassMods( $pep->[0] );
+      $pep->[2] = sprintf("%0.2f", $pep->[2]); # . '&nbsp;';
+      $pep->[3] = sprintf("%0.2f", $pep->[3]); # . '&nbsp;';
+      $pep->[5] = sprintf("%0.1f", $pep->[5]); # . '&nbsp;';
+      $pep->[6] = sprintf("%0.0f", $pep->[6]); # . '&nbsp;';
+      $pep->[7] = sprintf("%0.1f", $pep->[7]); # . '&nbsp;';
+      $pep->[8] = sprintf("%0.1f", $pep->[8]); # . '&nbsp;';
+#      $pep->[1] .= '&nbsp;';
+#      $pep->[6] .= '&nbsp;';
+#      $pep->[7] .= '&nbsp;';
+
+      # trim off extra peak label stuff, like mass delta and alt annots.
+#      ($pep->[4]) = $pep->[4] =~ /^([a-zA-Z]\d+)/;
+      ($pep->[4]) = $pep->[4] =~ /^([^\/]+)\/*/;
+      
+      for my $idx ( 0..$#{$pep} ) {
+        $pep->[$idx] = $sbeams->makeInactiveText('n/a') if !defined $pep->[$idx];
+      }
+    }
+    my @labels = ( 'Sequence', 'Charge', 'q1_mz', 'q3_mz', 'Label', 'Intensity', 'CE', 'RT', 'SSRCalc', 'Instr', 'Annotator', 'Quality' );
+
+    #### Add table column headings
+    unshift @$mrm_transitions, \@labels;
+
+    #### Format table
+    $transitionHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
+                                                      tr_info => $tr,
+                                                        width => '600',
+                                                 set_download => 1,
+                                                  chg_bkg_idx => 2,
+                                                       align  => [qw(left center right right center right right right right left left left)],
+                                                         rows => $mrm_transitions );
+    #### Display table
+    print "<TABLE WIDTH=600><TR><TD COLSPAN=5>$annot_help</TD></TR><BR>$transitionHTML</TABLE>\n" if $#{$mrm_transitions};
+  }
+
+
+  my $marker_peptides = get_synthesized_peptides( $peptide_accession[0] );
+  my $markerHTML = $sbeamsMOD->encodeSectionHeader(
+    text => "Reference Peptides",
+   'link' => $link,
+    bold => 1
+  );
+
+  #### If a result is returned
+  if ( scalar @$marker_peptides ) {
+#    $transitionHTML .= $sbeams->getPopupDHTML();
+
+    #### Loops through resultset and do formatting
+    for my $pep ( @$marker_peptides ) {
+#      $pep->[2] = sprintf("%0.2f", $pep->[2]);
+#      $pep->[3] = sprintf("%0.2f", $pep->[3]);
+#      $pep->[4] = 1 if $pep->[4] == 1;
+       $pep->[4] = $sbeamsMOD->formatMassMods( $pep->[4] );
+       $pep->[2] = $sbeams->makeInactiveText('n/a') if !$pep->[2];
+    }
+    my @labels = ( 'Peptide Sequence', 'Type', 'Publication', 'Annotator', 'Modified Sequence' );
+
+    #### Add table column headings
+    unshift @$marker_peptides, \@labels;
+
+    #### Format table
+    $markerHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
+                                                      tr_info => $tr,
+                                                        width => '600',
+                                                       align  => [qw(left center left left center)],
+                                                         rows => $marker_peptides );
+    #### Display table
+    print "<TABLE WIDTH=600><BR>$markerHTML</TABLE>\n" if $#{$marker_peptides};
+  }
+
+
+  $log->debug( "End validated Trans " . time() );
+
+
 
 
   #############################################################################
@@ -2352,8 +2368,8 @@ sub get_table_help {
   my $name = shift;
   return '' unless $name;
   my @entries;
-  my $hidetext;
-  my $showtext;
+  my $showtext = 'show column descriptions';
+  my $hidetext = 'hide column descriptions';
   my $heading;
   my $description;
 ## { key => 'Peptide Accession', value => 'Primary key for annotations table.' },
@@ -2373,11 +2389,23 @@ sub get_table_help {
                  { key => 'Quality', value => 'Crude scale of quality for the observation, currently one of Best, OK, and No. ' },
         );
                  
-    $showtext = 'show column descriptions';
-    $hidetext = 'hide column descriptions';
-    $heading = 'Annotated Tranitions';
+    $heading = 'Annotated Transitions';
     $description= 'Contributed Q1/Q3 transition pairs for SRM experiments';
-
+  } elsif ( $name eq 'individual_spectra' ) {
+    @entries = ( 
+                 { key => 'Modified Sequence', value => 'Amino acid sequence of detected pepide, including any mass modifications.' },
+                 { key => 'Chg', value => 'Charge on observed peptide ion.' },
+                 { key => 'Smpl', value => 'Sample ID from which this spectrum was obtained.' },
+                 { key => 'Instr', value => 'Model of mass spectrometer on which transition pair was validated.' },
+                 { key => 'Prob', value => 'Probability assigned peptide-spectrum match (iProphet).' },
+                 { key => 'Spectrum Name', value => 'Name of spectrum, typically filename.scan.scan' },
+                 { key => 'Avg Eval', value => 'Average manual evaluation score for peptide-spectrum match  (if applicable)' },
+                 { key => 'Fragmentation Type', value => 'Fragmentation method used to generate spectrum.  IT = IonTrap, CID = Collision Induced Dissociation, etc.' },
+                 { key => 'Spectrum', value => 'Link to display of actual spectrum' },
+        );
+                 
+    $heading = 'Individual Spectra';
+    $description= 'Individual spectra supporting the existence of the subject peptide; list can be narrowed to a specific peptide ion in the Modified Peptide table above';
   }
 
   return unless @entries;
