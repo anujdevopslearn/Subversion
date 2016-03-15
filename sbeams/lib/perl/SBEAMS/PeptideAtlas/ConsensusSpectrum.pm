@@ -723,10 +723,10 @@ sub getConsensusLinks {
       $libmap{338} = 'mhigh';
       $libmap{339} = 'high';
     } else {
-      $libmap{320} = 'low';
-      $libmap{321} = 'mlow';
-      $libmap{323} = 'mhigh';
-      $libmap{324} = 'high';
+      $libmap{361} = 'low';
+      $libmap{362} = 'mlow';
+      $libmap{364} = 'mhigh';
+      $libmap{365} = 'high';
     }
   }
 
