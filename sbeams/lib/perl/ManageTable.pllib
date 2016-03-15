@@ -1366,6 +1366,10 @@ sub addTableErrors {
   END_ERR
 }
 
+sub printLocalStyle {
+  print "<style> pre{  font-family: Helvetica, Arial, sans-serif; font-size: 9pt} </style>\n";
+}
+
 #+
 # Pushes error onto passed array ref
 # -
