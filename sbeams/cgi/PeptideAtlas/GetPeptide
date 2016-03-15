@@ -1314,7 +1314,9 @@ if ($apply_action =~ /QUERY|GO/i ) {
       $pep->[$smpl_idx] = sample_view( $pep->[$smpl_idx] ); # Sample IDs, keep list under control
 
       my $img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='View spectra for $pep->[$mseq_idx] (+$pep->[$chrg_idx])'>";
-      push @{$pep}, "<a href='$spec_url;charge=$pep->[$chrg_idx];mod_seq=$pep->[$mseq_idx]'>$img</a>";
+
+      my $sep = ( $spec_url =~ /\?/ ) ? ';' : '?';
+      push @{$pep}, "<a href='${spec_url}${sep}charge=$pep->[$chrg_idx];mod_seq=$pep->[$mseq_idx]#Modified Peptides'>$img</a>";
 
       $pep->[$mseq_idx] = $sbeamsMOD->formatMassMods( $pep->[$mseq_idx] );
     }
