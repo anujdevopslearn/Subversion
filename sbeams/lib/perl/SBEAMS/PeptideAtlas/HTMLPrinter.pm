@@ -608,6 +608,8 @@ sub encodeSectionHeader {
   my $METHOD = 'encodeSectionHeader';
   my $self = shift || die ("self not passed");
   my %args = @_;
+
+  my $colspan = $args{colspan} || 2;
   
   # Default to BOLD
   $args{bold} = 1 if !defined $args{bold};
@@ -629,7 +631,7 @@ sub encodeSectionHeader {
 #        <TR><TD colspan="2" background="$HTML_BASE_DIR/images/fade_orange_header_2.png" width="600">$link<font color="white">$anchor$text</font></TD></TR>
 #        <TR><TD colspan="2" class=fade_header width="600">$link<font color="white">$anchor$text</font></TD></TR>
   my $buffer = qq~
-        <TR><TD colspan="2" style="background-repeat: no-repeat; background-image: url('$HTML_BASE_DIR/images/fade_orange_header_2.png')" width="600">$link<font color="white">$anchor$text</font></TD></TR>
+        <TR><TD colspan="$colspan" style="background-repeat: no-repeat; background-image: url('$HTML_BASE_DIR/images/fade_orange_header_2.png')" width="600">$link<font color="white">$anchor$text</font></TD></TR>
 ~;
 
   return $buffer;
@@ -724,7 +726,7 @@ sub encodeSectionTable {
     $class_def = $args{class} || 'PA_sort_table';
   }
 
-  my @table_attrs = ( 'BORDER' => 0, );
+  my @table_attrs = ( 'border' => 0, );
   my $tr_info = $args{tr_info} || 'NOOP=1 ';
   my $tab = SBEAMS::Connection::DataTable->new( @table_attrs, 
                                                 __tr_info => $tr_info,
@@ -880,8 +882,8 @@ sub encodeSectionTable {
   my $html = "$pre_text\n";
   my $help = $args{help_text} || '';
 
-  if ( $html || $help ) {
-    $html .= "<TR $tr_info><TD NOWRAP ALIGN=left>$help</TD><TD NOWRAP ALIGN=right>$rs_link</TD></TR>\n";
+  if ( $html && $args{manual_widgets} ) {
+    $html .= "<tr $tr_info><td nowrap ALIGN=left>$closelink</td><td align=center>$help</td><td nowrap ALIGN=right>$rs_link</td></tr>\n";
   }
 
   if ( 0 && ( $rs_link || $args{change_form} ) ) {
@@ -896,18 +898,29 @@ sub encodeSectionTable {
     }
   }
  
-  $html .= "<TR><TD NOWRAP COLSPAN=2>$tab</TD></TR>";
+  my $colspan = $args{colspan} || 2;
+  $html .= "<TR><TD NOWRAP COLSPAN=$colspan>$tab</TD></TR>";
   $html .= '</TABLE>' if $args{close_table};
-  $html .= $closelink;
-
+   
   if ( wantarray ) {
+
     if ( $args{truncate_msg_as_text} ) {
+      $html = "<tr><td>$closelink</td></tr>" . $html;
       return ($html, $rs_name, $msg);
     } else {
       return ($html, $rs_name);
     }
-  } else {
-    return $html;
+  } else { 
+    if ( $args{unified_widgets} ) {
+      my $widget = "<tr $tr_info><td align=left>$closelink</td>";
+      $widget .= "<td align=center>$help</td>";
+      $widget .= "<td align=right nowrap=1>$rs_link</td>"; 
+      $widget .= "</tr>";
+      return( $widget . $html ); 
+    } else {
+      $html = "<tr><td>$closelink</td></tr>" . $html;
+      return $html;
+    }
   }
 }
 
