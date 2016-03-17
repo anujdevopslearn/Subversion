@@ -102,6 +102,7 @@ sub main {
   my %parameters;
 
   $parameters{uploaded_file_not_saved} = 1;
+  $parameters{current_username} = $current_username;
 
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);

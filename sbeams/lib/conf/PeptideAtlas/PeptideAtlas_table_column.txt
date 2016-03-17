@@ -34,7 +34,7 @@ AT_sample	3	sample_accession	Sample Accession	varchar	255	0	Y		N			N	text	20		Y	
 AT_sample	4	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	Y	Organism for which this default applies.  Leave empty for overall default	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 AT_sample	5	sample_title	Sample Title	varchar	255	0	N		N			Y	textarea	2		Y	Y	Y	Title of this Sample		
 AT_sample	6	sample_tag	Sample Tag	varchar	100	0	N		N			Y	text	30		Y	Y	Y	"Short tag (mnenomic) for this sample (e.g., THP1sLPS)"		
-AT_sample	7	original_experiment_tag	Original Experiment Tag	varchar	50	0	Y		N			Y	text	30		Y	Y	N	"Short tag (mnenomic) for the original experiment, perhaps superseded with a better name in sample_tag"		
+AT_sample	7	original_experiment_tag	Original Experiment Tag	varchar	50	0	Y		N			Y	text	30		Y	N	N	"Short tag (mnenomic) for the original experiment, perhaps superseded with a better name in sample_tag"		
 AT_sample	8	sample_date	Sample Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	textdate	20		Y	Y	N	Date on which this sample was prepared		
 AT_sample	9	sample_description	Sample Description	text	16	0	Y		N			N	textarea	10		Y	Y	N	Full description of this sample		
 AT_sample	10	instrument_model_id	Instrument Model ID	int	4	0	Y		N	PR_instrument	instrument_id	N	optionlist			Y	Y	N	Instrument (mass spectrometer) manufacturer model name	"SELECT instrument_id,instrument_name FROM $TBPR_INSTRUMENT WHERE record_status != 'D' ORDER BY instrument_name"	
@@ -63,7 +63,6 @@ AT_sample	33	sample_preparation	Sample preparation	text	16	0	Y		N			N	textarea	2
 AT_sample	40	tissue_cell_type	Tissue/Cell Type	text	16	0	Y		N			N	textarea	1		Y	Y	N			
 AT_sample	41	cell_line	Cell Line	text	16	0	Y		N			N	textarea	1		Y	Y	N			
 AT_sample	42	disease	Disease	text	16	0	Y		N			N	textarea	1		Y	Y	N			
-AT_sample	43	biological_conditions	Biological Conditions	text	16	0	Y		N			N	textarea	2		Y	Y	N			
 AT_sample	44	treatment_physiological_state	Treatment/Physiological state	text	16	0	Y		N			N	textarea	2		Y	Y	N			
 AT_atlas_build_sample	1	atlas_build_sample_id	Atlas Build Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_atlas_build_sample	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id					N	N		Associated Atlas Build		
@@ -1030,7 +1029,7 @@ AT_proteotypic_peptide_xspecies_mapping	3	biosequence_set_ids	biosequence set id
 AT_proteotypic_peptide_xspecies_mapping	4	n_human_mapping	Number of Human Protein Mapping 	int	4	0	Y		N			N							Number of distinct accession numbers (proteins) for peptide in Human		
 AT_proteotypic_peptide_xspecies_mapping	5	n_mouse_mapping	Number of Mouse Protein Mapping 	int	4	0	Y		N			N							Number of distinct accession numbers (proteins) for peptide in Mouse		
 AT_proteotypic_peptide_xspecies_mapping	6	n_yeast_mapping	Number of Yeast Protein Mapping 	int	4	0	Y		N			N							Number of distinct accession numbers (proteins) for peptide in Yeast		
-AT_GetNextProtChromMapping	2	nextprot_mapping_id	neXtProt Mapping									N	optionlist	4		Y	Y	N	Select desired neXtProt mapping date	"SELECT ID, convert (char (10), PA_MAPPING_DATE,20) as mapping_time FROM $TBAT_NEXTPROT_MAPPING where atlas_build_id = $parameters{atlas_build_id} ORDER BY ID DESC"	
+AT_GetNextProtChromMapping	2	nextprot_mapping_id	neXtProt Mapping									N	optionlist	4		Y	Y	N	Select desired neXtProt mapping date	"if ($parameters{current_username} = 'guest')  SELECT ID, convert (char (10), PA_MAPPING_DATE,20) as mapping_time FROM $TBAT_NEXTPROT_MAPPING where atlas_build_id = $parameters{atlas_build_id} and is_public ='Y' ORDER BY ID DESC else  SELECT ID, convert (char (10), PA_MAPPING_DATE,20) as mapping_time FROM $TBAT_NEXTPROT_MAPPING where atlas_build_id = $parameters{atlas_build_id}  ORDER BY ID DESC"	
 AT_GetNextProtChromMapping	1	atlas_build_id	Atlas Build									N	optionlist	4	refreshDocument()	Y	Y	N	Select desired Atlas Build to include in query.	"select distinct NM.atlas_build_id , A.atlas_build_name FROM $TBAT_NEXTPROT_MAPPING NM  join $TBAT_ATLAS_BUILD A on(A.atlas_build_id = NM.atlas_build_id) order by NM.atlas_build_id desc "	
 AT_GetNextProtChromMapping	3	biosequence_name_constraint	Protein Name Constraint									N	text	40		Y	Y	N	Constraint for the Protein Name (accession). 		
 AT_GetNextProtChromMapping	4	upload_file	Upload File Of Proteins	varchar	255	0	Y		N			N	file	40		Y	Y	N	"Path to file with list of Protein Names, one per line, to be uploaded via the web interface (NOTE: if proteins are not found, search defaults to printing all proteins of the selected Atlas build)"		
@@ -1236,6 +1235,8 @@ AT_NeXtProt_Mapping	1	id	NextProt Mapping ID	int	4	0	N		Y			N				N	N	N
 AT_NeXtProt_Mapping	2	atlas_build_id	Atlas Build	int	4	0	N		N			N				N	N	N	source Atlas build		
 AT_NeXtProt_Mapping	3	nextprot_release_date	NextProt Release Date	datetime	8	0	N		N			N				N	N	N	NextProt Release Date		
 AT_NeXtProt_Mapping	4	pa_mapping_date	Mapping Date	datetime	8	0	N		N			N				N	N	N	Mapping Date		
+AT_NeXtProt_Mapping	5	is_public	Is the build publicly available?	char	1	0	Y		N			Y	optionlist			Y	Y	N	Indicates whether the build is public	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+AT_NeXtProt_Mapping	6	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_NeXtProt_Chromosome_Mapping	1	id	NextProt Mapping ID	int	4	0	N		Y			N				N	N	N			
 AT_NeXtProt_Chromosome_Mapping	2	Gene_Name	Gene Name	varchar	255	0	Y		N			N									
 AT_NeXtProt_Chromosome_Mapping	3	neXtProt_Accession	neXtProt Accession	varchar	255	0	N		N			N									
