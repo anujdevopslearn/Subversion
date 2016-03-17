@@ -8,7 +8,7 @@ package SBEAMS::Connection::DBInterface;
 # Description : This is part of the SBEAMS::Connection module which handles
 #               general communication with the database.
 #
-# SBEAMS is Copyright (C) 2000-2011 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2016 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -2963,8 +2963,14 @@ sub displayResultSet {
       print $header if $self->invocation_mode() eq 'http' && !$args{suppress_header};
 
       #### Set a very high page size if using defaults
-      $resultset_ref->{page_size} = 1100000
+      $resultset_ref->{page_size} = $CONFIG_SETTING{RESULTSET_PAGE_SIZE} || 10000000
         if ($rs_params_ref->{default_values} eq 'YES');
+        
+      
+      my $nrows = scalar(@{$resultset_ref->{data_ref}});
+      if ( $nrows > $resultset_ref->{page_size} ) {
+        $log->warn( "WARNING: Downloading RS where nrows ($nrows) > page_size ($resultset_ref->{page_size}) " );
+      }
 
       #### Get the hidden column hash
       my %hidden_cols;
@@ -3073,8 +3079,8 @@ sub displayResultSet {
     if ($output_mode eq 'interactive' ||
         $output_mode eq 'boxtable') {
 
-      #### Set a very high page size if not interactive and using defaults
-      $resultset_ref->{page_size} = 1000000
+        #### Set a very high page size if not interactive and using defaults
+        $resultset_ref->{page_size} = $CONFIG_SETTING{RESULTSET_PAGE_SIZE} || 10000000
         if ($rs_params_ref->{default_values} eq 'YES' &&
             $output_mode ne 'interactive');
 
