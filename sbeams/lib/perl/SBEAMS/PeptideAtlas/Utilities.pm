@@ -1,12 +1,16 @@
 package SBEAMS::PeptideAtlas::Utilities;
 
 use lib "/net/db/projects/PeptideAtlas/lib/Swissknife_1_72/lib";
+use vars qw($resultset_ref );
 
 use SWISS::Entry;
 use SWISS::FTs;
 use SBEAMS::Connection qw( $log );
 use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
 use SBEAMS::Proteomics::PeptideMassCalculator;
+
 
 use constant HYDROGEN_MASS => 1.0078;
 use Storable qw( nstore retrieve dclone );
@@ -2543,8 +2547,6 @@ sub get_clustal_display {
   );
 
 	my $display = qq~
-  <script type='text/javascript' src='https://db.systemsbiology.net/sbeams/usr/javascript/jquery/jquery.js'></script>
-
   $scroll_js
 
 	<DIV CLASS="$scroll_class" ID="clustal">
@@ -3644,6 +3646,50 @@ sub is_uniprot_accession {
     return 1;
   }
   return 0;
+}
+sub fetchResultHTMLTable{
+	my $self = shift;
+	my %args = @_;
+	my $table_name = $args{'table_name'} || die "parameter table_name missing";
+  my $key_value = $args{key_value} || die "parameer key_value missing";
+  my $sbeams = $self->getSBEAMS();
+
+	$resultset_ref = $args{'resultset_ref'};
+	
+	if ( $args{use_caching} ) {
+		my $rs_sql = qq~
+		SELECT cache_descriptor
+		FROM $TB_CACHED_RESULTSET
+		WHERE table_name = '$table_name'
+    AND key_value = '$key_value'
+		~;
+		my $cache_descriptor;
+		my $stmt_handle = $sbeams->get_statement_handle( $rs_sql );
+		while ( my @row = $stmt_handle->fetchrow_array() ) {
+			$cache_descriptor = $row[0];
+			last;
+		}
+		if ( $cache_descriptor ) {
+			my %params;
+			$log->info( "using cached resultset $cache_descriptor" );
+			my $status = $sbeams->readResultSet( resultset_file=>$cache_descriptor,
+																				 resultset_ref => $resultset_ref,
+																	query_parameters_ref => \%params );
+			if ($status){
+        $resultset_ref->{from_cache}++;
+        $resultset_ref->{cache_descriptor} = $cache_descriptor;
+        return;	
+			}else{
+				my $clear_cache_sql = qq~
+				DELETE FROM $TB_CACHED_RESULTSET WHERE table_name = '$table_name' and key_value = '$key_value' 
+				~;
+				$sbeams->do( $clear_cache_sql );
+				$log->info( "Cleaned up problem cache" );
+				$self->fetchResultHTMLTable( %args, use_caching => 0 );
+				return;
+      }
+	  }
+  }
 }
 
 1;

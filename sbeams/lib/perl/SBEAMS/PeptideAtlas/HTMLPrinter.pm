@@ -72,7 +72,12 @@ sub display_page_header {
     print STDERR $xml_header;
     print $xml_header;
     return;
-  }
+  }#elsif ($output_mode =~ 'tsv'){
+  #  my $text_header = $sbeams->get_http_header( mode => 'tsv', filename => 'table.tsv' );
+  #  print STDERR $text_header;
+  #  print $text_header;
+  #  return 
+  #}
 
   #### If the output mode is not html, then we may not want a header here
   if ($output_mode ne 'html') {
@@ -1938,6 +1943,7 @@ sub get_what_is_new {
   ~;
   my %sample_cnt = $sbeams->selectTwoColumnHash($sql);
 
+
   $sql = qq~
   SELECT  atlas_build_id,  COUNT(peptide_instance_id) cnt
   FROM $TBAT_PEPTIDE_INSTANCE
@@ -2034,6 +2040,30 @@ sub get_scroll_table {
   $sbeams = $self->getSBEAMS();
   my $sth = $sbeams->get_statement_handle->( $args{sql} );
   while ( my @row = $sth->fetchrow_array() ) {
+  }
+
+}
+
+sub print_html_table_to_tsv{
+  my $self = shift;
+  my %args = @_;
+  my $data_ref = $args{data_ref};
+  my $column_name_ref = $args{column_name_ref};
+  my $filename = $args{filename};
+  my %params =();
+  $params{'Content-Disposition'}="attachment;filename=$args{filename}";
+  print $q->header(-type=>'tsv',%params);
+
+  foreach (@$column_name_ref){
+    print lc($_) ."\t";
+  }
+  print "\n";
+  foreach my $row (@$data_ref){
+    foreach my $val (@$row){
+      $val =~ s/(\<[^\<]+\>)//g;
+      print "$val\t";
+    }
+    print "\n";
   }
 
 }

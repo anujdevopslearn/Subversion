@@ -18,6 +18,7 @@ use strict;
 #use vars qw ($sbeams);
 use lib qw (../../lib/perl);
 #use CGI::Carp qw(fatalsToBrowser croak);
+use vars qw($PROGRAM_FILE_NAME);
 
 use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
@@ -48,7 +49,7 @@ my $show_image = 0;
 
 { # Main 
 
-	my $t0 = time;
+	  my $t0 = time;
     # Authenticate or exit
     my $username = $sbeams->Authenticate( permitted_work_groups_ref => 
                                                       ['PeptideAtlas_user',
@@ -65,6 +66,9 @@ my $show_image = 0;
     my $build_help = get_table_help( table => 'build' );
     my $batch_help = get_table_help( table => 'batch' );
     my $mayu_help = get_table_help( table => 'mayu' );
+    my %resultset = ();
+    my $resultset_ref = \%resultset;
+    my $section = $params->{section} || '';
 
     my $page = $sbeams->getGifSpacer( 700 ) . "<BR>\n";
   #### Get the HTML to display the tabs
@@ -96,64 +100,121 @@ my $show_image = 0;
        exit;
     }
 
+
     # Add general section 
 #  print STDERR 'build overV ' . time() . "\n";
-    $page .= get_build_overview ( $build_id );
+    if (! $section  || $section =~ /overview/i){
+      $page .= get_build_overview ( $build_id );
+    }
 #  print STDERR 'sample info ' . time() . "\n";
-    my $what_is_new = $atlas->get_what_is_new ($build_id);
-    if($what_is_new){
-			$page .= "<BR>\n";
-			$page .= $what_is_new;
-			$page .= "<BR>\n";
+    if (! $section || $section =~ /what.*new/i){
+				my $what_is_new = fetchResultset(atlas_build_id => $build_id,
+                                         rs_table => 'buildDetail-new',
+                                         params => $params,
+                                         resultset_ref => $resultset_ref,
+                                         module_ref => sub{ $atlas->get_what_is_new(@_)});
+				$page .= "<BR>\n$what_is_new<BR>\n" if($what_is_new);
+    }
+       
+
+    if (! $section || $section =~ /ProteomeCoverage/i){
+      my $proteome_cover = fetchResultset(atlas_build_id => $build_id,
+                                         rs_table => 'buildDetail-ProteomeCoverage',
+                                         params => $params,
+                                         resultset_ref => $resultset_ref,
+                                         module_ref => sub{$atlas->get_proteome_coverage(@_)});
+      
+			if($proteome_cover){
+				$page .= "<BR>\n$proteome_cover<BR>\n";
+			}
     }
 
-
-    my $proteome_cover = $atlas->get_proteome_coverage( $build_id );
-    if($proteome_cover){
-			$page .= "<BR>\n";
-			$page .= $proteome_cover;
-			$page .= "<BR>\n";
+    my ( $chart_div, $header );
+    if (! $section || $section =~ /SampleContribution/i){
+			my ( $sample_table, $sample_arrayref ,$column_name_ref ) = get_sample_info( $build_id );
+      if ($params->{output_mode} =~ /tsv/i && $section){
+        $atlas->print_html_table_to_tsv( data_ref => $sample_arrayref,
+                                         column_name_ref => $column_name_ref,
+                                         filename=>'SampleContribution.tsv'); 
+      }else{
+			  ( $chart_div, $header ) = get_draw_chart_function( $sample_arrayref );
+			  $page .= "<BR>$batch_help\n";
+			  $page .= $sample_table;
+			  $page .= "<BR>\n";
+      }
     }
-    my ( $sample_table, $sample_arrayref ) = get_sample_info( $build_id );
-    my ( $chart_div, $header ) = get_draw_chart_function( $sample_arrayref );
-
-    $page .= "<BR>$batch_help\n";
-    $page .= $sample_table;
-    $page .= "<BR>\n";
 
     # Print what we already have, speed up apparent page loading time.
-    $atlas->display_page_header( header_info => $header, project_id => $project_id, onload => 'sortables_init()', sortable => 1 );
-		print $page;
+    if (! $section){
+      $atlas->display_page_header( header_info => $header, project_id => $project_id, onload => 'sortables_init()', sortable => 1 );
+		  print $page;
+			my $build_path = get_build_path( build_id => $build_id );
+			my $mayu_data_path = "$build_path/analysis/Mayu_out.csv";
+			if ( -e $mayu_data_path ) {
+				$page = "<BR>$mayu_help\n";
+				$page .= get_mayu_info( $mayu_data_path );
+				print $page;
+			}
 
-    my $build_path = get_build_path( build_id => $build_id );
-    my $mayu_data_path = "$build_path/analysis/Mayu_out.csv";
-    if ( -e $mayu_data_path ) {
-      $page = "<BR>$mayu_help\n";
-      $page .= get_mayu_info( $mayu_data_path );
-      print $page;
-    }
+	#  print STDERR 'showtime ' . time() . "\n";
+			# Add peptide stats section
+			# Add graphic
 
-#  print STDERR 'showtime ' . time() . "\n";
-    # Add peptide stats section
-    # Add graphic
-
-		if ( $show_image ) {
-      my $plots = $page = get_build_plots ( $build_id, $chart_div ); 
-	  	print $plots;
-		}
-    
-    if ( 1 ) {
-      my $map_display = getSampleMapDisplay ( %{$params}, build_id => $build_id );
-    	print $map_display;
-    }
-		$atlas->display_page_footer();
-    
-	my $tx = time;
-  my $td = $tx - $t0;
-  $log->debug("No SQL, time is $td for the whole page\n");
-
+			if ( $show_image ) {
+				my $plots = $page = get_build_plots ( $build_id, $chart_div ); 
+				print $plots;
+			}
+			
+			if ( 1 ) {
+				my $map_display = getSampleMapDisplay ( %{$params}, build_id => $build_id );
+				print $map_display;
+			}
+			$atlas->display_page_footer();
+			
+		my $tx = time;
+		my $td = $tx - $t0;
+		$log->debug("No SQL, time is $td for the whole page\n");
+  }
 } # end main
 
+sub fetchResultset {
+  my %args = @_;
+  my $build_id = $args{atlas_build_id};
+  my $rs_table = $args{rs_table};
+  my $params = $args{params};
+  my $resultset_ref = $args{resultset_ref}; 
+  my $module_ref = $args{module_ref};
+	#### Fetch the results from the database server
+  my $result;
+	$atlas->fetchResultHTMLTable(
+		table_name => $rs_table,
+		key_value => $build_id,	
+		resultset_ref=>$resultset_ref,
+		use_caching =>1 
+	);
+
+	if ( $resultset_ref->{from_cache} ) {
+ 		$log->info( "Skipping post-processing with cached RS" );
+	}else{
+		$resultset_ref->{data} = $module_ref->($build_id);
+		my %rs_params;
+		$rs_params{set_name} = 'SETME';
+		my %write_params = ( rs_table => $rs_table,
+											 key_field => 'atlas_build_id',
+											 key_value => $build_id );
+
+		$sbeams->writeResultSet(
+			resultset_file_ref=>\$rs_params{set_name},
+			resultset_ref=>$resultset_ref,
+			query_parameters_ref=>$params,
+			resultset_params_ref=>\%rs_params,
+			query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+			%write_params
+		 );
+	}
+  return $resultset_ref->{data};
+} 
+ 
 sub get_table_help {
   my %args = @_;
   my $name = $args{table};
@@ -198,6 +259,7 @@ sub get_table_help {
 #                 { key => 'Sens', value => 'The sensitivity of the Peptide Prophet model at a probablility of 0.9, the percent of true positives that would be included at that threshold was used as a cutoff. ' },
                  { key => 'FDR_(%)', value => 'The error rate of peptides above the threshold Peptide Prophet model at a probablility of 0.9, the percent of false positives that would be included at the build threshold. ' },
                  { key => 'Sample_Date', value => ''},
+                 { key => 'Pubmed_ID', value => ''}
         );
     $heading = 'Sample Overview'; 
     $description = 'These values pertain to individual samples within the atlas';
@@ -481,7 +543,7 @@ sub getSampleMapDisplay {
 	AND biosequence_id IN ( $bioseq_ids )
 	GROUP BY biosequence_name, SB.atlas_search_batch_id, sample_tag
   ~;
-  
+ 
 	my $t1 = time;
   my @samples = $sbeams->selectSeveralColumns($sql);
 	my $t2 = time;
@@ -751,7 +813,6 @@ sub get_sample_info {
   my @project_ids = $sbeams->getAccessibleProjects();
   my $project_ids = join( ",", @project_ids ) || '0';
 
-
   my $table = "<TABLE WIDTH=600>\n";
 
   my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'sample_contribution',
@@ -765,15 +826,24 @@ sub get_sample_info {
          n_good_spectra, n_distinct_multiobs_peptides,
          n_uniq_contributed_peptides, n_progressive_peptides,
          cumulative_n_peptides, n_canonical_proteins, cumulative_n_proteins,
-         model_90_error_rate,CONVERT(VARCHAR(10), PE.date_created, 126) AS [YYYY-MM-DD]
+         model_90_error_rate,CONVERT(VARCHAR(10), PE.date_created, 126) AS [YYYY-MM-DD],
+         A.Pubmed_ID
   FROM $TBAT_SEARCH_BATCH_STATISTICS SBS 
   JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
   JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ( ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id )
   JOIN $TBAT_SAMPLE S ON (S.sample_id = ASB.sample_id)
-  JOIN PROTEOMICS.DBO.SEARCH_BATCH PSB
-  ON PSB.SEARCH_BATCH_ID = ASB.PROTEOMICS_SEARCH_BATCH_ID
-  JOIN PROTEOMICS.DBO.PROTEOMICS_EXPERIMENT PE
-  ON PE.EXPERIMENT_ID = PSB.EXPERIMENT_ID
+  LEFT JOIN (
+		SELECT DISTINCT SAMPLE_ID, 
+		STUFF(
+			(SELECT DISTINCT ',' + CONVERT (VARCHAR , P.PUBMED_ID )
+			FROM $TBAT_SAMPLE_PUBLICATION F2
+			JOIN $TBAT_PUBLICATION P ON (P.PUBLICATION_ID = F2.PUBLICATION_ID)
+			WHERE F1.SAMPLE_ID = F2.SAMPLE_ID
+			FOR XML PATH ('')),1, 1, '') AS Pubmed_ID
+		FROM $TBAT_SAMPLE_PUBLICATION F1
+  ) AS A ON (A.SAMPLE_ID = S.SAMPLE_ID) 
+  JOIN PROTEOMICS.DBO.SEARCH_BATCH PSB  ON (PSB.SEARCH_BATCH_ID = ASB.PROTEOMICS_SEARCH_BATCH_ID)
+  JOIN PROTEOMICS.DBO.PROTEOMICS_EXPERIMENT PE ON (PE.EXPERIMENT_ID = PSB.EXPERIMENT_ID)
   WHERE ABSB.atlas_build_id = $build_id
   ORDER BY rownum, cumulative_n_peptides, ABSB.atlas_build_search_batch_id ASC
   END
@@ -806,8 +876,10 @@ sub get_sample_info {
   
   my $heading_info = get_table_help( table => 'batch', mode => 'entries_only' );
   my @headings;
+  my @column_names;
   for my $row ( @$heading_info ) {
     push @headings, $row->{key}, $row->{value};
+    push @column_names, $row->{key};
   }
 
 #  for my $h ( @headings ) {
@@ -827,13 +899,13 @@ sub get_sample_info {
                                         header => 1, 
                                         nowrap => [1..scalar(@headings)], 
                                         table_id => 'sample_contribution',
-                                        align => [ qw(center left right right right right right right right right right center) ], 
+                                        align => [ qw(center left right right right right right right right right right center,center) ], 
                                         tr_info => $tr,
                                         bg_color => '#EAEAEA',
                                         rows_to_show => 25,
                                         sortable => 1 );
   $table .= '</TABLE>';
-  return ( $table, \@samples );
+  return ( $table, \@samples, \@column_names);
 
 }
 
