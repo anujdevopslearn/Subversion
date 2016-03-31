@@ -68,7 +68,8 @@ my %updated_peptides;
 GetOptions( \%opts,"verbose:s","quiet","debug:s","testonly",
 		           "list","purge_mappings","input_file:s", 'set_tag:s',
                'help', 'update_peptide_info', 'biosequence_set_id:i', 
-               'protein_file=s', 'map_set' ) || usage( "Error processing options" );
+               'protein_file=s', 'map_set', 'delete_mapped_peps'
+           ) || usage( "Error processing options" );
 
 # build list requested 
 if ($opts{list}) {
@@ -105,7 +106,7 @@ exit(0);
 ###############################################################################
 # Main Program:
 #
-# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+# Call $sbeams->Aurhenticate() and exit if it fails or continue if it works.
 ###############################################################################
 sub main {
 
@@ -138,8 +139,8 @@ sub handleRequest {
     $set_id = getBioseqSetID( %opts );
     $opts{biosequence_set_id} = $set_id;
   }
+  my $set_id = getBioseqSetID( %opts );
   my $organism_id = getBioseqSetOrganism( %opts );
-
 
   #### If specified, read the file in to fill the table
   if ( $input_file ) {
@@ -326,22 +327,23 @@ sub map_biosequence_set {
 #getBioseqSetID  -- return a bioseq_set_id
 ##############################################################################
 sub getBioseqSetID {
-  my $SUB = 'getBioseqSetID';
-  my %args = @_;
 
-  print "INFO[$SUB] Getting bioseq_set_id....." if ($VERBOSE);
-  my $bioseq_set_tag = $args{set_tag} or
-    die("ERROR[$SUB]: parameter set_tag not provided");
+  my %args = @_;
+  if ( $args{biosequence_set_id} ) {
+    return $args{biosequence_set_id};
+  } elsif ( !$args{set_tag} ) {
+    die "Must provide either biosequence_set_id or set_tag\n";
+  }
   
   my $sql = qq~
     SELECT biosequence_set_id
       FROM $TBAT_BIOSEQUENCE_SET
-     WHERE set_tag = '$bioseq_set_tag'
+     WHERE set_tag = '$args{set_tag}'
   ~;
   
   my ($bioseq_set_id) = $sbeams->selectOneColumn($sql);
+  $args{biosequence_set_id} = $bioseq_set_id;
 
-  print "bioseq_set_id: $bioseq_set_id\n" if ($VERBOSE);
   return $bioseq_set_id;
 }
 
@@ -353,14 +355,19 @@ sub getBioseqSetOrganism {
   my $SUB = 'getBioseqSetOrganism';
   my %args = @_;
 
-  print "INFO[$SUB] Getting bioseq_set_id....." if ($VERBOSE);
-  my $bioseq_set_id = $args{biosequence_set_id} or
-    die("ERROR[$SUB]: parameter set_tag not provided");
+  my $where = '';
+  if ( $args{biosequence_set_id} ) { 
+    $where = "WHERE biosequence_set_id = $args{biosequence_set_id}\n";
+  } elsif ( $args{seq_tag} ) { 
+    $where = "WHERE seq_tag = $args{seq_tag}\n";
+  } else {
+    die "Must provide either biosequence_set_id or set_tag\n";
+  }
   
   my $sql = qq~
     SELECT organism_id
-      FROM $TBAT_BIOSEQUENCE_SET
-     WHERE biosequence_set_id = '$bioseq_set_id'
+    FROM $TBAT_BIOSEQUENCE_SET
+    $where
   ~;
   my ($organism_id) = $sbeams->selectOneColumn($sql);
 
@@ -397,10 +404,38 @@ sub fillTable{
   open(INFILE,$source_file) || die "unable to open file $source_file"; 
   my %src_peptides;
   my $cnt = 0;
+
+  my $validated_headings = 0;
   while ( my $line = <INFILE> ) {
-    next unless $cnt++;
+
     chomp $line;
     my @line = split( /\t/, $line, -1 );
+
+    unless( $cnt++ ) {
+      my %heads = ( 0 => 'Protein',
+                    1 => 'Pre',
+                    2 => 'Peptide',
+                    3 => 'Fol',
+                    4 => 'apex',
+                    5 => 'espp',
+                    6 => 'detectability_predictor',
+                    7 => 'peptide_sieve',
+                    8 => 'stepp',
+                    9 => 'Combined_Score',
+                    10 => 'n_prot_map',
+                    11 => 'n_exact_map',
+                    12 => 'n_gen_loc' );
+      my $idx = 0;
+      my $bad = 0;
+      for my $col ( @line ) {
+        $bad++ unless $col =~ /$heads{$idx}/i;
+        $idx++;
+      }
+      $bad++ unless $#line >= 12;
+      $validated_headings++ unless $bad;
+      die "Invalid input file \n" unless $validated_headings;
+      next;
+    }
     $src_peptides{$line[2]}++;
   }
   close INFILE;
@@ -450,34 +485,37 @@ sub fillTable{
     chomp($line);
     my @columns = split("\t",$line, -1);
 
-    
-# proteotypic_peptide_id
-# matched_peptide_id
-# preceding_residue
-# peptide_sequence
-# following_residue
-# peptidesieve_ICAT
-# detectabilitypredictor_score
-# peptide_isoelectric_point
-# molecular_weight
-# SSRCalc_relative_hydrophobicity
-# peptidesieve_score
-# espp_score
-# apex_score
-# combined_predictor_score
+    # 0    Protein [ A0AAS4 ]
+    # 1    Pre [ R ]
+    # 2    Peptide [ LWWYHWICWLLSVVGIFCILLAHDHYTVDVVVAYYITTR ]
+    # 3    Fol [ L ]
+    # 4    apex [ 0 ]
+    # 5    espp [ 0.11634 ]
+    # 6    detectability_predictor [ -1 ]
+    # 7    peptide_sieve [ 2.31062e-05 ]
+    # 8    stepp [ -1.0106439168083756 ]
+    # 9    Combined_Score [ -1.0000 ]
+    # 10   n_prot_map [ 2 ]
+    # 11   n_exact_map [ 2 ]
+    # 12   n_gen_loc [ 0 ]
+    # 13   n_sp_mapping [ 1 ]
+    # 14   n_spvar_mapping [ 1 ]
+    # 15   n_spsnp_mapping [ 0 ]
+    # 16   n_ensp_mapping [ 0 ]
+    # 17   n_ensg_mapping [ 0 ]
+    # 18   n_ipi_mapping [ 0 ]
+    # 19   n_sgd_mapping [ 0 ]
 
-# 0 Protein
-# 1 Pre
-# 2 Peptide
-# 3 Fol
-# 4 apex
-# 5 espp
-# 6 detectability_predictor
-# 7 peptide_sieve
-# 8 Combined_Score
-# 9 n_prot_map
-# 10 n_exact_map
-# 11 n_gen_loc
+    # Hard-coded n_columns check
+    if ( !$validated_headings && scalar( @columns ) != 13 ) {
+      $fill_stats{bad_line}++;
+      next;
+    }
+    if ( $columns[2] !~ /^[ACDEFGHIKLMNPQRSTVWY]+$/ ) {
+      $fill_stats{bad_peptide}++;
+      next;
+    }
+    
 
     # Hard-coded n_columns check
     if ( scalar( @columns ) != 13 ) {
@@ -718,8 +756,12 @@ sub memusage {
       last;
     }
   }
-  $mem .= '% (' . time() . ')';
-  return $mem;
+  if ( $mem ) {
+    $mem .= '% (' . time() . ')';
+    return $mem;
+  } else {
+    return join( "::", @results );
+  }
 }
 
 
@@ -833,8 +875,10 @@ sub mapSeqs {
 sub purgeMappings {
   my $bioseq_set_id = shift;
   if ( $opts{purge_mappings} && $bioseq_set_id ) {
-    print "purging mappings for biosequence set $opts{set_tag}, press cntl-c to abort\n";
-    sleep 1;
+    print "purging mappings for biosequence set $opts{set_tag}";
+    print "also deleting source peptides\n" if $opts{delete_mapped_peps};
+    print "press cntl-c to abort\n";
+    sleep 5;
   } else {
     die "Must provide bioseq_set";
   }
@@ -847,11 +891,19 @@ sub purgeMappings {
     push @ids, $id;
     if ( scalar( @ids == 100 ) ) {
       my $id_list = join( ',', @ids );
-      my $sql = qq~
+      my $mapsql = qq~
       DELETE FROM $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING
       WHERE proteotypic_peptide_id IN ( $id_list )
       ~;
-      $sbeams->do( $sql );
+      $sbeams->do( $mapsql );
+
+      if ( $opts{delete_mapped_peps} ) {
+        my $ppsql = qq~
+        DELETE FROM $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING
+        WHERE proteotypic_peptide_id IN ( $id_list )
+        ~;
+        $sbeams->do( $ppsql );
+      }
       @ids = ();
       print '*';
       print "\n" unless $cnt++ % 50;
@@ -859,11 +911,19 @@ sub purgeMappings {
   }
   print "\n";
   my $id_list = join( ',', @ids );
-  my $sql = qq~
+  my $mapsql = qq~
   DELETE FROM $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING
   WHERE proteotypic_peptide_id IN ( $id_list )
   ~;
-  $sbeams->do( $sql ) if $id_list;
+  $sbeams->do( $mapsql ) if $id_list;
+
+  if ( $opts{delete_mapped_peps} ) {
+    my $ppsql = qq~
+    DELETE FROM $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING
+    WHERE proteotypic_peptide_id IN ( $id_list )
+    ~;
+    $sbeams->do( $ppsql );
+  }
 }
 
 
@@ -1003,6 +1063,7 @@ sub usage {
     --list                 If set, list the available builds and exit
     --help                 print this usage and exit.
     --purge_mappings       Delete peptide mappings pertaining to this set
+    --delete_mapped_peps   Also delete records from proteotypic_peptide table (req. purge_mappings)
     --set_tag              Name of the biosequence set tag  
     --update_peptide_info  will update info in proteotypic_peptide table, e.g.
                            pI, mw, SSRCalc, Peptide Sieve.  Does *not* currently
