@@ -15,6 +15,7 @@ use strict;
 use Getopt::Long;
 use File::Basename;
 use FindBin;
+use Data::Dumper;
 use lib '/net/db/src/SSRCalc/ssrcalc';
 use SSRCalculator;
 
@@ -32,6 +33,7 @@ use SBEAMS::Proteomics::PeptideMassCalculator;
 
 use vars qw ($sbeams $atlas $q $current_username $PROG_NAME $USAGE %opts
              $QUIET $VERBOSE $DEBUG $TESTONLY $TESTVARS $CHECKTABLES );
+$TESTONLY = 1;
 
 # don't buffer output
 $|++;
@@ -65,7 +67,8 @@ my %updated_peptides;
 ## Process options
 GetOptions( \%opts,"verbose:s","quiet","debug:s","testonly",
 		           "list","purge_mappings","input_file:s", 'set_tag:s',
-               'help', 'update_peptide_info' ) || usage( "Error processing options" );
+               'help', 'update_peptide_info', 'biosequence_set_id:i', 
+               'protein_file=s', 'map_set' ) || usage( "Error processing options" );
 
 # build list requested 
 if ($opts{list}) {
@@ -76,7 +79,7 @@ if ($opts{list}) {
 }
 
 for my $arg ( qw( set_tag ) ) {
-  usage( "Missing required parameter $arg" ) unless $opts{$arg};
+  usage( "Missing required parameter $arg" ) unless $opts{$arg} || $opts{biosequence_set_id};
 }
 
 $VERBOSE = $opts{"verbose"} || 0;
@@ -130,9 +133,13 @@ sub handleRequest {
   my $delete_set_tag = $opts{"delete_set"};
   my $input_file = $opts{"input_file"};
 
+  my $set_id;
+  if ( !$opts{biosequence_set_id} ) {
+    $set_id = getBioseqSetID( %opts );
+    $opts{biosequence_set_id} = $set_id;
+  }
   my $organism_id = getBioseqSetOrganism( %opts );
 
-  my $set_id = getBioseqSetID( %opts );
 
   #### If specified, read the file in to fill the table
   if ( $input_file ) {
@@ -142,6 +149,10 @@ sub handleRequest {
   } elsif ( $opts{purge_mappings} ) {
     print "purge mappings\n";
     purgeMappings( $set_id )
+  } elsif ( $opts{map_set} ) {
+    map_biosequence_set();
+  } else {
+    print "Unknown mode\n";
   }
 
 
@@ -149,6 +160,167 @@ sub handleRequest {
   return;
 
 } # end handleRequest
+
+sub map_biosequence_set {
+
+  my ($acc_to_id, $seq_to_id ) = getBioSeqData( %opts );
+  my $id_to_seq = {};
+
+  my $dbh = $sbeams->getDBHandle();
+
+  my $ppmsql = qq~
+  SELECT COUNT(*)
+  FROM $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING 
+  WHERE source_biosequence_id = ?
+  ~;
+  my $sth = $dbh->prepare( $ppmsql );
+
+  # assume we've got no id mappings
+  my $borrow_sql = qq~
+  SELECT B.biosequence_set_id, PP.peptide_sequence, PPM.*
+  FROM $TBAT_BIOSEQUENCE B 
+  JOIN $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING PPM
+    ON B.biosequence_id = PPM.source_biosequence_id
+  JOIN $TBAT_PROTEOTYPIC_PEPTIDE PP
+    ON PP.proteotypic_peptide_id = PPM.proteotypic_peptide_id
+  WHERE B.biosequence_name = ?
+  ORDER BY B.biosequence_set_id DESC
+  ~;
+  my $bsth = $dbh->prepare( $borrow_sql );
+
+  # assume we've got no acc mappings
+  my $borrow_pep_sql = qq~
+  SELECT B.biosequence_set_id, PP.peptide_sequence, PPM.*
+  FROM $TBAT_BIOSEQUENCE B 
+  JOIN $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING PPM
+  ON B.biosequence_id = PPM.source_biosequence_id
+  JOIN $TBAT_PROTEOTYPIC_PEPTIDE PP
+  ON PP.proteotypic_peptide_id = PPM.proteotypic_peptide_id
+  WHERE PP.peptide_sequence = ?
+  AND PP.preceding_residue = ?
+  AND PP.following_residue = ?
+  ORDER BY B.biosequence_set_id DESC
+  ~;
+  my $bpsth = $dbh->prepare( $borrow_pep_sql );
+
+  my %stats;
+  my %acc_missing;
+  for my $acc ( keys( %{$acc_to_id} ) ) {
+    my %pepmap;
+    my $id = $acc_to_id->{$acc} || die;
+    $sth->execute( $id );
+    my ($cnt) = $sth->fetchrow_array();
+    if ( $cnt ) {
+      $stats{mapped}++;
+    } else {
+      $stats{unmapped}++;
+      $bsth->execute( $acc );
+      print STDERR "$acc was unmapped, looking for peptides...\n";
+      my $acc_found = 0;
+      while ( my $row = $bsth->fetchrow_hashref() ) {
+        print STDERR "Inserting $row->{peptide_sequence}\n";
+        $acc_found++;
+        if ( $pepmap{$row->{peptide_sequence}}++ ) {
+          print "Skipping $row->{peptide_sequence}, already seen\n";
+          next;
+        } 
+        $row->{source_biosequence_id} = $id;
+#        print STDERR "Inserting $row->{peptide_sequence} for BSS ID $id\n";
+        delete $row->{biosequence_set_id};
+        delete $row->{peptide_sequence};
+        delete $row->{proteotypic_peptide_mapping_id};
+        my $map_pk = $sbeams->updateOrInsertRow( insert => 1,
+                                            table_name  => $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING,
+                                            rowdata_ref => $row,
+                                            verbose     => $VERBOSE,
+                                           return_PK    => 1,
+                                                     PK => 'proteotypic_peptide_mapping_id',
+                                            testonly    => $TESTONLY );
+#        print STDERR "new mapping ID is $map_pk\n";
+        $stats{acc_pep_inserted}++;
+      }
+      if ( $acc_found ) {
+        $stats{acc_found}++;
+      } else {
+        $stats{acc_missing}++;
+
+        # Invert seq2id hash one time if needed
+        unless ( scalar( keys( %{$id_to_seq} ) ) ) {
+          for my $seq ( keys(  %{$seq_to_id} ) ) {
+            for my $id ( @{$seq_to_id->{$seq}} ) {
+              $id_to_seq->{$id} = $seq;
+            }
+          }
+        }
+        my $seq = $id_to_seq->{$id} || die;
+
+        my $digest = $atlas->do_tryptic_digestion( aa_seq => $seq, min_len => 7, max_len => 50, flanking => 1 );
+        $acc_missing{$acc} ||= { missing => 0, found => 0, peptides => [] };
+        for my $fullpep ( @{$digest} ) {
+          my @pepinfo = split( /\./, $fullpep );
+          $bpsth->execute( $pepinfo[1], $pepinfo[0], $pepinfo[2] );
+          my $peprow = $bpsth->fetchrow_hashref();
+          if ( scalar( keys( %{$peprow} ) ) ) {
+#            $stats{pep_match_found}++;
+            $acc_missing{$acc}->{found}++;
+            push @{$acc_missing{$acc}->{peptides}}, $peprow;
+          } else {
+            $acc_missing{$acc}->{missing}++;
+#            $stats{pep_match_not_found}++;
+          }
+        }
+      }
+    }
+  }
+
+  my $missing_file = ( -e "missing_accessions.prot" ) ? "missing_accessions_" . time() . ".prot" : "missing_accessions.prot";
+  open MIA, ">$missing_file";
+
+  # Loop over peptide for which there was not acc match in PPM
+  for my $acc ( keys( %acc_missing ) ) {
+
+    # If at least one peptide was found
+    if ( $acc_missing{$acc}->{found} ) {
+
+      # If at least one peptide was NOT found, print sequence for predictor run
+      if ( $acc_missing{$acc}->{missing} ) {
+        $stats{pep_found_partial}++;
+        print MIA "$acc\n";
+
+      # All peptides 7-50 were found, insert them
+      } else {
+        $stats{pep_found_full}++;
+        for my $row ( @{$acc_missing{$acc}->{peptides}} ) {
+          delete $row->{biosequence_set_id};
+          delete $row->{peptide_sequence};
+          delete $row->{proteotypic_peptide_mapping_id};
+          $row->{source_biosequence_id} = $acc_to_id->{$acc};
+          my $map_pk = $sbeams->updateOrInsertRow( insert => 1,
+                                              table_name  => $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING,
+                                              rowdata_ref => $row,
+                                              verbose     => $VERBOSE,
+                                             return_PK    => 1,
+                                                       PK => 'proteotypic_peptide_mapping_id',
+                                              testonly    => $TESTONLY );
+  #        print STDERR "new mapping ID is $map_pk\n";
+          $stats{pep_found_full_inserted}++;
+        }
+      }
+    } else {
+      $stats{pep_found_none}++;
+      print MIA "$acc\n";
+    }
+  }
+  for my $s ( sort( keys( %stats ) ) ) {
+    print STDERR "$s\t\t$stats{$s}\n";
+  }
+  my $mia = $stats{pep_found_partial} + $stats{pep_found_none};
+  print STDERR "Printed $mia total missing or partially missing protein accessions\n";
+
+  for my $seq ( keys( %{$seq_to_id} ) ) {
+  }
+
+}
 
 ##############################################################################
 #getBioseqSetID  -- return a bioseq_set_id
@@ -182,15 +354,14 @@ sub getBioseqSetOrganism {
   my %args = @_;
 
   print "INFO[$SUB] Getting bioseq_set_id....." if ($VERBOSE);
-  my $bioseq_set_tag = $args{set_tag} or
+  my $bioseq_set_id = $args{biosequence_set_id} or
     die("ERROR[$SUB]: parameter set_tag not provided");
   
   my $sql = qq~
     SELECT organism_id
       FROM $TBAT_BIOSEQUENCE_SET
-     WHERE set_tag = '$bioseq_set_tag'
+     WHERE biosequence_set_id = '$bioseq_set_id'
   ~;
-  
   my ($organism_id) = $sbeams->selectOneColumn($sql);
 
   print "organism_id: $organism_id\n" if ($VERBOSE);
@@ -216,7 +387,7 @@ sub fillTable{
 
   print "get bioseq info\n";
   # Get biosequence set info
-  my ($acc_to_id, $seq_to_id ) = getBioSeqData( $bioseq_set_id );
+  my ($acc_to_id, $seq_to_id ) = getBioSeqData( %opts );
   # This is global, do this once so mapping can run in a sub
   @biosequences = keys( %$seq_to_id );
   print "Memory at " . &memusage . "\n";
@@ -669,7 +840,6 @@ sub purgeMappings {
   }
   my $proteopep_mapping = getProteotypicPeptideMapData( bioseq_set_id => $bioseq_set_id, purge_mode => 1 );
   print "Found " . scalar( keys( %{$proteopep_mapping} ) ) . " mappings\n";
-  exit;
 
   my @ids;
   my $cnt = 1;
@@ -748,23 +918,51 @@ sub getProteotypicPeptideData {
 }
 
 sub getBioSeqData {
-  my $bioseq_set_id = shift || usage( "missing required param bioseq_set_id" );
+
+  my %local_opts = @_;
+  my $bioseq_set_id = $local_opts{biosequence_set_id} || usage( "missing required param bioseq_set_id" );
+
+  my %targets;
+  my $target_string;
+  if ( $local_opts{protein_file} ) {
+    open PROT, $local_opts{protein_file} || die;
+    while ( my $acc = <PROT> ) {
+      chomp $acc;
+      $acc =~ s/\s//g;
+      $targets{$acc}++;
+    }
+    close PROT;
+    $target_string = "'" . join( "','", keys( %targets ) ) . "'";
+  }
 
   my $sql = qq~
      SELECT biosequence_name, biosequence_id, biosequence_seq
        FROM $TBAT_BIOSEQUENCE
       WHERE biosequence_set_id = '$bioseq_set_id'
-      AND biosequence_name NOT LIKE 'DECOY_%'
   ~;
+  if ( $target_string ) {
+    $sql .= "\nAND biosequence_name IN ( $target_string )";
+  } else {
+    $sql .= "\nAND biosequence_name NOT LIKE 'DECOY_%'";
+  }
 
   my $sth = $sbeams->get_statement_handle( $sql );
   my %seq_to_id;
   my %acc_to_id;
   while( my $row = $sth->fetchrow_arrayref() ) {
+    if ( $target_string ) {
+      next unless $targets{$row->[0]};
+    }
+    my $seq = $row->[2];
+    unless( $local_opts{use_compound_sequences} ) {
+      my @seq = split( /\*/, $row->[2] );
+      $seq = $seq[0];
+    }
     $acc_to_id{$row->[0]} = $row->[1];
-    $seq_to_id{$row->[2]} ||= [];
-    push @{$seq_to_id{$row->[2]}}, $row->[1];
+    $seq_to_id{$seq} ||= [];
+    push @{$seq_to_id{$seq}}, $row->[1];
   }
+#  my ($acc_to_id, $seq_to_id ) = getBioSeqData( %opts );
   return ( \%acc_to_id, \%seq_to_id );
 }
 
