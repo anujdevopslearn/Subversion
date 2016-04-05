@@ -3,7 +3,7 @@
 ###############################################################################
 # $Id: $
 #
-# SBEAMS is Copyright (C) 2000-2014 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2016 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -436,8 +436,22 @@ sub get_library_table {
       push @lib_data, [ @{$lib_file}[1,0,3,8], $size, $dwn . '&nbsp;&nbsp;' . $cust ];
     }
 
+
+    my ( $tr, $link ) = $sbeams->make_table_toggle( name => $lib_data[1]->[0],
+                                                 visible => 0,
+                                                 tooltip => 'Show/Hide Section',
+                                                 showtext => 'Show library files',
+                                                 hidetext => 'Hide library files',
+                                                 imglink => 1,
+                                                 textlink => 1,
+                                                  sticky => 1 );
+
+
+
+
     my $lib_table = $atlas->encodeSectionTable( header => 1, 
                                                  width => '800',
+                                               tr_info => $tr,
                                                 align  => [ qw(left left left left left left center) ],
                                                   rows => \@lib_data,
                                            chg_bkg_idx => 3, 
@@ -504,7 +518,7 @@ sub get_library_table {
      $lib_zero->[11] $px_link <br>
      $lib_zero->[12] 
      $publication
-     <table>$lib_table
+     $link <table>$lib_table
     <br>
     ~;
   }
@@ -733,7 +747,7 @@ sub get_subset_form {
   JOIN $TBAT_INSTRUMENT_TYPE IT ON IT.instrument_type_id = DIL.instrument_type_id
   WHERE project_id IN ( $project_ids )
   $format_constraint
-  AND is_master = 'Y'
+--  AND is_master = 'Y'
   AND DIL.record_status = 'N' 
   ORDER BY dia_library_tag, dia_library_name 
   ~;
