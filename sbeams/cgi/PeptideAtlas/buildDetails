@@ -259,7 +259,8 @@ sub get_table_help {
 #                 { key => 'Sens', value => 'The sensitivity of the Peptide Prophet model at a probablility of 0.9, the percent of true positives that would be included at that threshold was used as a cutoff. ' },
                  { key => 'FDR_(%)', value => 'The error rate of peptides above the threshold Peptide Prophet model at a probablility of 0.9, the percent of false positives that would be included at the build threshold. ' },
                  { key => 'Sample_Date', value => ''},
-                 { key => 'Pubmed_ID', value => ''}
+                 { key => 'Pubmed_ID', value => ''}, 
+                 { key => 'Other_Repos', value=>''}
         );
     $heading = 'Sample Overview'; 
     $description = 'These values pertain to individual samples within the atlas';
@@ -827,7 +828,7 @@ sub get_sample_info {
          n_uniq_contributed_peptides, n_progressive_peptides,
          cumulative_n_peptides, n_canonical_proteins, cumulative_n_proteins,
          model_90_error_rate,CONVERT(VARCHAR(10), PE.date_created, 126) AS [YYYY-MM-DD],
-         A.Pubmed_ID
+         A.Pubmed_ID, S.repository_identifiers
   FROM $TBAT_SEARCH_BATCH_STATISTICS SBS 
   JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
   JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ( ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id )
