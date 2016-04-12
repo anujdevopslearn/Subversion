@@ -886,6 +886,7 @@ sub get_sample_info {
       $batch->[$idx] ='';
       foreach my $id(@ids){
         my $link = '';
+        $id =~ s/\s+//g;
         if ($id =~ /PXD/){
           $link = "http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=";
         }elsif($id =~ /PASS/){
