@@ -508,6 +508,7 @@ sub getSampleMapDisplay {
 	GROUP BY matched_biosequence_id,  CAST(biosequence_seq AS VARCHAR(2000)), biosequence_name
 	ORDER BY SUM(PI.n_observations) DESC 
 	~;
+
 	my $t1 = time;
   my @prots = $sbeams->selectSeveralColumns($prot_sql);
 	my $t2 = time;
@@ -544,7 +545,8 @@ sub getSampleMapDisplay {
 	AND biosequence_id IN ( $bioseq_ids )
 	GROUP BY biosequence_name, SB.atlas_search_batch_id, sample_tag
   ~;
- 
+
+
 	my $t1 = time;
   my @samples = $sbeams->selectSeveralColumns($sql);
 	my $t2 = time;
@@ -869,6 +871,31 @@ sub get_sample_info {
       $batch->[$idx] = $atlas->make_pa_tooltip( tip_text => $batch->[$idx],
           link_text => "<a href='$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=AT_SAMPLE&sample_id=$batch->[0]'>$batch->[$idx]</a>" );
     }
+    for my $idx (12) {
+      next if ( ! $batch->[$idx]);
+      my @ids = split(",", $batch->[$idx]);
+      $batch->[$idx] ='';
+      foreach my $id(@ids){
+        $batch->[$idx] .= "<a href='http://www.ncbi.nlm.nih.gov/pubmed/?term=$id'>$id</a>,";
+      }
+      $batch->[$idx] =~ s/,$//;
+    }
+    for my $idx (13) {
+      next if ( ! $batch->[$idx]);
+      my @ids = split(",", $batch->[$idx]);
+      $batch->[$idx] ='';
+      foreach my $id(@ids){
+        my $link = '';
+        if ($id =~ /PXD/){
+          $link = "http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=";
+        }elsif($id =~ /PASS/){
+          $link = "http://www.peptideatlas.org/PASS/";
+        }
+        $batch->[$idx] .= "<a href='$link$id'>$id</a>,";
+      }
+      $batch->[$idx] =~ s/,$//;
+    }
+
     push @samples, $batch;
 
   }
