@@ -439,14 +439,34 @@ sub handle_request {
       ~;
     }
 	}
+  ## get organism_id to pass on to url_cols
+  my $tsql = qq~
+      SELECT BS.organism_id
+      FROM $TBAT_BIOSEQUENCE_SET BS
+      JOIN $TBAT_ATLAS_BUILD AB
+      ON (AB.biosequence_set_id = BS.biosequence_set_id)
+      where AB.atlas_build_id ='$parameters{atlas_build_id}'
+      ~;
+ 
+   my ($organism_id) = $sbeams->selectOneColumn($tsql) or
+       die "\nERROR: Unable to find the organism_id" .
+       " with $tsql\n\n";
+
+  $parameters{organism_id} = $organism_id;
 
   #### Build allow_low_ntt constraint
   my $allow_low_ntt_clause = '';
 	if ( $parameters{allow_low_ntt} && $parameters{allow_low_ntt} =~ /N/ ) {
-    $allow_low_ntt_clause = qq~
-		AND PI.preceding_residue like '[-KR]'
-		AND ( following_residue = '-' OR P.peptide_sequence LIKE '%[KR]' )
-		~;
+    if ($atlas_build_id >= 448 && $organism_id == 2 ){
+      $allow_low_ntt_clause = qq~
+        AND PI.highest_n_enzymatic_termini = 2
+      ~;
+    }else{
+      $allow_low_ntt_clause = qq~
+		    AND PI.preceding_residue like '[-KR]'
+		    AND ( following_residue = '-' OR P.peptide_sequence LIKE '%[KR]' )
+		  ~;
+    }
 	}
 	
 	
@@ -506,20 +526,6 @@ sub handle_request {
     constraint_value=>$parameters{peptide_ids_constraint} );
   return if ($peptide_ids_clause eq '-1');
 
-  ## get organism_id to pass on to url_cols
-  my $tsql = qq~
-      SELECT BS.organism_id
-      FROM $TBAT_BIOSEQUENCE_SET BS
-      JOIN $TBAT_ATLAS_BUILD AB
-      ON (AB.biosequence_set_id = BS.biosequence_set_id)
-      where AB.atlas_build_id ='$parameters{atlas_build_id}'
-      ~;
- 
-   my ($organism_id) = $sbeams->selectOneColumn($tsql) or
-       die "\nERROR: Unable to find the organism_id" .
-       " with $tsql\n\n";
-
-  $parameters{organism_id} = $organism_id;
 
   ## handle file upload and clause for sql for $parameters{upload_file}
   my $biosequence_names_clause;
