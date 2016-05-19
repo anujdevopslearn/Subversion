@@ -53,7 +53,7 @@ $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 my $modification_helper = new SBEAMS::PeptideAtlas::ModificationHelper();
-
+my $htmlmode;
 my $current_page = { organism => '', atlas_build_id => '' };
 
 #$q = new CGI;
@@ -120,7 +120,7 @@ sub main {
         q=>$q,
         parameters_ref=>\%parameters
         );
-
+    $htmlmode = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
     #### Decide what action to take based on information so far
     if ($parameters{action} eq "???") 
     {
@@ -276,8 +276,8 @@ sub handle_request {
     #### Define some variables for a query and resultset
     my %resultset = ();
     my $resultset_ref = \%resultset;
-    my (%url_cols,%hidden_cols,%max_widths,$show_sql);
-    
+    my (%rs_params,%url_cols,%hidden_cols,%max_widths,$show_sql);
+
     # Get list of accessible projects
     my @accessible_project_ids = $sbeams->getAccessibleProjects();
     my $project_string = join( ",", @accessible_project_ids ) || '0';
@@ -1192,9 +1192,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
   if ($is_origene){
     $consensus = $cs_obj->spectrum_search_origene( seq => $peptide_sequence[0] ); 
   }else{
-    $consensus = $cs_obj->spectrum_search( seq => $peptide_sequence[0], project_ids => $project_string ); # ,
- 
-                                          #  lib_id => $lib_id );
+    $consensus = $cs_obj->spectrum_search( seq => $peptide_sequence[0], project_ids => $project_string ); 
   }
 
   my $reference = $cs_obj->spectrum_search( seq => $peptide_sequence[0],
@@ -1211,19 +1209,15 @@ if ($apply_action =~ /QUERY|GO/i ) {
     if ( $cs_obj->has_QTOF_stepping( seq => $peptide_sequence[0] ) ) {
       $ce_ids = $cs_obj->get_QTOF_stepping( seq => $peptide_sequence[0] ); 
     }
-
     $q->delete( 'mod_seq' );
     $q->delete( 'charge' );
     my $spec_url = $q->self_url();
-
     #### Loops through resultset and do formatting
     for my $pep ( @mod_peps ) {
-
 			# Originally showed only one consensus per peptide ion, now
 			# show as a list, with default in first position.
 			my %all_consensus;
       $pep->[$spec_idx] = '';
-      
       for my $c_spectrum ( @$consensus ) {
         if ( $c_spectrum->[2] == $pep->[$chrg_idx] ) {
 
@@ -1235,11 +1229,9 @@ if ($apply_action =~ /QUERY|GO/i ) {
           }
           my $default_txt = ( $lib_id eq $c_spectrum->[7] ) ? '(Build default)' : '';
           my $title = "View consensus spectrum from the $c_spectrum->[10] library $default_txt"; 
-
 					$all_consensus{$c_spectrum->[7]} = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$c_spectrum->[0];ymax=11000' TARGET=blank><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
         }
       }
-
       my $best = '';
 			my $rest = '';
       if ( $is_origene){
@@ -1287,7 +1279,6 @@ if ($apply_action =~ /QUERY|GO/i ) {
         }
         $pep->[$ref_idx] = $ref_spectra;
       }
-
 			
       my $ce_key = $pep->[$mseq_idx] . $pep->[$chrg_idx];
       my $ce_link = '&nbsp;';
@@ -1338,34 +1329,43 @@ if ($apply_action =~ /QUERY|GO/i ) {
                                                 );
     if ( $is_origene){
       my $str = qq~
-          <tr ALIGN=CENTER BGCOLOR=#CCCCCC >
+          <tr ALIGN=CENTER BGCOLOR="#CCCCCC" >
           <td>ITCID</td>
           <td>FTCID</td>
           <td>ITETD</td>
           <td>FTETD</td>
           <td>HCD</td>
           </tr>
-     ~;
-      $modHTML =~ s/NOWRAP=1>(Modifi|Charge|Best|Mono|#|Sample)/NOWRAP=1 rowspan="2">$1/g;
-      $modHTML =~ s/<TD>Consensus Spectra<\/TD>/<TD colspan="5">Consensus Spectra<\/TD>/;
-      if ($modHTML =~ /CE_range/){
-        $modHTML =~ s/<TD>CE_range<\/TD>\n\s+<\/TR>/<\/TR>$str/;
-      }else{
-        $modHTML =~ s/Consensus Spectra<\/TD>\n\s+<\/TR>/Consensus Spectra<\/TD>\n  <\/TR>\n$str/;
-      }
+      ~;
+      my @lines = split ("\n", $modHTML);
+      my $flag=0;
+      foreach (@lines){
+        if ($_ =~ /Modified Sequence/){ 
+          s/<td/<td rowspan="2"/i;
+          $flag=1;
+          next;
+        }
+        if ($flag){
+					if (/>Consensus Spectra/i){
+						s/<td/<td colspan="5"/i;
+					}else{
+            s/<td/<td rowspan="2"/i;
+          }
+        }
+        if ($flag && /<\/tr>/i){
+          s/$/$str/;
+          last;
+        }
+      } 
+      $modHTML = join("\n", @lines);
     }
      #### Display table
     print "<TABLE WIDTH=600><BR>$modHTML</TABLE>\n";
-
-    }
+  }# Modified Peptides Section
 
   $log->debug( "End modified peptides " . time() );
 
-
-
    # Individual Spectra Placeholder
-
-
 
   #############################################################################
   #### Spectra Section
@@ -1376,12 +1376,6 @@ if ($apply_action =~ /QUERY|GO/i ) {
                                                 tooltip => 'Show/Hide Section',
                                                 imglink => 1,
                                                 sticky => 1 );
-  my $PTMHTML .= $sbeamsMOD->encodeSectionHeader(
-    text => "PTM Spectra",
-   'link' => $link,
-    bold => 1
-  );
-
   my $ispectra_clause = '';
   my $section_text = 'Individual Spectra';
   if ( $parameters{mod_seq} && $parameters{charge} ) {
@@ -1399,15 +1393,45 @@ if ($apply_action =~ /QUERY|GO/i ) {
     colspan => 3
   );
 
+  my %colnameidx = ();
+  my @column_titles = ();
+  my @column_array = (
+    ["modpep", "modified_peptide_sequence", "Modified Sequence"],
+    ["chg", "MPI.peptide_charge","Chg"],
+    ["sample_id", "SMP.sample_id","Smpl"],
+    ["instrument_name", "I.instrument_name","Instr"],
+    ["probability", "SI.probability","Prob"],
+    ["spectrum_name", "S.spectrum_name","Spectrum Name"],
+    ["avg_prob", "AVG(SAL.level_probability)","Avg Eval"],
+    ["frg_type", "FRG.FRAGMENTATION_TYPE","Fragmentation Type"],
+    ["spectrum", "SI.spectrum_identification_id","Spectrum"],
+    ["chromatogram", "''","Chromatogram"],
+    ["chimera_level", "S.chimera_level","Chimera Level"],
+    ["precursor_intensity", "precursor_intensity", "Precursor Intensity"],
+    ["scan_time", "scan_time", "RT"],
+    ["collision_energy","collision_energy", "CE"],
+    ["ptm_sequence", "SPI.ptm_sequence","PTM Sequence"],
+    ["sal_prob", "COUNT(SAL.level_probability)","SAL Prob"],
+    ["sample_tag", "SMP.sample_tag", "Sample Tag"],
+   );
+  my $columns_clause = $sbeams->build_SQL_columns_list(
+    column_array_ref=>\@column_array,
+    colnameidx_ref=>\%colnameidx,
+    column_titles_ref=>\@column_titles
+  );
+
+  my $ispectra_clause = '';
+  my $section_text = 'Individual Spectra';
+  if ( $parameters{mod_seq} && $parameters{charge} ) {
+    $ispectra_clause = qq~
+    AND modified_peptide_sequence = '$parameters{mod_seq}'
+    AND MPI.peptide_charge = $parameters{charge}
+    ~;
+    $section_text .= ' (filtered)';
+  }
 
   my $modSQL = qq~
-  SELECT modified_peptide_sequence, MPI.peptide_charge,
-         SMP.sample_id,I.instrument_name, SI.probability, S.spectrum_name,
-	 AVG(SAL.level_probability),
-         SI.spectrum_identification_id, SMP.sample_tag, precursor_intensity, scan_time,
-         collision_energy, SPI.ptm_sequence,
-	 COUNT(SAL.level_probability),
-         FRG.FRAGMENTATION_TYPE
+  SELECT $columns_clause 
     FROM $TBAT_PEPTIDE_INSTANCE PI
    INNER JOIN $TBAT_PEPTIDE P
          ON ( PI.peptide_id = P.peptide_id )
@@ -1445,387 +1469,84 @@ if ($apply_action =~ /QUERY|GO/i ) {
   GROUP BY modified_peptide_sequence, MPI.peptide_charge,
          SMP.sample_id,I.instrument_name, SI.probability, S.spectrum_name,
          SI.spectrum_identification_id, SMP.sample_tag, precursor_intensity, scan_time,
-         collision_energy, SPI.ptm_sequence, FRG.FRAGMENTATION_TYPE
+         collision_energy, SPI.ptm_sequence, FRG.FRAGMENTATION_TYPE,
+         S.chimera_level
   ORDER BY modified_peptide_sequence, MPI.peptide_charge, S.spectrum_name ASC
   ~;
 
+  #$sbeams->display_sql(sql=>$modSQL);
+  #my @mod_peps;
+  #my $sth = $sbeams->get_statement_handle( $modSQL );
 
-  my @mod_peps;
-  my $sth = $sbeams->get_statement_handle( $modSQL );
-  my $has_header_info = 0;
-  my $has_ptm_score = 0;
-  my $is_origene = 0;
-  $is_origene = 1 if ($atlas_build_name =~ /Origene/i);
-
-
-  # 04/09/13: these $blah_idx variables confused me so I
-  #  added some comments. Should really be rewritten, but I'm
-  #  afraid to re-write and break someone else's stuff. TMF
-
-#--------------------------------------------------
-# 0 modified_peptide_sequence
-# 1 MPI.peptide_charge
-# 2 SMP.sample_id
-# 3 I.instrument_name
-# 4 SI.probability
-# 5 S.spectrum_name,
-# 6 AVG(SAL.level_probability),
-# 7 SI.spectrum_identification_id
-# 8 SMP.sample_tag
-# 9 precursor_intensity
-# 10 scan_time,
-# 11 collision_energy
-# 12 SPI.ptm_sequence,
-# 13 COUNT(SAL.level_probability)
-# 14 FRAGMENTATION_TYPE
-#-------------------------------------------------- 
+  # Widget to allow show/hide of Individual spectra section
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprot_indiv_spec',
+                                                visible => 1,
+                                                tooltip => 'Show/Hide Section',
+                                                imglink => 1,
+                                                sticky => 1 );
 
 
+  my $spectraHTML = $sbeamsMOD->encodeSectionHeader(
+    text => $section_text,
+   'link' => $link,
+  );
 
-  # First few $blah_idx variables refer both to query results
-  # and column of results table
-  $mseq_idx = 0;         # modified peptide sequence
-  $chrg_idx = 1;         # charge
-  my $smpl_idx = 2;      # sample
-  my $inst_idx = 3;      # instrument
-  $prob_idx = 4;         # probability
-  my $name_idx = 5;      # spectrum name: mzML basename, scan, scan, chrg
-  my $ann_idx = 6;      # avg user annotation value
+  $sbeams->fetchResultSet(
+        sql_query=>$modSQL,
+        resultset_ref=>$resultset_ref,
+        use_caching => 0 
+      );
+  my (@ptm_peps,%ptm_score_summary);
+  postProcessResultset(
+          rs_params_ref=>\%rs_params,
+          resultset_ref=>$resultset_ref,
+          query_parameters_ref=>\%parameters,
+          column_titles_ref=>\@column_titles,
+          hidden_cols => \%hidden_cols,
+          ptm_score_summary_ref =>\%ptm_score_summary,
+          ptm_peps_ref => \@ptm_peps);
+  my $spectra_display = $sbeamsMOD->get_individual_spectra_display( 
+                                                 column_titles_ref=>\@column_titles,
+                                                 colnameidx_ref => \%colnameidx,
+                                                 tr_info => $tr,
+                                                 resultset_ref=> $resultset_ref,
+                                                 hidden_cols_ref=>\%hidden_cols,
+                                              );
 
-  # The following three don't correspond to any query result, only
-  # to results table
-  $spec_idx = 8;         # link to spectrum display
-  my $frag_idx = 7;      # 
-  my $chrm_idx = 9;      # chromatogram.
+  my $help_me = get_table_help( 'individual_spectra' );
+  print qq~<TABLE width="600">$spectraHTML</TABLE><TABLE><TR $tr><TD ALIGN=left>$help_me</TD><TR $tr><TD>~ if $htmlmode;
+  print "$spectra_display</TD></TR></TABLE>" if $htmlmode;
 
-  # The remaining $blah_idx variables refer to optional columns
-  # of the results table,
-  # and are 1 greater than the sql query result index.
-  # I think this "1 greater" issue arose recently and
-  # is not always handled properly below.
-  # These columns are deleted in loop below if they are not to be displayed.
-  my $it_idx = 10;        # precursor intensity
-  my $rt_idx = 11;       # retention time
-  my $ce_idx = 12;       # collision energy
-  my $ptm_idx = 13;      # ptm sequence
+  ### PTM Spectra
+  if (@ptm_peps){
+    my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'ptm_spectra',
+                                                visible => 1,
+                                                tooltip => 'Show/Hide Section',
+                                                imglink => 1,
+                                                sticky => 1 );
 
-  # This variable doesn't refer to any results table column.
-  my $ann_count_idx = 14;      # n user annotations
-
-  my $align = [qw(left center right right left center center center center center)];
-   
-  while ( my @row = $sth->fetchrow_array() ) {
-    # We only want to display PI and RT cols if we have data!
-    if ( !$has_header_info && $row[$it_idx-1] ) {
-      $has_header_info++;
-      #$align = [qw(left center right right left center center center center center right right)];
-      push  @$align , qw(center right right);
-    }
-    push @mod_peps, \@row;
-  }
-
-  #### If a result is returned
-  if ( scalar @mod_peps ) {
+    $spectraHTML = '';
+    $spectraHTML = $sbeamsMOD->encodeSectionHeader(
+      text => 'PTM Spectra',
+      'link' => $link,
+    );
     $spectraHTML .= $sbeams->getPopupDHTML();
-    #### Loops through resultset and do formatting
-
-    my @display_peps;
-    my @ptm_display_peps;
-    my $at_least_one_chromatogram = 0;
-    my %ptm_score_summary = ();
-    for my $pep ( @mod_peps ) {
-      # Get mzML filename, cycle, and charge from spectrum name
-      $pep->[$name_idx] =~ /(\S+)\.(\d+?)\.(\d+?)\.(\d)/;
-      my $mzml_basename = $1;
-      my $cycle = $2;
-      my $cycle2 = $3;
-      my $precursor_charge = $4;
-      $mzml_basename =~ s/\.mzML$//;    #remove .mzML if it's there
-      my $mzml_fname = "$mzml_basename.mzML";
-      my $rt;
-      my @trace_array;
-      my %trace;
-      my $chromatogram_entry = '';  #empty, unless we can find chromgram info
-
-      #### If this is a QTRAP 5500 mzML file, get info from special
-      #### table, QT5500_TRANSITION_GROUP.
-      #### This table needs to be updated each time the Human SRMAtlas is rebuilt.
-      #### Takes ~3 days. Clear existing table, then reload with
-      #### $SBEAMS/lib/scripts/PeptideAtlas/load_Q55500_transition_groups.pl
-      #### PeptideChromatogramExtractor java code is now failing
-      #### for all QT_ZH* files (see /Appears that all the QT files/ in
-      #### Terry's log), so for now
-      #### we won't display chromatogram icons/links for them.  07/05/11
-      my $none = $sbeams->makeInactiveText( 'n/a' );
-      if ( ( ($mzml_fname =~ /^5Q/) ||
-           #( $mzml_fname =~ /^QT_ZH/) ||
-           ( $mzml_fname =~ /^Z5Q/) ) ) {
-
-        my $sql = qq~
-          SELECT *
-          FROM $TBAT_QT5500_TRANSITION_GROUP QTG
-          WHERE QTG.mzml_filename = '$mzml_fname'
-        ~;
-
-        my @rows = $sbeams->selectSeveralColumns($sql);
-        my %site_ptm_info = ();
-
-        if (scalar @rows) {
-					my $first_row = shift @rows;
-					my ($qt5500_transition_group_id,
-										$mzml_filename, $mzml_pathname, $cycle, $precursor_charge,
-							 $precursor_mz, $rt) = @{$first_row};
-								$mzml_pathname .= "/$mzml_filename";
-        
-
-					my ($q1, $q1_charge2, $q1_charge3, $precursor_neutral_mass);
-
-					# Compute precursor neutral mass for this peptide
-					# (Could also compute theoretical mass from pepseq + mods)
-					my $precursor_charged_mass = $precursor_mz * $precursor_charge;
-					# Subtract mass for each proton added when precursor was charged
-					$precursor_neutral_mass = $precursor_charged_mass -
-						 ($precursor_charge * 1.00727638);
-
-					# We must invent the ion because we don't have transition list
-					my $ion = "y1";        ### INVENTED!!!
-					my $ion_charge = '1';    ### INVENTED!!!
-					# remove mods from pepseq
-					my $modified_pepseq = $pep->[$mseq_idx];
-					my $pepseq = $modified_pepseq;
-					$pepseq =~ s/\[.+?\]//g;
-					my $fragmentor = 125;  ### INVENTED!!! but maybe unused.
-					# There are fields for CE & RT in the Spectrum table,
-					# but unfortunately for SRM atlas these values are not loaded.
-					my $ce = $pep->[$ce_idx] ?  $pep->[$ce_idx] : 99;
-					if (! $rt ) {
-						$rt = $pep->[$rt_idx] ?  $pep->[$rt_idx] : 99;
-					}
-					my $delta_rt = 5.00;   ### INVENTED!!! but maybe unused.
-
-					$at_least_one_chromatogram = 1;
-					my $chrom_img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/chromatogram.gif' TITLE='View chromatogram for $pep->[$mseq_idx] (+$pep->[$chrg_idx])'>";
-
-					
-					#print "<p>Charge $precursor_charge Precursor Neutral Mass $precursor_neutral_mass Precursor Charged Mass $precursor_charged_mass<br>\n";
-
-					$chromatogram_entry =
-						qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowChromatogram?~;
-					$chromatogram_entry .= ""
-				#	."&ion=$ion"  #multiple; different per trace.
-				#	."&ion_charge=$ion_charge"  #multiple
-			#	  ."&precursor_charge=$precursor_charge"  #both +2 & +3 will be shown.
-					."&pepseq=$pepseq"
-					."&modified_pepseq=$modified_pepseq"
-				#	."&q1=$q1"  #multiple
-				#	."&q3=$q3"  #multiple
-					."&spectrum_basename=$mzml_basename"
-					."&spectrum_pathname=$mzml_pathname"
-				#	."&ce=$ce"
-			#	  ."&rt=$rt"  #multiple
-					."&delta_rt=$delta_rt"
-					."&fragmentor=$fragmentor"
-					."&precursor_neutral_mass=$precursor_neutral_mass";
-
-					 $chromatogram_entry =
-						qq~$chromatogram_entry" TARGET=blank>$chrom_img</A>~;
-
-				} # end if there is info for this pep in the QT5500_transition_group table
-      } # end if Qtrap 5500
-
-      $pep->[$prob_idx] = sprintf("%0.3f", $pep->[$prob_idx]) unless $pep->[$prob_idx] == 1;
-      $pep->[$prob_idx] = 1 if $pep->[$prob_idx] == 1;
-      $pep->[$inst_idx] =~ s/ +/&nbsp;/g;
-      my $build_id = $parameters{atlas_build_id};
-      my $img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='View spectrum for $pep->[$mseq_idx] (+$pep->[$chrg_idx])'>";
-      my $eval_string = $parameters{'ann'}? 'eval=1&' : '' ;
-      $pep->[$spec_idx] = qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowObservedSpectrum?${eval_string}atlas_build_id=$build_id&spectrum_identification_id=$pep->[7]&peptide=$pep->[$mseq_idx]&assumed_charge=$pep->[$chrg_idx]" TARGET=blank>$img</A>~;
-      $pep->[$ann_idx] = sprintf("%0.2f", $pep->[$ann_idx]);
-      $pep->[$ann_idx] =~ s/^0// if ($pep->[$ann_idx] > 0);  #remove any zero before decimal
-      $pep->[$ann_idx] = "0" if ($pep->[$ann_idx] == 0);
-      $pep->[$ann_idx] .= "($pep->[$ann_count_idx-1])";
-      $pep->[$ann_idx] = $none if (!$pep->[$ann_count_idx-1]);
-      delete $pep->[$ann_count_idx-1];
-
-      $pep->[$chrm_idx] = $chromatogram_entry;
-
-			my $modified_pepseq = $pep->[$mseq_idx];
-
-			if ($pep->[$ptm_idx-1]){
-        my @ptm_pep =();
-        foreach my $i (0..9){
-          push @ptm_pep, $pep->[$i];
-        }
-				my $ptm_sequence = $pep->[$ptm_idx-1];
-				my $newseq = '';
-				my %mods = ();
-        my %ptm_score = ();
-				my $pos = -1;
-				my @elms = split(/\]/, $modified_pepseq);
-				foreach my $str (@elms){
-					if ($str =~ /(.*)\[(.*)/){
-					  $pos += length ($1);
-					  $mods{$pos} = $2;
-          }else{
-            $pos += length ($str);
-          }
-				}
-        
-				@elms = split(/\)/, $ptm_sequence);
-        if (@elms > 1){ $has_ptm_score = 1;}
-					$pos = -1;
-					foreach my $str (@elms){
-						if ($str =~ /(.*)\((.*)/){
-							$pos += length ($1);
-							$ptm_score{$pos} = $2;
-						}else{
-							$pos += length ($str);
-						}
-					}
-          $pos=0;
-          @elms =  split(/(?=[a-zA-Z])/, $ptm_sequence) ;
-          my @melms = split(/(?=[a-zA-Z])/, $modified_pepseq) ;
-          for (my $i=0; $i<=$#elms;$i++){
-            my $pstr = $elms[$i];
-            my $mstr = $melms[$i];
-            if ($pstr =~ /n/){
-              next;
-            }
-            $pstr =~ /([A-Z])/;
-            my $aa = $1;
-            my $score='';
-            if ($aa !~ /[STY]/){
-              $ptm_score_summary{$pos}{aa} = $aa;
-              $ptm_score_summary{$pos}{obsmh}='';
-              $ptm_score_summary{$pos}{obsh}='';
-              $ptm_score_summary{$pos}{obsm}='';
-              $ptm_score_summary{$pos}{obsl}='';
-              $ptm_score_summary{$pos}{obsml}=''; 
-              $pos++;
-              next;
-            }
-            $ptm_score_summary{$pos}{aa} = $aa;
-            if ($pstr =~ /[STY]\(/){ 
-              $pstr =~ /([\d\.]+)/;
-              $score = $1;
-							if ($score >= 0.98){
-								 $ptm_score_summary{$pos}{obsh}++;
-							}elsif($score >= 0.9 && $score < 0.98 ){
-								$ptm_score_summary{$pos}{obsmh}++;
-							}elsif($score >= 0.7 && $score < 0.9){
-								 $ptm_score_summary{$pos}{obsm}++;
-							}elsif($score >= 0.3 && $score < 0.7){
-								 $ptm_score_summary{$pos}{obsml}++;
-							}elsif($score < 0.3){
-								$ptm_score_summary{$pos}{obsl}++;
-							}
-            }
-            $pos++;
-          }
-        my $pepseq = $modified_pepseq;
-        $pepseq =~ s/\[[\d\.]+\]//g;
-        my @aas = split(//, $pepseq);
-        for(my $i=0; $i<=$#aas; $i++){
-          if(defined $mods{$i} && defined $ptm_score{$i}){
-            $newseq .= "$aas[$i]\[$mods{$i}\]($ptm_score{$i})";
-          }elsif(defined $mods{$i} && not defined $ptm_score{$i}){
-            $newseq .= "$aas[$i]\[$mods{$i}\]";
-          }elsif(defined $ptm_score{$i} && not defined $mods{$i}){
-            $newseq .= "$aas[$i]($ptm_score{$i})";
-          }else{
-            $newseq .= $aas[$i];
-          }
-        }
-				$modified_pepseq = $newseq;
-			  if ($modified_pepseq  !~/\(/){
-          $ptm_pep[$mseq_idx] = $sbeamsMOD->formatMassMods($modified_pepseq);
-        }else{
-          $ptm_pep[$mseq_idx] = $modified_pepseq;
-        }
-        $ptm_pep[$frag_idx] = $pep->[14];
-        push @ptm_display_peps, \@ptm_pep;
-        $pep->[$mseq_idx] =~ s/(\([\d\.]+\))//g;
-      }
-     
-      $pep->[$frag_idx] = $pep->[14];
-      delete $pep->[14];
-
-      if ( !$has_header_info ) {
-        delete $pep->[$ce_idx];
-        delete $pep->[$rt_idx];
-        delete $pep->[$it_idx];
-      } else {
-        $pep->[$it_idx] = ( $pep->[$it_idx] ) ? $sbeams->formatScientific( number=> $pep->[$it_idx], precision=>1, output_mode => $sbeams->get_output_mode() ): $sbeams->makeInactiveText('n/a'); 
-        $pep->[$rt_idx] = ( $pep->[$rt_idx] ) ? sprintf( "%0.1f", $pep->[$rt_idx]/60 ) : $sbeams->makeInactiveText('n/a'); 
-        $pep->[$ce_idx] = ( $pep->[$ce_idx] ) ? sprintf( "%0.1f", $pep->[$ce_idx] ) : $sbeams->makeInactiveText('n/a'); 
-      }
-      push @display_peps, $pep;
-
-    } # end for each pep
-
-    # if no chromatograms, remove chromatogram column
-    if (! $at_least_one_chromatogram) {
-      for my $pep (@display_peps) {
-        delete $pep->[$chrm_idx];
-      }
-      for my $pep (@ptm_display_peps) {
-        delete $pep->[$chrm_idx];
-      }
-    }
-
-
-    print qq~
-     <style>
-      .ptm_low {background:#A6A6A6;}
-      .ptm_mlow {background:#E0A7D2;}
-      .ptm_mhigh {background:#00F0F0;}
-      .ptm_high {background:#ABF99C;}
-     </style>
-    ~;
-
-
-    my @headings = ( 'Modified Sequence', 'Chg', 'Smpl', 'Instr', 'Prob', 'Spectrum Name', 'Avg Eval', 'Fragmentation Type', 'Spectrum');
-    push @headings, 'Chromatogram' if $at_least_one_chromatogram;
-    push @headings, ( 'Precursor Intensity', 'RT', 'CE' ) if $has_header_info;
-    #### Add table column headings
-    unshift @display_peps, [ @headings ];
-
-    if ($has_ptm_score){
-       unshift @ptm_display_peps, [ @headings ];
-       sort_ptm_peps(\@ptm_display_peps);
-    }
-    my $help_me = get_table_help( 'individual_spectra' );
- 
-    #### Format table
-    $spectraHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
-                                                 width => '600',
-                                               tr_info => $tr, 
-                                                dumpme => 0,
-                                                unified_widgets => 1,
-                                          set_download => 1,
-                                               colspan => 3,
-                                             help_text => $help_me,
-                                                align  => $align,
-                                                  rows => \@display_peps,
-                                          rows_to_show => 10,
-                                              max_rows => 200,
-                                          truncate_msg => '  <b>Use link in Modified Peptides section to filter results</b>.',
-                                                nowrap => [1],
+    $resultset_ref->{data_ref} = \@ptm_peps; 
+    $spectra_display = $sbeamsMOD->get_individual_spectra_display(
+                                                 column_titles_ref=>\@column_titles,
+                                                 colnameidx_ref => \%colnameidx,
+                                                 tr_info => $tr,
+                                                 resultset_ref=> $resultset_ref,
+                                                 hidden_cols_ref=>\%hidden_cols,
                                               );
-
-    print "<TABLE WIDTH=600 border=0><BR>$spectraHTML</TABLE>\n";
-
-
-    if ($has_ptm_score){
-      $PTMHTML .= $sbeamsMOD->encodeSectionTable( header => 1,
-                                                 width => '600',
-                                               tr_info => $tr,
-                                                align  => $align,
-                                                  rows => \@ptm_display_peps,
-                                          rows_to_show => 10,
-                                              max_rows => 500,
-                                              nowrap => [1],
-                                              );
+			print qq~
+			 <style>
+				.ptm_low {background:#A6A6A6;}
+				.ptm_mlow {background:#E0A7D2;}
+				.ptm_mhigh {background:#00F0F0;}
+				.ptm_high {background:#ABF99C;}
+			 </style>
+			~;
 			my $PTM_color = qq~
 			 <table>
 				<tr align="CENTER" bgcolor="#CCCCCC">
@@ -1841,18 +1562,29 @@ if ($apply_action =~ /QUERY|GO/i ) {
 				</tr>
 			 </table>
 			~;
-      my $GV = SBEAMS::Connection::GoogleVisualization->new();
-      my $ptm_summary_chart = $GV->drawPTMHisChart(data=> \%ptm_score_summary);
-			$PTMHTML =~ s/<table/\n$ptm_summary_chart\n$PTM_color\n<table/i;
-    }
-    #### Display table
-    if ($has_ptm_score){
-      print "<TABLE WIDTH=600><BR>$PTMHTML</TABLE>\n";
+
+     my $GV = SBEAMS::Connection::GoogleVisualization->new();
+     my $ptm_summary_chart = $GV->drawPTMHisChart(data=> \%ptm_score_summary);
+
+     #### Display table
+     print qq~
+     <TABLE width="600">$spectraHTML</TABLE>
+     <TABLE>
+     <TR $tr><TD>
+        $ptm_summary_chart
+        $PTM_color
+     </TD>
+     <TR $tr><TD>
+     ~ if $htmlmode;
+     $spectra_display =~ s/<table/<table name="ptm_spectra"/i;
+
+     print "$spectra_display</TD></TR></TABLE>" if $htmlmode;
+
 			print( <<"		END" );
 			<script LANGUAGE="JavaScript" TYPE="text/javascript">
-			var indiv_spec = document.getElementsByName("getprot_indiv_spec"); 
+			var indiv_spec = document.getElementsByName("ptm_spectra");
 			var rows = indiv_spec[1].getElementsByTagName('TR');	
-			var j=1;
+			var j=3;
 			while (j<=rows.length) {
 				var aas = rows[j].cells[0].innerHTML.split('\\)'); 
 				var newInnerHTML = '';
@@ -1896,9 +1628,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
 				}
 				</script>
 		END
-    }
   }
-
   $log->debug( "End spectra " . time() );
 
   #############################################################################
@@ -1918,8 +1648,6 @@ if ($apply_action =~ /QUERY|GO/i ) {
       form_fields => $hidden_form_fields
     );
   }
-
-
 
   #############################################################################
   #### Validated Transitions Section
@@ -1997,9 +1725,6 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
     #### Loops through resultset and do formatting
     for my $pep ( @$marker_peptides ) {
-#      $pep->[2] = sprintf("%0.2f", $pep->[2]);
-#      $pep->[3] = sprintf("%0.2f", $pep->[3]);
-#      $pep->[4] = 1 if $pep->[4] == 1;
        $pep->[4] = $sbeamsMOD->formatMassMods( $pep->[4] );
        $pep->[2] = $sbeams->makeInactiveText('n/a') if !$pep->[2];
     }
@@ -2075,8 +1800,6 @@ if ($apply_action =~ /QUERY|GO/i ) {
 	unless ( $total == $inst_obs ) {
 		$log->error( "mismatch in sample count!!! $total <> $inst_obs " );
 	}
-#	push @$plot_samples, [ 'Total observations', $total ];
-
   # Widget to allow show/hide of modified peptides section
   my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprot_obs_sample',
                                                 visible => 1,
@@ -2112,8 +1835,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
   <TR><TD>&nbsp;</TD><TD>&nbsp;</TD></TR>
   </TABLE>
 	~;
-        }
-
+}
     #### If QUERY was not selected, then tell the user to enter some parameters
   } else {
 
@@ -2127,11 +1849,309 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
         }
 
-    }
+   }
 
   $log->debug( "End samples, handlerequest " . time() );
 
 } # end handle_request
+
+sub postProcessResultset {
+  my %args = @_;
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+  #### Process the arguments list
+  my $resultset_ref = $args{'resultset_ref'};
+  my $rs_params_ref = $args{'rs_params_ref'};
+  my $query_parameters_ref = $args{'query_parameters_ref'};
+  my $column_titles_ref = $args{'column_titles_ref'};
+  my $hidden_cols = $args{'hidden_cols'};
+  my $ptm_score_summary_ref = $args{'ptm_score_summary_ref'};
+  my $ptm_peps_ref = $args{'ptm_peps_ref'};
+	#--------------------------------------------------
+	# 0 modified_peptide_sequence
+	# 1 MPI.peptide_charge
+	# 2 SMP.sample_id
+	# 3 I.instrument_name
+	# 4 SI.probability
+	# 5 S.spectrum_name,
+	# 6 AVG(SAL.level_probability),
+	# 7 FRAGMENTATION_TYPE
+	# 8 SI.spectrum_identification_id
+	# 9 chromatogram 
+	# 10 chimera_level 
+	# 11 precursor_intensity
+	# 12 scan_time,
+	# 13 collision_energy
+	# 14 SPI.ptm_sequence,
+	# 15 COUNT(SAL.level_probability)
+	# 16 SMP.sample_tag
+	#-------------------------------------------------- 
+
+  # First few $blah_idx variables refer both to query results
+  # and column of results table
+  my $mseq_idx    = 0;      # modified peptide sequence
+  my $chrg_idx    = 1;      # charge
+  my $smpl_idx = 2;      # sample
+  my $inst_idx = 3;      # instrument
+  my $prob_idx    = 4;      # probability
+  my $name_idx = 5;      # spectrum name: mzML basename, scan, scan, chrg
+  my $ann_idx  = 6;      # avg user annotation value
+  my $frag_idx = 7;      # 
+  my $spec_idx    = 8;      # link to spectrum display
+  my $chrm_idx = 9;      # chromatogram.
+  my $chimera_idx = 10;
+
+
+  # The remaining $blah_idx variables refer to optional columns
+  # of the results table,
+  # These columns are deleted in loop below if they are not to be displayed.
+  my $it_idx = 11;        # precursor intensity
+  my $rt_idx = 12;        # retention time
+  my $ce_idx = 13;        # collision energy
+  
+  # not displayed result 
+  my $ptm_idx = 14;       # ptm sequence
+  my $ann_count_idx = 15; # n user annotations
+  my $sample_tag_idx = 16;   
+  
+
+	my @display_peps;
+	my $at_least_one_chromatogram = 0;
+	my $at_least_one_chimera =0;
+  my $has_header_info = 0;
+  my $has_ptm_score = 0;
+  my $n_rows = scalar(@{$resultset_ref->{data_ref}});
+
+ for (my $i=0; $i<$n_rows; $i++) {
+    #### Loops through resultset and do formatting
+    my $pep = $resultset_ref->{data_ref}->[$i];
+      # Get mzML filename, cycle, and charge from spectrum name
+      $pep->[$name_idx] =~ /(\S+)\.(\d+?)\.(\d+?)\.(\d)/;
+      my $mzml_basename = $1;
+      my $cycle = $2;
+      my $cycle2 = $3;
+      my $precursor_charge = $4;
+      $mzml_basename =~ s/\.mzML$//;    #remove .mzML if it's there
+      my $mzml_fname = "$mzml_basename.mzML";
+      my $rt;
+      my @trace_array;
+      my %trace;
+      my $chromatogram_entry = '';  #empty, unless we can find chromgram info
+      $at_least_one_chimera++ if ($pep->[$chimera_idx]);
+      #### If this is a QTRAP 5500 mzML file, get info from special
+      #### table, QT5500_TRANSITION_GROUP.
+      #### This table needs to be updated each time the Human SRMAtlas is rebuilt.
+      #### Takes ~3 days. Clear existing table, then reload with
+      #### $SBEAMS/lib/scripts/PeptideAtlas/load_Q55500_transition_groups.pl
+      #### PeptideChromatogramExtractor java code is now failing
+      #### for all QT_ZH* files (see /Appears that all the QT files/ in
+      #### Terry's log), so for now
+      #### we won't display chromatogram icons/links for them.  07/05/11
+      my $none = $sbeams->makeInactiveText( 'n/a' );
+      if ( ( ($mzml_fname =~ /^5Q/) ||
+           ( $mzml_fname =~ /^Z5Q/) ) ) {
+        my $sql = qq~
+          SELECT *
+          FROM $TBAT_QT5500_TRANSITION_GROUP QTG
+          WHERE QTG.mzml_filename = '$mzml_fname'
+        ~;
+        my @rows = $sbeams->selectSeveralColumns($sql);
+        my %site_ptm_info = ();
+        if (scalar @rows) {
+					my $first_row = shift @rows;
+					my ($qt5500_transition_group_id,
+										$mzml_filename, $mzml_pathname, $cycle, $precursor_charge,
+							 $precursor_mz, $rt) = @{$first_row};
+								$mzml_pathname .= "/$mzml_filename";
+        
+					my ($q1, $q1_charge2, $q1_charge3, $precursor_neutral_mass);
+
+					# Compute precursor neutral mass for this peptide
+					# (Could also compute theoretical mass from pepseq + mods)
+					my $precursor_charged_mass = $precursor_mz * $precursor_charge;
+					# Subtract mass for each proton added when precursor was charged
+					$precursor_neutral_mass = $precursor_charged_mass -
+						 ($precursor_charge * 1.00727638);
+
+					# We must invent the ion because we don't have transition list
+					my $ion = "y1";        ### INVENTED!!!
+					my $ion_charge = '1';    ### INVENTED!!!
+					# remove mods from pepseq
+					my $modified_pepseq = $pep->[$mseq_idx];
+					my $pepseq = $modified_pepseq;
+					$pepseq =~ s/\[.+?\]//g;
+					my $fragmentor = 125;  ### INVENTED!!! but maybe unused.
+					# There are fields for CE & RT in the Spectrum table,
+					# but unfortunately for SRM atlas these values are not loaded.
+					my $ce = $pep->[$ce_idx] ?  $pep->[$ce_idx] : 99;
+					if (! $rt ) {
+						$rt = $pep->[$rt_idx] ?  $pep->[$rt_idx] : 99;
+					}
+					my $delta_rt = 5.00;   ### INVENTED!!! but maybe unused.
+
+					$at_least_one_chromatogram = 1;
+					my $chrom_img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/chromatogram.gif' TITLE='View chromatogram for $pep->[$mseq_idx] (+$pep->[$chrg_idx])'>";
+					
+					#print "<p>Charge $precursor_charge Precursor Neutral Mass $precursor_neutral_mass Precursor Charged Mass $precursor_charged_mass<br>\n";
+
+					$chromatogram_entry =
+						qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowChromatogram?~;
+					$chromatogram_entry .= ""
+				#	."&ion=$ion"  #multiple; different per trace.
+				#	."&ion_charge=$ion_charge"  #multiple
+			  # ."&precursor_charge=$precursor_charge"  #both +2 & +3 will be shown.
+					."&pepseq=$pepseq"
+					."&modified_pepseq=$modified_pepseq"
+				#	."&q1=$q1"  #multiple
+				#	."&q3=$q3"  #multiple
+					."&spectrum_basename=$mzml_basename"
+					."&spectrum_pathname=$mzml_pathname"
+				#	."&ce=$ce"
+			  # ."&rt=$rt"  #multiple
+					."&delta_rt=$delta_rt"
+					."&fragmentor=$fragmentor"
+					."&precursor_neutral_mass=$precursor_neutral_mass";
+
+					 $chromatogram_entry =
+						qq~$chromatogram_entry" TARGET=blank>$chrom_img</A>~;
+
+				} # end if there is info for this pep in the QT5500_transition_group table
+      } # end if Qtrap 5500
+
+      $pep->[$prob_idx] = sprintf("%0.3f", $pep->[$prob_idx]) unless $pep->[$prob_idx] == 1;
+      $pep->[$prob_idx] = 1 if $pep->[$prob_idx] == 1;
+      $pep->[$inst_idx] =~ s/ +/&nbsp;/g;
+      my $build_id = $query_parameters_ref->{atlas_build_id};
+      my $img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='View spectrum for $pep->[$mseq_idx] (+$pep->[$chrg_idx])'>";
+      my $eval_string = $query_parameters_ref->{'ann'}? 'eval=1&' : '' ;
+      $pep->[$spec_idx] = qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowObservedSpectrum?${eval_string}atlas_build_id=$build_id&spectrum_identification_id=$pep->[$spec_idx]&peptide=$pep->[$mseq_idx]&assumed_charge=$pep->[$chrg_idx]" TARGET=blank>$img</A>~;
+      $pep->[$ann_idx] = sprintf("%0.2f", $pep->[$ann_idx]);
+      $pep->[$ann_idx] =~ s/^0// if ($pep->[$ann_idx] > 0);  #remove any zero before decimal
+      $pep->[$ann_idx] = "0" if ($pep->[$ann_idx] == 0);
+      $pep->[$ann_idx] .= "($pep->[$ann_count_idx])";
+      $pep->[$ann_idx] = $none if (!$pep->[$ann_count_idx]);
+      $pep->[$chrm_idx] = $chromatogram_entry;
+			my $modified_pepseq = $pep->[$mseq_idx];
+
+			if ($pep->[$ptm_idx]){
+        my @ptm_pep =();
+        foreach my $i (0..10){
+          push @ptm_pep, $pep->[$i];
+        }
+				my $ptm_sequence = $pep->[$ptm_idx];
+				my $newseq = '';
+				my %mods = ();
+        my %ptm_score = ();
+				my $pos = -1;
+				my @elms = split(/\]/, $modified_pepseq);
+				foreach my $str (@elms){
+					if ($str =~ /(.*)\[(.*)/){
+					  $pos += length ($1);
+					  $mods{$pos} = $2;
+          }else{
+            $pos += length ($str);
+          }
+				}
+        
+				@elms = split(/\)/, $ptm_sequence);
+        if (@elms > 1){ $has_ptm_score = 1;}
+					$pos = -1;
+					foreach my $str (@elms){
+						if ($str =~ /(.*)\((.*)/){
+							$pos += length ($1);
+							$ptm_score{$pos} = $2;
+						}else{
+							$pos += length ($str);
+						}
+					}
+          $pos=0;
+          @elms =  split(/(?=[a-zA-Z])/, $ptm_sequence) ;
+          my @melms = split(/(?=[a-zA-Z])/, $modified_pepseq) ;
+          for (my $i=0; $i<=$#elms;$i++){
+            my $pstr = $elms[$i];
+            my $mstr = $melms[$i];
+            if ($pstr =~ /n/){
+              next;
+            }
+            $pstr =~ /([A-Z])/;
+            my $aa = $1;
+            my $score='';
+            if ($aa !~ /[STY]/){
+              $ptm_score_summary_ref->{$pos}{aa} = $aa;
+              $ptm_score_summary_ref->{$pos}{obsmh}='';
+              $ptm_score_summary_ref->{$pos}{obsh}='';
+              $ptm_score_summary_ref->{$pos}{obsm}='';
+              $ptm_score_summary_ref->{$pos}{obsl}='';
+              $ptm_score_summary_ref->{$pos}{obsml}=''; 
+              $pos++;
+              next;
+            }
+            $ptm_score_summary_ref->{$pos}{aa} = $aa;
+            if ($pstr =~ /[STY]\(/){ 
+              $pstr =~ /([\d\.]+)/;
+              $score = $1;
+							if ($score >= 0.98){
+								 $ptm_score_summary_ref->{$pos}{obsh}++;
+							}elsif($score >= 0.9 && $score < 0.98 ){
+								$ptm_score_summary_ref->{$pos}{obsmh}++;
+							}elsif($score >= 0.7 && $score < 0.9){
+								 $ptm_score_summary_ref->{$pos}{obsm}++;
+							}elsif($score >= 0.3 && $score < 0.7){
+								 $ptm_score_summary_ref->{$pos}{obsml}++;
+							}elsif($score < 0.3){
+								$ptm_score_summary_ref->{$pos}{obsl}++;
+							}
+            }
+            $pos++;
+          }
+        my $pepseq = $modified_pepseq;
+        $pepseq =~ s/\[[\d\.]+\]//g;
+        my @aas = split(//, $pepseq);
+        for(my $i=0; $i<=$#aas; $i++){
+          if(defined $mods{$i} && defined $ptm_score{$i}){
+            $newseq .= "$aas[$i]\[$mods{$i}\]($ptm_score{$i})";
+          }elsif(defined $mods{$i} && not defined $ptm_score{$i}){
+            $newseq .= "$aas[$i]\[$mods{$i}\]";
+          }elsif(defined $ptm_score{$i} && not defined $mods{$i}){
+            $newseq .= "$aas[$i]($ptm_score{$i})";
+          }else{
+            $newseq .= $aas[$i];
+          }
+        }
+				$modified_pepseq = $newseq;
+			  if ($modified_pepseq  !~/\(/){
+          $ptm_pep[$mseq_idx] = $sbeamsMOD->formatMassMods($modified_pepseq);
+        }else{
+          $ptm_pep[$mseq_idx] = $modified_pepseq;
+        }
+        $ptm_pep[$frag_idx] = $pep->[$frag_idx];
+        push @$ptm_peps_ref, \@ptm_pep;
+        $pep->[$mseq_idx] =~ s/(\([\d\.]+\))//g;
+      }
+     
+      if ( $has_header_info ) {
+        $pep->[$it_idx] = ( $pep->[$it_idx] ) ? $sbeams->formatScientific( number=> $pep->[$it_idx], precision=>1, output_mode => $sbeams->get_output_mode() ): $sbeams->makeInactiveText('n/a'); 
+        $pep->[$rt_idx] = ( $pep->[$rt_idx] ) ? sprintf( "%0.1f", $pep->[$rt_idx]/60 ) : $sbeams->makeInactiveText('n/a'); 
+        $pep->[$ce_idx] = ( $pep->[$ce_idx] ) ? sprintf( "%0.1f", $pep->[$ce_idx] ) : $sbeams->makeInactiveText('n/a'); 
+      }
+      $resultset_ref->{data_ref}->[$i] = $pep; 
+    } # end for each pep
+     
+    if ($has_ptm_score){
+       sort_ptm_peps(\@$ptm_peps_ref);
+    }
+    $hidden_cols->{"chimera_level"} = 1 if (! $at_least_one_chimera) ; 
+    $hidden_cols->{"chromatogram"} = 1 if ( ! $at_least_one_chromatogram);
+    if ( ! $has_header_info){
+      $hidden_cols->{'precursor_intensity'} = 1;
+      $hidden_cols->{'scan_time'} =1;
+      $hidden_cols->{'collision_energy'} =1;
+    }
+    
+    $hidden_cols->{'ptm_sequence'} = 1;
+    $hidden_cols->{'sal_prob'} = 1;
+    $hidden_cols->{'sample_tag'} = 1;
+}
 
 sub get_protein_mapping_widget {
 
@@ -2147,7 +2167,6 @@ sub get_protein_mapping_widget {
           CAST( BS.biosequence_desc AS VARCHAR(2000) ) biosequence_desc,
           CASE WHEN PPL.level_name IS NULL THEN 'zzzz' ELSE PPL.level_name END as level_name,
           BSRT.relationship_name,
---          BS_REP.biosequence_name as "group_rep",
           BS_REF.biosequence_name as "reference_biosequence_name"
     FROM PeptideAtlas.dbo.biosequence_set BSS
     INNER JOIN PeptideAtlas.dbo.biosequence BS
@@ -2171,14 +2190,6 @@ sub get_protein_mapping_widget {
           ON ( BSRT.biosequence_relationship_type_id = BSR.relationship_type_id )
          LEFT JOIN PeptideAtlas.dbo.biosequence BS_REF
               ON ( BS_REF.biosequence_id = BSR.reference_biosequence_id )
---         LEFT JOIN PeptideAtlas.dbo.protein_identification PID_REF
---              ON ( PID_REF.biosequence_id = BS_REF.biosequence_id )
---	            AND PID_REF.atlas_build_id = $build_id
---         LEFT JOIN PeptideAtlas.dbo.biosequence BS_REF_REP
---              ON ( BS_REF_REP.biosequence_id =
---                    PID_REF.represented_by_biosequence_id )
---         LEFT JOIN PeptideAtlas.dbo.biosequence_relationship BSR_REF
---              ON ( BSR_REF.related_biosequence_id = BS_REF.biosequence_id )
        WHERE BS.biosequence_id IN ( $id_str )
        ORDER BY level_name ASC, dbxref_name DESC, BS.biosequence_name ASC
        ~;
@@ -2188,12 +2199,8 @@ sub get_protein_mapping_widget {
   my %level;
 
   my @headings = qw( ID Protein Database Annotation EvidenceLevel Relationship Reference isVariant );
-#  my @headings = qw( Protein Database Annotation EvidenceLevel Relationship Reference isVariant );
-#  my @headings = qw( Protein Database EvidenceLevel Relationship Representative Reference isVariant );
   my @data = ( \@headings );
   while ( my @row = $sth->fetchrow_array() ) {
-#    $level{$row[0]} = \@row;
-#    push @ordered, $row[0];
     $row[4] = '' if $row[4] eq 'zzzz';
     $row[2] =~ s/Human Proteins//g;
     $row[2] =~ s/EBI IPI/IPI/g;

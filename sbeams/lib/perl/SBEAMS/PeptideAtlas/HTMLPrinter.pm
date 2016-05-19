@@ -1384,7 +1384,7 @@ sub getPTMTableDisplay{
   my $SUB_NAME = 'getPTMTableDisplay';
   my $cols = $args{cols};
   my $data = $args{data};
-  my $atlas_build_id = $args{atlas_build_id}; 
+  my $self_build_id = $args{atlas_build_id}; 
   my $biosequence_name = $args{biosequence_name};
   my @rows;
   shift @$cols;
@@ -1402,7 +1402,7 @@ sub getPTMTableDisplay{
                                 ||  $data->{$prot}{$pos}{InneXtprot} =='yes' )){
           my $start_in_biosequence = $pos + 1;
           my $link = "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?".
-                     "atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Sequence&searchForThis=".
+                     "atlas_build_id=$self_build_id&searchWithinThis=Peptide+Sequence&searchForThis=".
                      "$data->{$prot}{$pos}{peptide}&apply_action=QUERY"; 
           $data->{$prot}{$pos}{$col} = $self->make_pa_tooltip( tip_text => "Get peptide sequence covering this site",
                                                                link_text => "<a href='$link'>$data->{$prot}{$pos}{$col}</a>" );
@@ -1429,6 +1429,78 @@ sub getPTMTableDisplay{
 }
 
 
+###############################################################################
+# get_individual_spectra_display 
+###############################################################################
+sub get_individual_spectra_display {
+  my $self = shift;
+  my $sbeams = $self->getSBEAMS();
+  my %args = @_;
+  my $SUB_NAME = 'get_individual_spectra_display';
+  my $bg_color = $args{bg_color} || '';
+  my $column_titles_ref = $args{column_titles_ref};
+  my $colnameidx_ref = $args{colnameidx_ref};
+  my $hidden_cols_ref = $args{hidden_cols_ref};
+
+  my $sortable = 1;
+  if ( $args{sortable} ne ''){
+    $sortable = $args{sortable};
+  }
+
+
+  unless( $args{resultset_ref} ) {
+    $log->error( "No resultset_ref passed to display" );
+    return;
+  }
+  my $resultset_ref = $args{resultset_ref};
+	my @data = ();
+  my @headings =();
+  my $loop =1;
+
+  foreach my $row (@{$resultset_ref->{data_ref}}){
+    my @tmp =();
+    foreach my $col (sort {$colnameidx_ref->{$a} <=> $colnameidx_ref->{$b}} keys %$colnameidx_ref){
+       if (not defined $hidden_cols_ref->{$col}){
+         push @tmp, $row->[$colnameidx_ref->{$col}];
+         push @headings, $column_titles_ref->[$colnameidx_ref->{$col}] if ($loop==1);
+       }
+    }
+    $loop++;
+    push @data, \@tmp;
+  }
+  my $headings = $self->get_column_defs( labels => \@headings, plain_hash => 1 );
+  unshift @data, ($self->make_sort_headings(headings => $headings));
+
+  
+    #push @{$resultset_ref->{column_list_ref}}, 'num_prot_mappings';
+    #push @{$resultset_ref->{types_list_ref}}, 'int';
+
+  my $align = [qw(left center left left center left center center center center)];
+
+  my $html = $self->encodeSectionTable( header => 1,
+                                                 width => '600',
+                                               tr_info => $args{tr},
+                                       unified_widgets => 1,
+                                          set_download => 1,
+                                               colspan => 3,
+                                                align  => $align,
+                                                  rows => \@data,
+                                          rows_to_show => 10,
+                                              max_rows => 200,
+                                                nowrap => [1],
+                                          bkg_interval => 3,
+                                           rs_headings => \@$column_titles_ref, 
+                                              bg_color => '#EAEAEA',
+                                              sortable => 1,
+                                           close_table => 1,
+                                              table_id => 'individual_spectra',
+                                          truncate_msg => '  <b>Use link in Modified Peptides section to filter results</b>.',
+                                              );
+
+  return "<TABLE WIDTH=600>$html\n";
+
+
+} # end getSampleDisplay
 ###############################################################################
 # displaySamples
 ###############################################################################
@@ -2060,7 +2132,7 @@ sub print_html_table_to_tsv{
   print "\n";
   foreach my $row (@$data_ref){
     foreach my $val (@$row){
-      $val =~ s/(\<[^\<]+\>)//g;
+      $val =~ s/(\<[^\<]+\>)/ /g;
       print "$val\t";
     }
     print "\n";
