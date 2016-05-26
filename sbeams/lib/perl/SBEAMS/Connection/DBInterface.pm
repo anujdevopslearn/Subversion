@@ -844,9 +844,9 @@ sub initiate_transaction {
   $dbh->{AutoCommit} = 0;
 
   # Finish any incomplete transactions
-  eval {
-    $dbh->commit();
-  };
+  #eval {
+  #  $dbh->commit();
+  #};
   if ( $@ ) {
     $log->error( "DBI error: $@\n" );
   }
@@ -856,7 +856,7 @@ sub initiate_transaction {
 
   # from DBI docs, appears that setting AutoCommit off is sufficient to init_transaction.
 # Begin transaction
-#  $dbh->begin_work();
+  #$dbh->begin_work();
 
   # Turn RaiseError off only if asked to
   $dbh->{RaiseError} = 1 if $args{reset_raise_error};
@@ -3586,29 +3586,35 @@ sub displayResultSetControls {
     # Sensible default, avoid div by zero
 		$rs_params{page_size} ||= 50;
 
-    my $npages = int($nrowsminus / $rs_params{page_size}) + 1;
-    for ($i=0; $i<$npages; $i++) {
-      my $pg = $i+1;
-
-      if ( ( $i % 50 ) == 0 ) {
-          print "<BR>";
-      }
-
-      if ($i == $rs_params{page_number}) {
-        print "[<font color=red>$pg</font>] \n";
-      } else {
-        print "<A HREF=\"$base_url${separator}apply_action=VIEWRESULTSET&".
-          "rs_set_name=$rs_params{set_name}&".
-          "rs_page_size=$rs_params{page_size}&".
-          "rs_page_number=$pg\">$pg</A> \n";
-      }
-    }
-    print "of $npages<BR>\n";
+#    my $npages = int($nrowsminus / $rs_params{page_size}) + 1;
+#    for ($i=0; $i<$npages; $i++) {
+#      my $pg = $i+1;
+#
+#      if ( ( $i % 50 ) == 0 ) {
+#          print "<BR>";
+#      }
+#
+#      if ($i == $rs_params{page_number}) {
+#        print "[<font color=red>$pg</font>] \n";
+#      } else {
+#        print "<A HREF=\"$base_url${separator}apply_action=VIEWRESULTSET&".
+#          "rs_set_name=$rs_params{set_name}&".
+#          "rs_page_size=$rs_params{page_size}&".
+#          "rs_page_number=$pg\">$pg</A> \n";
+#      }
+#    }
+#    print "of $npages<BR>\n";
 
 
     #### Print out a form to control some variable parameters
     my $this_page = $rs_params{page_number} + 1;
     print qq~
+      <script type="text/javascript" src="$CGI_BASE_DIR/../usr/javascript/lorikeet/js/jquery.min.js"></script>
+      <script type="text/javascript" src="$CGI_BASE_DIR/../usr/javascript/simplePagination/jquery.simplePagination.js"></script>
+      <link rel="stylesheet" type="text/css" href="$CGI_BASE_DIR/../usr/javascript/simplePagination/simplePagination.css" />
+      <br>
+      <div class="compact-theme simple-pagination" id="compact-pagination">
+      </div>
       <INPUT TYPE="hidden" NAME="rs_set_name" VALUE="$rs_params{set_name}">
       Page Size:
       <INPUT TYPE="text" NAME="rs_page_size" SIZE=4
@@ -3617,6 +3623,20 @@ sub displayResultSetControls {
       <INPUT TYPE="text" NAME="rs_page_number" SIZE=4
         VALUE="$this_page">
       <INPUT TYPE="submit" NAME="apply_action" VALUE="VIEWRESULTSET">
+      <script>
+  			\$(function() {
+           var itemsOnPage = \$("[name='rs_page_size']").val();
+           var rs_page_number = \$("[name='rs_page_number']").val();
+
+			  	 \$('#compact-pagination').pagination({
+							items: $nrows,
+							itemsOnPage: itemsOnPage,
+							cssStyle: 'light-theme',
+              rs_page_number: rs_page_number,
+							rs_set_name: "$rs_params{set_name}"
+					});
+			  });
+			</script>
     ~;
 
 
