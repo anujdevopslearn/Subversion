@@ -297,6 +297,13 @@ sub handle_request {
 #     constraint_value=>$parameters{protein_name_constraint} );
 #   return if ($expt_protein_name_clause eq '-1');
 #-------------------------------------------------- 
+  #### Build datasetIdentifier constraint
+  my $datasetIdentifier_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SELE.datasetIdentifier",
+    constraint_type=>"plain_text",
+    constraint_name=>"PASS Identifier",
+    constraint_value=>$parameters{pass_identifier_constraint} );
+  return if ($datasetIdentifier_clause eq '-1');
 
   #### Build PROTEIN_MAPPING constraint
   my $protein_mapping_clause = $sbeams->parseConstraint2SQL(
@@ -433,10 +440,10 @@ sub handle_request {
     constraint_value=>$parameters{SEL_runs} );
   return if ($runs_clause eq '-1');
 
-  if($protein_mapping_clause eq '' && $experiments_clause eq ''){
+  if($protein_mapping_clause eq '' && $experiments_clause eq '' && $datasetIdentifier_clause eq '' ){
     if ($sbeams->output_mode() eq 'html') {
         print "\&nbsp;\&nbsp;(<font color=red>WARNING: </font>".
-               "NO protein and SRM Experiment constraint. ".
+               "NO protein, SRM Experiment and PASS identifier constraint. ".
                "First SRM Experiment is queried by default.)\n";
     } else {
         print "WARNING: NO protein and SRM Experiment constraint. ".
@@ -511,6 +518,7 @@ sub handle_request {
    ["targeted_q1_mz","SELTG.q1_mz","tar geted Q1 m/z"],
    ["calculated_q1_mz","SELPI.q1_mz","calc. Q1 m/z"],
    @transition_column_array,
+   ["mz_diffs",'SELTG.mz_diffs',"Q1Q3 m/z Diffs"],
    ["d_score","STR(SELTG.d_score,7,4)", "d_score"],
    ["m_score","STR(SELTG.m_score,7,4)", "m_score"],
    ["best_pg_rt","STR(SELPG.Tr/60,7,4)", "Best Peak Group RT"],
@@ -519,6 +527,7 @@ sub handle_request {
    ["S_N","STR(SELTG.S_N,7,4)", "S/N"],
    ["isotype","SELTG.isotype","Isotype"],
    #["experiment","SELE.experiment_title","Experiment"],
+   ["pass_identifier","SELE.datasetIdentifier","PASS"],
    ["sample","S.sample_tag", "Sample"],
    ["organism","O.organism_name", "Organism"],
    ["run","SELR.spectrum_filename","Run"],
@@ -612,9 +621,9 @@ sub handle_request {
 	$project_id_clause
         $runs_clause
 	$display_decoys_clause
+  $datasetIdentifier_clause
 	AND SELE.record_status != 'D'
 	AND SELR.record_status != 'D'
-
     $group_by_clause
    ~;
 
@@ -664,6 +673,8 @@ sub handle_request {
 #                  'SEL_run_id' => 1,
 #                  'SEL_transition_id' => 1,
                   'calc. Q1 m/z' => 1,
+                  'Q1_delta_mz' => 1,
+                  'Q3_delta_mz' => 1,
                   'Stripped Peptide Sequence' => 1,
                   'sample_id' => 1,
                   'frg_type' => 1,
@@ -934,7 +945,7 @@ sub postProcessResultset {
   print "<br>$npeps_seen peptides in SRM atlas<br>\n"
     if $DEBUG;
 
-  # populate pep_in_shotgun, prot_in_shotgun columns accordingly
+  # populate pep_in_shotgun, prot_in_shotgun , mz_diff columns accordingly
   for (my $i=0; $i < scalar @{$resultset_ref->{data_ref}}; $i++) {
     my $this_pep = $resultset_ref->{data_ref}->[$i]->
                          [$cols->{stripped_peptide_sequence}];
@@ -949,6 +960,9 @@ sub postProcessResultset {
     if ( defined $prot_hash{$this_prot}) {
       $resultset_ref->{data_ref}->[$i]->[$cols->{prot_in_shotgun}] = 1;
     }
+    my @mzdiffs = split(/,/, $resultset_ref->{data_ref}->[$i]->[$cols->{mz_diffs}]);
+    my %mzdiff_list = map {$_ => 1} @mzdiffs;
+    $resultset_ref->{data_ref}->[$i]->[$cols->{mz_diffs}]  = join(",", sort {$a cmp $b } keys %mzdiff_list);
   }
 
   # If resultset doesn't have multiple isotypes,
@@ -1063,8 +1077,21 @@ sub postProcessResultset {
       $prev_row->[$cols->{SEL_chromatogram_id_heavy}] =
 			$this_row->[$cols->{SEL_chromatogram_id}];
       $prev_row->[$cols->{isotype}] = 'heavy+light';
+
+      ## copy 2nd mz_diffs to into 1st
+      my $sep = '';
+      if ($prev_row->[$cols->{mz_diffs}]){
+        $sep = ',';
+      }
+      if ($this_row->[$cols->{mz_diffs}]){
+        $prev_row->[$cols->{mz_diffs}] .= "$sep$this_row->[$cols->{mz_diffs}]";
+      }
+      my @mzdiffs = split(/,/, $prev_row->[$cols->{mz_diffs}]);
+      my %mzdiff_list = map {$_ => 1} @mzdiffs;
+      $prev_row->[$cols->{mz_diffs}]  = join(",", sort {$a cmp $b } keys %mzdiff_list);
       # Mark duplicate row for deletion
       $rows_to_delete{$i} = 1;
+
     # No merge needed.
     } else {
       ### (url_cols processing will display nothing for empty value)
@@ -1254,6 +1281,7 @@ sub get_url_cols {
   #### Define the hypertext links for columns that need them
   my %url_cols = (
           'Sample' => "$CGI_BASE_DIR/PeptideAtlas/ManageTable.cgi?TABLE_NAME=AT_SAMPLE&sample_id=\%$colnameidx_ref->{sample_id}V",
+          'PASS' => "http://www.peptideatlas.org/PASS/\%$colnameidx_ref->{pass_identifier}V",
           'Sample_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show details about this sample\'; return true"',
 
           'Expt Protein Name' => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions?protein_name_constraint=\%$colnameidx_ref->{protein_name}V&action=QUERY",

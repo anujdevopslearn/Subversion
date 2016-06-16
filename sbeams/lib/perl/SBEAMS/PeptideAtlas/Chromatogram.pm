@@ -187,41 +187,40 @@ sub getChromatogramParameters{
   $param_href->{'S_N'} = $results_aref->[21];
   $param_href->{'light_heavy_ratio_maxapex'} = $results_aref->[22];
 
-      # Create a string describing this transition group.
-      sub getTransitionInfo {
-        my $transition_group_id = shift;
-        my $sql = qq~
-          SELECT q3_mz, frg_type, frg_nr, frg_z, frg_loss, relative_intensity
-            FROM $TBAT_SEL_TRANSITION
-           WHERE SEL_transition_group_id = '$transition_group_id'
-        ~;
-				my @rows = $sbeams->selectSeveralColumns($sql);
+	# Create a string describing this transition group.
+	sub getTransitionInfo {
+		my $transition_group_id = shift;
+		my $sql = qq~
+			SELECT q3_mz, frg_type, frg_nr, frg_z, frg_loss, relative_intensity
+				FROM $TBAT_SEL_TRANSITION
+			 WHERE SEL_transition_group_id = '$transition_group_id'
+		~;
+		my @rows = $sbeams->selectSeveralColumns($sql);
 
-				# See if there are any relative_intensity (eri) values.
-				# If there are, we will set eri to very small number for those rows
-				# that have no value.
-				my $any_eri = 0;
-				for my $row (@rows) {
-					if ( defined $row->[5] && $row->[5] ne '' && $row->[5] > 0) {
-							$any_eri = 1;
-							last;
-					}
-				}
+		# See if there are any relative_intensity (eri) values.
+		# If there are, we will set eri to very small number for those rows
+		# that have no value.
+		my $any_eri = 0;
+		for my $row (@rows) {
+			if ( defined $row->[5] && $row->[5] ne '' && $row->[5] > 0) {
+					$any_eri = 1;
+					last;
+			}
+		}
 
-				my $tx_info = "";
-				for my $row (@rows) {
-					$row->[5] = 0.01
-					 if ($any_eri && ($row->[5] eq '' || $row->[5] == 0));
-						 $tx_info .= "$row->[0],";  #q3
-							$tx_info .= "$row->[1]";   #frg_type
-							$tx_info .= "$row->[2]" if $row->[1] ne 'p'; #frg_nr
-							$tx_info .= "^$row->[3]" if $row->[3] > 1;   #frg_z
-							$tx_info .= "$row->[4]" if $row->[4] != 0;   #frg_loss
-							$tx_info .= ",$row->[5],"; #eri
-				}
-        return $tx_info;
-         
-   }
+		my $tx_info = "";
+		for my $row (@rows) {
+			$row->[5] = 0.01
+			 if ($any_eri && ($row->[5] eq '' || $row->[5] == 0));
+				 $tx_info .= "$row->[0],";  #q3
+					$tx_info .= "$row->[1]";   #frg_type
+					$tx_info .= "$row->[2]" if $row->[1] ne 'p'; #frg_nr
+					$tx_info .= "^$row->[3]" if $row->[3] > 1;   #frg_z
+					$tx_info .= sprintf("%.0f", $row->[4]) if $row->[4] != 0;   #frg_loss
+					$tx_info .= ",$row->[5],"; #eri
+		}
+		return $tx_info;
+  }
 }
 
 ###############################################################################
@@ -534,13 +533,13 @@ sub mzML2traces {
       for my $spectrum (@allspectra) {
         my $index = $spectrum->attr('index');
         if ($index == $ms2_scan) {
-  	my @cvParams = $spectrum->find_by_tag_name('cvParam');
-  	for my $cvParam (@cvParams) {
-  	  my $name = $cvParam->attr('name');
-  	  if ($name eq 'scan start time') {
-  	    $ms2_rt = $cvParam->attr('value');
-  	  }
-  	}
+					my @cvParams = $spectrum->find_by_tag_name('cvParam');
+					for my $cvParam (@cvParams) {
+						my $name = $cvParam->attr('name');
+						if ($name eq 'scan start time') {
+							$ms2_rt = $cvParam->attr('value');
+						}
+					}
         }
       }
     }
@@ -642,15 +641,15 @@ sub mzML2traces {
 	  # Process the cvParams for this binaryDataArray
 	  for my $cvParam (@cvParam) {
 	    if (defined $cvParam->{'name'}) {
-		if ($cvParam->{'name'} =~ '(\S+) compression') {
-		$compression = $1;
-	      } elsif ($cvParam->{'name'} =~ '(\d+)-bit float') {
-		$precision = $1;
-	      } elsif ($cvParam->{'name'} =~ '(\S+) array') {
-		$array_type = $1;
-		$unit_name = $cvParam->{'unitName'};
-	      }
-	    }
+				if ($cvParam->{'name'} =~ '(\S+) compression') {
+					$compression = $1;
+				} elsif ($cvParam->{'name'} =~ '(\d+)-bit float') {
+					$precision = $1;
+				} elsif ($cvParam->{'name'} =~ '(\S+) array') {
+					$array_type = $1;
+					$unit_name = $cvParam->{'unitName'};
+				}
+			}
 	  }
 
 	  # Decode the binary array
@@ -672,7 +671,7 @@ sub mzML2traces {
 	      $n_time = scalar @{$time_aref};
 	      # convert all times to minutes
 	      for (my $i=0; $i<$n_time; $i++) {
-		$time_aref->[$i] *= $time_factor;
+					$time_aref->[$i] *= $time_factor;
 	      }
 	    # Get intensities
 	    } elsif ($array_type eq 'intensity') {
@@ -999,8 +998,8 @@ sub traces2json_old {
       # Add this frg_type to basic list if not there already.
       # Rarely/never needed
       if ( ( index $frg_types, $frg_type) == -1 ) {
-	push (@frg_types, $frg_type);
-	$frg_types = $frg_types . $frg_type;
+				push (@frg_types, $frg_type);
+				$frg_types = $frg_types . $frg_type;
       }
       $ion_hash{$q1}->{$frg_type}->{ion_q3s}->{$frg_ion} = $q3;
     }
@@ -1012,10 +1011,10 @@ sub traces2json_old {
     for my $frg_type (@frg_types) {
       for my $frg_ion
       ( sort
-	  keys %{$ion_hash{$q1}->{$frg_type}->{ion_q3s}} ) {
-	push @sorted_q1_list, $q1;
-	push @sorted_q3_list,
-	  $ion_hash{$q1}->{$frg_type}->{ion_q3s}->{$frg_ion};
+				keys %{$ion_hash{$q1}->{$frg_type}->{ion_q3s}} ) {
+				push @sorted_q1_list, $q1;
+				push @sorted_q3_list,
+				$ion_hash{$q1}->{$frg_type}->{ion_q3s}->{$frg_ion};
       }
     }
   }
@@ -1029,28 +1028,28 @@ sub traces2json_old {
       my $label = '';
       if ($tx_info) {
       # if (defined $traces{'tx'}->{$q1}->{$q3}->{frg_ion}) {
-	$label .= sprintf "%-5s ", $traces{'tx'}->{$q1}->{$q3}->{frg_ion};
+				$label .= sprintf "%-5s ", $traces{'tx'}->{$q1}->{$q3}->{frg_ion};
       } else {
-	$label .= sprintf "%3.3d ", $count;
+				$label .= sprintf "%3.3d ", $count;
       }
 
 
       $label .=  sprintf "%7.3f / %7.3f",  $traces{'tx'}->{$q1}->{$q3}->{'q1'}, $q3;
       $label .= sprintf (" ERI: %0.1f", $traces{'tx'}->{$q1}->{$q3}->{'eri'} )
-	if ($traces{'tx'}->{$q1}->{$q3}->{'eri'});
-      $json_string .= qq~         "label" : "$label",\n~;
-      $json_string .= qq~         "eri" : $traces{'tx'}->{$q1}->{$q3}->{'eri'},\n~
+			if ($traces{'tx'}->{$q1}->{$q3}->{'eri'});
+				$json_string .= qq~         "label" : "$label",\n~;
+				$json_string .= qq~         "eri" : $traces{'tx'}->{$q1}->{$q3}->{'eri'},\n~
         if ($traces{'tx'}->{$q1}->{$q3}->{'eri'});
-      $json_string .= qq~         "data" : [\n~;
-      # Write each pair of numbers in Dick's JSON format.
-      my $first = 1;
-      for my $time (sort {$a <=> $b} keys %{$traces{'tx'}->{$q1}->{$q3}->{'rt'}}) {
-        if (! $first) {
-        $json_string .= sprintf ",\n";
-        }
-        $first = 0;
-	my $intensity = $traces{'tx'}->{$q1}->{$q3}->{'rt'}->{$time};
-	$json_string .= sprintf qq~            {\n               "time" : %0.4f,\n               "intensity" : %0.5f\n            }~, $time, $intensity;
+				$json_string .= qq~         "data" : [\n~;
+				# Write each pair of numbers in Dick's JSON format.
+				my $first = 1;
+				for my $time (sort {$a <=> $b} keys %{$traces{'tx'}->{$q1}->{$q3}->{'rt'}}) {
+					if (! $first) {
+						$json_string .= sprintf ",\n";
+					}
+					$first = 0;
+					my $intensity = $traces{'tx'}->{$q1}->{$q3}->{'rt'}->{$time};
+					$json_string .= sprintf qq~            {\n               "time" : %0.4f,\n               "intensity" : %0.5f\n            }~, $time, $intensity;
       }
       # Close this chromatogram in JSON object
       $json_string .= qq~\n         ],\n~;
@@ -1130,35 +1129,35 @@ sub traces2json {
     for my $q1 ( sort { $a <=> $b } keys %{$traces_href->{'tx'}}) {
       push @sorted_unique_q1_list, $q1;
       for my $q3 ( sort { $a <=> $b } keys %{$traces{'tx'}->{$q1}}) {
-	my $frg_ion = $traces{'tx'}->{$q1}->{$q3}->{frg_ion};
-	my $frg_type = substr($frg_ion,0,1);
-	# Add this frg_type to basic list if not there already.
-	# Rarely/never needed
-	if ( ( index $frg_types, $frg_type) == -1 ) {
-	  push (@frg_types, $frg_type);
-	  $frg_types = $frg_types . $frg_type;
-	}
-	$ion_hash{$q1}->{$frg_type}->{ion_q3s}->{$frg_ion} = $q3;
+				my $frg_ion = $traces{'tx'}->{$q1}->{$q3}->{frg_ion};
+				my $frg_type = substr($frg_ion,0,1);
+				# Add this frg_type to basic list if not there already.
+				# Rarely/never needed
+				if ( ( index $frg_types, $frg_type) == -1 ) {
+					push (@frg_types, $frg_type);
+					$frg_types = $frg_types . $frg_type;
+				}
+				$ion_hash{$q1}->{$frg_type}->{ion_q3s}->{$frg_ion} = $q3;
       }
     }
     # Do the sort
     for my $q1 ( @sorted_unique_q1_list ) {
       for my $frg_type (@frg_types) {
-	for my $frg_ion
-	( sort
-	  keys %{$ion_hash{$q1}->{$frg_type}->{ion_q3s}} ) {
-	  push @sorted_q1_list, $q1;
-	  push @sorted_q3_list,
-	  $ion_hash{$q1}->{$frg_type}->{ion_q3s}->{$frg_ion};
-	}
+				for my $frg_ion
+				( sort
+					keys %{$ion_hash{$q1}->{$frg_type}->{ion_q3s}} ) {
+					push @sorted_q1_list, $q1;
+					push @sorted_q3_list,
+					$ion_hash{$q1}->{$frg_type}->{ion_q3s}->{$frg_ion};
+				}
       }
     }
   # If we don't have tx_info, don't sort by frg_ion.
   } else {
     for my $q1 ( sort { $a <=> $b } keys %{$traces_href->{'tx'}}) {
       for my $q3 ( sort { $a <=> $b } keys %{$traces{'tx'}->{$q1}}) {
-	push (@sorted_q1_list, $q1);
-	push (@sorted_q3_list, $q3);
+				push (@sorted_q1_list, $q1);
+				push (@sorted_q3_list, $q3);
       }
     }
   }
@@ -1191,6 +1190,7 @@ sub traces2json {
     if ($traces{'tx'}->{$q1}->{$q3}->{'eri'});
     # Write each pair of numbers in Dick's JSON format.
     for my $time (sort {$a <=> $b} keys %{$traces{'tx'}->{$q1}->{$q3}->{'rt'}}) {
+
       my $intensity = $traces{'tx'}->{$q1}->{$q3}->{'rt'}->{$time};
       my %timepoint;
       $timepoint{'time'} = $time + 0;
@@ -1257,12 +1257,12 @@ sub store_tx_info_in_traces_hash {
     # see if we have data for this q3
     for my $data_q1 (keys %{$traces{'tx'}}) {
       for my $data_q3 (keys %{$traces{'tx'}->{$data_q1}}) {
-	if (($q3 <= $data_q3+$tol) && ($q3 >= $data_q3-$tol)) {
-	  # if we do, store the fragment ion and the eri
-	  $traces{'tx'}->{$data_q1}->{$data_q3}->{'frg_ion'} = $frg_ion;
-	  $traces{'tx'}->{$data_q1}->{$data_q3}->{'eri'} = $int if (defined $int);
-	  last;
-	}
+				if (($q3 <= $data_q3+$tol) && ($q3 >= $data_q3-$tol)) {
+					# if we do, store the fragment ion and the eri
+					$traces{'tx'}->{$data_q1}->{$data_q3}->{'frg_ion'} = $frg_ion;
+					$traces{'tx'}->{$data_q1}->{$data_q3}->{'eri'} = $int if (defined $int);
+					last;
+				}
       }
     }
   }
@@ -1888,20 +1888,20 @@ sub getChromatogramInfo {
         $parameters_href->{'transition_info'},
         $sptxt_fulltext ) =
       $cgram->getTransitionGroupInfo_from_sptxt (
-	pepseq => $modified_pepseq,
-	charge => $precursor_charge,
-	sptxt_pathname => $sptxt_pathname,
+				pepseq => $modified_pepseq,
+				charge => $precursor_charge,
+				sptxt_pathname => $sptxt_pathname,
       );
       # if there is no sptxt, and no precursor mass, try to calculate the
       # mass from the pepseq. If no pepseq either, we can't proceed.
     } elsif ( ! defined $precursor_neutral_mass ) {
       if ( defined $modified_pepseq )  {
-	use SBEAMS::Proteomics::PeptideMassCalculator;
-	my $calculator = new SBEAMS::Proteomics::PeptideMassCalculator;
-	$parameters_href->{'precursor_neutral_mass'} =
-	  $calculator->getPeptideMass( sequence=>$modified_pepseq );
+				use SBEAMS::Proteomics::PeptideMassCalculator;
+				my $calculator = new SBEAMS::Proteomics::PeptideMassCalculator;
+				$parameters_href->{'precursor_neutral_mass'} =
+				$calculator->getPeptideMass( sequence=>$modified_pepseq );
       } else {
-	die "Cannot find transition info. Must provide PASSEL SEL_chromatogram_id--OR--spectrum_pathname for an mzML that has an .sptxt file of same name--OR--q1, pepseq, or precursor_neutral_mass param (plus optional precursor_charge and/or optional transition_info param with format Q3,ion,rel_intens,Q3,ion,rel_intens, ...)";
+				die "Cannot find transition info. Must provide PASSEL SEL_chromatogram_id--OR--spectrum_pathname for an mzML that has an .sptxt file of same name--OR--q1, pepseq, or precursor_neutral_mass param (plus optional precursor_charge and/or optional transition_info param with format Q3,ion,rel_intens,Q3,ion,rel_intens, ...)";
       }
     }
   }

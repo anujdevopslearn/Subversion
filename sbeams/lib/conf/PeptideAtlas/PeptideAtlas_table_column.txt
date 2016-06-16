@@ -452,9 +452,10 @@ AT_GetSELTransitions	11	d_score_constraint	d_score Constraint									N	text	15	
 AT_GetSELTransitions	12	S_N_constraint	Signal to Noise Constraint									N	text	15		Y	1	N	"Constraint for mQuest S_N score for best peakgroup; higher is better.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", between n.n and n.n"""", """"n.n +- n.n"""""""		
 AT_GetSELTransitions	13	max_apex_intensity_constraint	Maximum Apex Intensity Constraint									N	text	15		Y	1	N	"Constraint for maximum apex intensity for best peakgroup.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", between n.n and n.n"""", """"n.n +- n.n"""""""		
 AT_GetSELTransitions	14	organism_constraint	Organism Constraint									N	multioptionlist	4		Y	Y	N	Limit query to one or more organisms	"SELECT DISTINCT O.organism_id, O.organism_name FROM $TB_ORGANISM O JOIN $TBAT_SAMPLE S ON S.organism_id = O.organism_id JOIN $TBAT_SEL_EXPERIMENT SE ON SE.sample_id = S.sample_id ORDER BY O.organism_name ASC"	
-AT_GetSELTransitions	15	SEL_experiments	SRM Experiments									N	multioptionlist	4	refreshDocument()	Y	Y	N	Limit query to one or more SRM experiments	"SELECT distinct SELE.SEL_experiment_id, experiment_title FROM $TBAT_SEL_EXPERIMENT SELE JOIN $TBAT_SEL_RUN SELR ON SELR.SEL_experiment_id = SELE.SEL_experiment_id  WHERE SELE.project_id IN ( $accessible_project_ids )  ORDER BY SELE.SEL_experiment_id ASC"	
+AT_GetSELTransitions	15	SEL_experiments	SRM Experiments									N	multioptionlist	8	refreshDocument()	Y	Y	N	Limit query to one or more SRM experiments	"SELECT distinct SELE.SEL_experiment_id, experiment_title FROM $TBAT_SEL_EXPERIMENT SELE JOIN $TBAT_SEL_RUN SELR ON SELR.SEL_experiment_id = SELE.SEL_experiment_id  WHERE SELE.project_id IN ( $accessible_project_ids )  ORDER BY SELE.SEL_experiment_id ASC"	
 AT_GetSELTransitions	16	SEL_runs	SRM Experiment Runs									N	multioptionlist	4		Y	Y	N	Limit query to one or more SRM runs	"SELECT distinct SELR.SEL_run_id,SELR.spectrum_filename FROM $TBAT_SEL_RUN SELR  JOIN $TBAT_SEL_EXPERIMENT SELE ON SELE.SEL_experiment_id = SELR.SEL_experiment_id JOIN $TBAT_SEL_TRANSITION_GROUP SELTG ON SELTG.SEL_run_id = SELR.SEL_run_id WHERE SELR.SEL_experiment_id IN ( $parameters{SEL_experiments} ) and SELE.project_id IN ( $accessible_project_ids ) ORDER BY spectrum_filename ASC"	
 AT_GetSELTransitions	17	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE record_status != 'D' AND option_type = 'SELTran_display_options' ORDER BY sort_order,option_value"	
+AT_GetSELTransitions	18	pass_identifier_constraint	PASS Identifier Constraint									N	text	40		Y	Y	N	Constraint for the PASS identifier. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
 AT_CompareBuildsProteins	1	atlas_build_id	Atlas Build									Y	optionlist	4		Y	Y	N	"Select desired Atlas Build to compare with, required."	"SELECT atlas_build_id,atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids ) ORDER BY atlas_build_name "	
 AT_CompareBuildsProteins	2	atlas_build_id_2	Atlas Build 2									Y	optionlist	4		Y	Y	N	"Select desired Atlas Build to compare against, required."	"SELECT atlas_build_id,atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids ) ORDER BY atlas_build_name "	
 AT_CompareBuildsProteins	3	comparison_type_constraint	Comparison Type					intersection				Y	optionlist			Y	Y	N	Type of comparison desired.	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'CBP_comparison_types' AND record_status != 'D' ORDER BY sort_order,option_value;"	
@@ -895,8 +896,9 @@ AT_SEL_peptide_ion	2	stripped_peptide_sequence	Stripped Peptide Sequence	varchar
 AT_SEL_peptide_ion	3	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	Y		N			N							Modified peptide sequence		
 AT_SEL_peptide_ion	4	monoisotopic_peptide_mass	Monoisotopic Neutral Peptide Mass	float	8	0	Y		N			N	text	10		Y	Y	N	Neutral peptide monoisotopic mass		
 AT_SEL_peptide_ion	5	peptide_charge	Peptide Precursor Charge	int	4	0	Y		N										Precursor charge		
-AT_SEL_peptide_ion	6	q1_mz	Ideal Q1 mz value	float	8	0	Y		N										Calculated Q1 mz value		
+AT_SEL_peptide_ion	6	q1_mz	Ideal Q1 mz value	float	8	0	Y		N										Calculated Q1 mz		
 AT_SEL_peptide_ion	7	is_decoy	Is Decoy	char	1	0	Y		N				optionlist			Y	Y	N	Is this a decoy peptide?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+AT_SEL_peptide_ion	8	q1_delta_mz	Targeted Q1 mz - Calculated Q1 mz value	float	8	0	Y		N										Difference between Targeted and Calculated Q1 mz value		
 AT_SEL_peptide_ion_protein	1	SEL_peptide_ion_protein_id	SEL Peptide Ion Protein ID	int	4	0	N		Y								N	Y	Primary Key		
 AT_SEL_peptide_ion_protein	2	SEL_peptide_ion_id	SEL Peptide Ion ID	int	4	0	N		N	AT_SEL_peptide_ion	SEL_peptide_ion_id						N	Y	Foreign Key		
 AT_SEL_peptide_ion_protein	3	biosequence_id	BioSequence ID	int	4	0	Y		N	AT_biosequence	biosequence_id					N	N	Y	Foreign Key		
@@ -916,16 +918,18 @@ AT_SEL_transition_group	12	m_score	mProphet m_score	real	8	0	Y		N			Y							mPro
 AT_SEL_transition_group	13	S_N	Signal to Noise Ratio	real	8	0	Y		N			N					Y	N	Signal-to-noise ratio for highest ranking peak group		
 AT_SEL_transition_group	14	max_apex_intensity	Maximum Apex Intensity	real	8	0	Y		N			N					Y	N	Maximum apex intensity for highest ranking peak group; a measure of relative abundance		
 AT_SEL_transition_group	15	light_heavy_ratio_maxapex	Light Heavy Ratio Maximum Apex Intensity	real	8	0	Y		N			N					Y	N	mQuest ratio of maximum apex intensity vs. heavy standard; a measure of relative abundance		
+AT_SEL_transition_group	16	mz_diffs	List of Q1_delta_mz and Q3_mz_diff values	char	255	0	Y		N										List of Q1_delta_mz and Q3_mz_diff values		
 AT_SEL_transition	1	SEL_transition_id	SEL Transition ID	int	4	0	N		Y			N					N	Y	Primary Key		
 AT_SEL_transition	2	SEL_transition_group_id	SEL Transition Group ID	int	4	0	N		N			N						Y	Foreign Key		
-AT_SEL_transition	3	q3_mz	Q3 mz value	float	8	0	Y		N			N							Q3 mz value		
+AT_SEL_transition	3	q3_mz	Q3 mz value in transition list	float	8	0	Y		N			N							Q3 mz value in transition list		
 AT_SEL_transition	4	frg_type	Fragment Type	char	1	0	Y		N			N							"Fragment type (b, y, etc.)"		
 AT_SEL_transition	5	frg_nr	Fragment Number	int	4	0	Y		N			N							Fragment number		
 AT_SEL_transition	6	frg_z	Fragment Charge	int	4	0	Y		N			N							Fragment charge		
 AT_SEL_transition	7	relative_intensity	Relative Intensity	float	8	0	Y		N			N							Expected intensity relative to other transitions in group		
 AT_SEL_transition	8	intensity_rank	Intensity Rank	int	4	0	Y		N			N	text	10		Y	Y	N	Expected intensity rank among all transitions in group		
 AT_SEL_transition	9	collision_energy	Collision Energy	float	8	0	Y		N			N							Collision energy applied to individual transition		
-AT_SEL_transition	6	frg_loss	Fragment Neutral Loss	int	4	0	Y		N			N							"Fragment neutral loss, expressed as a negative number"		
+AT_SEL_transition	10	frg_loss	Fragment Neutral Loss	float	8	0	Y		N			N							"Fragment neutral loss, expressed as a negative number"		
+AT_SEL_transition	11	q3_mz_diff	Targeted Q3 mz  - Calculated Q3 mz	float	8	0	Y		N										Difference between Targeted and Calculated Q3 mz value		
 AT_SEL_chromatogram	1	SEL_chromatogram_id	SEL Chromatogram ID	int	4	0	N		Y			Y					N	Y	Primary Key		
 AT_SEL_chromatogram	2	SEL_transition_group_id	SEL Transition Group ID	int	4	0	Y		N	AT_SEL_transition_group	SEL_transition_group_id	Y						Y	Foreign Key		
 AT_SEL_peak_group	1	SEL_peak_group_id	SEL Peak Group ID	int	4	0	N		Y			N					N	Y	Primary Key		pkDEFAULT
@@ -1231,12 +1235,16 @@ AT_GetAtlasVariants	9	expression_ratio	Expression percentage									Y	text	10		
 AT_GetAtlasVariants	10	category	Category									Y	text	10		Y	Y	N	"Category of SNP, one of XNUE (no unique evidence) XAMBI (ambiguous, e.g. I -> L), XHV (High-value), XEXCL (Exclusively as SNP)"		
 AT_GetAtlasVariants	11	original_peptide_sequence	Original Peptide Sequence									N	text	40		Y	Y	N	Original peptide sequence(s)		
 AT_GetAtlasVariants	12	variant_peptide_sequence	Variant Peptide Sequence									N	text	40		Y	Y	N	Variant peptide sequence(s)		
-AT_NeXtProt_Mapping	1	id	NextProt Mapping ID	int	4	0	N		Y			N				N	N	N			
-AT_NeXtProt_Mapping	2	atlas_build_id	Atlas Build	int	4	0	N		N			N				N	N	N	source Atlas build		
-AT_NeXtProt_Mapping	3	nextprot_release_date	NextProt Release Date	datetime	8	0	N		N			N				N	N	N	NextProt Release Date		
-AT_NeXtProt_Mapping	4	pa_mapping_date	Mapping Date	datetime	8	0	N		N			N				N	N	N	Mapping Date		
+AT_NeXtProt_Mapping	1	id	NextProt Mapping ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_NeXtProt_Mapping	2	atlas_build_id	Atlas Build	int	4	0	N		N			Y	optionlist			Y	Y	N	source Atlas build	"select atlas_build_id, atlas_build_name  from $TBAT_ATLAS_BUILD where atlas_build_name like 'Human [0-9]%' and atlas_build_id >= 433"	
+AT_NeXtProt_Mapping	3	nextprot_release_date	NextProt Release Date	datetime	8	0	N	CURRENT_TIMESTAMP	N			Y	text	20		Y	Y	N	NextProt Release Date		
+AT_NeXtProt_Mapping	4	pa_mapping_date	Mapping Date	datetime	8	0	N	CURRENT_TIMESTAMP	N			Y	text	20		Y	Y	N	Mapping Date		
 AT_NeXtProt_Mapping	5	is_public	Is the build publicly available?	char	1	0	Y		N			Y	optionlist			Y	Y	N	Indicates whether the build is public	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
-AT_NeXtProt_Mapping	6	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_NeXtProt_Mapping	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_NeXtProt_Mapping	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_NeXtProt_Mapping	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_NeXtProt_Mapping	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_NeXtProt_Mapping	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_NeXtProt_Chromosome_Mapping	1	id	NextProt Mapping ID	int	4	0	N		Y			N				N	N	N			
 AT_NeXtProt_Chromosome_Mapping	2	Gene_Name	Gene Name	varchar	255	0	Y		N			N									
 AT_NeXtProt_Chromosome_Mapping	3	neXtProt_Accession	neXtProt Accession	varchar	255	0	N		N			N									

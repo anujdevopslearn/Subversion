@@ -311,7 +311,7 @@ sub read_mquest_peakgroup_file {
                 target_group_id => [ qw( target_group_id ) ],
         transition_group_pepseq => [ qw( transition_group_pepseq ) ],
         transition_group_charge => [ qw( transition_group_charge ) ],
-                          decoy => [ qw( decoy ) ],
+                          decoy => [ qw( decoy is_decoy) ],
 		     pg_prerank => [ qw( pg_prerank ) ],
              max_apex_intensity => [ qw( max_apex_intensity ) ],
       light_heavy_ratio_maxapex => [ qw( light_heavy_ratio_maxapex light_heavy_ratio ) ],
@@ -470,7 +470,7 @@ sub read_mprophet_peakgroup_file {
        log10_max_apex_intensity => [ qw( log10_max_apex_intensity ) ],
              max_apex_intensity => [ qw( max_apex_intensity, var_max_apex_intensity ) ],
       light_heavy_ratio_maxapex => [ qw( light_heavy_ratio_maxapex light_heavy_ratio) ],
-                          decoy => [ qw( decoy ) ],
+                          decoy => [ qw( decoy is_decoy) ],
                          charge => [ qw( transition_group_charge ) ],
                         protein => [ qw( protein ) ],
                   peak_group_id => [ qw( peak_group_id ) ],
@@ -638,7 +638,7 @@ sub read_mprophet_peakgroup_file {
         $peak_group ;
     $peak_group = 1 if (! $peak_group); 
     $decoy = ( defined $idx{decoy} &&
-               (( $fields[$idx{decoy}] =~ /TRUE/i ) ||
+               (( $fields[$idx{decoy}] =~ /(Y|TRUE)/i ) ||
 	        ( $fields[$idx{decoy}] == 1)) )
 	      ? 1 : $decoy ;
 
@@ -772,11 +772,13 @@ sub read_transition_list {
 			  frg_nr => [ qw( frg_nr ), 'ion number',  ],
 			   frg_z => [ qw( frg_z ), 'q3 z',  ],
 			frg_loss => [ qw( frg_loss ),  ],
+         q1_delta_mz => [ qw(q1_delta_mz ), ],
+         q3_mz_diff => [ qw( q3_mz_diff ), ],
       trfile_transition_group_id => [ qw( transition_group_id ) ],
 		    modification => [ qw( modification modified_sequence sequence) ],
 	      relative_intensity => [ qw( relative_intensity intensity ) ],
 		  intensity_rank => [ qw( ), 'intensity rank',  ],
-		        is_decoy => [ qw( decoy ), ],
+		        is_decoy => [ qw( is_decoy decoy ), ],
     );
 
     # Now reverse the direction of the hash to make it easier to use.
@@ -827,7 +829,6 @@ sub read_transition_list {
     my @fields = split($sep, $line);
     my $q1_mz = $fields[$idx{q1_mz}];
     my $q3_mz = $fields[$idx{q3_mz}];
-
     # Skip these; retention time peptides that are sold by Biognosys
     # 01/23/12: Olga would like to see these. Hmmm.
     # Can store as a new field of SEL_peptide_ion and make it a display option
@@ -900,17 +901,22 @@ sub read_transition_list {
     # user somehow.
     if ($tx_href->{isotype} eq 'heavy') {
       if ($stripped_sequence =~ /K$/) {
-	$tx_href->{isotype_delta_mass} = '8.0142';
+				$tx_href->{isotype_delta_mass} = '8.0142';
       } elsif ($stripped_sequence =~ /R$/) {
-	$tx_href->{isotype_delta_mass} = '10.0083';
-      } 
+				$tx_href->{isotype_delta_mass} = '10.0083';
+      } #elsif($stripped_sequence =~ /L/){
+        #  my @n = $stripped_sequence =~ /L/g;
+        #  $tx_href->{isotype_delta_mass} = 7.017164 * scalar @n;
+      #}
     }
     $tx_href->{peptide_charge} = $fields[$idx{prec_z}] if defined $idx{prec_z};
     $tx_href->{frg_type} = $fields[$idx{frg_type}] if defined $idx{frg_type};
     $tx_href->{frg_nr} = int($fields[$idx{frg_nr}]) if defined $idx{frg_nr};
     $tx_href->{frg_z} = int($fields[$idx{frg_z}]) if defined $idx{frg_z};
     $tx_href->{frg_loss} = 0;
-    $tx_href->{frg_loss} = int($fields[$idx{frg_loss}]) if defined $idx{frg_loss};
+    $tx_href->{frg_loss} = $fields[$idx{frg_loss}] if defined $idx{frg_loss};
+    $tx_href->{q1_delta_mz} = $fields[$idx{q1_delta_mz}];
+    $tx_href->{q3_mz_diff} = $fields[$idx{q3_mz_diff}];
     $tx_href->{is_decoy} =
         ( ((defined $idx{is_decoy}) &&
 	   (($fields[$idx{is_decoy}] == 1) ||
@@ -1172,14 +1178,16 @@ sub map_peps_to_prots {
   my $sql = '';
   if ($organism_id  == 2){
     $sql = qq~
-			SELECT BSS.biosequence_set_id FROM $TBAT_BIOSEQUENCE_SET BSS
-			WHERE BSS.organism_id = '$organism_id'
- 			AND BSS.record_status != 'D'
-      AND SET_DESCRIPTION LIKE '%ENS%'
-			~;
+			SELECT BS.BIOSEQUENCE_SET_ID
+			FROM $TBAT_DEFAULT_ATLAS_BUILD DAP
+			JOIN $TBAT_ATLAS_BUILD AB ON (DAP.ATLAS_BUILD_ID = AB.ATLAS_BUILD_ID)
+			JOIN $TBAT_BIOSEQUENCE_SET BS ON (BS.BIOSEQUENCE_SET_ID = AB.BIOSEQUENCE_SET_ID)
+			WHERE DAP.ORGANISM_ID IS NULL
+    ~;
    }else{
     $sql = qq~
-      SELECT BSS.biosequence_set_id FROM $TBAT_BIOSEQUENCE_SET BSS
+      SELECT BSS.biosequence_set_id 
+      FROM $TBAT_BIOSEQUENCE_SET BSS
       WHERE BSS.organism_id = '$organism_id'
       AND BSS.record_status != 'D';
       ~;
@@ -1618,16 +1626,16 @@ sub load_transition_data {
 
       my @matching_target_q3s = @{$matching_target_q3s_aref};
 
-				if (scalar @matching_target_q3s == 0) {
-		print "None of the measured transitions for Q1 $measured_q1 appears in the transition file.\n" if $VERBOSE;
-		next;
-				}
+			if (scalar @matching_target_q3s == 0) {
+				print "None of the measured transitions for Q1 $measured_q1 appears in the transition file.\n" if $VERBOSE;
+				next;
+			}
 
-				# See if this peptide ion was measured as a decoy and/or as a real pep.
-				my $q3_decoy_aref = [];
-				my $q3_real_aref = [];
-				my $measured_as_decoy = 0;
-				my $measured_as_real = 0;
+			# See if this peptide ion was measured as a decoy and/or as a real pep.
+			my $q3_decoy_aref = [];
+			my $q3_real_aref = [];
+			my $measured_as_decoy = 0;
+			my $measured_as_real = 0;
 
       # For all the matching target Q3s, see if decoy or real.
       for my $q3_mz (@matching_target_q3s) {
@@ -1676,6 +1684,7 @@ sub load_transition_data {
 						mass_type => 'monoisotopic',
 						charge => $rowdata_ref->{peptide_charge},
 					);
+          $rowdata_ref->{q1_delta_mz} = $tx_href->{q1_delta_mz};
 					$rowdata_ref->{monoisotopic_peptide_mass} = $calculator->getPeptideMass(
 						sequence => $rowdata_ref->{modified_peptide_sequence},
 						mass_type => 'monoisotopic',
@@ -1688,7 +1697,8 @@ sub load_transition_data {
 					FROM $TBAT_SEL_PEPTIDE_ION
 					WHERE stripped_peptide_sequence = '$rowdata_ref->{stripped_peptide_sequence}'
 					AND modified_peptide_sequence = '$rowdata_ref->{modified_peptide_sequence}'
-					AND q1_mz = '$rowdata_ref->{q1_mz}'
+					AND q1_mz = $rowdata_ref->{q1_mz}
+          AND q1_delta_mz = $rowdata_ref->{q1_delta_mz}
 					AND is_decoy = '$rowdata_ref->{is_decoy}'
 					~;
 
@@ -1759,6 +1769,7 @@ sub load_transition_data {
 
 	  # Compute fragment_ions string and store in field of same name.
 	  my @ion_list;
+    my %mz_diff_list;
 	  my @q3_list = $is_decoy ? @{$q3_decoy_aref} : @{$q3_real_aref} ;
 	  for my $q3_mz (@q3_list) {
 
@@ -1786,11 +1797,44 @@ sub load_transition_data {
 	    $frg_href->{frg_z} = $tx_href->{frg_z};
 	    $frg_href->{frg_loss} = $tx_href->{frg_loss};
 	    push (@ion_list, $frg_href);
-	  }
 
+      my $label = '';
+      if (defined $tx_href->{isotype}){
+        if ($tx_href->{isotype} =~ /^h/i){
+           $label = 'H';
+        }else{
+           $label = 'L';
+        }
+      }
+      my $encoded_tg = '';
+      my $sep = '';
+      $encoded_tg .= $frg_href->{'frg_type'} . $frg_href->{'frg_nr'};
+      $encoded_tg .= "^$frg_href->{'frg_z'}" if ($frg_href->{'frg_z'} > 1);
+      $encoded_tg .= sprintf("%.0f", $frg_href->{'frg_loss'})  if ($frg_href->{'frg_loss'} != 0);
+      if (abs($tx_href->{q1_delta_mz}) > $q1_tol){
+        $mz_diff_list{$encoded_tg} = "Q1$label=". $tx_href->{q1_delta_mz};
+         $sep = ",";
+      }
+      if (abs($tx_href->{q3_mz_diff}) > $q3_tol){
+        $mz_diff_list{$encoded_tg} .= $sep ."T" . "Q3$label=" . $tx_href->{q3_mz_diff};
+      }
+	  }
+   
 	  my $fragment_ions = $self->encode_transition_group_list (tg_aref=>\@ion_list);
-	  $rowdata_ref->{fragment_ions} = $fragment_ions
-	    if (! $load_scores_only);
+	  $rowdata_ref->{fragment_ions} = $fragment_ions if (! $load_scores_only);
+    my %mz_diffs = ();
+    my $cnt = 1;
+    foreach my $i (split(/,/, $fragment_ions)){
+      if (defined $mz_diff_list{$i}){
+         if ($mz_diff_list{$i} =~ /TQ3/){
+           $mz_diff_list{$i} =~ s/TQ3/T${cnt}Q3/g;
+         }
+         $mz_diffs{$mz_diff_list{$i}} =1;
+      }
+      $cnt++;
+    }
+    my $mz_diffs = join(",", sort {$a cmp $b } keys %mz_diffs);
+    $rowdata_ref->{mz_diffs} = $mz_diffs if (! $load_scores_only); 
 
 	  # See if a record for this transition group is already
 	  # loaded
@@ -1837,14 +1881,14 @@ sub load_transition_data {
 	      print "Updating scores for transition group $transition_group_id, peptide $modified_peptide_sequence!\n"
 	          if $VERBOSE > 2;
 	      my $result = $sbeams->updateOrInsertRow(
-		update=>1,
-		table_name=>$TBAT_SEL_TRANSITION_GROUP,
-		rowdata_ref=>$rowdata_ref,
-		PK => 'SEL_transition_group_id',
-		return_PK => 1,
-		PK_value => $transition_group_id,
-		verbose=>$VERBOSE,
-		testonly=>$TESTONLY,
+					update=>1,
+					table_name=>$TBAT_SEL_TRANSITION_GROUP,
+					rowdata_ref=>$rowdata_ref,
+					PK => 'SEL_transition_group_id',
+					return_PK => 1,
+					PK_value => $transition_group_id,
+					verbose=>$VERBOSE,
+					testonly=>$TESTONLY,
 	      );
 	    }
 	  }
@@ -1924,13 +1968,13 @@ sub load_transition_data {
 	    } elsif (! $n_existing_pg && $chromatogram_id ) {
 #	          && ! $load_scores_only) {
 	      $peak_group_id = $sbeams->updateOrInsertRow(
-		insert=>1,
-		table_name=>$TBAT_SEL_PEAK_GROUP,
-		rowdata_ref=>$rowdata_ref,
-		PK => 'SEL_peak_group_id',
-		return_PK => 1,
-		verbose => $VERBOSE,
-		testonly=> $TESTONLY,
+				insert=>1,
+				table_name=>$TBAT_SEL_PEAK_GROUP,
+				rowdata_ref=>$rowdata_ref,
+				PK => 'SEL_peak_group_id',
+				return_PK => 1,
+				verbose => $VERBOSE,
+				testonly=> $TESTONLY,
 	      );
 	    } else {
 	      print "No peak group loaded or updated for chromatogram $chromatogram_id.\n" if $VERBOSE > 2;
@@ -1948,6 +1992,7 @@ sub load_transition_data {
 	    {mod_pepseq}->{$modified_peptide_sequence};
 	    $rowdata_ref->{SEL_transition_group_id} = $transition_group_id;
 	    $rowdata_ref->{q3_mz} = $q3_mz;
+      $rowdata_ref->{q3_mz_diff} = $tx_href->{q3_mz_diff};
 	    $rowdata_ref->{frg_type} = $tx_href->{frg_type};
 	    $rowdata_ref->{frg_nr} = $tx_href->{frg_nr};
 	    $rowdata_ref->{frg_z} = $tx_href->{frg_z};
@@ -2418,7 +2463,7 @@ sub encode_transition_group_list {
   for my $ion (@sorted_ion_list) {
     $encoded_tg .= $ion->{'frg_type'} . $ion->{'frg_nr'};
     $encoded_tg .= "^$ion->{'frg_z'}" if ($ion->{'frg_z'} > 1);
-    $encoded_tg .= "$ion->{'frg_loss'}" if ($ion->{'frg_loss'} != 0);
+    $encoded_tg .= sprintf("%.0f", $ion->{'frg_loss'})  if ($ion->{'frg_loss'} != 0);
     $i++;
     $encoded_tg .= ',' if ($i < $n_ions);
   }
@@ -2455,6 +2500,7 @@ sub read_prots_into_hash {
 
   #### Loop through file
   my $done = 0;
+
   while (! $done) {
     $line = <PROTFILE>;
     chomp $line;
@@ -2464,13 +2510,13 @@ sub read_prots_into_hash {
     }
     $line =~ s/[\r\n]//g;
     if ($line =~ /\>/) {
-      if ($line =~ /^>(\S+)\s+(.*)/) {
+      if ($line =~ /^>(\S+)\s+(.*)$/) {
 				my $next_acc = $1;
         my $next_desc = $2;
 				if ($current_seq &&     # check for Swiss-Prot accession
 					  (( ! $swissprot_only )||($acc =~ /^[ABOPQ]\w{5}$/ )||($acc =~ /^[ABCOPQ]\w{5}-\d{1,2}$/))){
           if ($organism_id == 2){ ## use only nP20K and SPnotNP 
-             if ($desc =~ /( nP20K | SPnotNP )/i){
+             if ($desc =~ /(nP20K|SPnotNP)\s/i){
               if ($prots_href->{$current_seq}) {
 								$prots_href->{$current_seq}->{accessions_string} .= ",$acc";
 							} else {
@@ -2668,14 +2714,22 @@ sub load_srm_run {
     if (! $spec_file_basename) {
       die "No spectrum file for $SEL_run_id.";
     }
-    $spectrum_filepath = "$data_path/$spec_file_basename.mzML";
-
+    if ( -e "$data_path/$spec_file_basename.mzML"){
+      $spectrum_filepath = "$data_path/$spec_file_basename.mzML";
+    }else{
+      $spectrum_filepath = "$data_path/$spec_file_basename.mzXML";
+    }
   # if still no spectrum file, assume base is same as transition file.
   } else {
     $spec_file_basename = $tran_file_basename;
     print "No spectrum filename given; assume same basename as transition file with .mzXML extension.\n";
-    $extension = 'mzML';
-    $spectrum_filepath = "$data_path/$spec_file_basename.mzML";
+    #$extension = 'mzML';
+    if ( -e "$data_path/$spec_file_basename.mzML"){
+      $spectrum_filepath = "$data_path/$spec_file_basename.mzML";
+    }else{
+      $spectrum_filepath = "$data_path/$spec_file_basename.mzXML";
+    }
+ 
   }
 
   my $SEL_experiment_id = $self->get_SEL_experiment_id(
