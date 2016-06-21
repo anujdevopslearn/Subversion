@@ -68,7 +68,8 @@ my %updated_peptides;
 GetOptions( \%opts,"verbose:s","quiet","debug:s","testonly",
 		           "list","purge_mappings","input_file:s", 'set_tag:s',
                'help', 'update_peptide_info', 'biosequence_set_id:i', 
-               'protein_file=s', 'map_set', 'delete_mapped_peps'
+               'protein_file=s', 'map_set', 'delete_mapped_peps',
+               'force_new'
            ) || usage( "Error processing options" );
 
 # build list requested 
@@ -506,7 +507,7 @@ sub fillTable{
     # 18   n_ipi_mapping [ 0 ]
     # 19   n_sgd_mapping [ 0 ]
 
-    # Hard-coded n_columns check
+    # amended columns check (13-19 currently used but not required)
     if ( !$validated_headings && scalar( @columns ) != 13 ) {
       $fill_stats{bad_line}++;
       next;
@@ -516,17 +517,6 @@ sub fillTable{
       next;
     }
     
-
-    # Hard-coded n_columns check
-    if ( scalar( @columns ) != 13 ) {
-      $fill_stats{bad_line}++;
-      next;
-    }
-    if ( $columns[2] !~ /^[ACDEFGHIKLMNPQRSTVWY]+$/ ) {
-      $fill_stats{bad_peptide}++;
-      next;
-    }
-
     my $proName = $columns[0];
     my $prevAA = $columns[1];
     my $pepSeq = $columns[2];
@@ -548,8 +538,17 @@ sub fillTable{
     my $n_exact_prot_mappings = $columns[11] || 0;
     my $n_genome_locations = $columns[12] || 0;
 
-    # Decoys are duds!
+    # And an additional 7 - keep up!
+    # 13   n_sp_mapping [ 1 ]
+    # 14   n_spvar_mapping [ 1 ]
+    # 15   n_spsnp_mapping [ 0 ]
+    # 16   n_ensp_mapping [ 0 ]
+    # 17   n_ensg_mapping [ 0 ]
+    # 18   n_ipi_mapping [ 0 ]
+    # 19   n_sgd_mapping [ 0 ]
     
+
+    # Decoys are duds!
     if ( $proName =~ /^DECOY_/ ) {
       $fill_stats{decoy}++;
       next; 
@@ -706,6 +705,18 @@ sub fillTable{
 #        $match_cnt{ok}++;
 #      }
 
+    # 13   n_sp_mapping [ 1 ]
+    # 14   n_spvar_mapping [ 1 ]
+    # 15   n_spsnp_mapping [ 0 ]
+    # 16   n_ensp_mapping [ 0 ]
+    # 17   n_ensg_mapping [ 0 ]
+    # 18   n_ipi_mapping [ 0 ]
+    # 19   n_sgd_mapping [ 0 ]
+
+      for my $idx ( 13..19 ) {
+        $columns[$idx] = '' if !defined $columns[$idx];
+      }
+
 
       $fill_stats{insert_mapping}++;
       my %rowdata=( 
@@ -714,7 +725,15 @@ sub fillTable{
                  source_biosequence_id => $acc_to_id->{$proName},
                     n_protein_mappings => $n_prot_mappings,
                     n_genome_locations => $n_genome_locations,
-              n_exact_protein_mappings => $n_exact_prot_mappings );
+              n_exact_protein_mappings => $n_exact_prot_mappings,
+                          n_sp_mapping => $columns[13],
+                       n_spvar_mapping => $columns[14],
+                       n_spsnp_mapping => $columns[15],
+                        n_ensp_mapping => $columns[16],
+                        n_ensg_mapping => $columns[17],
+                         n_ipi_mapping => $columns[18],
+                         n_sgd_mapping => $columns[19],
+              );
 
        my $map = $sbeams->updateOrInsertRow( insert => 1,
                                         table_name  => $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING,
@@ -875,7 +894,7 @@ sub mapSeqs {
 sub purgeMappings {
   my $bioseq_set_id = shift;
   if ( $opts{purge_mappings} && $bioseq_set_id ) {
-    print "purging mappings for biosequence set $opts{set_tag}";
+    print "purging mappings for biosequence set $opts{set_tag}\n";
     print "also deleting source peptides\n" if $opts{delete_mapped_peps};
     print "press cntl-c to abort\n";
     sleep 5;
@@ -883,47 +902,60 @@ sub purgeMappings {
     die "Must provide bioseq_set";
   }
   my $proteopep_mapping = getProteotypicPeptideMapData( bioseq_set_id => $bioseq_set_id, purge_mode => 1 );
-  print "Found " . scalar( keys( %{$proteopep_mapping} ) ) . " mappings\n";
+  print "Found " . scalar( keys( %{$proteopep_mapping} ) ) . " peptides with mappings \n" ;
 
-  my @ids;
+  my @ppids;
+  my @mapids;
   my $cnt = 1;
   for my $id ( keys( %{$proteopep_mapping} ) ) {
-    push @ids, $id;
-    if ( scalar( @ids == 100 ) ) {
-      my $id_list = join( ',', @ids );
+    push @ppids, $id;
+    for my $ppmid ( @{$proteopep_mapping->{$id}} ) {
+      push @mapids, $ppmid;
+    }
+    if ( scalar( @ppids == 50 ) ) {
+      my $map_id_list = join( ',', @mapids );
+      my $pp_id_list = join( ',', @ppids );
       my $mapsql = qq~
       DELETE FROM $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING
-      WHERE proteotypic_peptide_id IN ( $id_list )
+      WHERE proteotypic_peptide_id IN ( $pp_id_list )
       ~;
+#      WHERE proteotypic_peptide_mapping_id IN ( $map_id_list )
       $sbeams->do( $mapsql );
 
       if ( $opts{delete_mapped_peps} ) {
         my $ppsql = qq~
-        DELETE FROM $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING
-        WHERE proteotypic_peptide_id IN ( $id_list )
+        DELETE FROM $TBAT_PROTEOTYPIC_PEPTIDE
+        WHERE proteotypic_peptide_id IN ( $pp_id_list )
         ~;
         $sbeams->do( $ppsql );
       }
-      @ids = ();
-      print '*';
+      @ppids = ();
+      @mapids = ();
+      print '*'; # . time() . "\n";
       print "\n" unless $cnt++ % 50;
+#      print "\t" . time()  . "\n" unless $cnt++ % 50;
     }
   }
   print "\n";
-  my $id_list = join( ',', @ids );
+
+  my $map_id_list = join( ',', @mapids );
+  my $pp_id_list = join( ',', @ppids );
   my $mapsql = qq~
   DELETE FROM $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING
-  WHERE proteotypic_peptide_id IN ( $id_list )
+  WHERE proteotypic_peptide_id IN ( $pp_id_list )
   ~;
-  $sbeams->do( $mapsql ) if $id_list;
+#  WHERE proteotypic_peptide_mapping_id IN ( $map_id_list )
+  $sbeams->do( $mapsql );
 
   if ( $opts{delete_mapped_peps} ) {
     my $ppsql = qq~
-    DELETE FROM $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING
-    WHERE proteotypic_peptide_id IN ( $id_list )
+    DELETE FROM $TBAT_PROTEOTYPIC_PEPTIDE
+    WHERE proteotypic_peptide_id IN ( $pp_id_list )
     ~;
     $sbeams->do( $ppsql );
   }
+  print "Finished.\n";
+
 }
 
 
@@ -933,7 +965,7 @@ sub getProteotypicPeptideMapData {
   die unless $args{bioseq_set_id};
 
   my $sql = qq~
-  SELECT DISTINCT proteotypic_peptide_id, source_biosequence_id 
+  SELECT DISTINCT proteotypic_peptide_id, source_biosequence_id, proteotypic_peptide_mapping_id 
   FROM $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING PPM
   JOIN $TBAT_BIOSEQUENCE B 
   ON B.biosequence_id = PPM.source_biosequence_id
@@ -945,7 +977,8 @@ sub getProteotypicPeptideMapData {
   my %mapping;
   while( my $row = $sth->fetchrow_arrayref() ) {
     if ( $args{purge_mode} ) { 
-      $mapping{$row->[0]}++;
+      $mapping{$row->[0]} ||= [];
+      push @{$mapping{$row->[0]}}, $row->[2];
     } else {
       $mapping{$row->[0] . '-' . $row->[1]}++;
     }
@@ -955,6 +988,9 @@ sub getProteotypicPeptideMapData {
 
 sub getProteotypicPeptideData {
   my $src_peptides = shift;
+
+  return {} if $opts{force_new};
+
   my $sql = qq~
   SELECT preceding_residue, peptide_sequence, following_residue, 
          proteotypic_peptide_id
@@ -1071,6 +1107,12 @@ sub usage {
                            one should run purge_mappings first and then update.
     --input_file           Name of file with PepSeive and Indiana scores, as 
                            well as n_mapping info.
+    --biosequence_set_id   Specify biosequence set by ID instead of set_tag
+    --protein_file         Only fetch bioseq data for a subset of proteins
+    --map_set              Map new biosequence_set to existing peptides
+    --delete_mapped_peps   When purging mappings, also delete underlying peptides 
+                           iff possible.
+    --force_new            Insert all peptides, ignoring any existing PRE.SEQUENCE.POST
                            
 
    e.g.: $PROG_NAME --list
