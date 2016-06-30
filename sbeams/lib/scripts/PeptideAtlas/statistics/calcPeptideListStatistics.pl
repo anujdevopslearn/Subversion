@@ -56,7 +56,7 @@ Options:
                       using all peptides in the input file
   --search_batch_id   If set, only process this search_batch_id and
                       ignore others
-
+  --ex_tag_list tag list separated by comma (CONTAM, DECOY and UNMAPPED excluded already) 
  e.g.:  $PROG_NAME --verbose 2 --source YeastInputExperiments.tsv
 
 EOU
@@ -72,7 +72,7 @@ unless ($ARGV[0]){
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
   "source_file:s","prot_file:s","pepmap_file:s",
-  "P_threshold:f","search_batch_id:i",
+  "P_threshold:f","search_batch_id:i","ex_tag_list:s"
   )) {
   print "$USAGE";
   exit;
@@ -118,6 +118,9 @@ sub main {
 
   my $prot_file = $OPTIONS{prot_file};
   my $pepmap_file = $OPTIONS{pepmap_file};
+  my $ex_tag_list = $OPTIONS{ex_tag_list} || '';
+  $ex_tag_list =~ s/,/|/g;
+
   unless (($prot_file && open(PROTFILE, $prot_file)) &&
       ($pepmap_file && open(PEPMAPFILE, $pepmap_file))) {
     print "WARNING: --prot_file or --pepmap_file missing or unopenable; protein stats won't be compiled and cumulative protein plot won't be drawn.\n\n";
@@ -151,6 +154,7 @@ sub main {
   my %n_cumulative_canonical_prots;
 
   ### First, read prot info if provided
+  my %excluded_peptides = ();
   if (defined $prot_file) {
     # read header and get index of biosequence_name from it
 #protein_group_number,biosequence_name,probability,confidence,n_observations,n_distinct_peptides,level_name,represented_by_biosequence_name,subsumed_by_biosequence_name,estimated_ng_per_ml,abundance_uncertainty,is_covering,group_size
@@ -176,7 +180,9 @@ sub main {
       @fields = split(",", $line);
       if ( ($fields[$level_name_idx] eq 'canonical') &&
            ($fields[$biosequence_name_idx] !~ /UNMAPPED/) &&
-           ($fields[$biosequence_name_idx] !~ /^DECOY_/)
+           ($fields[$biosequence_name_idx] !~ /^DECOY_/) && 
+           ($fields[$biosequence_name_idx] !~ /^CONTAM_/) && 
+           ($fields[$biosequence_name_idx] !~ /($ex_tag_list)/) 
         ) {
 	$canonical_hash{$fields[$biosequence_name_idx]} = 1;
       }
@@ -193,6 +199,10 @@ sub main {
       chomp $line;
       # get peptide, protein
       my ($pep_acc, $unmod_pep_seq, $prot_acc) = split("\t", $line);
+      $excluded_peptides{$unmod_pep_seq} = 1;
+      next if ($prot_acc =~ /($ex_tag_list|^CONTAM|^DECOY)/);
+      $excluded_peptides{$unmod_pep_seq} = 0;
+
       # if protein is canonical
       if (defined $canonical_hash{$prot_acc}) {
 	# add protein to list hashed to by peptide
@@ -236,6 +246,10 @@ sub main {
     if ($line = <INFILE>) {
       chomp($line);
       @columns = split(/\t/,$line);
+      if(defined $excluded_peptides{$columns[3]} and $excluded_peptides{$columns[3]} == 1){
+        print "$columns[3] \n";
+        next;
+      }
       next if ($columns[$origprobcol] < $P_threshold);
 
       if ($process_search_batch_id) {
