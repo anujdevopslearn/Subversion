@@ -401,7 +401,7 @@ sub handle_request {
   }else{
     $filterstr = $search_key; 
   }
-  my $pass_query_result = query_repository (file => "/regis/passdata/PASS.json", 
+  my $pass_query_result = query_repository (file => "/proteomics/peptideatlas2/PASS.json", 
                                             filterstr=>$filterstr);
 
   if ($pass_query_result ne '' and $pass_query_result =~ /PASS\d{5}/i){
@@ -997,7 +997,7 @@ sub query_repository{
   }
 	foreach my $id (keys %tmp){
 		if($tmp{$id} == scalar @qts){
-      if ($date > $releaseDate and $file =~ /passdata/i){
+      if ($date > $releaseDate and $file =~ /peptideatlas2/i){
 				$selectedID{$id} = 1;
       }else{
         $selectedID{$id} = 1;

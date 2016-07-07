@@ -181,7 +181,7 @@ sub handle_request {
 
   $log->debug( "end param handling " . time() );
 
-  my $file = "/regis/passdata/PASS.json" ;
+  my $file = "/proteomics/peptideatlas2/PASS.json" ;
 	my %selectedID=();
 	if($filterstr ne '' and $filtercol eq 'all'){
 		$filterstr =~ s/^\s+//;
@@ -345,7 +345,7 @@ sub handle_request {
     my $id  = $sort_cols_hash{$idx}{sample}->{id};
     my $datapassword = $sort_cols_hash{$idx}{sample}->{datapassword};
     my $url = "ftp://$id:$datapassword".'@ftp.peptideatlas.org';
-    my $dir = "/regis/passdata/home/$id";
+    my $dir = "/proteomics/peptideatlas2/home/$id";
     my @files;
     use File::Find;
     find( sub{

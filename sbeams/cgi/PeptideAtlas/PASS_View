@@ -933,7 +933,7 @@ sub getPASSMetaData {
 
   my $PASS_ACCOUNTS_BASE = '/prometheus/u1/home';
   unless ( -d "$PASS_ACCOUNTS_BASE/${identifier}" ) {
-    $PASS_ACCOUNTS_BASE = '/regis/passdata/home';
+    $PASS_ACCOUNTS_BASE = '/proteomics/peptideatlas2/home';
   }
 
   my $infile = "$PASS_ACCOUNTS_BASE/${identifier}/${identifier}_DESCRIPTION.txt";
@@ -1297,7 +1297,7 @@ sub DisplayPASSDirListing {
 
   my $PASS_ACCOUNTS_BASE = '/prometheus/u1/home';
   unless ( -d "$PASS_ACCOUNTS_BASE/${identifier}" ) {
-    $PASS_ACCOUNTS_BASE = '/regis/passdata/home';
+    $PASS_ACCOUNTS_BASE = '/proteomics/peptideatlas2/home';
   }
 
   my $PASS_PROCESSING_BASE = '/regis/sbeams/PASS';
@@ -1415,7 +1415,7 @@ sub showFile {
 
   my $PASS_ACCOUNTS_BASE = '/prometheus/u1/home';
   unless ( -d "$PASS_ACCOUNTS_BASE/${identifier}" ) {
-    $PASS_ACCOUNTS_BASE = '/regis/passdata/home';
+    $PASS_ACCOUNTS_BASE = '/proteomics/peptideatlas2/home';
   }
 
   my $PASS_PROCESSING_BASE = '/regis/sbeams/PASS';

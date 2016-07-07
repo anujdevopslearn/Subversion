@@ -817,7 +817,7 @@ sub addDataset {
   close(CMDFILE);
 
   my ($date) = `date '+%F+%H+%m+%s'`;
-  `cp /regis/passdata/PASS.json /regis/passdata/pass_json/PASS.json-$date`;
+  `cp /proteomics/peptideatlas2/PASS.json /proteomics/peptideatlas2/pass_json/PASS.json-$date`;
 
   my $cmd = "/net/dblocal/www/html/sbeams/lib/scripts/PeptideAtlas/create_PASS_Json.pl";
   system($cmd);
