@@ -622,7 +622,7 @@ sub handle_request {
   my $modification_join = '';
   if ($parameters{display_options} =~ /DASFormat/) {
     @column_array = (
-      ["label","DISTINCT 'Similarity'","Label"],
+      ["label","'Similarity'","Label"],
       ["peptide_accession","P.peptide_accession","Peptide Accession"],
       ["n_observations","'Nobs='+LTRIM(STR(PI.n_observations,6,0))","N Obs"],
       ["peptide_sequence","P.peptide_sequence","Peptide Sequence"],
@@ -927,7 +927,6 @@ sub handle_request {
       column_help=>$obs_help,
       base_url=>$base_url,
     );
-
 
     #### Display the resultset controls
     $sbeams->displayResultSetControls(
