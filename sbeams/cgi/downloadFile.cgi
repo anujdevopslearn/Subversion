@@ -177,7 +177,16 @@ sub handle_request {
   # Currently only option, but could use this to fetch a file and force download.
   if ( $parameters{tmp_file} ) {
     my $file = "$PHYSICAL_BASE_DIR/tmp/$parameters{tmp_file}";
-    $file = $parameters{tmp_file} unless -e $file;
+#    $file = $parameters{tmp_file} unless -e $file;
+
+    if ( $parameters{list_tmp_file} ) {
+      $log->info( $file );
+    } else {
+      $log->info( $file );
+      $log->info( `ls -lh $file` );
+    }
+
+
 
     my $size = prettyBytes( -s $file );
 
