@@ -212,7 +212,7 @@ sub displayGuestPageHeader {
   my $skinLink = $args{uri} || 'http://www.peptideatlas.org/.index.dbbrowse.php';
   my $resource = $sbeams->getSessionAttribute( key => 'PA_resource' ) || '';
   if ( $resource eq 'SRMAtlas' ) {
-    $skinLink = 'http://www.srmatlas.org/.index.dbbrowse-srm.php';
+    $skinLink = 'http://www.srmatlas.org/.index.dbbrowse.php';
   } elsif ( $resource eq 'DIAAtlas' ) {
     $skinLink = 'http://www.swathatlas.org/.index.dbbrowse.php';
   }
@@ -266,11 +266,26 @@ sub displayGuestPageHeader {
   $skin =~ s#/images/#/sbeams/images/#gm;
   $self->{'_external_footer'} =~ s#/images/#/sbeams/images/#gm;
   #$skin =~ s#/images/#/dev2/sbeams/images/#gm;
+  
+  if ( $args{tracker_type} ) {
+    if ( $args{tracker_type} eq 'srm' ) {
+#      $skin =~ s/<!-- Google Analytics.*<!-- End Google Analytics -->//gms;
+#      die $skin;
+    } elsif ( $args{tracker_type} eq 'swath' ) {
+      if ( $skinLink !~ /swath/ ) {
+        $skin =~ s/<!-- Google Analytics.*<!-- End Google Analytics -->//gms;
+        $self->{'_external_footer'} =~ s/<!-- Google Analytics.*<!-- End Google Analytics -->//gms;
+        my $track_link = $skinLink;
+        $track_link =~ s/.index.*$/includes\/tracker.inc.php/;
+        my $response = $ua->request( HTTP::Request->new( GET => "$track_link" ) );
+        my $tracker = $response->content();
+        $skin =~ s/<head>/<head>\n$tracker/gi;
+      }
+    }
+  }
 
   print "$http_header\n\n";
-  print <<"  END_PAGE";
-  $skin
-  END_PAGE
+  print "$skin";
   print "$args{header_info}\n" if $args{header_info};
 
   $self->printJavascriptFunctions();
