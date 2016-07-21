@@ -330,6 +330,12 @@ $(document).ready(function() {
     ~;
     print "$restricted_build_js\n";
     print q~
+
+    $.getJSON("AJAXClient.cgi",{pabst_build_id: $("select#pabst_build_id").val(), source: 'GetTransitions_Gradient_doc'}, function(j){
+       document.getElementById("gradient_doc").innerHTML = j['url'];
+    })
+
+
     $.getJSON("AJAXClient.cgi",{pabst_build_id: $("select#pabst_build_id").val(), source: 'GetTransitions_SourceSelect'}, function(j){
       var options = '';
       for (var i = 0; i < j.length; i++) {
@@ -346,9 +352,15 @@ $(document).ready(function() {
      $("select#rt_type").html(options);
     })
 
+
   }
 
   $("select#pabst_build_id").change(function() {
+
+    $.getJSON("AJAXClient.cgi",{pabst_build_id: $("select#pabst_build_id").val(), source: 'GetTransitions_Gradient_doc'}, function(j){
+       document.getElementById("gradient_doc").innerHTML = j['url'];
+//      $("div#gradient_doc").html = j['url'];
+    })
 
     var elution_time_option = document.getElementById( 'rt_type' );
     elution_time_option.selectedIndex = 9999;
@@ -747,7 +759,7 @@ sub print_form {
     my $rt_help =  "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Select type of RT value to show in results'</TD>";
 
     my $rt_help = mk_help_link( title => 'Elution Time', text => 'Select retention time values to show in results' );
-    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Elution Time Type:</B></TD>$rt_help<TD>$rt_select</INPUT></TD></TR> ~;
+    $form .= qq~ <TR><TD VALIGN=TOP style="white-space:nowrap"><div id='gradient_doc'></div> </TD>$rt_help<TD>$rt_select </TD></TR> ~;
     $form .= $ion_filters;
     $form .= $mod_filters;
 
