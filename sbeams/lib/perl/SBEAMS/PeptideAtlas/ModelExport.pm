@@ -457,7 +457,7 @@ sub getDDISampleXML {
       $xml .= '       <field name="' . $field . '"' . ">$additional_fields{$field}</field>\n" if defined $additional_fields{$field};
 
     }
-    $xml .= "<field name='full_dataset_link'>https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/ManageTable.cgi?TABLE_NAME=AT_sample&sample_id=$sample->{sample_id}</field>";
+    $xml .= "<field name='full_dataset_link'>'https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/ManageTable.cgi?TABLE_NAME=AT_sample&amp;sample_id=$sample->{sample_id}'</field>";
 
     # These are 'required' by ddi validator
     $xml .= qq~
