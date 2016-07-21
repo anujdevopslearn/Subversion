@@ -98,28 +98,28 @@ sub main
   $guest = $sbeams->isGuestUser();
   if ( !$guest ) {
     $parameters{pabst_build_id} ||= '';
-    $parameters{pabst_build_id} = 146 if $parameters{pabst_build_id} eq 'specialaccess';
+#   $parameters{pabst_build_id} = 146 if $parameters{pabst_build_id} eq 'specialaccess';
   }
   $parameters{apply_action_hidden} ||= '';
   my $referrer = $q->referer();
-  if ( $referrer =~ /https*:\/\/db\.systemsbiology\./ &&
-     ( $referrer =~ /MapSearch|proteinList/ || ( $q->request_method() eq 'POST' && $parameters{apply_action_hidden} =~ /HPPBD/ ) ) ) {
-    if ( $guest ) {
-      $super_guest = 1;
-      $parameters{apply_action_hidden} ||= '<INPUT TYPE="hidden" NAME="apply_action_hidden" VALUE="HPPBD"\>';
-      if ( !$parameters{pabst_build_id} && ( $parameters{organism_name} && $parameters{organism_name} =~ /Human/i ) ) {
-        $parameters{pabst_build_id} = 146;
-      }
-    }
-  } elsif ( is_srma_preview_site( $referrer ) ) {
-    if ( $guest ) {
-      $super_guest = 1;
-      $parameters{apply_action_hidden} ||= "<INPUT TYPE='hidden' NAME='apply_action_hidden' VALUE='$referrer'\>";
-      if ( !$parameters{pabst_build_id} && ( $parameters{organism_name} && $parameters{organism_name} =~ /Human/i ) ) {
-        $parameters{pabst_build_id} = 146;
-      }
-    }
-  }
+#  if ( $referrer =~ /https*:\/\/db\.systemsbiology\./ &&
+#     ( $referrer =~ /MapSearch|proteinList/ || ( $q->request_method() eq 'POST' && $parameters{apply_action_hidden} =~ /HPPBD/ ) ) ) {
+#    if ( $guest ) {
+#      $super_guest = 1;
+#      $parameters{apply_action_hidden} ||= '<INPUT TYPE="hidden" NAME="apply_action_hidden" VALUE="HPPBD"\>';
+#      if ( !$parameters{pabst_build_id} && ( $parameters{organism_name} && $parameters{organism_name} =~ /Human/i ) ) {
+#        $parameters{pabst_build_id} = 146;
+#      }
+#    }
+#  } elsif ( is_srma_preview_site( $referrer ) ) {
+#    if ( $guest ) {
+#      $super_guest = 1;
+#      $parameters{apply_action_hidden} ||= "<INPUT TYPE='hidden' NAME='apply_action_hidden' VALUE='$referrer'\>";
+#      if ( !$parameters{pabst_build_id} && ( $parameters{organism_name} && $parameters{organism_name} =~ /Human/i ) ) {
+#        $parameters{pabst_build_id} = 146;
+#      }
+#    }
+#  }
 
 # Wrap this in a warn level... IDEA!
 #  my $paramstr = join( ',', %parameters );
@@ -172,45 +172,44 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
   my $special_access_ok = 0;
 
   if ( $parameters{pabst_build_id} && $parameters{pabst_build_id} != $pabst_build_id ) {
-    my $auth_path = get_auth_path();
-
-    # Remove any expired auth files
-    clear_auth( $auth_path );
-
-    $SRMAuth = $q->cookie( 'SRMAtlasAuthorized' );
-    if ( $guest && !$super_guest && $SRMAuth && ($parameters{pabst_build_id} == 146 || $parameters{pabst_build_id} eq 'specialaccess' ) ) {
-      $parameters{pabst_build_id} = 146;
-
-      # This mechanism supercedes the restricted proteins mechanism
-      $restricted_protein_clause = '';
-
-      if ( -e "$auth_path/$SRMAuth" ) {
-        $isAuthorized++;
-        unlink( "$auth_path/$SRMAuth" );
-        $super_guest++;
-        $pabst_build_id = $parameters{pabst_build_id};
-        print qq~
-        <p>
-        <br>
-        <span class=info_box>You are being allowed access to the Complete Human SRMAtlas subject to the provisional license agreement</span>
-        <br>
-        </p>
-        ~ if $is_html;
-        $special_access_ok++;
-      } else {
-#        die "auth don't exist SRMA is $SRMAuth, auth path is $auth_path";
-        $bad_build_specified++ unless $super_guest;
-      }
-    } else {
-#      die "not guest($guest) and not super($super_guest), etc.SRMA is $SRMAuth, auth path is $auth_path";
+#    my $auth_path = get_auth_path();
+#
+#    # Remove any expired auth files
+#    clear_auth( $auth_path );
+#
+#    $SRMAuth = $q->cookie( 'SRMAtlasAuthorized' );
+#    if ( $guest && !$super_guest && $SRMAuth && ($parameters{pabst_build_id} == 146 || $parameters{pabst_build_id} eq 'specialaccess' ) ) {
+#      $parameters{pabst_build_id} = 146;
+#
+#      # This mechanism supercedes the restricted proteins mechanism
+#      $restricted_protein_clause = '';
+#
+#      if ( -e "$auth_path/$SRMAuth" ) {
+#        $isAuthorized++;
+#        unlink( "$auth_path/$SRMAuth" );
+#        $super_guest++;
+#        $pabst_build_id = $parameters{pabst_build_id};
+#        print qq~
+#        <p>
+#        <br>
+#        <span class=info_box>You are being allowed access to the Complete Human SRMAtlas subject to the provisional license agreement</span>
+#        <br>
+#        </p>
+#        ~ if $is_html;
+#        $special_access_ok++;
+#      } else {
+##        die "auth don't exist SRMA is $SRMAuth, auth path is $auth_path";
+#        $bad_build_specified++ unless $super_guest;
+#      }
+#    } else {
+##      die "not guest($guest) and not super($super_guest), etc.SRMA is $SRMAuth, auth path is $auth_path";
       $bad_build_specified++ unless $super_guest;
-    }
+#    }
   }
 
-
-  if ( $super_guest ) {
-    $pabst_build_id = ( $parameters{pabst_build_id} == 146 ) ? 146 : $pabst_build_id;
-  }
+#  if ( $super_guest ) {
+#    $pabst_build_id = ( $parameters{pabst_build_id} == 146 ) ? 146 : $pabst_build_id;
+# }
 
   $parameters{organism} ||= $best_peptide->getBuildOrganism( pabst_build_id => $pabst_build_id );
 	$parameters{build_bss_id} = $best_peptide->get_pabst_bss_id( pabst_build_id => $pabst_build_id );  
@@ -223,56 +222,56 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
 
   # provisional access issue
   if ( $parameters{pabst_build_id} && $parameters{pabst_build_id} !~ /^\d+$/ ){ 
-    die "illegal build specified: SGuest is $super_guest, $parameters{pabst_build_id}";
+    die "illegal build specified: $parameters{pabst_build_id}";
   }
 
   my $protein_list_info = $atlas->getProteinListInfo( username => $current_username, build_id => $parameters{pabst_build_id} );
 
   my $pl_auth = 0;
-  if ( $protein_list_info->{build_ok} && ( !$guest || $super_guest ) ) {
-    $restricted_build_js = qq~
-    var pb_select=document.getElementById("pabst_build_id");
-    var new_option=document.createElement("option");
-    new_option.text="$protein_list_info->{build_name}";
-    new_option.value="$protein_list_info->{build_id}";
-    pb_select.add(new_option,pb_select.options[null]);
-    var last_idx = pb_select.length - 1;
-    pb_select.selectedIndex=last_idx;
-    ~;
-    $restricted_build_js = ''; 
-    # Protein list access superceded by preview access
+#  if ( $protein_list_info->{build_ok} && ( !$guest ) ) {
+#    $restricted_build_js = qq~
+#    var pb_select=document.getElementById("pabst_build_id");
+#    var new_option=document.createElement("option");
+#    new_option.text="$protein_list_info->{build_name}";
+#    new_option.value="$protein_list_info->{build_id}";
+#    pb_select.add(new_option,pb_select.options[null]);
+#    var last_idx = pb_select.length - 1;
+#    pb_select.selectedIndex=last_idx;
+#    ~;
+#    $restricted_build_js = ''; 
+#    # Protein list access superceded by preview access
+#
+#    if ( !$parameters{pabst_build_id} ) {
+#      # Assume that this is the best build, unless they've specified another
+#      $pabst_build_id = $protein_list_info->{build_id};
+#    } elsif ( $parameters{pabst_build_id} eq $protein_list_info->{build_id} ) {
+#      # They specified a build that is legal based on protein list.  Let it be. 
+#      $log->info( "looks like a valid build_id" );
+#      $pl_auth++;
+#      $pabst_build_id = $parameters{pabst_build_id};
+#    }
+#}
 
-    if ( !$parameters{pabst_build_id} ) {
-      # Assume that this is the best build, unless they've specified another
-      $pabst_build_id = $protein_list_info->{build_id};
-    } elsif ( $parameters{pabst_build_id} eq $protein_list_info->{build_id} ) {
-      # They specified a build that is legal based on protein list.  Let it be. 
-      $log->info( "looks like a valid build_id" );
-      $pl_auth++;
-      $pabst_build_id = $parameters{pabst_build_id};
-    }
-  }
 
 
-
-  # This might have gotten overridden due to permissions.
-  if ( $protein_list_info->{build_ok} &&
-       $pabst_build_id == 146         &&
-       !is_srma_preview_site()        &&
-       $pl_auth  ) {
-
-    # Could be allowed via a protein list
-    if ( scalar( keys( %{$protein_list_info->{proteins}} ) ) ) {
-      $restricted_protein_clause = " AND biosequence_name IN ( '" . join( "','", keys( %{$protein_list_info->{proteins}} ) ) . " ' ) \n";
-      $log->info( "Allowed access for $current_username to build $pabst_build_id proteins $restricted_protein_clause" );
-    }
-    if ( scalar( keys( %{$protein_list_info->{peptides}} ) ) ) {
-      $restricted_peptide_clause = " AND peptide_sequence IN ( '" . join( "','", keys( %{$protein_list_info->{peptides}} ) ) . " ' ) \n";
-      $log->info( "Allowed access for $current_username to build $pabst_build_id peptides $restricted_peptide_clause" );
-    }
-    $bad_build_specified = 0;
-  }
-  $restricted_protein_clause = '' if $special_access_ok;
+#  # This might have gotten overridden due to permissions.
+#  if ( $protein_list_info->{build_ok} &&
+#       $pabst_build_id == 146         &&
+#       !is_srma_preview_site()        &&
+#       $pl_auth  ) {
+#
+#    # Could be allowed via a protein list
+#    if ( scalar( keys( %{$protein_list_info->{proteins}} ) ) ) {
+#      $restricted_protein_clause = " AND biosequence_name IN ( '" . join( "','", keys( %{$protein_list_info->{proteins}} ) ) . " ' ) \n";
+#      $log->info( "Allowed access for $current_username to build $pabst_build_id proteins $restricted_protein_clause" );
+#    }
+#    if ( scalar( keys( %{$protein_list_info->{peptides}} ) ) ) {
+#      $restricted_peptide_clause = " AND peptide_sequence IN ( '" . join( "','", keys( %{$protein_list_info->{peptides}} ) ) . " ' ) \n";
+#      $log->info( "Allowed access for $current_username to build $pabst_build_id peptides $restricted_peptide_clause" );
+#    }
+#    $bad_build_specified = 0;
+#  }
+#  $restricted_protein_clause = '' if $special_access_ok;
 
   # Decide what action to take based on information so far
 
@@ -679,7 +678,7 @@ sub print_form {
      `touch $auth_path/$akey`;
      close AUTH;
 
-     $form =~ s/<SELECT NAME="pabst_build_id" >/<SELECT NAME="pabst_build_id" >\n<option class=bold_red_italic_text value=specialaccess><div class=bold_red_italic_text>Complete Human SRMAtlas<\/div><\/option>\n/gm;
+#     $form =~ s/<SELECT NAME="pabst_build_id" >/<SELECT NAME="pabst_build_id" >\n<option class=bold_red_italic_text value=specialaccess><div class=bold_red_italic_text>Complete Human SRMAtlas<\/div><\/option>\n/gm;
     }
     $form =~ s/(NAME="pabst_build_id")/$1 ID="pabst_build_id"/gm;
     $form =~ s/(NAME="source_instrument_type_id")/$1 ID="source_instrument_type_id"/gm;
@@ -1755,7 +1754,7 @@ sub fetch_transitions {
   # Code to get only pertinent headings here...
   if ( $parameters{rt_type} ) {
     my $rt_heading = ( $irt ) ? 'iRT' : 'RT_Cat';
-    if ( $rt_heading eq 'RT_Cat' && ( !$guest || $super_guest ) ) {
+    if ( $rt_heading eq 'RT_Cat' ) {
       push @headings, $rt_heading unless $parameters{rt_type} == $ssr_type;
     } elsif ( $rt_heading eq 'iRT' ) {
       push @headings, $rt_heading unless $parameters{rt_type} == $ssr_type;
@@ -1775,7 +1774,7 @@ sub fetch_transitions {
   my $has_chromats = $consensus->hasChromatograms( pabst_build_id => $pabst_build_id );
 	
   if ( $parameters{speclinks} ) {
-    if ( $guest && !$super_guest ) {
+    if ( 0 && $guest && !$super_guest ) {
       push @headings, 'IonTrap';
     } else {
       if ( $consensus_srcs->{QTOF} ) {
@@ -1788,7 +1787,7 @@ sub fetch_transitions {
     }
   }
 
-  if ( ( !$guest || $super_guest ) && ( $has_chromats || $has_ce ) ) {
+  if ( $has_chromats || $has_ce ) {
     push @headings, 'QQQ ', ' QTRAP ';
   }
 
@@ -2164,7 +2163,8 @@ sub fetch_transitions {
       my $organism_name = $id2name->{$organism} || 'unknown';
 
       my $links = '';
-      if ( !$guest || $super_guest ) {
+#      if ( !$guest || $super_guest ) {
+      if ( 1 ) {
         my @bids = keys( %{$build_resources->{atlas_build}} );
         my $pa_img = "<img src='$HTML_BASE_DIR/images/pa_tiny_clear.png' border=0 />";
         my $srm_img = "<img src='$HTML_BASE_DIR/images/srm_icon_clear.gif' border=0 />";
@@ -2319,7 +2319,7 @@ sub fetch_transitions {
         }
 #        push @rowdata, $links, $chromat_link;
         push @rowdata, @{$links};
-        if ( ( $has_chromats || $organism == 2 ) && ( !$guest || $super_guest ) ) {
+        if ( $has_chromats || $organism == 2 ) {   # && ( !$guest || $super_guest ) ) {
           push @rowdata, @chromat_links;
         }
       }
@@ -2926,7 +2926,8 @@ sub get_consensus_links {
                IonTrap => 'IonTrap' );
 
   my @links;
-  if ( !$guest || $super_guest ) {
+#  if ( !$guest || $super_guest ) {
+  if ( 1 ) {
     my $link = '';
     if ( $libs->{qtof}->{$spectrum_key} ) {
       my $title = "View +$chg spectrum for $seq in $instr{QTOF} library"; 
