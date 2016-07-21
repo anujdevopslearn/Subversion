@@ -7,7 +7,7 @@
 # Description : Script responds to AJAX requests from Peptide Atlas scripts and 
 # returns desired information as JSON object.
 #
-# SBEAMS is Copyright (C) 2000-2014 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2016 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -89,6 +89,8 @@ sub process_query {
     return GetProtein_VariantDisplay();
   } elsif ( $params{source} eq 'GetDIALibs_LibrarySelect' ) {
     return GetDIALibs_LibrarySelect();
+  } elsif ( $params{source} eq 'GetTransitions_Gradient_doc' ) {
+    return GetTransitions_Gradient_doc();
   } else {
     return $params{source};
   }
@@ -100,11 +102,9 @@ sub GetDIALibs_LibrarySelect {
   my $dia = new SBEAMS::PeptideAtlas::DIALibrary;
 
   # Build select list
-
   my $select = $dia->get_library_select( as_array => 1, %params );
-
   my $json_text = $json->encode( $select ); 
-
+  $log->debug( $json_text );
   return $json_text;
 }
 
@@ -228,6 +228,14 @@ sub GetTransitions_NamespaceFilters {
   my $json_text = $json->encode( [$div_text] );
 	$log->debug( $json_text );
   return $json_text;
+}
+
+sub GetTransitions_Gradient_doc {
+  my $doc_url = '<td valign=top nobr><b>Elution Time Type:</b></td>';
+  if ( $params{pabst_build_id} && $params{pabst_build_id} == 146 ) {
+    $doc_url = "<td valign=top nobr><b>Elution Time Type:</b>&nbsp;&nbsp;<a href='https://db.systemsbiology.net/devDC/sbeams/doc/PeptideAtlas/HumanSRMAtlas_Gradient_RTs_web_v1_20160714.pdf'>[gradient info]</a></td>";
+  }
+  return $json->encode( { url => $doc_url} );
 }
 
 sub GetTransitions_ElutionTimeSelect {
