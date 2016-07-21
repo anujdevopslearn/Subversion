@@ -195,7 +195,7 @@ sub get_QTOF_stepping {
     AND sequence = '$args{seq}'
   END
   my %ce;
-  return \%ce if $sbeams->isGuestUser();
+#return \%ce if $sbeams->isGuestUser();
 
   for my $row ( $sbeams->selectSeveralColumns( $sql ) ) {
     my $key = $row->[0] . $row->[1];
@@ -664,7 +664,7 @@ sub getConsensusLinks {
   }
   my $srcs = $self->getConsensusSources( pabst_build_id => $args{pabst_build_id},
                                                 lib_ids => 1 );
-  if ( $sbeams->isGuestUser() && !$args{super_guest} ) {
+  if ( 0 && $sbeams->isGuestUser() && !$args{super_guest} ) {
     my $project_ids = $sbeams->getAccessibleProjects();
     my $sql = qq~
     SELECT MAX(consensus_library_id) 
