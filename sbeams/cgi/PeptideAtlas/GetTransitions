@@ -288,7 +288,7 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
   if ( $parameters{default_search} ) {
     $parameters{y_ions} ||= 'on';
     $parameters{b_ions} ||= 'on';
-    $parameters{C160} ||= 'on';
+    $parameters{'C[160]'} ||= 'on';
     $parameters{speclinks} ||= 'on';
     $parameters{SwissProt} ||= 'checked';
   }
@@ -2245,7 +2245,7 @@ sub fetch_transitions {
         $display_prot = 'NX_' . $prot;
       }
          
-      if ( ( $guest && !$super_guest && $parameters{rt_type} eq 'iRT' ) || $parameters{rt_type} == $ssr_type ) {
+      if ( $parameters{rt_type} eq 'iRT'  || $parameters{rt_type} == $ssr_type ) {
 
         @rowdata = ( $prot, $links, @row[0..12] );
       } else {
