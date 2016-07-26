@@ -155,7 +155,8 @@ sub getSamples {
   O2.species eo_species,
   O2.genus eo_genus,
   O.ncbi_taxonomy_id,
-  is_public
+  is_public,
+  S.project_id
 
   FROM $TBAT_SAMPLE S
   JOIN $TB_PROJECT P on P.project_id = S.project_id
@@ -171,13 +172,26 @@ sub getSamples {
   my $sth = $sbeams->get_statement_handle( $sql );
   my @samples;
   if ( $args{public_check} ) {
-    open PUB, ">>public_mismatch.tsv";
+    if ( ! -e "public_mismatch.tsv" ) {
+      open PUB, ">public_mismatch.tsv";
+      print PUB join( "\t", qw( AtlasBuild SampleID SampleAccession SampleTag isPublic PublicProject ) ) . "\n";
+    } else {
+      open PUB, ">>public_mismatch.tsv";
+    }
   }
+
+  my $accessible = $sbeams->getAccessibleProjects( as_guest => 1, 
+                                                   wg_module => 'PeptideAtlas',
+                                                   as_hashref => 1 );
+
   while ( my $row = $sth->fetchrow_hashref() ) {
     push @samples, $row;
     next if !$args{public_check};
     if ( !$row->{is_public} || $row->{is_public} eq 'N' ) {
-      print PUB join( "\t", $args{atlas_build_id}, $row->{sample_id}, $row->{sample_accession}, $row->{sample_tag} ) . "\n";
+      my $project_public = ( $accessible->{$row->{project_id}} ) ? 'Y' : 'N';
+      print PUB join( "\t", $args{atlas_build_id}, $row->{sample_id}, $row->{sample_accession}, $row->{sample_tag}, 'N', $project_public ) . "\n";
+    } elsif ( !$accessible->{$row->{project_id}} ) {
+      print PUB join( "\t", $args{atlas_build_id}, $row->{sample_id}, $row->{sample_accession}, $row->{sample_tag}, 'Y', 'N' ) . "\n";
     }
   }
   close PUB if $args{public_check};
