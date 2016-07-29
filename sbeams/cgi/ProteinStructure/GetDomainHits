@@ -704,7 +704,7 @@ sub handle_request {
         $biosequence_category_clause
         $transmembrane_class_clause
         $n_transmembrane_regions_clause
-        ORDER BY BS.biosequence_name,DM.domain_match_index,DN.cluster_name,DM.query_start
+        ORDER BY BS.biosequence_name,DM.domain_match_index,DM.cluster_name,DM.query_start
 	$limit_clause->{trailing_limit_clause}
   ~;
 
