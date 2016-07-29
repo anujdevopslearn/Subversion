@@ -102,11 +102,13 @@ sub new {
       'R[157]' => 0.984009,     # Citrullination (Unimod)
 
       'Q[111]' => -17.026549,   # Pyro-glu from Q (UniMod)
+      'Q[142]' => 14.01565,     # Methlyation of Q (UniMod)
 
       'S[167]' => 79.966331,    # Phosphorylation (UniMod 21) (incorrect)
       'S[166]' => 79.966331,    # Phosphorylation (UniMod 21)
       'S[129]' => 42.010565,    # Acetylation  (Unimod 1)
 
+      'T[85]' => -15.994915,    # Deoxy (UniMod)
       'T[181]' => 79.966331,    # Phosphorylation (UniMod)
       'T[143]' => 42.010565,    # Acetylation  (Unimod 1)
 
