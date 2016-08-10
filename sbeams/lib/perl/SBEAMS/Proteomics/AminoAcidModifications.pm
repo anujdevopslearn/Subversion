@@ -46,7 +46,8 @@ sub new {
 
       'A[85]'  => 14.01565,     # Methylation (Unimod) This may be a red herring
       'C[143]' => 39.994915,    # Pyro-carbamidonmethyl (Unimod)
-      'C[148]' => 45.987721,    # Beta-methylthiolation (UniMod)
+      'C[148]' => 45.987721,    # [DEPR] Beta-methylthiolation (UniMod)
+      'C[149]' => 45.987721,    # Beta-methylthiolation (UniMod)
       'C[160]' => 57.021464,    # Carbamidomethyl (UniMod)Cys_CAM
       'C[161]' => 58.005479,    # Search ERROR?? Maybe not, maybe Carboxymethyl?? Latin Square?
       'C[174]' => 71.037114,    # Propionamide (Acrylamide adduct) used initially by IPAS (UniMod)
@@ -128,7 +129,8 @@ sub new {
       'n[230]' => 229.2634,     # 6 plex
       'n[305]' => 304.3081,     # 8 plex
       'C[143]' => 40.0208,      # Pyro-carbamidonmethyl (Unimod)
-      'C[148]' => 46.0916,      # Beta-methylthiolation (UniMod)
+      'C[148]' => 46.0916,      # [DEPR] Beta-methylthiolation (UniMod)
+      'C[149]' => 46.0916,      # Beta-methylthiolation (UniMod)
       'C[160]' => 57.0513,      # Cys_CAM (UniMod)
       'C[161]' => 58.0361,      # Search ERROR?? Maybe not, maybe Carboxymethyl?? Latin Square?
       'C[174]' => 71.0779,      # Propionamide (Acrylamide adduct) used initially by IPAS (UniMod)
@@ -202,7 +204,8 @@ sub get_modification_names {
 
       'A[85]'  =>  'Ala Methylation', # (Unimod) This may be a red herring
       'C[143]' =>  'Cys Pyro-carbamidonmethyl', # (Unimod)
-      'C[148]' =>  'Cys Beta-methylthiolation', # (UniMod)
+      'C[148]' =>  '[DEPR] Cys Beta-methylthiolation', # (UniMod)
+      'C[149]' =>  'Cys Beta-methylthiolation', # (UniMod)
       'C[160]' =>  'Cys Carbamidomethyl', #  (UniMod)Cys_CAM
       'C[161]' =>  'Cys Carboxymethyl', # ?? Latin Square?
       'C[174]' =>  'Cys Propionamide', #  (Acrylamide adduct) used initially by IPAS (UniMod)
