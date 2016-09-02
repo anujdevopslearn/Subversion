@@ -233,7 +233,7 @@ sub GetTransitions_NamespaceFilters {
 sub GetTransitions_Gradient_doc {
   my $doc_url = '<td valign=top nobr><b>Elution Time Type:</b></td>';
   if ( $params{pabst_build_id} && $params{pabst_build_id} == 146 ) {
-    $doc_url = "<td valign=top nobr><b>Elution Time Type:</b>&nbsp;&nbsp;<a href='https://db.systemsbiology.net/devDC/sbeams/doc/PeptideAtlas/HumanSRMAtlas_Gradient_RTs_web_v1_20160714.pdf'>[gradient info]</a></td>";
+    $doc_url = "<td valign=top nobr><b>Elution Time Type:</b>&nbsp;&nbsp;<a href='/sbeams/doc/PeptideAtlas/HumanSRMAtlas_Gradient_RTs_web_v1_20160714.pdf'>[gradient info]</a></td>";
   }
   return $json->encode( { url => $doc_url} );
 }
@@ -254,11 +254,11 @@ sub GetTransitions_ElutionTimeSelect {
     }
 
     my $sql = qq~
-    SELECT DISTINCT elution_time_type, ET.elution_time_type_id
+    SELECT DISTINCT elution_time_type, ET.elution_time_type_id, sort_order
     FROM $TBAT_ELUTION_TIME ET 
     JOIN $TBAT_ELUTION_TIME_TYPE ETT on ET.elution_time_type_id = ETT.elution_time_type_id
     $resource_clause
-    ORDER BY elution_time_type ASC
+    ORDER BY sort_order ASC
     ~;
 
    $log->debug( $sql );
