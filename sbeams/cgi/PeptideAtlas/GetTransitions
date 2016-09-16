@@ -80,8 +80,6 @@ sub main
   # Authenticate and exit if a username is not returned
   my $current_username = $sbeams->Authenticate( allow_anonymous_access => 1 );
   exit unless $current_username;
-  $sbeams->setSessionAttribute( key => 'PA_resource', value => 'SRMAtlas' ) if $is_html;
-
 
   #### Read in the default input parameter_onlys
   $parameters{uploaded_file_not_saved} = 1;
@@ -94,6 +92,9 @@ sub main
 
   # This will look for mod-specific params and do the right thing
   $atlas->processModuleParameters(parameters_ref=>\%parameters);
+
+  $is_html = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
+  $sbeams->setSessionAttribute( key => 'PA_resource', value => 'SRMAtlas' ) if $is_html;
 
   $guest = $sbeams->isGuestUser();
   if ( !$guest ) {
@@ -124,8 +125,6 @@ sub main
 # Wrap this in a warn level... IDEA!
 #  my $paramstr = join( ',', %parameters );
 #  $log->logCGI( paramstr => $paramstr, mode => 'start' );
-
-  $is_html = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
 
 
   $sbeams->time_stmt( "Set target" );
