@@ -117,7 +117,7 @@ my %basespace = ( basespace_params => '' );
     }
     $params->{mode} ||= 'download_libs';
 #    die "header coming";
-    $atlas->display_page_header();
+    $atlas->display_page_header( tracker_type => 'swath' );
 
     if ( $params->{mode} eq 'subset_libs' ) {
       my $title = qq~
@@ -410,7 +410,7 @@ sub get_library_table {
 
       $sbeams->makeSBEAMSTempLink( path => $lib_file->[7],
                                linkname => $lib_file->[6],
-                               relative => 1 );
+                               relative => 0 );
 
       my $dwn = "<a href=$CGI_BASE_DIR/downloadFile.cgi?name=$fname;format=tsv;tmp_file=$lib_file->[6];raw_download=1>Download</a>";
       if ( $basespace{url_params} ) {
