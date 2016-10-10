@@ -46,6 +46,8 @@ CREATE NONCLUSTERED INDEX idx_peptide_id ON dbo.peptide_instance ( peptide_id ) 
 
 CREATE NONCLUSTERED INDEX idx_biosequence_set_id ON dbo.biosequence ( biosequence_set_id )   --WITH DROP_EXISTING
 CREATE NONCLUSTERED INDEX idx_biosequence_name ON dbo.biosequence ( biosequence_name )   --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_biosequence_set_id_biosequence_name ON dbo.biosequence ( biosequence_set_id,biosequence_name )   --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_biosequence_set_id_biosequence_accession ON dbo.biosequence ( biosequence_set_id,biosequence_accession )   --WITH DROP_EXISTING
 CREATE NONCLUSTERED INDEX idx_dbxref_id ON dbo.biosequence ( dbxref_id )   --WITH DROP_EXISTING
 
 -- PABST
