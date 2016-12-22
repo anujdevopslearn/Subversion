@@ -1,0 +1,6 @@
+
+-- #### Moved these uk constraints from CREATEINDEXES 2016-12-22 EWD
+ALTER TABLE dbo.biosequence ADD CONSTRAINT biosequence_set_name_uk UNIQUE (biosequence_set_id,biosequence_name)
+ALTER TABLE dbo.peptide ADD CONSTRAINT peptide_accession_uk UNIQUE (peptide_accession)
+ALTER TABLE dbo.peptide ADD CONSTRAINT peptide_sequence_uk UNIQUE (peptide_sequence)
+
