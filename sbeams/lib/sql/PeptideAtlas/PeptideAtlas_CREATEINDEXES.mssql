@@ -1,108 +1,103 @@
-ALTER TABLE dbo.biosequence ADD CONSTRAINT biosequence_set_name_uk UNIQUE (biosequence_set_id,biosequence_name)
 
+USE PeptideAtlas
 
-ALTER TABLE dbo.peptide ADD CONSTRAINT peptide_accession_uk UNIQUE (peptide_accession)
-ALTER TABLE dbo.peptide ADD CONSTRAINT peptide_sequence_uk UNIQUE (peptide_sequence)
+CREATE NONCLUSTERED INDEX idx_atlas_build_id ON dbo.atlas_build ( atlas_build_id ) WITH DROP_EXISTING
 
-CREATE NONCLUSTERED INDEX idx_atlas_build_id ON dbo.atlas_build ( atlas_build_id ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_atlas_build_id ON dbo.peptide_instance ( atlas_build_id ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_peptide_id ON dbo.peptide_instance ( peptide_id )  WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.peptide_instance ( peptide_instance_id ) WITH DROP_EXISTING
 
-CREATE NONCLUSTERED INDEX idx_atlas_build_id ON dbo.peptide_instance ( atlas_build_id ) --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.peptide_instance ( peptide_instance_id ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_atlas_search_batch_id ON dbo.peptide_instance_search_batch ( atlas_search_batch_id ) WITH DROP_EXISTING
 
-CREATE NONCLUSTERED INDEX idx_peptide_sequence ON dbo.peptide ( peptide_sequence ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_peptide_sequence ON dbo.peptide ( peptide_sequence ) WITH DROP_EXISTING
 
-CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.peptide_instance_sample ( peptide_instance_id ) --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.peptide_instance_search_batch ( peptide_instance_id ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.peptide_instance_sample ( peptide_instance_id ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.peptide_instance_search_batch ( peptide_instance_id ) WITH DROP_EXISTING
 
-CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.peptide_mapping ( peptide_instance_id ) --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_peptide_mapping_biosequence_id ON dbo.peptide_mapping ( matched_biosequence_id ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.peptide_mapping ( peptide_instance_id ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_peptide_mapping_biosequence_id ON dbo.peptide_mapping ( matched_biosequence_id ) WITH DROP_EXISTING
 
-CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.modified_peptide_instance ( peptide_instance_id ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.modified_peptide_instance ( peptide_instance_id ) WITH DROP_EXISTING
 
-CREATE NONCLUSTERED INDEX idx_modified_peptide_instance_id ON dbo.modified_peptide_instance_sample ( modified_peptide_instance_id ) --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_modified_peptide_instance_id ON dbo.modified_peptide_instance_search_batch ( modified_peptide_instance_id ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_modified_peptide_instance_id ON dbo.modified_peptide_instance_sample ( modified_peptide_instance_id ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_modified_peptide_instance_id ON dbo.modified_peptide_instance_search_batch ( modified_peptide_instance_id ) WITH DROP_EXISTING
 
-CREATE NONCLUSTERED INDEX idx_modified_peptide_instance_id ON dbo.spectrum_identification ( modified_peptide_instance_id ) --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_spectrum_id ON dbo.spectrum_identification ( spectrum_id ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_modified_peptide_instance_id ON dbo.spectrum_identification ( modified_peptide_instance_id ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_spectrum_id ON dbo.spectrum_identification ( spectrum_id ) WITH DROP_EXISTING
 
-CREATE INDEX idx_build_key ON dbo.search_key ( atlas_build_id,search_key_name ) --WITH DROP_EXISTING
-CREATE INDEX idx_resource_name ON dbo.search_key ( resource_name ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_build_key ON dbo.search_key ( atlas_build_id,search_key_name ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_resource_name ON dbo.search_key ( resource_name ) WITH DROP_EXISTING
 
+CREATE NONCLUSTERED INDEX idx_biosequence_set_id ON dbo.biosequence ( biosequence_set_id )   WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_biosequence_name ON dbo.biosequence ( biosequence_name )   WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_biosequence_set_id_biosequence_name ON dbo.biosequence ( biosequence_set_id,biosequence_name )   WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_biosequence_set_id_biosequence_accession ON dbo.biosequence ( biosequence_set_id,biosequence_accession )   WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_dbxref_id ON dbo.biosequence ( dbxref_id )   WITH DROP_EXISTING
 
--- consensus non-clustered INDEXES
-CREATE NONCLUSTERED INDEX idx_consensus_library_spectrum_id ON dbo.consensus_library_spectrum_peak ( consensus_library_spectrum_id ) --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_sequence ON dbo.consensus_library_spectrum ( sequence ) --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_peptide_sequence ON dbo.peptide ( peptide_sequence ) --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_mz_exact ON dbo.consensus_library_spectrum ( mz_exact ) --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_mz ON dbo.consensus_library_spectrum_peak ( mz ) --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX relative_intensity ON dbo.consensus_library_spectrum_peak (relative_intensity) --WITH DROP_EXISTING 
+-- consensus
+CREATE NONCLUSTERED INDEX idx_consensus_library_spectrum_id ON dbo.consensus_library_spectrum_peak ( consensus_library_spectrum_id ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_sequence ON dbo.consensus_library_spectrum ( sequence ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_peptide_sequence ON dbo.peptide ( peptide_sequence ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_mz_exact ON dbo.consensus_library_spectrum ( mz_exact ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_mz ON dbo.consensus_library_spectrum_peak ( mz ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX relative_intensity ON dbo.consensus_library_spectrum_peak (relative_intensity) WITH DROP_EXISTING 
 
 -- Proteotypic Peptide
-CREATE INDEX idx_source_biosequence_id ON dbo.proteotypic_peptide( source_biosequence_id );
-CREATE INDEX idx_proteotypic_peptide_id ON dbo.proteotypic_peptide_mapping( proteotypic_peptide_id );
-
-CREATE NONCLUSTERED INDEX idx_atlas_search_batch_id ON dbo.peptide_instance_search_batch ( atlas_search_batch_id ) --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_peptide_id ON dbo.peptide_instance ( peptide_id )  --WITH DROP_EXISTING
-
-CREATE NONCLUSTERED INDEX idx_biosequence_set_id ON dbo.biosequence ( biosequence_set_id )   --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_biosequence_name ON dbo.biosequence ( biosequence_name )   --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_biosequence_set_id_biosequence_name ON dbo.biosequence ( biosequence_set_id,biosequence_name )   --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_biosequence_set_id_biosequence_accession ON dbo.biosequence ( biosequence_set_id,biosequence_accession )   --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_dbxref_id ON dbo.biosequence ( dbxref_id )   --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_proteotypic_peptide_id ON dbo.proteotypic_peptide_mapping ( proteotypic_peptide_id ) WITH DROP_EXISTING 
 
 -- PABST
-CREATE NONCLUSTERED INDEX idx_biosequence_set_id ON dbo.pabst_tmp_build ( biosequence_set_id ) -- WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_biosequence_set_id ON dbo.pabst_tmp_build ( biosequence_set_id ) WITH DROP_EXISTING
 
-CREATE NONCLUSTERED INDEX idx_pabst_build_id ON dbo.pabst_tmp_peptide ( pabst_build_id ) -- WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_peptide_sequence ON dbo.pabst_tmp_peptide ( peptide_sequence ) -- WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_build_and_sequence ON dbo.pabst_tmp_peptide ( pabst_build_id, peptide_sequence ) -- WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_pabst_build_id ON dbo.pabst_tmp_peptide ( pabst_build_id ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_peptide_sequence ON dbo.pabst_tmp_peptide ( peptide_sequence ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_build_and_sequence ON dbo.pabst_tmp_peptide ( pabst_build_id, peptide_sequence ) WITH DROP_EXISTING
 
-CREATE NONCLUSTERED INDEX idx_biosequence_id ON dbo.pabst_tmp_peptide_mapping ( biosequence_id )   -- WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_pabst_peptide_id ON dbo.pabst_tmp_peptide_mapping ( pabst_peptide_id )   -- WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_biosequence_id ON dbo.pabst_tmp_peptide_mapping ( biosequence_id ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_pabst_peptide_id ON dbo.pabst_tmp_peptide_mapping ( pabst_peptide_id ) WITH DROP_EXISTING
 
-CREATE NONCLUSTERED INDEX idx_pabst_peptide_id ON dbo.pabst_tmp_peptide_ion ( pabst_peptide_id )   -- WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_modified_peptide_sequence ON dbo.pabst_tmp_peptide_ion ( modified_peptide_sequence )   -- WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_peptide_charge ON dbo.pabst_tmp_peptide_ion ( peptide_charge )   -- WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_pabst_peptide_id ON dbo.pabst_tmp_peptide_ion ( pabst_peptide_id ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_modified_peptide_sequence ON dbo.pabst_tmp_peptide_ion ( modified_peptide_sequence ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_peptide_charge ON dbo.pabst_tmp_peptide_ion ( peptide_charge ) WITH DROP_EXISTING
 
-CREATE NONCLUSTERED INDEX idx_peptide_ion_id ON dbo.pabst_tmp_peptide_ion_instance ( pabst_peptide_ion_id )   -- WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_source_instrument_type_id ON dbo.pabst_tmp_peptide_ion_instance ( source_instrument_type_id ) -- WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_peptide_ion_id ON dbo.pabst_tmp_peptide_ion_instance ( pabst_peptide_ion_id ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_source_instrument_type_id ON dbo.pabst_tmp_peptide_ion_instance ( source_instrument_type_id ) WITH DROP_EXISTING
 
-CREATE NONCLUSTERED INDEX idx_pabst_peptide_ion_id ON dbo.pabst_tmp_transition ( pabst_peptide_ion_id ) -- WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_transition_mz_crude ON dbo.pabst_tmp_transition ( precursor_ion_mz_crude, fragment_ion_mz_crude ) -- WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_pabst_peptide_ion_id ON dbo.pabst_tmp_transition ( pabst_peptide_ion_id ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_transition_mz_crude ON dbo.pabst_tmp_transition ( precursor_ion_mz_crude, fragment_ion_mz_crude ) WITH DROP_EXISTING
 
-CREATE NONCLUSTERED INDEX idx_pabst_transition_id ON dbo.pabst_tmp_transition_instance ( pabst_transition_id ) -- WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_source_instrument_type_id ON dbo.pabst_tmp_transition_instance ( source_instrument_type_id ) -- WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_pabst_transition_id ON dbo.pabst_tmp_transition_instance ( pabst_transition_id ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_source_instrument_type_id ON dbo.pabst_tmp_transition_instance ( source_instrument_type_id ) WITH DROP_EXISTING
 
-CREATE NONCLUSTERED INDEX idx_modified_peptide_sequence ON dbo.elution_time ( modified_peptide_sequence )   -- WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_peptide_sequence ON dbo.elution_time ( peptide_sequence )   -- WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_elution_time_type_id ON dbo.elution_time ( elution_time_type_id )   -- WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_elution_time_set ON dbo.elution_time ( elution_time_set )   -- WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_modified_peptide_sequence ON dbo.elution_time ( modified_peptide_sequence ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_peptide_sequence ON dbo.elution_time ( peptide_sequence ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_elution_time_type_id ON dbo.elution_time ( elution_time_type_id ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_elution_time_set ON dbo.elution_time ( elution_time_set ) WITH DROP_EXISTING
 
-CREATE NONCLUSTERED INDEX idx_modified_sequence ON dbo.chromatogram_source_file ( modified_sequence )   -- WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_source_file_set ON dbo.chromatogram_source_file ( source_file_set )   -- WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_modified_sequence ON dbo.chromatogram_source_file ( modified_sequence ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_source_file_set ON dbo.chromatogram_source_file ( source_file_set ) WITH DROP_EXISTING
 
 -- Protein Relationship
-CREATE NONCLUSTERED INDEX idx_reference_biosequence_id ON dbo.biosequence_relationship ( reference_biosequence_id )   --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_related_biosequence_id ON dbo.biosequence_relationship ( related_biosequence_id )   --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_biosequence_id ON dbo.protein_identification ( biosequence_id )   --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_represented_by_biosequence_id ON dbo.protein_identification ( represented_by_biosequence_id )   --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_reference_biosequence_id ON dbo.biosequence_relationship ( reference_biosequence_id )   WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_related_biosequence_id ON dbo.biosequence_relationship ( related_biosequence_id )   WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_biosequence_id ON dbo.protein_identification ( biosequence_id )   WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_represented_by_biosequence_id ON dbo.protein_identification ( represented_by_biosequence_id )   WITH DROP_EXISTING
 
 -- Protein List
-CREATE INDEX idx_protein_name ON dbo.protein_list_protein ( protein_name ) --WITH DROP_EXISTING
-CREATE INDEX idx_protein_list_id ON dbo.protein_list_protein ( protein_list_id ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_protein_name ON dbo.protein_list_protein ( protein_name ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_protein_list_id ON dbo.protein_list_protein ( protein_list_id ) WITH DROP_EXISTING
 
 -- srm_transition
-CREATE NONCLUSTERED INDEX idx_stripped_peptide_sequence ON dbo.srm_transition ( stripped_peptide_sequence ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_stripped_peptide_sequence ON dbo.srm_transition ( stripped_peptide_sequence ) WITH DROP_EXISTING
 
 -- elution_time
-CREATE NONCLUSTERED INDEX idx_modified_peptide_sequence ON dbo.elution_time ( modified_peptide_sequence ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_modified_peptide_sequence ON dbo.elution_time ( modified_peptide_sequence ) WITH DROP_EXISTING
 
 -- PASSEL
-CREATE NONCLUSTERED INDEX idx_SEL_peptide_ion_id ON dbo.SEL_peptide_ion_protein ( SEL_peptide_ion_id )   --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_stripped_peptide_sequence ON dbo.SEL_peptide_ion ( stripped_peptide_sequence )   --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_SEL_transition_group_id ON dbo.SEL_chromatogram ( SEL_transition_group_id )   --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_SEL_experiment_project_id ON dbo.SEL_experiment ( project_id )   --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_SEL_chromatogram_id ON dbo.SEL_peak_group ( SEL_chromatogram_id )   --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_SEL_run_id ON dbo.SEL_transition_group ( SEL_run_id )   --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_SEL_peptide_ion_id ON dbo.SEL_transition_group ( SEL_peptide_ion_id )   --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_SEL_peptide_ion_id ON dbo.SEL_peptide_ion_protein ( SEL_peptide_ion_id ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_stripped_peptide_sequence ON dbo.SEL_peptide_ion ( stripped_peptide_sequence ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_SEL_transition_group_id ON dbo.SEL_chromatogram ( SEL_transition_group_id ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_SEL_experiment_project_id ON dbo.SEL_experiment ( project_id ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_SEL_chromatogram_id ON dbo.SEL_peak_group ( SEL_chromatogram_id ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_SEL_run_id ON dbo.SEL_transition_group ( SEL_run_id ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_SEL_peptide_ion_id ON dbo.SEL_transition_group ( SEL_peptide_ion_id ) WITH DROP_EXISTING
 
