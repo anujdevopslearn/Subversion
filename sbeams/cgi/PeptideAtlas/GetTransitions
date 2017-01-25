@@ -1700,6 +1700,7 @@ sub fetch_transitions {
 	  $quant_info = get_quant_info( $pep_seq_string );
     $has_quant = ( scalar( keys( %{$quant_info} ) ) ) ? 1 : 0;
   }
+  my $snp_clause = "AND is_snp <> 'Y'";
 
   my $limit_clause = $sbeams->buildLimitClause( row_limit => 100000 );
   my $weight_clause = get_src_weights( \%parameters );
@@ -1738,6 +1739,7 @@ sub fetch_transitions {
       $target_instrument_clause
       $ssr_clause
       $modifications_constraint
+      $snp_clause
     ORDER BY 
     biosequence_id,
     PTI.is_predicted ASC,
