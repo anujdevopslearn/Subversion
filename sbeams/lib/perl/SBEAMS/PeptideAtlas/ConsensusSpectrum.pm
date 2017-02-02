@@ -350,7 +350,7 @@ sub process_spectrum_record {
 #      print STDERR "Fullname is $spectrum{full_name}\n";
     }
 
-    if ( $line =~ /^NumPeaks:\s+(\d+)\s*$/ ) {
+    if ( $line =~ /^NumPeaks:\s*(\d+)\s*$/ ) {
       $spectrum{n_peaks} = $1;
       $collect_peaks++;
       next;
@@ -648,13 +648,16 @@ sub getConsensusLinks {
   $TBAT_CONSENSUS_LIBRARY_SPECTRUM = 'peptideatlas.dbo.consensus_library_spectrum';
   $TBAT_CONSENSUS_LIBRARY = 'peptideatlas.dbo.consensus_library';
 
-  my %libs = ( it => {}, qtof => {}, qtrap => {}, CE => {}, qqq => {},
+  my %libs = ( it => {}, qtof => {}, qtrap => {}, CE => {}, qqq => {}, hcd => {}, ttof => {}, qstar => {},
           low => {}, mlow => {}, medium => {}, mhigh => {}, high=> {} );
 
   my %imap = ( IonTrap => 'it',
                QTOF => 'qtof',
                QTrap4000 => 'qtrap',
                QTrap5500 => 'qtrap',
+               TripleTOF => 'ttof',
+               HCD => 'hcd',
+               QSTAR => 'qstar',
                QQQ => 'qqq' );
 
   my %libmap;
