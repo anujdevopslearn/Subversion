@@ -748,9 +748,13 @@ sub print_form {
 #    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Allowable Modifications:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$select_lists->[1]</TD></TR> ~;
 #
     
+    # Add SNP checkbox
+    my $snp_chk = ( $parameters{include_snps} ) ? 'checked' : 'unchecked';
+    my $snp_help = mk_help_link( title => 'Include SNPs', text =>  'Include SNPs for any selected peptides' );
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Include SNPs:</B></TD>$snp_help<TD><INPUT TYPE=CHECKBOX NAME=include_snps SIZE=10 $snp_chk></INPUT></TD></TR> ~;
+
     # Add spectral links
     my $splinks_chk = ( $parameters{speclinks} ) ? 'checked' : 'checked';
-
     my $spec_help = mk_help_link( title => 'Spectra Link Display', text => 'Show links to various spectra in results' );
     $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Show Spectral Links:</B></TD>$spec_help<TD><INPUT TYPE=CHECKBOX NAME=speclinks SIZE=10 $splinks_chk></INPUT></TD></TR> ~;
     
@@ -1586,11 +1590,12 @@ sub fetch_transitions {
   my $sth = $sbeams->get_statement_handle( $peptide_sql );
   $sbeams->time_stmt( "done" );
   my %acc2gene;
-  my %pep_ids;
-  my %pep_seqs;
+  my %id2seq;
+  my %seq2id;
   my %bioseq_ids;
   my %bioseq2name;
   my %bioseq2peptides;
+  my %pep2bioseq;
 
   # We will limit the total number of proteins queried to 50 for 'superuser' 
   my $max_query_proteins = 100;
@@ -1604,12 +1609,40 @@ sub fetch_transitions {
     }
 
     $acc2gene{$row[0]} ||= $row[4];
-    $pep_ids{$row[2]}++;
-    $pep_seqs{$row[3]}++;
+    $id2seq{$row[2]} ||= $row[3];
+    $seq2id{$row[3]} = $row[2];
     $bioseq_ids{$row[1]}++;
     $bioseq2name{$row[1]} = $row[0];
     $bioseq2peptides{$row[1]} ||= {};
     $bioseq2peptides{$row[1]} ||= {$row[2]};
+  }
+
+  my %snps;
+  my %has_snp;
+  if ( $parameters{include_snps} && scalar(keys(%seq2id)) ) {
+
+    my $seq_clause = "'" . join( "','", keys( %seq2id ) ) . "'";
+    my $sql = qq~
+    SELECT DISTINCT snp_sequence, matching_sequence, P.pabst_peptide_id,
+           dbsnp_acc, snp_pos, PM.biosequence_id
+    FROM $TBAT_SRMSNPS S
+    JOIN $TBAT_PABST_PEPTIDE P
+    ON P.peptide_sequence = S.snp_sequence
+    JOIN $TBAT_PABST_PEPTIDE_MAPPING PM
+    ON P.pabst_peptide_id = PM.pabst_peptide_id
+    WHERE S.matching_sequence IN ( $seq_clause )
+    ~;
+    my $sth = $sbeams->get_statement_handle( $sql );
+    my $snpacc = 'A';
+    while ( my @row = $sth->fetchrow_array() ) {
+      $has_snp{$row[1]} = { match => $row[0], snpacc => $snpacc };
+      $snps{$row[0]} = { match => $row[1], trans => [], snpacc => $snpacc,
+                         dbsnp => $row[3], snppos => $row[4] };
+      $id2seq{$row[2]} = $row[0];
+      $seq2id{$row[0]} = $row[2];
+      $bioseq2peptides{$row[3]}->{$row[2]}++;
+      $snpacc++;
+    }
   }
 
   fill_in_genes( \%acc2gene );
@@ -1617,20 +1650,20 @@ sub fetch_transitions {
   my $acc2symbol = get_gene_symbols( [keys( %acc2gene )] );
   $sbeams->time_stmt( "got symbols" );
 
-  my $pep_id_string = join( ',', keys( %pep_ids ) ) || 1;
-  my $pep_seq_string = "'" . join( "','", keys( %pep_seqs ) ) . "'" || '';
+  my $pep_id_string = join( ',', keys( %id2seq ) ) || 1;
+  my $pep_seq_string = "'" . join( "','", keys( %seq2id ) ) . "'" || '';
   my $bioseq_id_string = join( ',', keys( %bioseq_ids ) ) || 1;
 
-  if ( $isAuthorized ) {
-    $SRMAuth;
-    my $SRMAuthEmail = $q->cookie( 'SRMAuthEmail' );
-    my $time = time();
-    my $bioseq_str = join( ':', keys( %acc2gene ) );
-    $log->info( "Allowed provisional access: $SRMAuth, $SRMAuthEmail, $ENV{REMOTE_HOST}, $bioseq_str" );
-  }
+#  if ( $isAuthorized ) {
+#    $SRMAuth;
+#    my $SRMAuthEmail = $q->cookie( 'SRMAuthEmail' );
+#    my $time = time();
+#    my $bioseq_str = join( ':', keys( %acc2gene ) );
+#    $log->info( "Allowed provisional access: $SRMAuth, $SRMAuthEmail, $ENV{REMOTE_HOST}, $bioseq_str" );
+#  }
 
   my $nprots = scalar( keys( %bioseq_ids ) );
-  my $npeps = scalar( keys( %pep_ids ) );
+  my $npeps = scalar( keys( %id2seq ) );
 
   my $status_txt = "Running query with $nprots proteins and $npeps peptides ";
 
@@ -1700,18 +1733,22 @@ sub fetch_transitions {
 	  $quant_info = get_quant_info( $pep_seq_string );
     $has_quant = ( scalar( keys( %{$quant_info} ) ) ) ? 1 : 0;
   }
-  my $snp_clause = "AND is_snp <> 'Y'";
+
+  my $has_snps = scalar( keys( %snps) );
+  $has_snps = 0 if !scalar(keys(%has_snp));
+  my $snp_clause = ( $has_snps ) ? "" : "AND is_snp <> 'Y'";
 
   my $limit_clause = $sbeams->buildLimitClause( row_limit => 100000 );
   my $weight_clause = get_src_weights( \%parameters );
   my $lib_sql = qq~
-    SELECT DISTINCT preceding_residue, PI.modified_peptide_sequence, following_residue,
-    synthesis_adjusted_score, instrument_type_name, precursor_ion_mz, 
-    precursor_ion_charge, fragment_ion_mz, fragment_ion_charge,
-    fragment_ion_label, ion_rank, relative_intensity, SSRCalc_relative_hydrophobicity, 
-    $ssr_field, biosequence_id,
-    merged_score, PII.n_observations, source_build, PSP.priority, PTI.is_predicted,
-    $weight_clause, PII.max_precursor_intensity
+    SELECT DISTINCT preceding_residue, PI.modified_peptide_sequence, 
+    following_residue, synthesis_adjusted_score, instrument_type_name,
+    precursor_ion_mz, precursor_ion_charge, fragment_ion_mz,
+    fragment_ion_charge, fragment_ion_label, ion_rank, relative_intensity,
+    SSRCalc_relative_hydrophobicity, $ssr_field, biosequence_id,
+    merged_score, PII.n_observations, source_build, PSP.priority,
+    PTI.is_predicted, $weight_clause, PII.max_precursor_intensity,
+    is_snp, PP.pabst_peptide_id, PP.peptide_sequence
     FROM $TBAT_PABST_PEPTIDE PP 
     JOIN $TBAT_PABST_PEPTIDE_ION PI 
     ON PP.pabst_peptide_id = PI.pabst_peptide_id
@@ -1741,6 +1778,7 @@ sub fetch_transitions {
       $modifications_constraint
       $snp_clause
     ORDER BY 
+    is_snp DESC,
     biosequence_id,
     PTI.is_predicted ASC,
     SRC_WEIGHT DESC,
@@ -1776,6 +1814,9 @@ sub fetch_transitions {
 
   if ( $has_mappings ) {
     push @headings, 'N_map';
+  }
+  if ( $has_snps ) {
+    push @headings, 'SNP';
   }
   if ( $has_quant ) {
     push @headings, 'Quant';
@@ -1856,10 +1897,66 @@ sub fetch_transitions {
 
   my $id2name = $sbeams->get_organism_hash( key => 'organism_id' );
 
+# 0 preceding_residue
+# 1 PI.modified_peptide_sequence
+# 2 following_residue
+# 3 synthesis_adjusted_score
+# 4 instrument_type_name
+# 5 precursor_ion_mz
+# 6 precursor_ion_charge
+# 7 fragment_ion_mz
+# 8 fragment_ion_charge,
+# 9 fragment_ion_label
+# 10 ion_rank
+# 11 relative_intensity
+# 12 SSRCalc_relative_hydrophobicity
+# 13 $ssr_field
+# 14 biosequence_id
+# 15 merged_score
+# 16 PII.n_observations
+# 17 source_build
+# 18 PSP.priority
+# 19 PTI.is_predicted,
+# 20 $weight_clause
+# 21 PII.max_precursor_intensity
+# 22 is_snp
+# 23 P.pabst_peptide_id
+# 24 P.peptide_sequence
+
+  my $previous;
+  my $previous_snp;
+  my $previous_score;
   while( my @row = $sth->fetchrow_array() ) {
     push @row, $tcnt++;
     $row[14] = $bioseq2name{$row[14]};
-    push @transitions, \@row;
+    if ( $row[22] && $row[22] eq 'Y' ) {
+#      print "pushing SNP $row[1]<br>\n";
+      push @{$snps{$row[24]}->{trans}}, \@row;
+    } else {
+      $previous ||= $row[24];
+      my $print = ( $previous eq $row[24] ) ? 0 : 0;
+      print "not a SNP\n" if $print;
+      $previous_score ||= $row[3];
+      my $ref = ref( $has_snp{$previous} );
+      print "has_snps is $has_snps, previous is $previous, row 24 is $row[24], HSP is $has_snp{$previous} ref is $ref<br>\n" if $print;
+      if ( $has_snps && $ref && $previous ne $row[24] ) {
+        for my $row ( @{$snps{$has_snp{$previous}->{match}}->{trans}} ) {
+          $row->[3] = $previous_score;
+          push @transitions, $row;
+        }
+      }
+      push @transitions, \@row;
+      print "pushing regular $row[1]<br>\n" if $print;
+      $previous = $row[24];
+      $previous_score = $row[3];
+    }
+  }
+  if ( $has_snps && $has_snp{$previous} ) {
+    my $snpseq = $has_snp{$previous}->{match};
+    for my $row ( @{$snps{$snpseq}->{trans}} ) {
+      $row->[3] = $previous_score;
+      push @transitions, $row;
+    }
   }
   $sbeams->time_stmt( "Initial row cache" );
 
@@ -1944,6 +2041,7 @@ sub fetch_transitions {
 
   my %cc;
   my $pfrag;
+  my %snpacc2key = ( keybase => 'A' );
   for my $row ( @transitions ) {
     if ( $is_changed ) {
       $row->[20] = $row->[25];
@@ -2259,6 +2357,54 @@ sub fetch_transitions {
         } else {
           push @rowdata, 'n/a';
         }
+      }
+      if ( $has_snps ) {
+        if ( $snps{$row[24]} ) {
+          if ( !$snpacc2key{$snps{$row[24]}->{snpacc}} ) {
+            $snpacc2key{$snps{$row[24]}->{snpacc}} = $snpacc2key{keybase}++; 
+          }
+          my $snpref = 'SNP_' . $snpacc2key{$snps{$row[24]}->{snpacc}};
+          if ( $snps{$row[24]}->{dbsnp} ) {
+            $snpref = "<a target=_dbsnp href=https://www.ncbi.nlm.nih.gov/projects/SNP/snp_ref.cgi?rs=" . $snps{$row[24]}->{dbsnp} . ">$snpref</a>";
+          }
+#          push @rowdata, 'SNP_' . $snpacc2key{$snps{$row[24]}->{snpacc}};
+          push @rowdata, $snpref;
+
+          if ( $snps{$row[24]}->{snppos} ) {
+#            print "In loop with $rowdata[3], pos is $snps{$row[24]}->{snppos} <br>\n";
+            my @seq = split( '', $rowdata[3] );
+            my $idx = 0;
+            my @newseq;
+            for my $char ( @seq ) {
+              
+#              print "testing $char at position $idx, pos is $snps{$row[24]}->{snppos}<br>\n";
+              if ( $char =~ /\w/ && $char !~ /\d/ ) {
+                $idx++;
+# print "word char<br>\n";
+                if ( $idx == $snps{$row[24]}->{snppos} ) {
+#                  print "idx matches pos<br>\n";
+                  push @newseq, "<span style='background-color:#66CCFF'>$char</span>";
+                } else {
+                  push @newseq, $char;
+                }
+              } else {
+#                print "odd char<br>\n";
+                push @newseq, $char;
+              }
+            }
+            $rowdata[3] = join( '', @newseq );
+          }
+
+
+        } elsif ( $has_snp{$row[24]} ) {
+          if ( !$snpacc2key{$has_snp{$row[24]}->{snpacc}} ) {
+            $snpacc2key{$has_snp{$row[24]}->{snpacc}} = $snpacc2key{keybase}++; 
+          }
+          push @rowdata, 'Orig_' . $snpacc2key{$has_snp{$row[24]}->{snpacc}};
+        } else {
+          push @rowdata, '';
+        }
+      } else {
       }
       if ( $has_quant ) {
         if ( $quant_info->{$cleanseq} ) {
