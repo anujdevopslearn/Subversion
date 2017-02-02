@@ -116,12 +116,14 @@ use vars qw(@ISA @EXPORT
     $TBAT_PABST_BUILD
     $TBAT_PABST_BUILD_FILE
     $TBAT_PABST_BUILD_RESOURCE
+    $TBAT_PABST_BUILD_STATISTICS
     $TBAT_PABST_TRANSITION_INSTANCE
     $TBAT_INSTRUMENT_TYPE
     $TBAT_TRANSITION_TYPE
     $TBAT_PABST_SOURCE_PRIORITY
     $TBAT_ELUTION_TIME_TYPE
     $TBAT_ELUTION_TIME
+    $TBAT_SRMSNPS
 
     $TBAT_CHROMATOGRAM_SOURCE_FILE
 
@@ -273,12 +275,14 @@ require Exporter;
     $TBAT_PABST_BUILD
     $TBAT_PABST_BUILD_RESOURCE
     $TBAT_PABST_BUILD_FILE
+    $TBAT_PABST_BUILD_STATISTICS
     $TBAT_PABST_TRANSITION_INSTANCE
     $TBAT_INSTRUMENT_TYPE
     $TBAT_TRANSITION_TYPE
     $TBAT_PABST_SOURCE_PRIORITY
     $TBAT_ELUTION_TIME_TYPE
     $TBAT_ELUTION_TIME
+    $TBAT_SRMSNPS
     $TBAT_CHROMATOGRAM_SOURCE_FILE
 
     $TBAT_PROTEIN_LIST
@@ -436,12 +440,14 @@ $TBAT_PABST_TRANSITION              = "${mod}pabst_tmp_transition";
 $TBAT_PABST_BUILD                   = "${mod}pabst_tmp_build";
 $TBAT_PABST_BUILD_RESOURCE          = "${mod}pabst_build_resource";
 $TBAT_PABST_BUILD_FILE              = "${mod}pabst_tmp_build_file";
+$TBAT_PABST_BUILD_STATISTICS        = "${mod}pabst_build_statistics";
 $TBAT_PABST_TRANSITION_INSTANCE     = "${mod}pabst_tmp_transition_instance";
 $TBAT_INSTRUMENT_TYPE               = "${mod}instrument_type";
 $TBAT_TRANSITION_TYPE               = "${mod}transition_type";
 $TBAT_PABST_SOURCE_PRIORITY         = "${mod}pabst_tmp_source_priority";
 $TBAT_ELUTION_TIME_TYPE             = "${mod}elution_time_type";
 $TBAT_ELUTION_TIME                  = "${mod}elution_time";
+$TBAT_SRMSNPS                       = "${mod}srmsnps";
 $TBAT_CHROMATOGRAM_SOURCE_FILE      = "${mod}chromatogram_source_file";
 
 $TBAT_PROTEIN_LIST                  = "${mod}protein_list";
