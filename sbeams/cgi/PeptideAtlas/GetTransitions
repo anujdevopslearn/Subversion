@@ -1165,7 +1165,6 @@ sub get_multi_selects {
   $src_select .= "</SELECT>\n";
 
 # FIXME
-  $TBAT_QUERY_OPTION = 'peptideatlas.dbo.query_option';
   my $sql = qq~
   SELECT option_key,option_value FROM $TBAT_QUERY_OPTION 
   WHERE option_type = 'GetTransitions_Modifications' 
@@ -1617,6 +1616,16 @@ sub fetch_transitions {
     $bioseq2peptides{$row[1]} ||= {$row[2]};
   }
 
+  my %mature;
+  my $sql = qq~
+    SELECT sequence, biosequence_accession
+    FROM $TBAT_MATURE_FORM_PEPTIDES
+  ~;
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    $mature{$row[0]} = $row[1];
+  }
+
   my %snps;
   my %has_snp;
   if ( $parameters{include_snps} && scalar(keys(%seq2id)) ) {
@@ -1981,6 +1990,7 @@ sub fetch_transitions {
                           $a->[1] cmp $b->[1] ||  
                           $a->[22] <=> $b->[22] } @{$evaluated};
 
+
 #    print Dumper( $rows );
 #    die;
 
@@ -2013,7 +2023,15 @@ sub fetch_transitions {
 
 #    die Dumper( $rows );
 
+  } else {
+    @transitions = sort { $b->[14] cmp $a->[14] ||
+                          $b->[19] cmp $a->[19] ||  
+                          $b->[20] <=> $a->[20] ||  
+                          $a->[1] cmp $b->[1] ||  
+                          $a->[22] <=> $b->[22] } @transitions;
+
   }
+
 
   # If no params were changed, use static values
   $log->debug( "Iterating over results " . time() );
@@ -2349,6 +2367,10 @@ sub fetch_transitions {
         @rowdata = ( $prot, $links, @row[0..12] );
       } else {
         @rowdata = ( $display_prot, $links, @row[0..13] );
+      }
+
+      if ( $mature{$row[24]} ) {
+        $rowdata[3] = "<span style='background-color:#33FF66' title='Denotes peptide unique to mature proteoform' >$rowdata[3]</span>";
       }
 
       if ( $has_mappings ) {
@@ -2853,7 +2875,7 @@ sub get_quant_info {
 
   my $sql = qq~
   SELECT DISTINCT peptide_sequence, lod, loq 
-  FROM peptideatlas.dbo.quant_info
+  FROM $TBAT_QUANT_INFO
   WHERE product_mz IS NULL
   AND fail_mode = 'PASSED'
   AND peptide_sequence IN ( $pep_string )
@@ -3029,8 +3051,8 @@ sub get_scan_path {
 
   my $sql = qq~
   SELECT DISTINCT peptide_ion, mzML_path, scan_number, instrument_type_name  
-    FROM peptideatlas.dbo.chromatogram_source_file CSF
-    JOIN peptideatlas.dbo.instrument_type IT
+    FROM $TBAT_CHROMATOGRAM_SOURCE_FILE CSF
+    JOIN $TBAT_INSTRUMENT_TYPE IT
       ON IT.instrument_type_id = CSF.instrument_type_id
     WHERE 1 = 1
     $subclause
