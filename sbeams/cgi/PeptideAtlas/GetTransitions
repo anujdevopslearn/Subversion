@@ -2025,7 +2025,7 @@ sub fetch_transitions {
 
   } else {
     @transitions = sort { $b->[14] cmp $a->[14] ||
-                          $b->[19] cmp $a->[19] ||  
+                          $a->[19] cmp $b->[19] ||  
                           $b->[20] <=> $a->[20] ||  
                           $a->[1] cmp $b->[1] ||  
                           $a->[22] <=> $b->[22] } @transitions;
