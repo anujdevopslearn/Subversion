@@ -33,6 +33,8 @@ use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::PeptideAtlas::Chromatogram;
 
 use File::Basename;
+use Data::Dumper;
+use JSON;
 
 use Carp;
 $SIG{__DIE__} = sub { &Carp::confess };
@@ -80,8 +82,7 @@ sub main {
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
   my $apply_action  = $q->param('apply_action');
-
-
+  
   #### Process certain actions, then print the header, figure and do what the user wants, and print footer
   $sbeamsMOD->display_page_header( show_doctype => 1 );
   #processRequest();
@@ -157,6 +158,21 @@ sub processRequest {
   # fetch it and add it to the parameters hash.
   my ($json_string, $sptxt_fulltext)
      = $cgram->getChromatogramInfo($ref_parameters);
+
+  if ( $ref_parameters->{sort_peaks} ) {
+    my $json = new JSON;
+    my $traces = $json->decode( $json_string );
+    for my $item ( @{$traces->{data_json}} ) {
+      my $max = 0;
+      for my $tp ( @{$item->{data}} ) {
+        $max = $tp->{intensity} if $tp->{intensity} > $max;
+      }
+      $item->{max} = $max;
+    }
+    my @data = sort { $b->{max} <=> $a->{max} } @{$traces->{data_json}};
+    $traces->{data_json} = \@data;
+    $json_string = $json->encode( $traces );
+  }
 
   # Fetch some of the parameters into scalar variables and do some processing.
   my $precursor_charge = $ref_parameters->{'precursor_charge'};
@@ -248,6 +264,34 @@ sub processRequest {
       print "<pre>$sptxt_fulltext</pre>\n";
   	}
   }
+
+  my $hidden = '';
+  for my $param ( keys( %{$ref_parameters} ) ) {
+    next if $param =~ /tolerance/;
+    $hidden .= "<input type=hidden name='$param' value='$ref_parameters->{$param}'></input>\n";
+  }
+  $ref_parameters->{q1_tolerance} ||= 0.07;
+  $ref_parameters->{q3_tolerance} ||= 0.07;
+
+  my $advanced_form = qq~
+  <form name=advanced>
+    <table>
+     <tr>
+      <td align=right>Q1 tolerance</td>
+      <td align=left><input type=text name=q1_tolerance value=$ref_parameters->{q1_tolerance} size=20></td>
+     </tr>
+     <tr>
+      <td align=right>Q3 tolerance</td>
+      <td align=left><input type=text name=q3_tolerance value=$ref_parameters->{q3_tolerance} size=20></td>
+     </tr>
+     <tr><td align=right><input type=submit value=re-draw></input></td></tr>
+    </table>
+    $hidden
+   </form>
+  </form>
+  ~;
+  print $advanced_form if $ref_parameters->{show_advanced};
+
 
   # Print the HTML that allows user to recall and download resultset
   print $cgram->getBottomHTMLforChromatogramViewer(
