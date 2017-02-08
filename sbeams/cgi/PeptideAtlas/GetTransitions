@@ -2493,7 +2493,7 @@ sub fetch_transitions {
             } elsif ( $instr_name =~ /5500/i && !grep /qtrap_spectrum/, @{$links{$link_key}} ) {
               $chromat_link = '';
             } else {
-              $chromat_link = "<A HREF=ShowChromatogram?${scan_param}precursor_neutral_mass=$mass;pepseq=$row[1]$precursor_param;precursor_mz=$row[5];limit_smoothing_options=1;default_smoothing_factor=5;spectrum_pathname=$pepion2scanpath->{$ch_type}->{$link_key}->{path};peptide=$row[1];no_specfile=1;no_mquest=1;instrument_name=$instr_name TARGET=$ch_type> <IMG BORDER=0 SRC='$image{$ch_type}' TITLE='$title'> </A>";
+              $chromat_link = "<A HREF=ShowChromatogram?sort_peaks=1;q1_tolerance=0.01;alternate_q1=0.07;${scan_param}precursor_neutral_mass=$mass;pepseq=$row[1]$precursor_param;precursor_mz=$row[5];limit_smoothing_options=1;default_smoothing_factor=5;spectrum_pathname=$pepion2scanpath->{$ch_type}->{$link_key}->{path};peptide=$row[1];no_specfile=1;no_mquest=1;instrument_name=$instr_name TARGET=$ch_type> <IMG BORDER=0 SRC='$image{$ch_type}' TITLE='$title'> </A>";
             }
           }
           push @chromat_links, $chromat_link;
