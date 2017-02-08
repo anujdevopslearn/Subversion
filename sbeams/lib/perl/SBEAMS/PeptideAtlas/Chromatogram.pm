@@ -404,7 +404,6 @@ sub specfile2traces {
     push (@frg_ion_array, $tx_info_elements[$i+1]);
   }
 
-
   # Parse the spectrum file according to filetype and obtain a hash of
   # time/intensity traces.
   if ($spectrum_pathname =~ /\.mzML/) {
@@ -413,6 +412,26 @@ sub specfile2traces {
       q3_aref=>\@q3_array,
       frg_ion_aref=>\@frg_ion_array,
     );
+    if ( $args{param_href}->{alternate_q1} && !scalar( keys( %{$traces_href} ) ) ) {
+      $log->warn( "Failed to find chromat, falling back to alternate q1" );
+      $traces_href = mzML2traces(
+        %args,
+        q1_tolerance => $args{param_href}->{alternate_q1},
+        q3_aref=>\@q3_array,
+        frg_ion_aref=>\@frg_ion_array,
+      );
+    }
+    if ( $traces_href->{tx} && scalar( keys( %{$traces_href->{tx}} ) > 1 ) ) {
+      $log->warn( "Detected multiple q1 in chromatogram search" );
+      my %keymap;
+      for my $key ( keys( %{$traces_href->{tx}} ) ) {
+        $keymap{$key} = scalar( keys( %{$traces_href->{tx}->{$key}} ) );
+      }
+      for my $key ( sort { $keymap{$b} <=> $keymap{$a} } keys( %keymap ) ) {
+        $traces_href->{tx} = { $key => $traces_href->{tx}->{$key} };
+        last;
+      }
+    }
   } elsif ($spectrum_pathname =~ /\.mzXML/) {
     $traces_href = mzXML2traces(
       %args,
@@ -422,6 +441,7 @@ sub specfile2traces {
   } else {
     die "specfile2traces(): ${spectrum_pathname} invalid filetype; must be .mzML or .mzXML";
   }
+  $log->warn( "No trace found with parameters given:\n" . Dumper( %args ) ) unless $traces_href->{tx};
 
   return $traces_href;
 }
@@ -451,6 +471,7 @@ sub mzML2traces {
 
   my $parse_entire_file = 1;
   my $stime = time();
+
   if ( $args{param_href}->{use_pepname} ) {
     $parse_entire_file = 0;
     my $offset = `tail -10 $spectrum_pathname | grep indexListOffset `;
@@ -1848,7 +1869,11 @@ sub getChromatogramInfo {
   my $parameters_href = shift;
 
   # Create a chromatogram object so we can use its methods
-  my $cgram = new SBEAMS::PeptideAtlas::Chromatogram;
+#
+#  What the?
+#  my $cgram = new SBEAMS::PeptideAtlas::Chromatogram;
+  my $cgram = $self;
+
   $cgram->setSBEAMS($sbeams);
 
   # Get all necessary info from database using chromatogram_id, if
