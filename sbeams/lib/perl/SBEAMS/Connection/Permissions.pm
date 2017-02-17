@@ -8,7 +8,7 @@ package SBEAMS::Connection::Permissions;
 # Description : This is part of the SBEAMS::Connection module which contains
 #               methods regarding project permissions.
 #
-# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2017 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -961,6 +961,26 @@ sub isDeniedGuestPrivileges {
 	return 0;
 }
 
+sub getGuestWorkGroup {
+  my $self = shift;
+  my %args = @_;
+  my $wg_clause = '';
+ 
+  if ( $args{wg_name} ) {
+    $wg_clause = "WHERE work_group_name = '$args{wg_name}'\n";
+  } elsif( $args{wg_module} ) {
+    $wg_clause = "WHERE work_group_name = '$args{wg_module}_readonly'\n";
+  } else {
+    $wg_clause = "WHERE work_group_name = 'guest'\n";
+  }
+  my $sql = qq~
+    SELECT work_group_id, work_group_name
+    FROM $TB_WORK_GROUP
+    $wg_clause;
+  ~;
+  my @wg = $self->selectrow_array( $sql );
+  return \@wg;
+}
 
 ###############################################################################
 # getAccessibleProjects
@@ -974,6 +994,13 @@ sub getAccessibleProjects{
   ## Decode argument list
   my $current_contact_id = $args{'contact_id'}
     || $self->getCurrent_contact_id();
+
+  if ( $args{as_guest} ) {
+    $current_contact_id = $self->get_guest_contact_id();
+    my $wg_info = $self->getGuestWorkGroup(%args);
+    $work_group_name = $wg_info->[1];
+  }
+
   my $module = $args{'module'} || "";
   my $privilege_level = $args{'privilege_level'} || 40;
 
@@ -1042,11 +1069,13 @@ sub getAccessibleProjects{
   my @rows = $self->selectSeveralColumns($sql);
 
   my @project_ids = ();
-
+  my %projects = {};
   foreach my $element (@rows) {
-      push(@project_ids,$element->[0]);
+    push(@project_ids,$element->[0]);
+    $projects{$element->[0]} = $element->[2];
   }
-  return ( wantarray ) ? @project_ids : join( ',', @project_ids );
+  return ( $args{as_hashref} ) ? \%projects :
+         ( wantarray ) ? @project_ids : join( ',', @project_ids );
 } # end getAccessibleProjects
 
 #+
