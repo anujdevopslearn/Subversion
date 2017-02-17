@@ -1405,7 +1405,8 @@ sub assess_protein_peptides {
     JOIN $TBAT_ATLAS_BUILD AB
       ON AB.biosequence_set_id = B.biosequence_set_id
     WHERE AB.atlas_build_id = $args{build_id}
-    AND biosequence_accession = '$args{accession}'
+    AND ( biosequence_accession = '$args{accession}'
+       OR biosequence_name = '$args{accession}' )
     ~;
 
     my $sth = $sbeams->get_statement_handle( $protein_sql );
