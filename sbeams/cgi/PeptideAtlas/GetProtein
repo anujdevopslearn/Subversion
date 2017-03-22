@@ -287,9 +287,9 @@ sub handle_request {
 
   my %parameters = %{$ref_parameters};
 
-
   # put a spacer so that showing hidden content doesn't mangle the layout
   print "<BR>$spacer\n" if $htmlmode;
+
 
   #### Get the HTML to display the tabs
   my $tabMenu = $sbeamsMOD->getTabMenu(
@@ -541,13 +541,6 @@ sub handle_request {
         print "</td></tr>\n";
       }
       print "</table>\n";
-
-
-
-
-
-
-
 
       $current_page->{organism} = $sbeamsMOD->getCurrentAtlasOrganism( parameters_ref => { atlas_build_id => $atlas_build_id } );
       my $gaggle = $sbeams->getGaggleMicroformat(
@@ -1266,7 +1259,6 @@ sub handle_request {
                             atlas_build_id => $current_page->{atlas_build_id}, 
                                   organism => $current_page->{organism} );
 
-
   #############################################################
   ## Display the sequence graphic ##
 
@@ -1724,6 +1716,10 @@ if ( 0 ) { # Not ready for prime time
 #    $resultset_ref->{precision_list_ref}->[4] = 36;
 
     #### Display the resultset
+    my $tsv_link = "<a href='$base_url/peptide.tsv?rs_set_name=$rs_params{set_name}&output_mode=tsv&apply_action=VIEWRESULTSET'>TSV</A>";
+    my $download_link = "<SPAN CLASS=info_box>Download as: $tsv_link</SPAN>";
+    print $download_link;
+
     $sbeams->displayResultSet(
       resultset_ref=>$resultset_ref,
       query_parameters_ref=>\%parameters,
@@ -1736,7 +1732,6 @@ if ( 0 ) { # Not ready for prime time
       cytoscape=>$java_web_start,
       no_escape => 1
     );
-
 
     #### Display a hyperlink for viewing this information in Cytoscape
     if ($sbeams->output_mode() eq 'html') {
