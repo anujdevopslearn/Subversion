@@ -8,7 +8,7 @@
 # Description : This program that allows users to
 #               get peptides from the PeptideAtlas based on various criteria.
 #
-# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2017 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -23,6 +23,7 @@
 use strict;
 use Getopt::Long;
 use FindBin;
+use Data::Dumper;
 
 use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
@@ -937,17 +938,18 @@ sub handle_request {
       base_url=>$base_url,
     );
 
-
     #### Display a plot of data from the resultset
-    $sbeams->displayResultSetPlot(
+    $sbeams->displayResultSetPlot_plotly(
       rs_params_ref=>\%rs_params,
       resultset_ref=>$resultset_ref,
       query_parameters_ref=>\%parameters,
       column_titles_ref=>\@column_titles,
       use_tabbed_panes => 1,
+      mouseover_column => 'peptide_sequence',
+      mouseover_url => $url_cols{'Peptide Sequence'},
+      mouseover_tag => '%1V',
       base_url=>$base_url,
     );
-
 
   #### If QUERY was not selected, then tell the user to enter some parameters
   } else {
