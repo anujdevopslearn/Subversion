@@ -1279,7 +1279,7 @@ sub getSessionCookie {
 ###############################################################################
 sub createSessionCookie {
   my $self = shift;
-  print STDERR "Creating session cookie\n";
+  # print STDERR "Creating session cookie\n";
 
   my $cookie_path = $HTML_BASE_DIR;
 
