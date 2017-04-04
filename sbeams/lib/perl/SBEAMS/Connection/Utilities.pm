@@ -98,7 +98,7 @@ sub histogram {
     print "n_elements=$n_elements, min=$min, max=$max, range=$range, ".
       "round_range=$round_range<BR>\n" if ($VERBOSE);
     if ($round_range == 0) {
-      print "Histogram error: round_range = 0<BR>\n";
+      print "Histogram error: round_range = 0<BR>\n" unless $args{quiet};
       return $result;
     }
 
