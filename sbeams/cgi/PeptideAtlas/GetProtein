@@ -7,7 +7,7 @@
 # Description : Prints summary of a given protein given selection
 #               atlas build and protein name.
 #
-# SBEAMS is Copyright (C) 2000-2015 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2017 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -35,6 +35,7 @@ use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TabMenu;
 $sbeams = new SBEAMS::Connection;
+$sbeams->enable_sql_cache();
 my $htmlmode;
 
 use SBEAMS::BioLink;
@@ -65,7 +66,7 @@ $bestPeptideSelector->setSBEAMS($sbeams);
 $bestPeptideSelector->setAtlas($sbeamsMOD);
 
 # Global sequence coverage array, will be populated post-graphic
-my @coverage;  
+my @coverage;
 my $max_intensity = 1;
 my %coverage=();
 my @methods =  qw(ITCID FTCID ITETD FTETD HCD);
@@ -120,6 +121,7 @@ if ($DEBUG) {
 # Set Global Variables and execute main()
 ###############################################################################
 main();
+$sbeams->profile_sql( list=>1);
 exit(0);
 
 
@@ -287,9 +289,9 @@ sub handle_request {
 
   my %parameters = %{$ref_parameters};
 
+
   # put a spacer so that showing hidden content doesn't mangle the layout
   print "<BR>$spacer\n" if $htmlmode;
-
 
   #### Get the HTML to display the tabs
   my $tabMenu = $sbeamsMOD->getTabMenu(
@@ -303,17 +305,17 @@ sub handle_request {
 
   my $protein_list_sql = '';
   if ( $parameters{atlas_build_id} && $parameters{protein_name} ) {
-    $protein_list_sql = qq~  
+    $protein_list_sql = qq~
     SELECT DISTINCT AB.atlas_build_id
     FROM $TBAT_ATLAS_BUILD AB
-    JOIN peptideatlas.dbo.protein_list_build PLB 
+    JOIN peptideatlas.dbo.protein_list_build PLB
       ON AB.atlas_build_id = PLB.atlas_build_id
-    JOIN peptideatlas.dbo.protein_list PL 
+    JOIN peptideatlas.dbo.protein_list PL
       ON PL.protein_list_id = PLB.protein_list_id
     JOIN peptideatlas.dbo.protein_list_protein PLP
       ON PL.protein_list_id = PLP.protein_list_id
     JOIN $TBAT_BIOSEQUENCE B ON ( B.biosequence_set_id = AB.biosequence_set_ID
-                            AND B.biosequence_accession = PLP.protein_name )
+                            AND B.biosequence_name = PLP.protein_name )
     WHERE PL.contributor_contact_id = $contact_id
       AND AB.atlas_build_id = $parameters{atlas_build_id}
       AND PLP.protein_name = '$parameters{protein_name}'
@@ -323,7 +325,7 @@ sub handle_request {
   #### Get the current atlas_build_id based on parameters or session
   my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
     allow_protein_list_login => 1,
-    protein_list_sql => $protein_list_sql, 
+    protein_list_sql => $protein_list_sql,
     parameters_ref => \%parameters,
   );
   if (defined($atlas_build_id) && $atlas_build_id < 0) {
@@ -463,10 +465,10 @@ sub handle_request {
 
   my $tube_pattern = '';
   my $tube_pattern2 = '';
-  my $tube = '';  
+  my $tube = '';
   if($parameters{ori_tube} ne '' and $atlas_build_names{$atlas_build_id} =~ /Origene/i){
 
-    $tube = $parameters{ori_tube}; 
+    $tube = $parameters{ori_tube};
     if($parameters{ori_expected_prot} =~ /yes/i ){
       $origene_accession = $parameters{ori_sku};
     };
@@ -542,9 +544,16 @@ sub handle_request {
       }
       print "</table>\n";
 
+
+
+
+
+
+
+
       $current_page->{organism} = $sbeamsMOD->getCurrentAtlasOrganism( parameters_ref => { atlas_build_id => $atlas_build_id } );
       my $gaggle = $sbeams->getGaggleMicroformat(
-                                          organism => $current_page->{organism}, 
+                                          organism => $current_page->{organism},
                                               data => [$protein_name],
                                             object => 'namelist',
                                               name => 'Protein name',
@@ -612,9 +621,9 @@ sub handle_request {
   }
 
 
-  my $sql = qq~ 
-    SELECT IS_TRYPSIN_BUILD 
-    FROM $TBAT_ATLAS_BUILD 
+  my $sql = qq~
+    SELECT IS_TRYPSIN_BUILD
+    FROM $TBAT_ATLAS_BUILD
     WHERE ATLAS_BUILD_ID = $atlas_build_id
   ~ ;
 
@@ -628,7 +637,7 @@ sub handle_request {
   if($is_trypsin_build eq 'N'){
     print qq~
           <div  style="border:5px double; color:white;  background-color: CC0000; width: 600px;"  >
-          WARNING: This build contains many samples that are not digested with trypsin 
+          WARNING: This build contains many samples that are not digested with trypsin
           and therefore the usual trypsin-centric display elements are turned off.
           </div>
     ~;
@@ -713,7 +722,7 @@ sub handle_request {
       $sbeams->reportException(
           state => 'ERROR',
           type => 'TOO MANY RECORDS',
-          message => qq~More than one ($n_biosequences) was returned from 
+          message => qq~More than one ($n_biosequences) was returned from
              your request
              for '$protein_name' in the
              atlas build '$atlas_build_names{$atlas_build_id}'.~,
@@ -726,7 +735,7 @@ sub handle_request {
   #### Extract the one biosequence_id
   my ($biosequence_id) = keys(%biosequences);
 
-  
+
   #### Return some information about this biosequence
   #### In order to get complete protein identification information
   #### for all biosequences, even those that are identical to an
@@ -813,7 +822,7 @@ sub handle_request {
        SELECT BS.biosequence_id, signal_end, signal_start
        FROM $TBAT_BIOSEQUENCE BS
        JOIN peptideatlas.dbo.swiss_prot_annotation SPA
-         ON BS.biosequence_accession = SPA.accession
+         ON BS.biosequence_name = SPA.accession
        WHERE BS.biosequence_id = $biosequence_id
     ~;
     my $sth = $sbeams->get_statement_handle($sp_sql);
@@ -835,7 +844,7 @@ sub handle_request {
     $identification_status = $redundancy_rel;
   }
 
-  if ($prepositions{$identification_status}) { 
+  if ($prepositions{$identification_status}) {
     $identification_status .= " $prepositions{$identification_status} $biosequence->{reference_biosequence_name}";
   }
 
@@ -878,7 +887,7 @@ sub handle_request {
 #     my $available_viz_acc = `wget -q -O - http://ec2-204-236-255-114.compute-1.amazonaws.com/peptides/protein/`;
 #     my @acc_is_present = grep (/${acc}.html/, ($available_viz_acc));
 #     my $acc_is_present = scalar @acc_is_present;
-#-------------------------------------------------- 
+#--------------------------------------------------
     my $url = $acc_is_present ?  "http://ec2-204-236-255-114.compute-1.amazonaws.com/peptides/protein/pages/${acc}.html": '';
     my $key = $acc_is_present ? "Protein Name and Visualization" : "Protein Name";
     print $sbeamsMOD->encodeSectionItem(
@@ -995,7 +1004,7 @@ sub handle_request {
       chomp( $synonym->[0] );
       #### Store the synonym information $biosequence for later use
       $biosequence->{synonyms}->{$synonym->[1]} = $synonym->[0];
-      if ( $synonym->[2] ) { 
+      if ( $synonym->[2] ) {
         my $str;
         if($synonym->[2] =~ /DisplayGoTerm/ and $synonym->[0] =~ /GO:\d+:/){
           $synonym->[0]  =~ /GO:(\d+):(.*)/;
@@ -1118,7 +1127,7 @@ sub handle_request {
     ["is_subpeptide_of","PI.is_subpeptide_of",'Subpep of'],
     ["peptide_instance_id","PI.peptide_instance_id","peptide_instance_id"],
   );
-  push @column_array, 
+  push @column_array,
   ["SAL_level_probability","AVG(SAL.level_probability)","Avg Eval"]
      if $parameters{'ann'};
   $group_by_clause .= "PI.empirical_proteotypic_score,P.SSRCalc_relative_hydrophobicity,PI.n_protein_mappings,PI.n_genome_locations,PI.sample_ids,PI.is_subpeptide_of,PI.peptide_instance_id" if $parameters{'ann'};
@@ -1146,7 +1155,7 @@ sub handle_request {
              FROM  $TBAT_SPECTRUM S
        INNER JOIN  $TBAT_SPECTRUM_IDENTIFICATION SI
              ON (SI.SPECTRUM_ID = S.SPECTRUM_ID )
-       INNER JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI 
+       INNER JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI
              ON ( MPI.MODIFIED_PEPTIDE_INSTANCE_ID = SI.MODIFIED_PEPTIDE_INSTANCE_ID)
        WHERE S.SPECTRUM_NAME LIKE '$tube_pattern' or S.SPECTRUM_NAME LIKE '$tube_pattern2'
        GROUP BY MPI.PEPTIDE_INSTANCE_ID
@@ -1175,7 +1184,7 @@ sub handle_request {
          ON  PIA.peptide_instance_id = PI.peptide_instance_id
     LEFT JOIN $TBAT_SPECTRUM_ANNOTATION_LEVEL  SAL
          ON  SAL.spectrum_annotation_level_id =
-	     PIA.spectrum_annotation_level_id 
+	     PIA.spectrum_annotation_level_id
 	  AND PIA.record_status != 'D'
     WHERE 1 = 1
           AND AB.atlas_build_id IN ( $atlas_build_id )
@@ -1237,7 +1246,7 @@ sub handle_request {
     if ( $htmlmode ) {
       print $sbeamsMOD->encodeSectionItem( tr_info => $tr,
                                                key => 'Distinct Peptides',
-                                             value => "$peptide_counts\n" ); 
+                                             value => "$peptide_counts\n" );
       print $sbeamsMOD->encodeSectionItem( tr_info => $tr,
                                                key => 'Total Observations',
                                              value => $obs );
@@ -1249,15 +1258,16 @@ sub handle_request {
                               key => 'Normalized PSMs per 100K',
                               value => sprintf("%0.3f", $biosequence->{norm_PSMs_per_100K}) )
             if defined $biosequence->{norm_PSMs_per_100K};
-      print "</TABLE>\n"; 
+      print "</TABLE>\n";
     }
 
 
   #############################################################################
   #### Display the External Links section
   displayExternalLinksSection( biosequence =>$biosequence,
-                            atlas_build_id => $current_page->{atlas_build_id}, 
+                            atlas_build_id => $current_page->{atlas_build_id},
                                   organism => $current_page->{organism} );
+
 
   #############################################################
   ## Display the sequence graphic ##
@@ -1289,6 +1299,7 @@ sub handle_request {
                                                      build_id => $atlas_build_id,
                                                         swiss => $swiss,
                                                     accession => $biosequence->{biosequence_name},
+                                                    
                                                    );
 
 #  https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetProtein_new?atlas_build_id=442&protein_name=P32297&apply_action=&action=GO;min_ssr=38;max_ssr=40;use_ssr=0;use_len=0;use_sig=0;use_tm=0
@@ -1301,11 +1312,11 @@ sub handle_request {
                     protein_data  => $biosequence,
                           tr_info => $tr,
                         obs_color => $parameters{obs_color} );
-     
+
   my $peptide_mappings = get_peptide_mappings ( peptides => $pep_nobs, biosequence => $biosequence->{biosequence_seq} );
 
-  my $graphic_section = get_sequence_graphic( %graphic_params, 
-                                              %motif_params, 
+  my $graphic_section = get_sequence_graphic( %graphic_params,
+                                              %motif_params,
                                               peptide_instance_constraint => $peptide_instance_clause,
                                               likely_peptides => $likely,
                                               mappings => $peptide_mappings,
@@ -1315,10 +1326,7 @@ sub handle_request {
   my $graphic_head = $sbeamsMOD->encodeSectionHeader( text => "Sequence Motifs", link => $link );
   print "<TABLE width=600>$graphic_head </TABLE> $graphic_section" if $htmlmode;
 
-
-   
-### Chuck in provisional peptide likelihood table
-if ( 0 ) { # Not ready for prime time
+  ## Chuck in provisional peptide likelihood table
   # Widget to allow show/hide of likely peptides section
   my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'likely_peptides',
                                                 visible => 1,
@@ -1334,15 +1342,15 @@ if ( 0 ) { # Not ready for prime time
   for my $pep ( @{$likely->{peptides}} ) {
     push @rows, [ $pep->{seq}, $pep->{status}, $pep->{start}, $pep->{end} ];
   }
-  my $likelyHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
+  my $likelyHTML .= $sbeamsMOD->encodeSectionTable( header => 1,
                                                    tr_info => $tr,
                                                      width => '600',
                                                chg_bkg_idx => 2,
                                                     align  => [qw(left center center right right center right right right right left left left)],
                                                       rows => \@rows );
-  print "<TABLE WIDTH=600>$likely_header$likelyHTML</TABLE>\n";
-}
-
+  if ( 0 ) {
+    print "<TABLE WIDTH=600>$likely_header$likelyHTML</TABLE>\n";
+  }
 
   #############################################################
   ## Display annotated sequence - this routine makes its own section header ##
@@ -1353,13 +1361,13 @@ if ( 0 ) { # Not ready for prime time
 #    print STDERR "$protein_name\t";
 
   if ( defined $parameters{show_clustal} ) {
-    $sbeams->setSessionAttribute( key => 'GetProtein_ShowVars', 
+    $sbeams->setSessionAttribute( key => 'GetProtein_ShowVars',
                                 value => $parameters{show_clustal} );
   } else {
     $parameters{show_clustal} = $sbeams->getSessionAttribute( key => 'GetProtein_ShowVars' );
   }
 
-  displayAnnotatedSequence( %parameters,  
+  displayAnnotatedSequence( %parameters,
                             peptides => $peptides,
                         peptide_nobs => $pep_nobs,
                         seq2instance => $seq2instance,
@@ -1372,7 +1380,7 @@ if ( 0 ) { # Not ready for prime time
 
   ### show sequence coverage for difference method
   if ($htmlmode and $atlas_build_names{$atlas_build_id} =~ /Origene/i){
-    
+
     my $file = "/net/db/projects/PeptideAtlas/species/Human/Origene/ExpectedProtein.txt";
 		open(IN, "<$file") or die "cannot open $file\n";
     my %PPfile = ();
@@ -1409,7 +1417,7 @@ if ( 0 ) { # Not ready for prime time
 		}
     if(defined $PPfile{$protein_name}){
       foreach my $m (@methods){
-        my $file = $PPfile{$protein_name}{path}; 
+        my $file = $PPfile{$protein_name}{path};
         my $str;
         if($parameters{ori_tube} ne ''){
           $parameters{ori_tube} =~ /(ISBHOT\d{3})-(\w)(\d+)/;
@@ -1434,7 +1442,7 @@ if ( 0 ) { # Not ready for prime time
                                  protein_name       => $protein_name);
       }
 
-    } 
+    }
 
   ($tr, $link ) = $sbeams->make_table_toggle( name => 'ori_getprotein_sequence',
                                                 visible => 0,
@@ -1458,7 +1466,7 @@ if ( 0 ) { # Not ready for prime time
     print qq~ <TABLE width="600" >
                <TR $tr><TD ALIGN=left>$graphic_head</TD></TR>
                <TR $tr><TD ALIGN=left>$ori_help</TD></TR>
-               <TR $tr><TD ALIGN=left> 
+               <TR $tr><TD ALIGN=left>
                         &nbsp;&nbsp;<b>$protein_name is primary protein in</b>:&nbsp;$PPfile{$protein_name}{tube} <BR>
                         $primary
                </TD></TR>
@@ -1471,9 +1479,9 @@ if ( 0 ) { # Not ready for prime time
 							biosequence => $biosequence,
 									 method => $method,
 				);
-				print "\n <TR $tr><TD > " . $origenecov -> get_html_seq( sequence => $sequence, 
+				print "\n <TR $tr><TD > " . $origenecov -> get_html_seq( sequence => $sequence,
                                                                 tags => $tags,
-                                                                method => $method, 
+                                                                method => $method,
                                                                 coverage => $coverage ) . "</TD></TR>\n";
      }
     print "</TABLE></DIV>\n";
@@ -1487,10 +1495,10 @@ if ( 0 ) { # Not ready for prime time
   my $ptm_sql = qq~
     SELECT biosequence_name,offset,residue,nObs,one_site,two_sites,over_two_sites,
            nP01,nP05,nP19,nP81,nP95,nP99,nP100,isInNextProt,isInUniprot,most_observed_ptm_peptide
-    FROM $TBAT_PTM_SUMMARY PS 
-    JOIN $TBAT_BIOSEQUENCE BS ON (PS.BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID) 
-    WHERE BS.BIOSEQUENCE_NAME = '$protein_name'  
-    AND PS.ATLAS_BUILD_ID = $atlas_build_id 
+    FROM $TBAT_PTM_SUMMARY PS
+    JOIN $TBAT_BIOSEQUENCE BS ON (PS.BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID)
+    WHERE BS.BIOSEQUENCE_NAME = '$protein_name'
+    AND PS.ATLAS_BUILD_ID = $atlas_build_id
   ~;
 
   my @ptm_results = $sbeams->selectSeveralColumns ($ptm_sql);
@@ -1512,18 +1520,18 @@ if ( 0 ) { # Not ready for prime time
 		foreach my $row  (@ptm_results){
 			my @vals = @$row;
 			$vals[1] = $vals[1] -1;
-			for my $i (2..$#vals){ 
+			for my $i (2..$#vals){
 				$data{$vals[0]}{$vals[1]}{$columns[$i]} = $vals[$i];
 			}
 		}
 		my $ptm_summary_chart = $GV->drawPTMHisChart_Protein(data=> \%data,
-                                                       protein=>$protein_name, 
+                                                       protein=>$protein_name,
                                                   atlas_build_id => $atlas_build_id,
                                                        seq=>$biosequence->{biosequence_seq});
     my $PTM_table_Display = $sbeamsMOD->getPTMTableDisplay( cols => \@columns,
-                                                           data => \%data, 
+                                                           data => \%data,
                                                   atlas_build_id => $atlas_build_id,
-                                                  biosequence_name => $protein_name, 
+                                                  biosequence_name => $protein_name,
                                                           'link' => $link,
                                                      rows_to_show => 10,
                                                          max_rows => 500,
@@ -1671,7 +1679,7 @@ if ( 0 ) { # Not ready for prime time
 			}
 
       push @sample_list, [ $row->[0], $row->[$resultset_ref->{column_hash_ref}{'sample_ids'}] ];
-    
+
       for my $idx ($resultset_ref->{column_hash_ref}{'sample_ids'},
                    $resultset_ref->{column_hash_ref}{'is_subpeptide_of'} ) {
         $row->[$idx] =~ s/\s//g;
@@ -1698,7 +1706,7 @@ if ( 0 ) { # Not ready for prime time
 #        $instance_ids{$row->[14]}++;
 			}
 
-      if ($sbeams->output_mode() eq 'html') { 
+      if ($sbeams->output_mode() eq 'html') {
         $annot = "<FONT COLOR=RED><SUP>$annot</SUP></FONT>";
       }
       $row->[4] = sprintf( "%0.2f", $row->[4] ) . " $annot";
@@ -1716,10 +1724,6 @@ if ( 0 ) { # Not ready for prime time
 #    $resultset_ref->{precision_list_ref}->[4] = 36;
 
     #### Display the resultset
-    my $tsv_link = "<a href='$base_url/peptide.tsv?rs_set_name=$rs_params{set_name}&output_mode=tsv&apply_action=VIEWRESULTSET'>TSV</A>";
-    my $download_link = "<SPAN CLASS=info_box>Download as: $tsv_link</SPAN>";
-    print $download_link;
-
     $sbeams->displayResultSet(
       resultset_ref=>$resultset_ref,
       query_parameters_ref=>\%parameters,
@@ -1732,6 +1736,7 @@ if ( 0 ) { # Not ready for prime time
       cytoscape=>$java_web_start,
       no_escape => 1
     );
+
 
     #### Display a hyperlink for viewing this information in Cytoscape
     if ($sbeams->output_mode() eq 'html') {
@@ -1785,7 +1790,7 @@ if ( 0 ) { # Not ready for prime time
 
     #############################################################
     #### Display synthetic peptide info
-  
+
     unless ( $sbeams->isGuestUser() ) {
 
       # Widget to allow show/hide of section
@@ -1795,13 +1800,13 @@ if ( 0 ) { # Not ready for prime time
         imglink => 1,
         sticky => 1,
        );
-  
+
       # Display the section header
       my $PabstHeader = $sbeamsMOD->encodeSectionHeader(
         text => 'Synthetic peptide info ',
         link => $link
       );
-  
+
       #### Display the best peptide information
       my $dirty_peptide_display = $bestPeptideSelector->get_dirty_peptide_display(
          atlas_build_id => $current_page->{atlas_build_id},
@@ -1810,15 +1815,15 @@ if ( 0 ) { # Not ready for prime time
          biosequence_id => $biosequence_id,
          tr_info => $tr,
        );
-  
+
       if ( $htmlmode && $dirty_peptide_display ) {
-        print qq~ 
+        print qq~
         <TABLE width="600">
         $PabstHeader
         </TABLE>
         <TABLE>
          <TR $tr>
-          <TD COLSPAN=2> $dirty_peptide_display 
+          <TD COLSPAN=2> $dirty_peptide_display
           </TD>
          </TR>
         </TABLE>
@@ -1854,13 +1859,13 @@ if ( 0 ) { # Not ready for prime time
      );
 
     if ( $htmlmode && $pabst_display && $parameters->{motif} ne 'glyco'  ) {
-      print qq~ 
+      print qq~
  <TABLE width="600">
   $PabstHeader
  </TABLE>
  <TABLE>
    <TR $tr>
-     <TD COLSPAN=2> $pabst_display 
+     <TD COLSPAN=2> $pabst_display
      </TD>
    </TR>
  </TABLE>
@@ -1891,8 +1896,8 @@ if ( 0 ) { # Not ready for prime time
       biosequence_id => $biosequence_id,
     );
 
-    if ( $htmlmode 
-         && $sbeams->rs_has_data( resultset_ref => $best_peptide_information->{resultset_ref}) 
+    if ( $htmlmode
+         && $sbeams->rs_has_data( resultset_ref => $best_peptide_information->{resultset_ref})
          && $parameters->{motif} ne 'glyco' ) {
 
       #### Display the best peptide information
@@ -1906,13 +1911,13 @@ if ( 0 ) { # Not ready for prime time
         tr_info => $tr,
       );
 
-      print qq~ 
+      print qq~
  <TABLE width="600">
   $highlyObservablePeptidesHeader
  </TABLE>
  <TABLE>
    <TR $tr>
-     <TD COLSPAN=2> $samples 
+     <TD COLSPAN=2> $samples
      </TD>
    </TR>
  </TABLE>
@@ -1938,7 +1943,7 @@ if ( 0 ) { # Not ready for prime time
       link => $link
     );
 
-    
+
     my $mrm_transitions = $sbeamsMOD->get_mrm_transitions( accessions => \@pa_accessions );
 
     #### If a result is returned
@@ -1969,7 +1974,7 @@ if ( 0 ) { # Not ready for prime time
           $pep->[$idx] = $sbeams->makeInactiveText('n/a') if !defined $pep->[$idx];
         }
       }
-      my @labels = ( 'Accession', 'Sequence', 'Charge', 'q1_mz', 'q3_mz', 
+      my @labels = ( 'Accession', 'Sequence', 'Charge', 'q1_mz', 'q3_mz',
                  'Label', 'Intensity', 'CE', 'RT', 'SSRT', 'Instr', 'Annotation Set', 'Quality');
       my $col_defs = $sbeamsMOD->get_column_defs( labels => \@labels );
 #      my $trans_help = get_table_help( 'annotated_transitions' );
@@ -1980,7 +1985,7 @@ if ( 0 ) { # Not ready for prime time
       unshift @$mrm_transitions, \@labels;
 
       #### Format table
-      $transitionsHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
+      $transitionsHTML .= $sbeamsMOD->encodeSectionTable( header => 1,
                                                         tr_info => $tr,
                                                           width => '600',
                                                    set_download => 1,
@@ -2010,7 +2015,7 @@ if ( 0 ) { # Not ready for prime time
      for my $pep ( @$marker_peptides ) {
 #      $pep->[2] = sprintf("%0.2f", $pep->[2]);
        $pep->[3] = $sbeams->makeInactiveText('n/a') if !$pep->[3];
-       
+
        $pep->[0] = "<A HREF=$link_base" . $pep->[0] . ">$pep->[0]</A";
      }
      my @labels = ( 'Accession', 'Peptide Sequence', 'Type', 'Publication', 'Annotator', 'Modified Sequence'  );
@@ -2019,7 +2024,7 @@ if ( 0 ) { # Not ready for prime time
     unshift @$marker_peptides, \@labels;
 
     #### Format table
-    $markerHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
+    $markerHTML .= $sbeamsMOD->encodeSectionTable( header => 1,
                                                       tr_info => $tr,
                                                         width => '600',
                                                        align  => [qw(left center left left left center)],
@@ -2063,7 +2068,7 @@ if ( 0 ) { # Not ready for prime time
 
     my $sampleDisplay = $sbeamsMOD->getSampleDisplay( sample_ids => $sample_ids,
 				                                                  'link' => $link,
-                                                     rows_to_show => 25, 
+                                                     rows_to_show => 25,
                                                          max_rows => 500,
 																												 tr_info => $tr );
     print "<TABLE width='600'>$sampleDisplay</TABLE>" if $htmlmode;
@@ -2113,7 +2118,7 @@ sub get_ortholog_information {
   }
   return $link if $link;
 
-  
+
   $sql =<<"  END";
   SELECT ortholog_group
   FROM biolink.dbo.ortholog O
@@ -2132,7 +2137,7 @@ sub get_ortholog_information {
 
 sub get_peptide_mappings  {
 
-  my %args = @_;  
+  my %args = @_;
   my @biosequence = split( /\*/, $args{biosequence} );
   my $base_sequence = $biosequence[0];
 #  die "Full seq: " . length( $args{biosequence} ) . ", base sed: " . length( $base_sequence ) . ": $base_sequence\n";
@@ -2162,22 +2167,22 @@ sub get_mrm_transitions {
   SELECT
   peptide_accession,
   modified_peptide_sequence,
-  peptide_charge, 
+  peptide_charge,
   q1_mz,
   q3_mz,
-  q3_ion_label,  
-  q3_peak_intensity,  
+  q3_ion_label,
+  q3_peak_intensity,
   collision_energy,
   retention_time,
   instrument,
-  CASE WHEN contact_id IS NULL 
-    THEN annotator_name 
-    ELSE username 
+  CASE WHEN contact_id IS NULL
+    THEN annotator_name
+    ELSE username
     END AS name,
   level_name
-  FROM $TBAT_MODIFIED_PEPTIDE_ANNOTATION MPA 
+  FROM $TBAT_MODIFIED_PEPTIDE_ANNOTATION MPA
   JOIN $TBAT_PEPTIDE P ON MPA.peptide_id = P.peptide_id
-  JOIN $TBAT_TRANSITION_SUITABILITY_LEVEL TSL 
+  JOIN $TBAT_TRANSITION_SUITABILITY_LEVEL TSL
     ON TSL.transition_suitability_level_id = MPA.transition_suitability_level_id
   LEFT JOIN $TB_USER_LOGIN UL ON UL.contact_id = MPA.annotator_contact_id
   WHERE peptide_accession IN ( $acc_string )
@@ -2203,12 +2208,12 @@ sub get_synthesized_peptides {
     peptide_accession,
     P.peptide_sequence, peptide_annotation,
     publication_name,
-  CASE WHEN contact_id IS NULL 
-    THEN annotator_name 
-    ELSE username 
+  CASE WHEN contact_id IS NULL
+    THEN annotator_name
+    ELSE username
     END AS name,
     PA.peptide_sequence
-  FROM $TBAT_PEPTIDE_ANNOTATION PA 
+  FROM $TBAT_PEPTIDE_ANNOTATION PA
   JOIN $TBAT_PEPTIDE P ON PA.peptide_id = P.peptide_id
   LEFT JOIN $TB_USER_LOGIN UL ON UL.contact_id = PA.annotator_contact_id
   LEFT JOIN $TBAT_PUBLICATION PP ON PP.publication_id = PA.publication_id
@@ -2222,7 +2227,7 @@ sub get_synthesized_peptides {
 
 #+
 # Generates a graphical overview of sequence features using bioperl routines
-# 
+#
 #-
 sub get_sequence_graphic {
 
@@ -2294,10 +2299,12 @@ sub get_sequence_graphic {
   my %coverage;
   for my $idx ( 1..$protlen ) { $coverage{$idx} = 0; }
 
+  my $width = ( $protlen <= 4000 ) ? 800 : int( $protlen/5 );
+
   ## Create main panel + sequence 'ruler' ##
   my $panel = Bio::Graphics::Panel->new( -length    => $protlen + 2,
                                          -key_style => 'between',
-                                         -width     => 800,
+                                         -width     => $width,
                                       -empty_tracks => 'suppress',
                                          -pad_top   => 5,
                                         -pad_bottom => 5,
@@ -2328,7 +2335,7 @@ sub get_sequence_graphic {
   if($peptide_instance_constraint){
       $n_observation_clause  = 'PI2.n_observations';
   }
-  # Had initially used the peptide query above, but the start/end coordinates 
+  # Had initially used the peptide query above, but the start/end coordinates
   # were problematic.  Thus we need to do it again.
   my $sql = qq~
      SELECT DISTINCT
@@ -2349,7 +2356,8 @@ sub get_sequence_graphic {
       ON ( AB.biosequence_set_id = BSS.biosequence_set_id )
     WHERE AB.atlas_build_id IN ( $args{build_id} )
 	  AND PM.matched_biosequence_id = $id
-    ORDER BY P.peptide_accession
+    ORDER BY PI.n_observations DESC, PM.start_in_biosequence ASC, PM.end_in_biosequence ASC,
+    P.peptide_accession
   ~;
   my @rows = $sbeams->selectSeveralColumns( $sql );
 
@@ -2383,31 +2391,34 @@ sub get_sequence_graphic {
     if ($row->[5]){
       $val = log($row->[5]);
     }
-#    my $score = ( $row->[2] > 1 ) ? 0 : 
-    my $score =  ( $row->[5] <= $threshold ) ? ($val/$lten) + 0.3 : $max;
+#    my $score = ( $row->[2] > 1 ) ? 0 :
+    my $score =  ( $row->[5] <= $threshold ) ? sprintf("%0.1f", ($val/$lten) + 0.3) : $max;
 
     my $start =  $row->[3];
     my $stop  =  $row->[4];
     # accession isn't necessarily unique, need compound key...
-    my $ugly_key = $acc . '::::' . $start . $stop; 
+    my $ugly_key = $acc . '::::' . $start . $stop;
     my $f = Bio::SeqFeature::Generic->new(
-                             -start => $start, 
+                             -start => $start,
                                -end => $stop,
                            -primary => $acc,
                       -display_name => $ugly_key,
-                             -score => $score );
+  -score => $score
+                             );
 
     if ( !scalar( @{$args{mappings}->{$seq}}) ) {
       push @snps, $f;
     }
+    my $n_obs  =  $args{pep_info}->{$seq}->{nobs} || 'n/d';
+    $pep_info{$ugly_key} = "$start - $stop, $acc: $seq ($n_obs obs)";
 #    push @peptides, $f;
 
     # Record the coverage for this peptide
     for my $idx ( $start..$stop ) { $coverage{$idx}++; }
 
-    # count peptide type, to build appropriate legend 
+    # count peptide type, to build appropriate legend
     if ( $score ) {
-      $single++; 
+      $single++;
     } else {
       $multi++;
     }
@@ -2420,7 +2431,13 @@ sub get_sequence_graphic {
 #                                              mappings => $peptide_mappings,
 #                                              counts => $pep_nobs,
 #                                              seq2acc => $seq2accession
-  foreach my $seq ( keys( %{$args{pep_info}} ) ) {
+  my $cnt = 0;
+  foreach my $seq ( sort { $args{mappings}->{$a}->[0] <=> $args{mappings}->{$b}->[0] ||
+                           $args{pep_info}->{$b}->{nobs} <=> $args{pep_info}->{$a}->{nobs}
+                         } ( keys( %{$args{pep_info}} ) ) ) {
+#  foreach my $seq ( sort { $args{pep_info}->{$b}->{nobs} <=> $args{pep_info}->{$a}->{nobs} } ( keys( %{$args{pep_info}} ) ) ) {
+#  foreach my $seq ( sort(keys %{$args{pep_info}}) ) {
+#    last if $cnt++ > 100;
     my $acc  =  $args{pep_info}->{$seq}->{acc};
 
     my $val = 0;
@@ -2428,7 +2445,7 @@ sub get_sequence_graphic {
     if ($n_obs){
       $val = log($n_obs);
     }
-    my $score =  ( $n_obs <= $threshold ) ? ($val/$lten) + 0.3 : $max;
+    my $score = ( $n_obs <= $threshold ) ? sprintf( "%0.1f", ($val/$lten) + .7 ) : $max;
 #    $score = 0 unless ( $args{pep_info}->{$seq}->{n_gen} && $args{pep_info}->{$seq}->{n_gen} < 2 );
 
 #    if ( !scalar( @{$args{mappings}->{$seq}}) ) {
@@ -2440,26 +2457,27 @@ sub get_sequence_graphic {
       my $start =  $start_0 + 1;
       my $stop  =  $start_0 + length( $seq );
     # accession isn't necessarily unique, need compound key...
-      my $ugly_key = $acc . '::::' . $start . $stop; 
+      my $ugly_key = $acc . '::::' . $start . $stop;
       my $f = Bio::SeqFeature::Generic->new(
-                             -start => $start, 
+                             -start => $start,
                                -end => $stop,
                            -primary => $acc,
                       -display_name => $ugly_key,
-                             -score => $score );
+ -score => $score
+                             );
 
     push @peptides, $f;
 
     # Record the coverage for this peptide
       for my $idx ( $start..$stop ) { $coverage{$idx}++; }
 
-      # count peptide type, to build appropriate legend 
+      # count peptide type, to build appropriate legend
       if ( $score ) {
-        $single++; 
+        $single++;
       } else {
         $multi++;
       }
-    $pep_info{$ugly_key} = "$start - $stop, $seq ($n_obs obs)";
+#      $pep_info{$ugly_key} = "$start - $stop, $acc: $seq ($n_obs obs)";
     }
   }
 
@@ -2509,7 +2527,7 @@ sub get_sequence_graphic {
     push @signalp, $f;
 
   }
- 
+
 
   ## End Signal P related tracks ##
 
@@ -2526,7 +2544,7 @@ sub get_sequence_graphic {
       my $num_sites = $peptide =~ tr/\*/\*/;
       my $p_len = length( $peptide ) - $num_sites;
 #      $log->debug( "Peptide $peptide, starting at $idx, has $num_sites sites and is $p_len amino acids long" );
-        
+
       my $f = Bio::SeqFeature::Generic->new( -start => $idx,
                                                -end => $idx + $p_len - 1,
                                       -display_name => $seqtype ,
@@ -2539,7 +2557,7 @@ sub get_sequence_graphic {
 
   ## End Glyco motif related tracks ##
 
-  # Calculate the coverage 'domains' 
+  # Calculate the coverage 'domains'
   # Made this global to use elsewhere...
   @coverage;
   my @uncovered;
@@ -2557,7 +2575,7 @@ sub get_sequence_graphic {
 
   # What is 1-based index of first observed aa, used for expected coverage.
   my $min_covered_aa = 0;
-  
+
   # %coverage is hash of seq depth keyed by coordinate
   my $last_key;
   for my $key ( sort{ $a <=> $b } keys( %coverage ) ) {
@@ -2595,7 +2613,7 @@ sub get_sequence_graphic {
         $cstart = 0;
         $cend = 0;
 
-        # Dropped out of coverage, cache ncstart 
+        # Dropped out of coverage, cache ncstart
         $ncstart = $key;
       }
     }
@@ -2605,7 +2623,7 @@ sub get_sequence_graphic {
   if ( !$in_coverage ) {
     push @uncovered, { start => $ncstart, end => $last_key } if $ncstart && $last_key;
   }
-  
+
   if ( $cend ) {
     my $f = Bio::SeqFeature::Generic->new( -start   => $cstart,
                                            -end     => $cend,
@@ -2666,13 +2684,13 @@ sub get_sequence_graphic {
     }
   }
 
-  
+
   # Keep track of how much sequence might be hard to observe
   my @unlikely_to_observe; # Cache and return to caller for seq annotation
   my @difficult;           # Use to make 'track' on sequence graphic
-  
+
   # Original logic discounted entire signal peptide as 'unlikely' if any of
-  # the sp was actually seen.  To restore this behaviour set 
+  # the sp was actually seen.  To restore this behaviour set
   # $penalize_obs_in_signal = 1
   my $penalize_obs_in_signal = 0;
   if ( !$sp_info && $signal_peptide_coords &&  $signal_peptide_coords->{end}  ) {
@@ -2695,7 +2713,7 @@ sub get_sequence_graphic {
       $signal_peptide_coords->{end} = $min_covered_aa - 1 if $min_covered_aa;
 
       my $signal_seq = substr( $protseq, 0, $signal_peptide_coords->{end} );
-      
+
 #      $log->debug( "2 start is $signal_peptide_coords->{start}, end is $signal_peptide_coords->{end}" );
       push @unlikely_to_observe, { start => $signal_peptide_coords->{start}, end => $signal_peptide_coords->{end}, seq => $signal_seq };
       my $f = Bio::SeqFeature::Generic->new( -start   => $signal_peptide_coords->{start},
@@ -2705,12 +2723,12 @@ sub get_sequence_graphic {
       push @difficult, $f;
     }
   }
-  
+
   # my $protseq = $args{protein_data}->{biosequence_seq};
   for my $cpair ( @uncovered ) {
     if ( $signal_peptide_coords &&  $signal_peptide_coords->{end}  ) {
 # $log->debug( "Start is $cpair->{start}, End is $cpair->{end}, seq is $cpair->{seq}" );
-      next if $cpair->{end} <= $signal_peptide_coords->{end}; 
+      next if $cpair->{end} <= $signal_peptide_coords->{end};
     }
     my $uncovered_length = $cpair->{end} -  $cpair->{start} + 1;
     my $seq = substr( $protseq, $cpair->{start} - 1, $uncovered_length );
@@ -2749,7 +2767,7 @@ sub get_sequence_graphic {
   ## Generate TMHMM-derived tracks ##
 
   # parse domain info
-  my $tm_info = $biolink->get_transmembrane_info ( tm_info => $tmhmm, 
+  my $tm_info = $biolink->get_transmembrane_info ( tm_info => $tmhmm,
                                                        end => $protlen );
   # loop over domains, create features for each
   my @intra;
@@ -2762,7 +2780,7 @@ sub get_sequence_graphic {
   foreach my $region (@$tm_info) {
     my $primary = $region->[0];
     my $tag = $primary;
-		
+
     my $f = Bio::SeqFeature::Generic->new(
                                  -start        => $region->[1],
                                  -end          => $region->[2] ,
@@ -2778,8 +2796,8 @@ sub get_sequence_graphic {
       push @tmm, $f;
     }
   }
-  
-  # Only add intra/extra if @tmm or @signalp 
+
+  # Only add intra/extra if @tmm or @signalp
   unless ( @tmm ) {
     @intra = ();
     @extra = ();
@@ -2787,6 +2805,7 @@ sub get_sequence_graphic {
 
 
 
+#                      -label       => sub { my $f = shift; my $n = $f->display_name(); $n =~ s/(.*)::::.*/$1/g; return $n },
   ## Add all the tracks to the panel ##
 
   $panel->add_track( $ruler,
@@ -2804,11 +2823,12 @@ sub get_sequence_graphic {
                       -key         => 'Observed Peptides',
                       -bump        => 1,
                       -height      => 8,
-                      -label       => sub { my $f = shift; my $n = $f->display_name(); $n =~ s/(.*)::::.*/$1/g; return $n },
+                      -label       => '',
                       -min_score   => 0,
                       -max_score   => $max
                      );
   # Add observed SNP track
+#                      -label       => sub { my $f = shift; my $n = $f->display_name(); $n =~ s/(.*)::::.*/$1/g; return $n },
   $panel->add_track( \@snps,
                       -glyph       => 'graded_segments',
                       -bgcolor     => $colors{Observed},
@@ -2817,7 +2837,7 @@ sub get_sequence_graphic {
                       -key         => 'Observed SNP peptides',
                       -bump        => 1,
                       -height      => 8,
-                      -label       => sub { my $f = shift; my $n = $f->display_name(); $n =~ s/(.*)::::.*/$1/g; return $n },
+                      -label       => '', # sub { my $f = shift; my $n = $f->display_name(); $n =~ s/(.*)::::.*/$1/g; return $n },
                       -min_score   => 0,
                       -max_score   => $max
                      ) if @snps;
@@ -2861,7 +2881,7 @@ sub get_sequence_graphic {
   for my $t ( qw( Intracellular Transmembrane Extracellular ) ) {
 
       my %legend = ( Transmembrane => 'Transmembrane Domain',
-                     Extracellular => 'Outside membrane', 
+                     Extracellular => 'Outside membrane',
                      Intracellular => 'Inside membrane');
 
 
@@ -2880,7 +2900,7 @@ sub get_sequence_graphic {
   }
 
 
-  
+
   my %tag2color = ( SIGNAL => 'sig',
                     TRANSMEM => 'Transmembrane',
                     TOPO_DOM => 'Extracellular' );
@@ -3015,7 +3035,7 @@ sub get_sequence_graphic {
                     -height => 8,
                     -key  => 'Sequence Position' );
 
-  
+
 #  $panel->add_track( $sequence,
 #                    -glyph   => 'segments',
 #                -bgcolor     => $colors{Translated},
@@ -3023,7 +3043,7 @@ sub get_sequence_graphic {
 #                     -tick   => 2 );
 
   # Set up graphic legend
-  my @legend; 
+  my @legend;
   my $sig_title = ( $sp_info ) ? 'Annotated signal peptide from direct observation or prediction' :
                                  'Signal peptide predicted from amino acid sequence';
   my %title = ( obs_sing => "Peptides which map to a single genome location",
@@ -3035,7 +3055,7 @@ sub get_sequence_graphic {
                 ex_dom =>  "Predicted orientation outside, (extracellular for cell membrane proteins)",
                 pep_cov => "Cumulative sequence coverage",
                 glyco => "Potential Glycosylation Site",
-                unlikely_obs => "tryptic peptides &le; " . MIN_OBS_LENGTH . " residues or signal peptides", 
+                unlikely_obs => "tryptic peptides &le; " . MIN_OBS_LENGTH . " residues or signal peptides",
                 ssr => "Unlikely due to SSR",
                 len => "Unlikely due to length",
                 tm => "Unlikely due to transmembrane",
@@ -3049,7 +3069,7 @@ sub get_sequence_graphic {
 
   push @legend, "<TR> <TD CLASS=lgnd_obs_sing>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{obs_sing}'>Observed peptide with single genome mapping</SPAN></TD> </TR>\n" if $single;
   push @legend, "<TR> <TD CLASS=lgnd_obs_multi>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{obs_multi}'>Observed peptide with ambiguous genome mapping</SPAN></TD> </TR>\n" if $multi;
-  push @legend, "<TR> <TD CLASS=lgnd_sig_seq>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{sig_seq}'>$sp_rationale</SPAN></TD> </TR>\n" if $signal; 
+  push @legend, "<TR> <TD CLASS=lgnd_sig_seq>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{sig_seq}'>$sp_rationale</SPAN></TD> </TR>\n" if $signal;
   push @legend, "<TR> <TD CLASS=lgnd_anc_seq>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{anc_seq}'>Anchor sequence predicted by Signal P</SPAN></TD> </TR>\n" if $anchor;
   push @legend, "<TR> <TD CLASS=lgnd_tm_dom>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{tm_dom}'>Transmembrane domain predicted by TMHMM</SPAN></TD> </TR>\n" if @tmm;
   push @legend, "<TR> <TD CLASS=lgnd_in_dom>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{in_dom}'>Predicted as inside membrane by TMHMM</SPAN></TD> </TR>\n" if @intra;
@@ -3075,7 +3095,7 @@ sub get_sequence_graphic {
     $legend .= $item;
   }
 
-  # Create image map from panel objects. 
+  # Create image map from panel objects.
   # links and mouseover coords for peptides, mouseover coords only for others
   my $baselink = "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$args{build_id}&searchWithinThis=Peptide+Name&searchForThis=_PA_Accession_&action=QUERY";
   my $pid = $$;
@@ -3106,7 +3126,7 @@ sub get_sequence_graphic {
   $map .= '</MAP>';
 
 
-  # Create image in tmp space 
+  # Create image in tmp space
   my $file_name    = $pid . "_glyco_predict.png";
   my $tmp_img_path = "images/tmp";
   my $img_file     = "$PHYSICAL_BASE_DIR/$tmp_img_path/$file_name";
@@ -3125,7 +3145,7 @@ sub get_sequence_graphic {
   # Generate and return HTML for graphic
   my $graphic =<<"  EOG";
   <TABLE width='600'>
-    <TR $tr> 
+    <TR $tr>
       <TD>
  	      <img src='$HTML_BASE_DIR/$tmp_img_path/$file_name' ISMAP USEMAP='#$pid' alt='Sorry No Img' BORDER=0>
   $map
@@ -3135,7 +3155,7 @@ sub get_sequence_graphic {
       <TD COLSPAN=2 ALIGN=RIGHT>
         <TABLE BORDER=0 class=lgnd_outline>
         $legend
-        </TABLE> 
+        </TABLE>
       </TD>
     </TR>
   </TABLE>
@@ -3192,8 +3212,8 @@ sub getPeptideCount {
 
 
     $map_info{$row->[$col{peptide_sequence}]} = { acc => $row->[$col{peptide_accession}],
-                                                  nobs => $row->[$col{n_observations}], 
-                                                  inst => $row->[$col{peptide_instance_id}], 
+                                                  nobs => $row->[$col{n_observations}],
+                                                  inst => $row->[$col{peptide_instance_id}],
                                                   n_gen => $row->[$col{n_genome_locations}] };
 
 
@@ -3308,7 +3328,7 @@ sub displayAnnotatedSequence {
   }
 
 
-  
+
 # print "<PRE>\n";
 
 
@@ -3370,9 +3390,9 @@ sub displayAnnotatedSequence {
   for my $frag ( @{$biosequence->{_non_coverage}} ) {
     $cnt += length( $frag->{seq} );
   }
-  
+
 # TMF: added this statement for special need
-# print STDERR int($observed_residues/$seq_length*1000)/1000,"\t",int(($observed_residues)/($seq_length-$cnt)*1000)/1000,"\n"; 
+# print STDERR int($observed_residues/$seq_length*1000)/1000,"\t",int(($observed_residues)/($seq_length-$cnt)*1000)/1000,"\n";
 #  print "\n\n";
 #  print "Protein Coverage = ",int($observed_residues/$seq_length*1000)/10,"%";
 #  $log->debug( "OBS: $observed_residues, SEQLEN: $seq_length, CNT $cnt" );
@@ -3382,7 +3402,7 @@ sub displayAnnotatedSequence {
                         end => [],
                       class => 'pa_observed_sequence',
                      number => 0 );
-  
+
   for my $f ( @coverage ) {
 #    $log->debug( "coverage starts at " . $f->start() . " and ends at " . $f->end() );
     push @{$observed{start}}, $f->start() - 1;
@@ -3402,7 +3422,7 @@ sub displayAnnotatedSequence {
     }
     $tags = $sbeamsMOD->make_tags( \%gsite, $tags );
 
-    # Commented out code that was drawing a box around predicted N-glyco 
+    # Commented out code that was drawing a box around predicted N-glyco
     # peptides; had bugs rendering in some circumstances and is largely
     # obviated by tryptic digest display code
 #    my %predicted = ( start => [], end => [], class => 'pa_predicted_pep', number => 0 );
@@ -3412,15 +3432,15 @@ sub displayAnnotatedSequence {
 #      $peptide =~ s/\W//g;
 #      push @{$predicted{end}}, $k + length( $peptide ) - 2;
 #      $predicted{number}++;
-#    } 
-#    $tags = $sbeamsMOD->make_tags( \%predicted, $tags ); 
-   
+#    }
+#    $tags = $sbeamsMOD->make_tags( \%predicted, $tags );
+
   }
 
   my  $alt_enz = [];
   if ( $args{is_trypsin_build} eq 'N' ) {
     my $sql = qq~
-    SELECT DISTINCT name FROM 
+    SELECT DISTINCT name FROM
     $TBAT_BIOSEQUENCE B JOIN $TBAT_PEPTIDE_MAPPING pm ON b.biosequence_id = pm.matched_biosequence_id
     JOIN $TBAT_PEPTIDE_INSTANCE PIN ON PIN.peptide_instance_id = PM.peptide_instance_id
     JOIN $TBAT_PEPTIDE_INSTANCE_SAMPLE PIS ON PIN.peptide_instance_id = PIS.peptide_instance_id
@@ -3435,15 +3455,16 @@ sub displayAnnotatedSequence {
     }
   }
 
-#  print "</PRE></TD></TR>\n";  
- 
+#  print "</PRE></TD></TR>\n";
+
   my $ub_id = $parameters->{uniprot_db_id} || 0;
   my $use_nextprot = ( $parameters->{use_nextprot} ) ? 1 : 0;
 
   my $html_seq = $sbeamsMOD->get_html_seq_vars( seq => $sequence,
                                           accession => $biosequence->{biosequence_name},
-                                      show_all_snps => 1, 
-                                               tags => $tags, 
+                                      show_all_snps => 1,
+                                               tags => $tags,
+                                              mupit => 1,
                                             alt_enz => $alt_enz,
                                            peptides => \@peptides,
                                        use_nextprot => $use_nextprot,
@@ -3451,7 +3472,7 @@ sub displayAnnotatedSequence {
                                               swiss => $swiss,
                                        peptide_nobs => $peptide_nobs,
                                        seq2instance => $seq2instance,
-                                   is_trypsin_build => $args{is_trypsin_build}, 
+                                   is_trypsin_build => $args{is_trypsin_build},
                                        show_clustal => $args{show_clustal} );
 
   print "<TR $tr><TD> $html_seq->{seq_display} </TD></TR>\n";
@@ -3476,6 +3497,38 @@ sub displayAnnotatedSequence {
 
     if ( $html_seq->{has_variants} ) {
       print "<TR $tr><TD><b>Annotated Variants from $source </b></TD></TR>\n";
+      my $class = 'visible';
+#      <script src="https://code.jquery.com/jquery-3.1.0.js"></script>
+       
+      print q~
+      <script src="https://code.jquery.com/jquery-3.1.1.min.js" integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" crossorigin="anonymous"></script>
+
+      <script type="text/javascript">
+      function check_mupit( prot, offset, num ) {
+        var url = "http://karchin-web02.icm.jhu.edu/MuPIT_Interactive/rest/showstructure/check?pos=" + prot + ":" + offset + "&protquery=y";
+
+//        if ( num > 40000 ) {
+   
+//        $.ajax({ url: 'http://karchin-web02.icm.jhu.edu/MuPIT_Interactive/rest/showstructure/check',
+//                data: { pos: prot + ':' + offset, protquery: 'y' },
+//                method: "GET",
+        $.ajax({ url: "https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/getMupitJSON.cgi",
+                type: "GET",
+                data: { prot: prot, offset: offset },
+                dataType: "json",
+               success : function(data) {     
+                                           if ( data.hit ) {
+                                            var div = document.getElementById( prot + "_" + num );
+                                            div.className = 'visible';
+                                           }
+                                        },
+               error : function( ts ) { console.log( "Object: %o", ts ) }
+
+               });
+//         }
+      }
+      </script>
+      ~;
       for my $var (  @{$html_seq->{variant_list}} ) {
         $cnt++;
         $variant_list .= '<SPAN style="display:none" ID=var_list>' if $cnt == 17;
@@ -3495,7 +3548,7 @@ sub displayAnnotatedSequence {
           if ( $total ) {
             my $opep = join( '_', keys( %{$nobs->{$skey}->{opeptides}} ) ) || 'na';
             my $spep = join( '_', keys( %{$nobs->{$skey}->{peptides}} ) ) || 'na';
-  
+
             my $spep_str = '';
             my @spep_str = sort( keys( %{$nobs->{$skey}->{peptides}} ) );
             if ( scalar( @spep_str ) > 9 ) {
@@ -3504,7 +3557,7 @@ sub displayAnnotatedSequence {
             } else {
               $spep_str = join( ",<br>", @spep_str );
             }
-  
+
             my $perc = ( $total ) ? sprintf( "%0.1f", 100*$post_cnt/$total ) : 0;
             my $observations = '';
             my $class = 'pa_snp_obs_font';
@@ -3523,12 +3576,20 @@ sub displayAnnotatedSequence {
   #          Not yet ready to release
             $var->[1] = "<a href=ViewPeptideExpression?atlas_build_id=$args{atlas_build_id};spep=$spep;opep=$opep;use_nextprot=$use_nextprot;acc=$biosequence->{biosequence_name} title='View SNP expression profile'>$var->[1]</a>\t";
             $title .= "<br>Supporting Peptides:<br>$spep_str";
-            $var->[4] = qq~<span class=$class onMouseout="hideTooltip()" onMouseover="showTooltip(event,'$title')">Obs $perc ~ . '% (' . "$post_cnt/$total) $uniq </span> $var->[4] "; 
-  
+            $var->[4] = qq~<span class=$class onMouseout="hideTooltip()" onMouseover="showTooltip(event,'$title')">Obs $perc ~ . '% (' . "$post_cnt/$total) $uniq </span> $var->[4] ";
+
   #          $var->[1] = "<span class=pa_ title='observed SNP'>$var->[1]</span>";
             }
           }
-        $variant_list .= join( "\t", @{$var}[0..4] ) . "\n";
+        my $prot = $biosequence->{biosequence_name};
+        print "<script type='text/javascript'>check_mupit( '$prot', $var->[3], $var->[1] )</script>" unless $var->[1] eq 'Num'; #  if $class eq 'visible';
+        $class = ( $class eq 'hidden' ) ? 'hidden' : 'hidden';
+        $prot =~ s/NX_//g;
+        my $mupit_link = "&nbsp;&nbsp;|<a target=_mupit href=http://karchin-web02.icm.jhu.edu/MuPIT_Interactive/?gm=${prot}:$var->[3]&protquery=y title='View this residue highlighted in green in the $prot structure at MuPit Interactive'><img src=$HTML_BASE_DIR/images/3D_smallest.png border=0></a>|";
+        $mupit_link = '' if $var->[3] eq 'End';
+        $mupit_link = '' unless $var->[0] eq 'SNP';
+        my $div_id = $prot . '_' . $var->[1];
+        $variant_list .= join( "\t", @{$var}[0..4] ) . "<div class=$class id=$div_id>$mupit_link</div>" . "\n";
       }
       my $var_toggle_link = '';
       if ( $cnt > 16 ) {
@@ -3546,15 +3607,15 @@ sub displayAnnotatedSequence {
             document.getElementById( "vars_toggle" ).innerHTML = 'Show Fewer';
           }
         }
-      m </SCRIPT>
+       </SCRIPT>
         ~;
       }
       print qq~ <TR $tr><TD> <PRE>$variant_list</PRE> $var_toggle_link </TD></TR> ~;
-    } 
+    }
     print "<TR $tr><TD>&nbsp;</TD></TR>\n";
     print "<TR $tr><TD><B>Annotations in Sequence Context:</B> </TD></TR>\n";
     print "<TR $tr><TD> $html_seq->{clustal_display} </TD></TR>\n";
-  } 
+  }
 
   if ( !$html_seq->{has_variants} ) {
     my $atype = ( $html_seq->{clustal_display} ) ? ' Variants' : ' Annotations';
@@ -3587,13 +3648,13 @@ sub displayAnnotatedSequence {
 
     # Make sure we get the common AA
     for my $aa ( qw( A C D E F G H I K L M N P Q R S T V W Y ) ) {
-      $aa{$aa} = 0; 
+      $aa{$aa} = 0;
     }
 
     for my $aa ( @aa ) {
       $aa{$aa}++;
     }
-    
+
     my %colors = ( 10 => '#555566',
                     9 => '#666677',
                     8 => '#777788',
@@ -3615,10 +3676,10 @@ sub displayAnnotatedSequence {
       my $font_color = ( $color_key > 6 ) ? 'white' : 'black';
       $color_key = 10 if $color_key > 10;
 
-#      $name .= "<TD Align=Center BGCOLOR='$colors{$color_key}'><FONT COLOR=$font_color>$aa</FONT></TD>"; 
-      $name .= "<TD Align=Center>$aa</TD>"; 
-      $count .= "<TD Align=right>$aa{$aa}</TD>"; 
-      $perc .= "<TD Align=Right BGCOLOR='$colors{$color_key}'><FONT COLOR=$font_color>$pct</FONT></TD>"; 
+#      $name .= "<TD Align=Center BGCOLOR='$colors{$color_key}'><FONT COLOR=$font_color>$aa</FONT></TD>";
+      $name .= "<TD Align=Center>$aa</TD>";
+      $count .= "<TD Align=right>$aa{$aa}</TD>";
+      $perc .= "<TD Align=Right BGCOLOR='$colors{$color_key}'><FONT COLOR=$font_color>$pct</FONT></TD>";
     }
     $name .= '</TR>';
     $count .= '</TR>';
@@ -4112,7 +4173,7 @@ sub getProteinInformationForPeptides {
 #     @entries = (
 #     { key => "Peptide Accession", value => 'Peptide Atlas accession number, beginning with PAp followed by 9 digits.' },
 #     { value => 'Preceding (towards the N terminus) amino acid', key => 'Pre AA' },
-#     { value => 'Amino Acid sequence of this peptide', key => 'Peptide Sequence'}, 
+#     { value => 'Amino Acid sequence of this peptide', key => 'Peptide Sequence'},
 #     { value => 'Following (towards the C terminus) amino acid', key => 'Fol AA' },
 #     { value => 'Score derived from peptide probability, EOS, and sequence characteristics such as missed cleavage <SUP><FONT COLOR=RED>[MC]</FONT></SUP> or semi-tryptic <SUP><FONT COLOR=RED>[ST]</FONT></SUP>, or <BR> multiple genome locations <SUP><FONT COLOR=RED>[MGL]</FONT></SUP>.  These are annotated in red as shown.', key => 'Suitability Score' },
 #     { value => 'Highest PeptideProphet probability for this observed sequence', key => 'Best Prob' },
@@ -4125,14 +4186,14 @@ sub getProteinInformationForPeptides {
 #     { value => 'Samples in which this sequence was seen', key => 'Sample IDs' },
 #     { value => 'Observed peptides of which this peptide is a subsequence', key => 'Parent Peptides' },
 #     { value => 'Observed peptides of which this peptide is a subsequence', key => 'Parent Peptides' },
-# 
+#
 #     );
-#     
+#
 #     $showtext = 'show column descriptions';
 #     $hidetext = 'hide column descriptions';
 #     $heading = 'Observed Peptides';
 #     $description= 'Peptides observed in MS/MS experiments';
-#     
+#
 #   } elsif ( $name eq 'annotated_transitions' ) {
 #     @entries = (
 #       { key => 'Sequence', value => 'Amino acid sequence of detected pepide, including any mass modifications.' },
@@ -4148,13 +4209,13 @@ sub getProteinInformationForPeptides {
 #       { key => 'Annotator', value => 'Person/lab who contributed validated transition.' },
 #       { key => 'Quality', value => 'Crude scale of quality for the observation, currently one of Best, OK, and No. ' },
 #       );
-# 
+#
 #     $showtext = 'show column descriptions';
 #     $hidetext = 'hide column descriptions';
 #     $heading = 'Annotated Tranitions';
 #     $description= 'Contributed Q1/Q3 transition pairs for SRM experiments';
 # 	}
-# 
+#
 #   return unless @entries;
 #   my $help = $sbeamsMOD->get_table_help_section( name => $name,
 #   description => $description,
@@ -4163,9 +4224,9 @@ sub getProteinInformationForPeptides {
 #   showtext => $showtext,
 #   hidetext => $hidetext  );
 #   return $help;
-#     
+#
 # } # end get_table_help
-#-------------------------------------------------- 
+#--------------------------------------------------
 
 ###############################################################################
 # printUserAnnotations
@@ -4232,7 +4293,7 @@ sub printUserAnnotations {
     if (@rows) {
 	foreach my $row (@rows)
 	{
-	    # TMF removed items 4,5,6 $sequence $charge 
+	    # TMF removed items 4,5,6 $sequence $charge
 	    my ($annot_id, $comment, $date, $level_id, $level, $first, $last, $uname,
 	      ) = @{$row};
 	    $total++;
@@ -4245,11 +4306,11 @@ sub printUserAnnotations {
 		# my $link = $q->self_url();
 		# $link =~ s/\?.*//;  # clear querystring
 		# $link .= "?spectrum_identification_id=$ident_id;peptide=$sequence;assumed_charge=$charge";
-		#-------------------------------------------------- 
+		#--------------------------------------------------
 
 		#--------------------------------------------------
 		# $buffer .= "<tr bgcolor='#dddddd' id='${uname}${annot_id}_annot_tr'><th valign='top'>$level<br /><a href='$link' style='color:red'>$sequence +$charge</a></th><td>$first $last ($date)<br />\n";
-		#-------------------------------------------------- 
+		#--------------------------------------------------
 		#}
 
 	    my $disp_comment = $comment;
@@ -4479,7 +4540,7 @@ sub displayExternalLinksSection {
       link => $link,
   );
 
-  $biosequence->{synonyms}->{'Entrez Gene Symbol'} ||= $biosequence->{synonyms}->{'Gene Symbol'}; 
+  $biosequence->{synonyms}->{'Entrez Gene Symbol'} ||= $biosequence->{synonyms}->{'Gene Symbol'};
   if ( !$biosequence->{synonyms}->{'UniProt'} ) {
     if ( $biosequence->{biosequence_name} =~ /[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}/ ) {
       $biosequence->{synonyms}->{'UniProt'} = $biosequence->{biosequence_name};
@@ -4526,7 +4587,7 @@ sub displayExternalLinksSection {
         value => $ensemblProtein,
         value => "<img src=$HTML_BASE_DIR/images/gpm_tiny.ico border=0 />" . '&nbsp;' . $ensemblProtein,
         url => "http://gpmdb.thegpm.org/protein/accession/$ensemblProtein",
-       
+
       );
     }
   }
@@ -4558,7 +4619,7 @@ sub displayExternalLinksSection {
 
 
 
-  #### Display a link to Pathway commons 
+  #### Display a link to Pathway commons
   if ($entrezGeneID) {
     if ($sbeams->output_mode() eq 'html') {
       $external_links .= $sbeamsMOD->encodeSectionItem(
