@@ -23,6 +23,7 @@
 use strict;
 use Getopt::Long;
 use FindBin;
+use Data::Dumper;
 
 use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
@@ -295,7 +296,7 @@ sub handle_request {
 
   #### If the apply action was to recall a previous resultset, do it
   my %rs_params = $sbeams->parseResultSetParams(q=>$q);
-  if ($apply_action eq "VIEWRESULTSET") {
+  if ($apply_action =~ /VIEWRESULTSET|VIEWPLOT/ ) {
     $sbeams->readResultSet(
         resultset_file=>$rs_params{set_name},
         resultset_ref=>$resultset_ref,
@@ -701,6 +702,7 @@ sub handle_request {
   my @is_keratin_sql;
   my @is_immunoglobulin_sql;
   my @biosequence_description_sql;
+
 
   # Define subqueries for protein properties; they are the same for
   # all clauses of the union.
@@ -1222,7 +1224,7 @@ sub handle_request {
 
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
-  if ($apply_action =~ /QUERY/i || $apply_action eq "VIEWRESULTSET") {
+  if ($apply_action =~ /QUERY/i || $apply_action =~ /VIEWRESULTSET|VIEWPLOT/ ) {
     #### If the action contained QUERY, then fetch the results from
     #### the database
     if ($apply_action =~ /QUERY/i) {
@@ -1783,13 +1785,17 @@ sub handle_request {
       use_tabbed_panes=>'1',
     );
 
+#    die ( Dumper( $resultset_ref->{column_hash_ref} ) );
 
     #### Display a plot of data from the resultset
-    $sbeams->displayResultSetPlot(
+    $sbeams->displayResultSetPlot_plotly(
       rs_params_ref=>\%rs_params,
       resultset_ref=>$resultset_ref,
       query_parameters_ref=>\%parameters,
       column_titles_ref=>\@column_titles,
+      mouseover_column => 'biosequence_name',
+      mouseover_url => $url_cols{'Biosequence Name'},
+      mouseover_tag => '%0V',
       base_url=>$base_url,
       use_tabbed_panes=>'1',
     );
