@@ -3802,6 +3802,301 @@ sub displayResultSetControls {
 
 } # end displayResultSetControls
 
+###############################################################################
+# displayResultSetPlot_plotly
+#
+# Displays a plot of data based on the information in the ResultSet. This 
+# version uses plotly.js for the plotting, as well as slightly different 
+# histogram creation options. Left old version (displayResultSetPlot) to 
+# allow for quick reversion if need be.
+###############################################################################
+sub displayResultSetPlot_plotly {
+    my $self = shift;
+    my %args = @_;
+
+    #### If the output mode is not html, do not make plot
+    if ($self->output_mode() ne 'html') {
+      return;
+    }
+    my ($i,$element,$key,$value,$line,$sql);
+
+    #### Process the arguments list
+    my $resultset_ref = $args{'resultset_ref'};
+    $rs_params_ref = $args{'rs_params_ref'};
+    my $query_parameters_ref = $args{'query_parameters_ref'};
+    my $column_titles_ref = $args{'column_titles_ref'};
+    my $base_url = $args{'base_url'};
+
+    my %rs_params = %{$rs_params_ref};
+    my %parameters = %{$query_parameters_ref};
+
+    #### Start form
+    my $spacer = $args{use_tabbed_panes} ? $self->addTabbedPane(label => "Plot") : '<BR><BR>';
+    print qq~$spacer
+    <TABLE WIDTH="100%" BORDER=0>
+    <FORM METHOD="POST">
+    ~;
+
+    # Only enter this block if we are plotting
+    $rs_params{rs_plot_type} ||= '';
+    my $result = { result => 'NA' };
+    if ( $rs_params_ref->{apply_action} && $rs_params_ref->{apply_action} eq 'VIEWPLOT' ) {
+  
+      # This won't work if there are multiple plots per page - hardcoded 
+      # div name, multiple js rss specs
+      print qq~
+      <!-- Latest compiled and minified plotly.js JavaScript -->
+      <script type="text/javascript" src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+      ~;
+
+      my @mouseover_text;
+      my $mo_idx;
+      if ( $args{mouseover_column} ) {
+        $mo_idx = $resultset_ref->{column_hash_ref}->{$args{mouseover_column}};
+      }
+  
+      #### If rs_columnA,B is defined, extract it
+      my $column_info;
+      my %has_char = ( A => 0, B => 0 );
+      foreach my $element (@{$resultset_ref->{data_ref}}) {
+        foreach my $column_index ( 'A','B' ) {
+          $column_info->{$column_index}->{name} ||= '';
+          $column_info->{$column_index}->{data} ||= ();
+          if ( $rs_params{"rs_column$column_index"}) {
+            my $value = $element->[$rs_params{"rs_column$column_index"}];
+            $value =~ s/^\s+//;
+            $value =~ s/\s+$//;
+            if ( !$has_char{$column_index} ) {
+              $has_char{$column_index}++ unless $value =~ /^\d*$/;
+            }
+            push(@{$column_info->{$column_index}->{data}},$value);
+          }
+          $column_info->{$column_index}->{name} ||= 
+          $column_titles_ref->[$rs_params{"rs_column$column_index"}] ||
+          $resultset_ref->{column_list_ref}->[$rs_params{"rs_column$column_index"}];
+        }
+        if ( defined $mo_idx ) {
+          push @mouseover_text, $element->[$mo_idx];
+        }
+      }
+  
+      my $plot = qq~ 
+      <tr><td colspan="2"><div id="plot_div" style="width:800px;height:600;"></div></td></tr>
+      ~;
+
+      my @data;
+      # If the plot_type is histogram, calc bins/cnts/titles 
+      if ( $rs_params{rs_plot_type} =~ /histogram/) {
+        my $plot_data = '';
+        my $hdata = $column_info->{A}->{data};
+    
+  	    if ( $rs_params{rs_plot_type} ne 'discrete_histogram') { # continuous
+          $result = $self->histogram( data_array_ref => $hdata, quiet => 1 );
+          if ( $result->{result} ne 'SUCCESS' ) {
+            print $self->makeInfoText('Unable to compute continuous histogram, falling back to discrete');
+          }
+        }
+
+  	    if ( $result->{result} eq 'SUCCESS' ) { # successful continuous
+          my $xstr = join( ',', @{$result->{xaxis}} );
+          my $ystr = "'" . join( "','", @{$result->{yaxis}} ) . "'";
+
+          my $data_label = ( scalar(keys(@mouseover_text)) ) ? "'" . join( "','", @mouseover_text) . "'" : $xstr;
+
+          $plot_data = qq~
+           x: [$xstr],
+           y: [$ystr],
+           type: 'bar',
+          ~;
+        } else { # discrete
+           # Deprecated, calculating below.
+#          $result = $self->discrete_value_histogram( data_array_ref => $hdata );
+          
+          if ( $result->{result} ne 'SUCCESS' ) {
+            my %tally;
+            for my $val ( @{$hdata} ) {
+              $val = '' if !defined $val;
+              $val =~ s/^\s+//;
+              $val =~ s/\s+$//;
+              $val = 'n/a' if $val eq '';
+              $tally{$val}++;
+            }
+            my @keys = ( $has_char{A} ) ? sort(keys(%tally)) : sort{$a<=>$b}(keys(%tally));
+            my $hcnt = scalar( @{$hdata} );
+            for my $key ( @keys ) {
+              my $perc = ( $hcnt ) ? sprintf( "%0.1f", ($tally{$key}/$hcnt)*100 ) : 0;
+              $result->{xaxis} ||= [];
+              push @{$result->{xaxis}}, $key;
+              $result->{yaxis} ||= [];
+              push @{$result->{yaxis}}, $tally{$key};
+              $result->{xaxis_disp} ||= [];
+              push @{$result->{xaxis_disp}}, "$key ($perc " . '%)';
+            }
+            $result->{result} = 'SUCCESS';
+          }
+
+          my $ystr = join( ',', @{$result->{yaxis}} );
+          my $xstr = "'" . join( "','", @{$result->{xaxis_disp}} ) . "'";
+          $plot_data = qq~
+           x: [$xstr],
+           y: [$ystr],
+           type: 'bar',
+          ~;
+        }
+        if ($result->{result} ne 'SUCCESS') {
+          print "ERROR: Unable to calculate histogram for column ".$rs_params{rs_columnA};
+          return '';
+        } else {
+          $plot .= qq~
+          <script type="text/javascript" charset="utf-8">
+          var data = [
+          {
+           $plot_data
+          }
+          ];
+          Plotly.newPlot('plot_div', data);
+          </script>
+          ~;
+        }
+      #### If the plot_type is xypoints, plot it
+      } elsif ( $rs_params{rs_plot_type} eq 'xypoints') {
+
+        my $label;
+        my $regex_tag = $args{mouseover_tag} || '%' . $mo_idx . 'V';
+
+        if ( $has_char{A} || $has_char{B} ) {
+          print $self->makeInfoText( "Scatter plots can only be made with two numeric columns" );
+        } else {
+  
+          # Prepare data
+          my $xstr = join( ',', @{$column_info->{A}->{data}} );
+          my $ystr = join( ',', @{$column_info->{B}->{data}} );
+          my $data_label = ( scalar(keys(@mouseover_text)) ) ? "'" . join( "','", @mouseover_text) . "'" : $xstr;
+
+          # Print plotting code
+          $plot .= qq~ 
+          <script type="text/javascript" charset="utf-8">
+          var trace = {
+           x: [$xstr],
+           y: [$ystr],
+           mode: 'markers',
+           type: 'scatter',
+           text: [$data_label],
+           marker: { size: 4 }
+           };
+           var data = [ trace ];
+           var layout = {
+           title:'$column_info->{A}->{name} vs $column_info->{B}->{name}',
+           // highlight closest in x,y sense
+           hovermode: 'closest',
+           };
+           Plotly.newPlot('plot_div', data, layout);
+           var myPlot = document.getElementById('plot_div');
+
+           // Add plotly_click event handler to allow click to link 
+           myPlot.on('plotly_click', function( data ){
+             for(var i=0; i < data.points.length; i++){
+               var idx = data.points[i]['pointNumber'];
+               var seq = data.points[i]['data']['text'][idx];
+               var url = "$args{mouseover_url}";
+               url = url.replace('$regex_tag',seq);
+               window.open(url);
+             };
+           });
+          </script>
+          ~;
+          $result->{result} = 'SUCCESS';
+        }
+      } else { # unknow plot type
+        print STDERR "Unknown plot type $rs_params{rs_plot_type}\n";
+        return;
+      }
+      print $plot if $result->{result} eq 'SUCCESS';
+
+    } # End "if we are plotting" conditional
+  
+    # Continue with form
+    print qq~
+    <TD VALIGN="TOP" WIDTH="50%">
+    <INPUT TYPE="hidden" NAME="rs_set_name" VALUE="$rs_params{set_name}">
+    <TABLE>
+    <TR><TD BGCOLOR="#E0E0E0">Plot Type</TD><TD>
+    <SELECT NAME="rs_plot_type">
+     ~;
+
+    my %plot_type_names = (
+      'histogram'=>'Continuous Value Histogram of Column A',
+      'discrete_histogram'=>'Discrete Value Histogram of Column A',
+      'xypoints'=>'Scatterplot B vs A',
+    );
+
+    $rs_params{rs_plot_type} ||= '';
+    foreach $element ('histogram','discrete_histogram','xypoints') {
+      my $selected_flag = '';
+      my $option_name = $plot_type_names{$element} || $element;
+      $selected_flag = 'SELECTED' if $element eq $rs_params{rs_plot_type};
+      print "<option $selected_flag VALUE=\"$element\">$option_name\n";
+    }
+    print "</SELECT></TD></TR>";
+
+    foreach my $column_index ( 'A','B' ) {
+      print qq~
+        <TR><TD BGCOLOR="#E0E0E0">Column $column_index</TD>
+        <TD><SELECT NAME="rs_column$column_index">
+      ~;
+
+      #### Create a list box for selecting columnA
+      $i=0;
+      foreach $element (@{$column_titles_ref}) {
+        my $selected_flag = '';
+        $selected_flag = 'SELECTED'
+          if (defined($rs_params{"rs_column$column_index"}) &&
+	      $i == $rs_params{"rs_column$column_index"});
+        print "<option $selected_flag VALUE=\"$i\">$element\n";
+        $i++;
+      }
+      print "</SELECT></TD></TR>\n";
+    }
+
+    my $plot_action = $args{use_tabbed_panes} ? 'VIEWPLOT' : 'VIEWRESULTSET';
+    print qq~
+      <TR><TD></TD><TD>
+      <INPUT TYPE="submit" NAME="apply_action" VALUE="$plot_action">
+      </TD></TR></TABLE>
+      </TD><TD>
+      <TABLE>
+    ~;
+
+    foreach my $element (@{$result->{ordered_statistics}}) {
+      print "<TR><TD BGCOLOR=#E0E0E0>$element</TD><TD>$result->{$element}</TD></TR>\n";
+    }
+
+    #### Finish the tables and form
+    print qq~
+    </TABLE>
+    </TD></TR>
+    </TABLE>
+    </FORM>
+    ~;
+
+    my $tab_selected = ($args{rs_params_ref}->{apply_action} eq 'VIEWPLOT') ? '1' : '0';
+    print $self->closeTabbedPane(selected=>$tab_selected) if $args{use_tabbed_panes};# close Plot div
+    print "</TABLE>" unless $args{quell_tables};
+
+    #### Print out some debugging information about the returned resultset:
+    if (0 == 1) {
+      print "<BR><BR>resultset_ref = $resultset_ref<BR>\n";
+      while ( ($key,$value) = each %{$resultset_ref} ) {
+        printf("%s = %s<BR>\n",$key,$value);
+      }
+      #print "columnlist = ",
+      #  join(" , ",@{$resultset_ref->{column_list_ref}}),"<BR>\n";
+      print "nrows = ",scalar(@{$resultset_ref->{data_ref}}),"<BR>\n";
+      print "rs_set_name=",$rs_params{set_name},"<BR>\n";
+    }
+    return 1;
+
+} # End displayResultsetPlot_plotly
 
 
 ###############################################################################
@@ -4010,8 +4305,7 @@ sub displayResultSetPlot {
       if (defined($result));
     if ($self->output_mode() eq 'html') {
       print qq~
-        <TR><TD COLSPAN="2">$imgsrcbuffer
-        </TD></TR>
+        <TR><TD COLSPAN="2">$imgsrcbuffer</TD></TR>
         <TD VALIGN="TOP" WIDTH="50%">
         <INPUT TYPE="hidden" NAME="rs_set_name" VALUE="$rs_params{set_name}">
         <TABLE>
