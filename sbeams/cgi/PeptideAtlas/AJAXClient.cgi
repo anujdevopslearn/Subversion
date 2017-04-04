@@ -69,7 +69,8 @@ sub main
       $params{pabst_build_id} = 146;
     }
 
-  print $sbeams->get_http_header();
+#  print $sbeams->get_http_header();
+  print $sbeams->get_http_header( type=>"application/json" );
   print process_query();
 
 } # end main
@@ -92,6 +93,11 @@ sub process_query {
   } elsif ( $params{source} eq 'GetTransitions_Gradient_doc' ) {
     return GetTransitions_Gradient_doc();
   } else {
+    if ( $params{offset} && $params{offset} %2 ) {
+      return '{"hit":false,"status":"normal"}';
+    } else { 
+      return '{"hit":true,"status":"normal"}';
+    }
     return $params{source};
   }
 }
