@@ -1924,9 +1924,9 @@ sub get_proteome_coverage {
   WHERE atlas_build_id = $build_id
   GROUP BY dbxref_id
   ~;
-  my $sth = $sbeams->get_statement_handle( $obs_sql );
+  my $obssth = $sbeams->get_statement_handle( $obs_sql );
   my %obs;
-  while ( my @row = $sth->fetchrow_array() ) {
+  while ( my @row = $obssth->fetchrow_array() ) {
     $obs{$row[1]} = $row[0];
   }
 
