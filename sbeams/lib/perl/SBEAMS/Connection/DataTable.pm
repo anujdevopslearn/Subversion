@@ -349,7 +349,8 @@ sub _getTD {
 
 # merge column/cell defined characteristics, cell chars take precedence
 
-  if ( @{$this->{__cellspecs}->[$row]->[$col]} ) {
+  if ( defined $this->{__cellspecs}->[$row] && 
+       defined $this->{__cellspecs}->[$row]->[$col] ) {
     my %attrs = @{$this->{__cellspecs}->[$row]->[$col]};
     foreach my $key ( keys( %attrs ) ) {
       $tag .= " ${key}=$attrs{$key}";
@@ -378,7 +379,7 @@ sub _getTR {
   my $row = shift;
   my $tag = '  <TR';
 
-  if ( @{$this->{__rowspecs}->[$row]} ) {
+  if ( defined $this->{__rowspecs}->[$row] ) {
     my %attrs = @{$this->{__rowspecs}->[$row]};
     foreach my $key ( keys( %attrs ) ) {
       $tag .= " ${key}=$attrs{$key}";
