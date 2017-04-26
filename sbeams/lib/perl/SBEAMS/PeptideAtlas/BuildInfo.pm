@@ -256,6 +256,11 @@ sub pa_build_info_2_tsv {
     my $poss_dist_count = $prot_count_href->{nprots};
     $prot_count_href = get_protein_identification_count (
       build_id => $atlas_build->[$atlas_build_id_idx],
+      presence_level => 'marginally distinguished',
+    );
+    $poss_dist_count += $prot_count_href->{nprots};
+    $prot_count_href = get_protein_identification_count (
+      build_id => $atlas_build->[$atlas_build_id_idx],
       presence_level => 'subsumed',
     );
     my $subsumed_count = $prot_count_href->{nprots};
