@@ -1621,7 +1621,7 @@ sub get_pabst_build {
   my @accessible = $sbeams->getAccessibleProjects();
   my $acc_str = join( ',', @accessible );
   my $sql = qq~
-  SELECT pabst_build_id, organism_name, build_name
+  SELECT pabst_build_id, organism_name, build_name, is_default
   FROM $TBAT_PABST_BUILD PB 
   JOIN $TB_ORGANISM O ON O.organism_id = PB.organism_id
   WHERE PB.project_id IN ( $acc_str )
@@ -1631,11 +1631,13 @@ sub get_pabst_build {
 #  $log->debug( "organism is $organism!!!" );
 
   my %build_organisms;
+  my %default_organisms;
   my %build_names;
   my $validated_build_id = '';
   my $sth = $sbeams->get_statement_handle( $sql );
   while ( my @row = $sth->fetchrow_array() ) {
     $build_organisms{$row[0]} = $row[1];
+    $default_organisms{$row[0]} = $row[1] if $row[3]  eq 'T';
     $build_names{$row[0]} = $row[2];
 
     # Set this to the default, might well get reset based on priority
@@ -1654,7 +1656,7 @@ sub get_pabst_build {
   # Get most recent build (highest build_id) for organism
   if ( !$found && $organism ) {
     for my $build_id ( sort { $b <=> $a } ( keys( %build_names ) ) ) {
-      if ( ( lc( $build_organisms{$build_id} ) eq lc( $organism ) ) ) {
+      if ( ( lc( $default_organisms{$build_id} ) eq lc( $organism ) ) ) {
         $validated_build_id = $build_id;
         $log->debug( "Returning $validated_build_id based on organism" );
         $found++;
