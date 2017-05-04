@@ -8,7 +8,7 @@
 # Description : This CGI program that allows users to
 #               browse through annotated proteins very simply
 #
-# SBEAMS is Copyright (C) 2000-2003 by Eric Deutsch
+# SBEAMS is Copyright (C) 2000-2017 by Eric Deutsch
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -35,9 +35,19 @@ use vars qw ($sbeams $q $current_contact_id $current_username);
 use SBEAMS::Connection qw( $q $log );
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::BestPeptideSelector;
 
 
 $sbeams = new SBEAMS::Connection;
+my $atlas = new SBEAMS::PeptideAtlas;
+$atlas->setSBEAMS($sbeams);
+my $best_peptide = new SBEAMS::PeptideAtlas::BestPeptideSelector;
+$best_peptide->setAtlas( $atlas );
+$best_peptide->setSBEAMS( $sbeams );
+
 
 { # Main program
 
@@ -49,6 +59,10 @@ $sbeams = new SBEAMS::Connection;
   $sbeams->parse_input_parameters( q=>$q, parameters_ref => \%parameters);
 
   my $base = $q->url( -base => 1 );
+
+  my $id = $atlas->getCurrentAtlasBuildID( parameters_ref => {organism_name => 'human' } );
+  my $pabst_build_id = $best_peptide->get_pabst_build( organism_name => 'human' );
+  
 
 #https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/Search?search_key=ENSP00000374576&build_type_name=Any&action=GO
   # TODO 
@@ -62,7 +76,7 @@ $sbeams = new SBEAMS::Connection;
 								            STRINGS => [ qw(Human) ] },
 
                 "buildDetails" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/buildDetails",  
-								            PARAMS => { atlas_build_id => 393, '_tab' => 2 },
+								            PARAMS => { atlas_build_id => $id, '_tab' => 2 },
 								            STRINGS => [ ] },
 
 
@@ -75,7 +89,7 @@ $sbeams = new SBEAMS::Connection;
 
 								"GetPeptides" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetPeptides",  
 								                   PARAMS => { '_tab' => 4,
-                                               atlas_build_id => 393,
+                                               atlas_build_id => $id,
                                                peptide_sequence_constraint => 'VLHPLEG%25',
                                                QUERY_NAME=> 'AT_GetPeptides',
                                                action=> 'QUERY' },
@@ -83,7 +97,7 @@ $sbeams = new SBEAMS::Connection;
 
 								"GetProteins" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetProteins",
                                    PARAMS => { '_tab' => 6,
-																	             atlas_build_id => 393,
+																	             atlas_build_id => $id,
                                                biosequence_name_constraint => 'ENSP00000222%25',
                                                QUERY_NAME => 'AT_GetProteins',
 																	             action => 'QUERY' },
@@ -93,7 +107,7 @@ $sbeams = new SBEAMS::Connection;
 #								QUERY_NAME=AT_GetProteins
 #								action=QUERY
 								"Summarize" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/Summarize_Peptide",  PARAMS => { searchForThis=>'VSFLSALEEYTK', output_mode=>'html', Submit=>'Submit' }, STRINGS => [ 'Human' ] },
-								"GetTransitions" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetTransitions", PARAMS => { pabst_build_id=>'120',protein_name_constraint=>'P06731',action=>'QUERY' }, STRINGS => [ qw(Source) ] },
+								"GetTransitions" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetTransitions", PARAMS => { pabst_build_id=>$pabst_build_id,protein_name_constraint=>'P06731',action=>'QUERY',default_search=>1 }, STRINGS => [ qw(Source) ] },
 
 								"ShowPathways" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/showPathways",
 								                    PARAMS => { apply_action => 'pathway_details',
@@ -103,8 +117,8 @@ $sbeams = new SBEAMS::Connection;
 																	  STRINGS => [] },
 
 								"GetProtein" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetProtein", 
-								                  PARAMS => { '_tab' => 5, atlas_build_id => 393, protein_name => 'ENSP00000371493', action=> 'QUERY' },
-																	STRINGS => [ 'Alpha-2-antiplasmin' ]  },
+								                  PARAMS => { '_tab' => 5, atlas_build_id => $id, protein_name => 'P08697', action=> 'QUERY' },
+																	STRINGS => [ 'SERPINF2' ]  },
 
 
 
@@ -152,7 +166,7 @@ $sbeams = new SBEAMS::Connection;
     my $section = $response->content();
 		my $post = time();
 		my $time = ( $post - $pre ) || 1;
-		if ( $section =~ /SBEAMS_PAGE_OK/gmi ) { 
+		if ( $section !~ /SBEAMS_PAGE_ERROR/gmi ) { 
 			$style = 'grn_bg' 
     }
 
