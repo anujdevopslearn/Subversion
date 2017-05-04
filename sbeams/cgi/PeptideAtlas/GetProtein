@@ -3500,6 +3500,8 @@ sub displayAnnotatedSequence {
       my $class = 'visible';
 #      <script src="https://code.jquery.com/jquery-3.1.0.js"></script>
        
+      # update (or remove conditional) when MuPit connection goes live.
+      my $show_mupit = 0;
       print q~
       <script src="https://code.jquery.com/jquery-3.1.1.min.js" integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" crossorigin="anonymous"></script>
 
@@ -3528,7 +3530,8 @@ sub displayAnnotatedSequence {
 //         }
       }
       </script>
-      ~;
+      ~ if $show_mupit;
+
       for my $var (  @{$html_seq->{variant_list}} ) {
         $cnt++;
         $variant_list .= '<SPAN style="display:none" ID=var_list>' if $cnt == 17;
