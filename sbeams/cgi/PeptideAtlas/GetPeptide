@@ -571,7 +571,7 @@ unless ( $apply_action eq "QUERY" || $apply_action eq "GO" ) { ## if receive fro
         print $q->submit(-name => "query", 
                          -value => 'QUERY',
                          -label => 'QUERY');
-        print $q->endform;
+        print $q->end_form;
         print "</nobr>";
 
         ## xxxx $help_url

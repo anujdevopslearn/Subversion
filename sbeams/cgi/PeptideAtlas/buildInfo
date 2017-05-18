@@ -534,7 +534,7 @@ sub handle_request {
 
     print "$table";
     print $q->hidden( "apply_action", '');
-    print $q->endform;
+    print $q->end_form;
 
   } elsif ( $sbeams->output_mode =~ /tsv/i ) {
     print $table->asTSV( strip_markup => 1 );

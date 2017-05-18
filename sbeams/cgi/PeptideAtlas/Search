@@ -352,7 +352,7 @@ sub handle_request {
       ~;
 
       $buffer .= '</CENTER></nobr></P>';
-      $buffer .= $q->endform;
+      $buffer .= $q->end_form;
   }
 
   #########################################################################

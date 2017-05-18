@@ -535,7 +535,7 @@ sub handle_request {
       print $q->submit(-name => "action",
                        -value => 'QUERY',
                        -label => 'GO');
-      print $q->endform;
+      print $q->end_form;
 
       print "</nobr>";
 

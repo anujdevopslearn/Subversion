@@ -408,7 +408,7 @@ sub handle_request {
 
 
     print $q->hidden( "apply_action", '');
-    print $q->endform;
+    print $q->end_form;
 
   }
 

@@ -121,7 +121,7 @@ if ($DEBUG) {
 # Set Global Variables and execute main()
 ###############################################################################
 main();
-$sbeams->profile_sql( list=>1);
+#$sbeams->profile_sql( list=>1);
 exit(0);
 
 
@@ -574,7 +574,7 @@ sub handle_request {
       print $q->submit(-name => "action",
                        -value => 'QUERY',
                        -label => 'GO');
-      print $q->endform;
+      print $q->end_form;
 
       print "</nobr>";
 

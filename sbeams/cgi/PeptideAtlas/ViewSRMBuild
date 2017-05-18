@@ -475,7 +475,7 @@ sub get_build_list {
 
   $content .= get_cover_select(); 
   $content .= $q->hidden( "apply_action", '');
-  $content .= $q->endform;
+  $content .= $q->end_form;
 
   return $content;
 } # get_build_list 

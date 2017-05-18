@@ -299,7 +299,7 @@ sub handle_request {
     $table->setColAttr(  COLS => [4,5], ROWS => [1..$rows], ALIGN => 'CENTER' );
     print "$table";
     print $q->hidden( "apply_action", '');
-    print $q->endform;
+    print $q->end_form;
 
   }
 

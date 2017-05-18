@@ -316,7 +316,7 @@ sub handle_request {
   } # end else
   print "$table";
   print $q->hidden( "apply_action", '');
-  print $q->endform;
+  print $q->end_form;
 
   }
 

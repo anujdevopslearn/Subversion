@@ -232,7 +232,7 @@ sub handle_request {
   $table->setColAttr(  COLS => [$org_idx+2..$ncols], ROWS => [1..$nrows], ALIGN => 'CENTER' );
   print "$table";
   print $q->hidden( "apply_action", '');
-  print $q->endform;
+  print $q->end_form;
 
   }
 } # end showMainPage

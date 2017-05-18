@@ -1268,7 +1268,7 @@ sub displayEditMetaDataForm {
 		      -value => 'UPDATE',
 		      -label => 'UPDATE');
 
-     print $q->endform;
+     print $q->end_form;
      print "</nobr>";
 
      print "</p>";
