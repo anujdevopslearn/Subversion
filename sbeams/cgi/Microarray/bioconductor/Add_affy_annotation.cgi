@@ -263,7 +263,7 @@ sub handle_request {
             "),
              $q->submit(-name=>'Upload Files',
                         ),
-             $q->endform;
+             $q->end_form;
    
 } # end handle_request
 
@@ -397,7 +397,7 @@ sub make_select_columns_page {
            br(),
            $q->submit(-name=>'merge_annotaion_files',
                         -value=>'Merge Files'),
-           $q->endform;
+           $q->end_form;
           
           	
 }

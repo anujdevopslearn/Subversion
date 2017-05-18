@@ -755,7 +755,7 @@ END
       
       print $cgi->reset;
       
-      print $cgi->endform;
+      print $cgi->end_form;
         
       print "<br><h>";
         
@@ -2496,7 +2496,7 @@ sub print_delete_child_data_form{
 						     		-value=>[$child_parent_analysis_id], 
 						     		-override => 1),
 						     submit(-name=>"delete_analysis_run_setup", -value=>"Delete Analysis Run",-class=>'red_bg'),
-						     $cgi->endform(),
+						     $cgi->end_form(),
 						  )
 						), 
 					  
