@@ -1274,7 +1274,7 @@ sub print_simple_form {
 
 			print $q->reset;
 			
-			print $q->endform;
+			print $q->end_form;
 
 			print "<br><h>";
 
@@ -2607,7 +2607,7 @@ sub format_protein_info {
 			-name  => 'display_type',
 			-value => "$query_to_show",
 		);
-		print $q->endform()
+		print $q->end_form()
 
 	}
 

@@ -1675,7 +1675,7 @@ sub print_data_download_tab {
 	
 		
 		print $q->reset;
-		print $q->endform;
+		print $q->end_form;
 		
 	}
 	
