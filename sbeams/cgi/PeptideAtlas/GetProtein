@@ -1646,35 +1646,41 @@ sub handle_request {
 			$instance_ids{$row->[16]}++;
     }
 
-
     my @pa_accessions;
     my @sample_list;
+
+    my $seq_idx = $resultset_ref->{column_hash_ref}->{peptide_sequence};
+    my $pre_idx = $resultset_ref->{column_hash_ref}->{preceding_residue};
+    my $fol_idx = $resultset_ref->{column_hash_ref}->{following_residue};
+    my $ntt_idx = $resultset_ref->{column_hash_ref}->{highest_n_enzymatic_termini};
+    my $mc_idx = $resultset_ref->{column_hash_ref}->{lowest_n_missed_cleavages};
+    my $ngl_idx = $resultset_ref->{column_hash_ref}->{n_genome_locations};
 
     for my $row ( @{$resultset_ref->{data_ref}} ) {
       push @pa_accessions, $row->[0];
 			my $ntt = 0;
-      if ( defined $row->[5] && $row->[5] ne '') {
-        $ntt = $row->[5];
+      if ( defined $row->[$ntt_idx] && $row->[$ntt_idx] ne '') {
+        $ntt = $row->[$ntt_idx];
       } else {
-  			if ( $row->[1] =~ /[-RK]/ ) {
+  			if ( $row->[$pre_idx] =~ /[-RK]/ ) {
 	  			$ntt++;
 		  	}
-			  if ( $row->[2] =~ /[RK]$/ || $row->[3] eq '-' ) {
+			  if ( $row->[$fol_idx] =~ /[RK]$/ || $row->[3] eq '-' ) {
 				  $ntt++;
 			  }
       }
-      $row->[5] = $ntt;
+      $row->[$ntt_idx] = $ntt if !defined $row->[$ntt_idx];
 
 			my $mc = 0;
-      if ( defined $row->[6] && $row->[6] ne ''){
-        $mc = $row->[6];
-      } elsif ( $row->[2] =~ /[RK][^P]/ ) {
+      if ( defined $row->[$mc_idx] && $row->[$mc_idx] ne '') {
+        $mc = $row->[$mc_idx];
+      } elsif ( $row->[$seq_idx] =~ /[RK][^P]/ ) {
 				$mc++;
 			}
-      $row->[6] = $mc;
+      $row->[$mc_idx] = $mc if !defined $row->[$mc_idx];
 
 			my $mgl = 0;
-			if ( $row->[11] > 1 ) {
+			if ( $row->[$ngl_idx] > 1 ) {
 				$mgl++;
 			}
 
@@ -1694,10 +1700,10 @@ sub handle_request {
 
       my %sample_list = @sample_list;
 			my @errs;
-      if($is_trypsin_build eq 'Y'){
+#      if($is_trypsin_build eq 'Y'){
 			  push @errs, 'mc' if $mc;
 			  push @errs, 'ntt' if $ntt < 2;
-      }
+#      }
 			push @errs, 'mgl' if $mgl;
 			my $annot = '';
 			if ( @errs) {
