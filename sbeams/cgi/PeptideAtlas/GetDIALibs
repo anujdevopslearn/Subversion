@@ -1507,6 +1507,7 @@ sub get_public_libsets {
                                          chg_bkg_idx => 1, 
                                             bg_color => '#EAEAEA',
                                             sortable => 0,
+                                              nowrap => [1,2,3],
                                             table_id => 'libraries',
                                           table_only => 1,
                                          close_table => 1,
