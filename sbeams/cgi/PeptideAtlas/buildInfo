@@ -357,11 +357,18 @@ sub handle_request {
   my $selected = '';
   my @rows;
   my @build_ids;
+  my $col_n = 0;
   while (my $line = <TSV>) {
     chomp $line;
     my @row = split("\t", $line);
+    my $build_name = $row[$build_name_idx];
+    $build_name =~ s/.*">//;
+    $build_name =~ s/<.*//;
+    push @row, $build_name;
     push (@rows, \@row);
+    $col_n = scalar @row;
     push @build_ids, $row[$#row]; # Assumes build id is last column
+  
   }
 
 #  my %accessible_default_builds;
@@ -400,16 +407,15 @@ sub handle_request {
     }
   }
 
-  @rows = sort { $organisms{$a->[$org_idx]} <=>  $organisms{$b->[$org_idx]}
+  @rows = sort { $a->[$col_n -1] cmp  $b->[$col_n -1]} @rows;
     # This is supposed to do an alphabetical sub-sort, but it's not working
     #|| $a->[$build_name_idx] cmp  $b->[$build_name_idx]
-	       }
-                  @rows;
+	      
 
   # Process and output the rows
   for my $row_aref (@rows) {
     my @row = @{$row_aref};
-
+    pop @row;
     my @trinfo;
     my $selected = '';
     my $bgcolor = '#dddddd';
