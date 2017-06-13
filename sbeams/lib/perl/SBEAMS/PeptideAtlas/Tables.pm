@@ -134,6 +134,14 @@ use vars qw(@ISA @EXPORT
     $TBAT_DOMAIN_PROTEIN_LIST
     $TBAT_DOMAIN_LIST_PROTEIN
     $TBAT_DOMAIN_LIST_RESOURCE
+    $TBAT_PTM_LIST
+    $TBAT_PTM_LIST_ENTRY
+
+    $TBAT_MELT_DRUG
+    $TBAT_MELT_ANALYSIS
+    $TBAT_MELT_PROTEIN
+    $TBAT_MELT_RESPONSE
+    $TBAT_MELT_RESPONSE_GROUP
 
     $TBAT_SEL_EXPERIMENT
     $TBAT_SEL_RUN
@@ -294,6 +302,14 @@ require Exporter;
     $TBAT_DOMAIN_PROTEIN_LIST
     $TBAT_DOMAIN_LIST_PROTEIN
     $TBAT_DOMAIN_LIST_RESOURCE
+    $TBAT_PTM_LIST
+    $TBAT_PTM_LIST_ENTRY
+
+    $TBAT_MELT_DRUG
+    $TBAT_MELT_ANALYSIS
+    $TBAT_MELT_PROTEIN
+    $TBAT_MELT_RESPONSE
+    $TBAT_MELT_RESPONSE_GROUP
 
     $TBAT_SEL_EXPERIMENT
     $TBAT_SEL_RUN
@@ -461,6 +477,14 @@ $TBAT_PROTEIN_LIST_PROTEIN          = "${mod}protein_list_protein";
 $TBAT_DOMAIN_PROTEIN_LIST           = "${mod}domain_protein_list";
 $TBAT_DOMAIN_LIST_PROTEIN           = "${mod}domain_list_protein";
 $TBAT_DOMAIN_LIST_RESOURCE          = "${mod}domain_list_resource";
+$TBAT_PTM_LIST                      = "${mod}ptm_list";
+$TBAT_PTM_LIST_ENTRY                = "${mod}ptm_list_entry";
+
+$TBAT_MELT_DRUG                     = "${mod}melt_drug";
+$TBAT_MELT_ANALYSIS                 = "${mod}melt_analysis";
+$TBAT_MELT_PROTEIN                  = "${mod}melt_protein";
+$TBAT_MELT_RESPONSE                 = "${mod}melt_response";
+$TBAT_MELT_RESPONSE_GROUP           = "${mod}melt_response_group";
 
 $TBAT_SEL_EXPERIMENT                = "${mod}SEl_experiment";
 $TBAT_SEL_RUN                       = "${mod}SEL_run";
