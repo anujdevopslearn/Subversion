@@ -741,7 +741,6 @@ if ($apply_action =~ /QUERY|GO/i ) {
                                             seq   => $protein_sequence,
                                             level => 'tbd',
                                             pep_seq => $seq };
-
                 $peptide_accession[$i] = $pa;
                 $peptide_sequence[$i] = $seq;
                 $best_probability[$i] = $prob;
@@ -2213,10 +2212,9 @@ sub get_protein_mapping_widget {
     my @seq = split( /\*/, $seq );
     my $cseq = shift( @seq );
     my $aseq = join( "*", @seq );
-
     my $isvar = 'n/a';
     my $annot = '';
-    if ( $row[2] =~ /Swiss/ || $row[2] =~ /Uniprot/i ) {
+    if ( $row[2] =~ /(Swiss|Uniprot|nextprot)/i ) {
       if ( $desc =~ /\sPE=(\d)/ ) {
         $annot = "PE level $1";
       }
