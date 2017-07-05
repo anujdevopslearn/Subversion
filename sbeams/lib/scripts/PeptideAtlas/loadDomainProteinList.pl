@@ -135,7 +135,9 @@ sub parse_list {
   for ( my $idx = $book->[2]->{minrow}; $idx <= $book->[2]->{maxrow}; $idx++ ) {
     my @row = Spreadsheet::Read::row( $book->[2], $idx );
     if ( $row[0] eq 'uniprot_accession' && !scalar( @keys ) ) {
-      @keys = @row;
+      for my $key ( @row ) {
+        push @keys, lc( $key );
+      }
       next;
     }
     next if $row[0] =~ /Uniprot accession/;
@@ -346,7 +348,17 @@ sub fill_table {
   my $list_proteins = $list_data->{list_proteins};
   my $list_id = $list_data->{list_id};
 
- 
+  my %known_fields = ( protein_full_name => 1,
+                       comment => 1,
+                       protein_symbol => 1,
+                       original_name => 1,
+                       original_accession => 1,
+                       uniprot_accession => 1,
+                       gene_symbol => 1,
+                       protein_list_id => 1,
+                       priority => 1,
+                     );
+
   for my $prot ( @{$list_proteins} ) {
     $prot->{priority} = ( $prot->{'popularity rank'} < 1 ) ? 1 :
                         ( $prot->{'popularity rank'} > 5 ) ? 5 : $prot->{'popularity rank'};
@@ -356,8 +368,8 @@ sub fill_table {
     $prot->{original_name} ||= '';
     $prot->{original_accession} ||= '';
     $prot->{protein_list_id} = $list_id;
-    for my $element ( 'popularity rank', 'protein_name', 'citations' ) {
-      delete( $prot->{$element} );
+    for my $element ( keys( %{$prot} ) ) {
+      delete( $prot->{$element} ) unless $known_fields{$element};
     }
 
     $sbeams->updateOrInsertRow( insert => 1,
