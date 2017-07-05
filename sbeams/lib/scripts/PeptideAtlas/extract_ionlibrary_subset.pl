@@ -9,6 +9,7 @@ my $ts = time();
 
 # Read in and check options (global)
 my %options;
+my %colmap;
 process_options();
 
 # peakview 
@@ -51,7 +52,26 @@ process_options();
 # 16   FragmentCharge [ 1 ]
 # 17   FragmentSeriesNumber [ 7 ]
 
-my %stats = ( count => 0, kept => 0, pcount => 0 );
+# spectronaut
+# 
+# 0    group_id [ AAAENIIPNSTGAAKAIGK.3;1796.986 ]
+# 1    peptide_sequence [ AAAENIIPNSTGAAKAIGK ]
+# 2    q1 [ 599.666837 ]
+# 3    q3 [ 1114.61975097656 ]
+# 4    q3.in_silico [ 1114.621471 ]
+# 5    decoy [ NA ]
+# 6    prec_z [ 3 ]
+# 7    frg_type [ y ]
+# 8    frg_nr [ 12 ]
+# 9    frg_z [ 1 ]
+# 10   relativeFragmentIntensity [ 72 ]
+# 11   irt [ 30.48 ]
+# 12   peptideModSeq [ AAAENIIPNSTGAAKAIGK ]
+# 13   mZ.error [ 0.00172002343697386 ]
+# 14   proteinInformation [ SAOUHSC_00795 ]
+# 15   id [ AAAENIIPNSTGAAKAIGK.3 ]
+
+my %stats = ( count => 0, kept => 0, pcount => 0, rt_max => 0, rt_max_minutes => 0 );
 my %swath_bins = calculate_swath_bins();
 
 my %doppler;
@@ -115,14 +135,17 @@ while ( my $line = <INFILE>) {
   chomp $line;
   my @line = split( /\t/, $line );
 
-  my $q1 = $line[0];
+
+  my $q1 = ( $options{format} eq 'peakview' ) ? $line[0] : $line[$colmap{PrecursorMz}];
+  my $q3 = ( $options{format} eq 'peakview' ) ? $line[1] : $line[$colmap{ProductMz}];
+
   if ( $q1 < $options{prec_min_mz} || $q1 > $options{prec_max_mz} ) {
     print STDERR "$q1 is out of range!\n" if $options{verbose};
     next;
   }
 
-  if ( $line[1] < $options{frag_min_mz} || $line[1] > $options{frag_max_mz} ) {
-    print STDERR "Frag mz $line[1] out of range ( $options{frag_min_mz} to $options{frag_max_mz} )\n" if $options{verbose};
+  if ( $q3 < $options{frag_min_mz} || $q3 > $options{frag_max_mz} ) {
+    print STDERR "Frag mz $q3 out of range ( $options{frag_min_mz} to $options{frag_max_mz} )\n" if $options{verbose};
     next;
   }
 
@@ -135,15 +158,15 @@ while ( my $line = <INFILE>) {
 #    print STDERR "bin for $q1 is $ion2bin{$q1}->[0] to $ion2bin{$q1}->[1]\n";
     }
     # Strip q3 that fall into the bin
-    if ( $line[1] >= $ion2bin{$q1}->[0] && $line[1] <= $ion2bin{$q1}->[1] ) { 
-#      print STDERR "q3 $line[1] is in target bin for $q1 !\n";
+    if ( $q3 >= $ion2bin{$q1}->[0] && $q3 <= $ion2bin{$q1}->[1] ) { 
+#      print STDERR "q3 $q3 is in target bin for $q1 !\n";
     print STDERR "Bin issue!\n" if $options{verbose};
       next 
     }
   }
   # Filter vs pre-defined list of peptides
   if ( $options{peptides} ) {
-    my $pfield = ( $options{format} eq 'peakview' ) ? $line[6] : $line[8];
+    my $pfield = ( $options{format} eq 'peakview' ) ? $line[6] : $line[$colmap{PeptideSequence}];
 
     my $ok = 0;
     if ( !$peptides{$pfield} ) {
@@ -155,9 +178,21 @@ while ( my $line = <INFILE>) {
     }
   }
 
+  if ( $options{no_mc} ) {
+    my $pfield = ( $options{format} eq 'peakview' ) ? $line[6] : $line[$colmap{PeptideSequence}];
+    my $ok = 0;
+    if ( $pfield  =~ /[KR][^P]/ ) {
+      $stats{mc_skipped}++;
+      print STDERR "no pfield!\n" if $options{verbose};
+      next;
+    } else {
+      $stats{mc_kept}++;
+    }
+  }
+
   # Filter vs pre-defined list of proteins
   if ( $options{proteins} ) {
-    my $pfield = ( $options{format} eq 'peakview' ) ? $line[13] : $line[14];
+    my $pfield = ( $options{format} eq 'peakview' ) ? $line[13] : $line[$colmap{UniprotID}];
 
     my $ok = 0;
     if ( !$proteins{$pfield} ) {
@@ -206,14 +241,24 @@ while ( my $line = <INFILE>) {
   if ( $options{nodups} ) {
     # openswath 11,12,15,16,17 ( modpep, pre_z, f_type, f_z, f_series )
     # peakview 7, 8, 9, 10, 11
-    my $dupkey = ( $options{format} eq 'peakview' ) ? join( ':', @line[7..11] ) : join( ':', @line[11,12,15,16,17] );
+
+
+    my $dupkey = ( $options{format} eq 'peakview' ) ? join( ':', @line[7..11] ) : join( ':', @line[$colmap{FullUniModPeptideName},$colmap{PrecursorCharge},$colmap{FragmentType},$colmap{FragmentCharge},$colmap{FragmentSeriesNumber}] );
     next if $doppler{$dupkey}++;
+ }
+
+ my $rt_idx = ( $options{format} eq 'peakview' ) ? 2 : $colmap{Tr_recalibrated};
+ $stats{rt_max} = $line[$rt_idx] if $line[$rt_idx] > $stats{rt_max};
+ if ( $options{rt_in_minutes} ) {
+   $line[$rt_idx] = sprintf( "%0.2f", $line[$rt_idx]/60 );
+   $stats{rt_max_minutes} = $line[$rt_idx] if $line[$rt_idx] > $stats{rt_max_minutes};
  }
 
   # We may limit based on min/max number of fragments per precursor (seq + mz)
   if ( $options{max_num_frags} || $options{min_num_frags} ) {
 
-    my $ion_key = ( $options{format} eq 'peakview' ) ? $line[6] . $line[0] : $line[8] . $line[0];
+#    my $ion_key = ( $options{format} eq 'peakview' ) ? $line[6] . $line[0] : $line[8] . $line[0];
+    my $ion_key = ( $options{format} eq 'peakview' ) ? $line[6] . $line[0] : $line[$colmap{PeptideSequence}] . $line[$colmap{PrecursorMz}];
     $ion_limit{$ion_key} ||= { min => 0, max => 0 };
 
     if ( $options{max_num_frags} ) {
@@ -270,7 +315,41 @@ while ( my $line = <INFILE>) {
       $line[3] = $line[13];
     }
   }
-  print OUT join( "\t", @line ) . "\n";
+
+  if ( $options{clean_sp_pipes} ) {
+    for my $pidx ( 3, 13 ) {
+      my $newprot;
+      for my $prot ( split( /,/, $line[$pidx] ) ) {
+        my @acc = split( /\|/, $prot );
+        if ( scalar( @acc ) == 1 ) {
+          $newprot = $prot;
+        } elsif ( $acc[0] eq 'tr' || $acc[0] eq 'sp' ) {
+          $newprot = $acc[1];
+        } elsif ( $acc[0] eq 'CONTAM_tr' || $acc[0] eq 'CONTAM_sp' ) {
+          $newprot = $acc[0] . '_' . $acc[1];
+        } else {
+          die "How do I clean pipes from $prot?\n";
+        }
+      }
+      die Dumper( @line ) unless $newprot;
+      $line[$pidx] = $newprot;
+    }
+  }
+
+  if ( $options{split_multimappers} && $line[3] =~ /,/ ) {
+    my @acc = split( /\t/, $line[3] );
+    if ( $line[13] && $line[13] =~ /,/ ) {
+      my @up = split( /\t/, $line[13] );
+      if ( scalar(@acc) != scalar(@up) ) {
+        print STDERR "cannot split if acc and up have disparate acc cnt\n";
+        exit;
+      }
+    }
+
+   
+  } else {
+    print OUT join( "\t", @line ) . "\n";
+  }
 #  print STDERR join( "\t", @line ) . "\n";
 #    die "JH, baby";
 }
@@ -280,6 +359,12 @@ close OUT;
 my $tf = time();
 my $tdelta = $tf - $ts;
 
+$stats{message} .= "Max rt seen was $stats{rt_max}";
+if ( $options{rt_in_minutes} ) {
+  $stats{message} .= " - converted to $stats{rt_max_minutes} minutes\n";
+} else {
+  $stats{message} .= "\n";
+}
 $stats{message} .= "Kept $stats{kept} ions out of $stats{count} in the library\n";
 
 print "Finished run in $tdelta seconds\n";
@@ -300,12 +385,16 @@ sub process_options {
                          'overlap:f',
                          'proteins:s', 
                          'peptides:s', 
+                         'no_mc', 
+                         'rt_in_minutes', 
                          'nodups',
                          'print_swaths', 
                          'swaths_file:s', 
                          'no_swaths', 
                          'verbose',
                          'clean_pv_names',
+                         'clean_sp_pipes',
+                         'split_multimapping',
                          'input_file:s' );
 
   printUsage() if $options{help};
@@ -318,7 +407,6 @@ sub process_options {
   $options{frag_min_mz} ||= $options{prec_min_mz};
   $options{frag_max_mz} ||= $options{prec_max_mz};
   $options{overlap} ||= 0;
-  $options{format} ||= 'peakview';
   $options{clean_pv_names} = 1 if !defined $options{clean_pv_names};
 
   if ( $options{print_swaths} && !$options{input_file} && $options{output_file} ) {
@@ -330,6 +418,22 @@ sub process_options {
   my $infile = $options{input_file} || printUsage( "input file required" );
   my $outfile = $options{output_file} || printUsage( "outfile required" );
 
+  if ( !$options{format} || $options{format} eq 'openswath' ) {
+    open INFILE, $options{input_file} || die "ERROR: Unable to read '$options{input_file}'";
+    while ( my $line = <INFILE> ) {
+      chomp $line;
+      $options{format} = 'openswath'; 
+      if ( $line =~ /Tr_recalibrated/ ) {
+        my $idx = 0;
+        for my $col ( split(/\t/, $line) ) {
+          $colmap{$col} = $idx++;
+        }
+        last;
+      }
+    }
+    close INFILE;
+  }
+  $options{format} ||= 'peakview';
 }
 
 sub calculate_swath_bins {
