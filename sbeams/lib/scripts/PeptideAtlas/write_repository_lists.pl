@@ -26,13 +26,17 @@
 #   in order to only show the latest search results and newest mzXML.
 #   Before the change, multiple search batches may be existed for one
 #   sample and they are showed in the web page and pa_public_archive.
-#   (1)change in get_data_url() =>get rid of existing mzXML.tar.gz
+#   (1)change in upload_data() =>get rid of existing mzXML.tar.gz
 #   (2)change in write_public_file =>only get the latest search batch results
 #   (3)change it run on phoebe
 #
 #    Zhi Sun @ 20110207 
 #    1: use peptideatlas FTP site to store the tar file.
 #    2: Create html page directly from this script, remove the dependency of the sForm
+#   
+#    Zhi Sun @ 20110622
+#    clean up: remove all html or php file generation script. only keep the script that 
+#    upload the data to ftp site.
 #######################################################################
 
 use strict;
@@ -43,12 +47,13 @@ use File::stat;
 use XML::Parser;
 use IO::File;
 use LWP::UserAgent;
+use File::Copy;
 
 use lib "$FindBin::Bin/../../perl";
 
 use vars qw ($sbeams $sbeamsMOD $q $current_username 
              $PROG_NAME $USAGE %OPTIONS $TEST $VERBOSE
-             $repository_url $repository_path
+             $repository_url $repository_path $repository_path_cp
              $sbeams_data_path
              $errorfile $timestamp_pattern
              $public_php_outfile $notpublic_php_outfile
@@ -83,37 +88,36 @@ $USAGE = <<EOU;
 Usage: [OPTIONS] key=value key=value ...
 Options:
   --test                 test this code, no disk writing
-
   --test_samples         if would like to run test, using specific samples,
                          can specify them here separated by commas
                          (e.g.,  --test_samples "26,34")
   --test_project_ids        --test_project_id "965" 
   --project_ids
+  --samples
+  --raw_private               don't release RAW and mzXML|mzML files
   --run 
-  --make_tmp_files       output files are named rep*.tmp to minimize 
-                         interruption of active download service
 
 e.g.:  ./$PROG_NAME  --test_sample 2700 --verbose 1 
-       ./$PROG_NAME  --test_project_ids "965" --verbose 1
+			 ./$PROG_NAME  --test_project_ids "965" --verbose 1
 
 EOU
 
 ## get arguments:
-GetOptions(\%OPTIONS, "test", "make_tmp_files", "verbose:s", "test_samples:s",
-           "test_project_ids:s","project_ids:s");
+GetOptions(\%OPTIONS, "test", "verbose:s", "test_samples:s",
+           "test_project_ids:s","samples:s", "project_ids:s", "raw_private:s","run");
 
 
 ## check for required arguments:
 unless ( $OPTIONS{"test"} || $OPTIONS{"test_samples"} || 
          $OPTIONS{"test_project_ids"} || $OPTIONS{"run"} ||
-         $OPTIONS{"project_ids"})
+         $OPTIONS{"project_ids"} || $OPTIONS{"samples"})
 {
     print "$USAGE";
-    exit;
+    #exit;
 };
 
 ## check format of test_samples if it's used
-if ($OPTIONS{"test_samples"})
+if ($OPTIONS{"test_samples"} || $OPTIONS{"samples"})
 {
     my @t = split(",", $OPTIONS{"test_samples"});
 
@@ -128,44 +132,33 @@ if ($OPTIONS{"test_samples"})
 
 
 ## set some vars based upon arguments:
-$TEST = $OPTIONS{"test"} || 0;
-
+if ($OPTIONS{"test"}  || $OPTIONS{"test_samples"} || $OPTIONS{"test_project_ids"}){
+  $TEST =1;
+}else{
+  $TEST = 0;
+}
+  
 $VERBOSE = $OPTIONS{"verbose"} || 0;
-
-$repository_url = "http://www.peptideatlas.org/repository/pa_public_archive2";;
-
-#$public_archive_uri = $OPTIONS{"public_archive_uri"};
 $sbeams_data_path = "/regis/sbeams/archive/";
-
 $repository_path = "/prometheus/u1/ftp/pub/PeptideAtlas/Repository";
+$repository_path_cp =  "/prometheus/u1/ftp/pub/PeptideAtlas/Repository";
 
 $timestamp_pattern = "+%Y%m%d%H%M";
-our %TrancheDescription =();
-our $buffer='';
 our $notpublic_buffer = '';
-our $rowbuffer = '';
+
 
 if ($TEST)
 {
-    $repository_path = "$repository_path/TESTFILES";
+	 $repository_path = "/prometheus/u1/ftp/pub/PeptideAtlas/TEST";
+   $repository_path_cp = "/prometheus/u1/ftp/pub/PeptideAtlas/TEST";
 }
 
+if( $TEST && $OPTIONS{"run"}){
 
+	$repository_path = "/prometheus/u1/ftp/pub/PeptideAtlas/TEST";
+	$repository_path_cp = "/prometheus/u1/ftp/pub/PeptideAtlas/TEST";
 
-## paths for output files:
-$public_php_outfile = "$repository_path/repository_public.php";
-
-$notpublic_php_outfile = "$repository_path/repository_notpublic.php";
-
-$errorfile = "$repository_path/errorfile.txt";
-
-if ( $OPTIONS{"make_tmp_files"} )
-{
-    $public_php_outfile = $public_php_outfile . ".tmp";    
-
-    $notpublic_php_outfile = $notpublic_php_outfile . ".tmp";    
 }
-
 
 #### execute main #####
 main();
@@ -186,61 +179,13 @@ sub main
     ## make sure that user is on atlas:
     check_host();
 
-
-    ## check that can write to files (also initializes them):
-    check_files();
-
     ## check that mandatory sample annotation exists
     unless ($TEST)
     {
         check_samples();
     }
-
-
-    ## write namespace and root tag to xml file:
-    #initializeXMLFile(xml_outfile => $public_php_outfile);
-
-    #initializeXMLFile(xml_outfile => $notpublic_php_outfile);
-    initializePhp(public => 1);
-    initializePhp(public => 0);
-
-    ## write $public_php_outfile, tar up relevant files and move em if needed
     write_public_file();
-
-    ## write $notpublic_php_outfile
-    write_private_file();
-
-
-    ## write ending root node and check that xml is well-formed
-    #finalizeXMLFile(xml_outfile => $public_php_outfile);
-
-    #finalizeXMLFile(xml_outfile => $notpublic_php_outfile);
-    #finalizeXMLFile(xml_outfile => $public_php_outfile);
-    #finalizeXMLFile(xml_outfile => $notpublic_php_outfile);
-    finalizePhp(public => 1);
-    finalizePhp(public => 0);
-
-    print "\nWrote the following files:\n";
-
-    print "$public_php_outfile\n"; 
-    open (OUT, ">$public_php_outfile") ;
-    print OUT "$buffer\n";
-    close OUT;
-
-    print "$notpublic_php_outfile\n"; 
-    open (OUT2, ">$notpublic_php_outfile") ;
-    print OUT2 "$notpublic_buffer\n";
-    close OUT2;
-
-    print "$errorfile\n"; 
-   
-
-    close OUT;
-    close OUT2;
-    # update symbolic link
-    system("rm -f /net/dblocal/wwwspecial/peptideatlas/repository/pa_public_archive2/*");
-    system("ln -s $repository_path/* /net/dblocal/wwwspecial/peptideatlas/repository/pa_public_archive2/");
-
+    #write_private_file();
 } ## end main
 
 
@@ -253,31 +198,11 @@ sub check_host()
     ## make sure that this is running on atlas for queries
     my $uname = `uname -a`;
 
-    unless ($uname =~ /.*(dione).*/)
-    {
-        die "you must run this on dione";
-    }
+    #unless ($uname =~ /.*(dione).*/)
+    #{
+    #    die "you must run this on dione";
+    #}
 }
-
-#######################################################################
-# check_files -- check that can write to files, and
-#   initialize them
-#######################################################################
-sub check_files()
-{
-    my @outfiles =  ($public_php_outfile, $notpublic_php_outfile, $errorfile);
-
-    for (my $i=0; $i <= $#outfiles; $i++)
-    {
-        my $outfile = $outfiles[$i];
-
-        open(OUTFILE,">$outfile") or die 
-           "cannot open $outfile for writing";
-
-        close(OUTFILE) or die "cannot close $outfile";
-    }
-}
-
 
 #######################################################################
 # check_samples -- checks that all samples have needed annotation.
@@ -344,6 +269,14 @@ sub write_public_file
 {
     my $sql;
 
+    my $sample_ids = $OPTIONS{raw_private};
+    $sample_ids =~ s/"//g;
+    $sample_ids =~ s/'//g;
+    $sample_ids =~ s/\s+//g;
+    my @t = split(",",$sample_ids);
+    my %raw_private = map { $_ => 1 } @t;
+ 
+     
     if ($OPTIONS{"test_samples"} || $OPTIONS{"test_project_ids"})
     {
         ## get a string of sample id formatted for use in IN clause of
@@ -379,14 +312,16 @@ sub write_public_file
         JOIN $TBAT_ATLAS_BUILD AB ON (AB.atlas_build_id = ABS.atlas_build_id)
         JOIN $TBAT_BIOSEQUENCE_SET BS ON (BS.biosequence_set_id = AB.biosequence_set_id)
         JOIN $TB_ORGANISM O ON (BS.organism_id = O.organism_id)
-        WHERE S.is_public = 'Y' AND S.record_status != 'D'
+        WHERE 
+        S.is_public = 'Y' AND 
+        S.record_status != 'D'
         AND S.sample_id IN ($test_sample_ids)
+        --AND AB.atlas_build_id= 366
         ORDER BY O.organism_name, S.sample_tag
         ~;
         print "$sql\n";
         
-        
-    } elsif ($TEST)
+    } elsif ($OPTIONS{"test"}  and ( ! $OPTIONS{"test_samples"} and !  $OPTIONS{"test_project_ids"}) and ! $OPTIONS{"run"})
     {   ## Use 2 records for TEST
         $sql = qq~
         SELECT distinct top 2 S.sample_accession, S.sample_tag, S.sample_id,
@@ -403,6 +338,10 @@ sub write_public_file
     } else
     {
         my $sample_id_clause='';
+        if($OPTIONS{"samples"}  ne ''){
+          $sample_id_clause = "AND S.sample_id IN (" .  formatSampleIDs(sample_ids => $OPTIONS{"samples"});
+          $sample_id_clause .= ")"; 
+        }
         if( $OPTIONS{"project_ids"} ne ''){
           my $project_ids = formatSampleIDs(
             sample_ids => $OPTIONS{"project_ids"});
@@ -410,17 +349,12 @@ sub write_public_file
             AND S.sample_id in (
             SELECT DISTINCT S.SAMPLE_ID
             FROM
-            $TBPR_PROTEOMICS_EXPERIMENT E,
-            $TBPR_SEARCH_BATCH SB,
-            $TBAT_ATLAS_SEARCH_BATCH ASB,
-            $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB,
-            $TBAT_SAMPLE S
-            WHERE
-            E.EXPERIMENT_ID = SB.EXPERIMENT_ID
-            AND SB.SEARCH_BATCH_ID = ASB.PROTEOMICS_SEARCH_BATCH_ID
-            AND ASB.SAMPLE_ID = ABSB.SAMPLE_ID
-            AND ABSB.SAMPLE_ID = S.SAMPLE_ID
-            AND E.PROJECT_ID in ($project_ids))
+            $TBPR_PROTEOMICS_EXPERIMENT E 
+            JOIN $TBPR_SEARCH_BATCH SB ON (E.EXPERIMENT_ID = SB.EXPERIMENT_ID)
+            JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON (SB.SEARCH_BATCH_ID = ASB.PROTEOMICS_SEARCH_BATCH_ID)
+            RIGHT JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON ( ASB.SAMPLE_ID = ABSB.SAMPLE_ID)
+            JOIN $TBAT_SAMPLE S ON (ABSB.SAMPLE_ID = S.SAMPLE_ID)
+            WHERE E.PROJECT_ID in ($project_ids))
            ~;
         }
         $sql = qq~
@@ -431,9 +365,12 @@ sub write_public_file
         JOIN $TBAT_ATLAS_BUILD AB ON (AB.atlas_build_id = ABS.atlas_build_id)
         JOIN $TBAT_BIOSEQUENCE_SET BS ON (BS.biosequence_set_id = AB.biosequence_set_id)
         JOIN $TB_ORGANISM O ON (BS.organism_id = O.organism_id)
-        WHERE S.is_public = 'Y' AND S.record_status != 'D'
+        WHERE 
+        S.is_public = 'Y' AND 
+        S.record_status != 'D'
         $sample_id_clause
-        --AND S.sample_id != '198' AND S.sample_id != '292'
+        AND S.sample_id != '198' AND S.sample_id != '292'
+        and ABS.atlas_build_id = 451
         ORDER BY O.organism_name, S.sample_tag
         ~;
         ## xx temporarily adding ignore MicroProt datasets as their 
@@ -442,53 +379,19 @@ sub write_public_file
 
     my @rows = $sbeams->selectSeveralColumns($sql) or 
         die "Couldn't find sample records using $sql";
-
-   my $date = `date`;
-   my $sample_number = scalar @rows;
-   $buffer .= qq~ <p class="rep">
-      There are
-      $sample_number  experimental datasets available for download ($date)</p><br/>
-      <form action="http://db.systemsbiology.net/webapps/repository/sForm" method="post">
-
-      <input type="button" value="Mark All Matching Records" onClick="MarkSelectedTexts()">
-      <input type="button" value="Generate Bash File" onClick="GenerateBashFile()">
-      <table class="rep" id="table1">
-
-      <tbody>
-      <tr><th class="rep">
-              Sample Accession
-            </th><th class="rep">
-              Name
-            </th><th class="rep">
-                Organism
-            </th><th class="rep"><a target="_blank" href="http://www.peptideatlas.org/repository/resources_help.php">
-                Resources
-              </a></th><th class="rep">
-                Description
-            </th><th class="rep">
-
-                Data Contributors
-            </th><th class="rep">
-                Related Publications
-            </th></tr>
-     ~;
-
-
-
     my $count = 0;
-
     ## store query results in $sample_info
     foreach my $row (@rows) 
     {
-        %TrancheDescription =();
         $count = $count + 1;
         my (@file_array_for_README, @pubmed_id_array_for_README);
-
         my (@pub_cit_array_for_README, @pub_url_array_for_README);
-
         my ($sample_accession, $sample_tag, $sample_id, $organism, 
             $is_public) = @{$row};
-
+       # unless ( $sample_id eq '517' or $sample_id eq '413' or $sample_id eq '1715' or $sample_id eq '1950'
+       #          or $sample_id eq '2536' or $sample_id eq '156'){
+       #   next;
+       # }
         my $sql2 = qq~
         SELECT S.sample_description, S.data_contributors
         FROM $TBAT_SAMPLE S
@@ -496,7 +399,26 @@ sub write_public_file
         AND S.record_status != 'D'
         ~;
 
-        next if($organism eq 'Chimpanzee');
+        next if($organism eq 'Chimpanzee' );
+
+        if($organism eq 'Honeybee'){
+          $organism = 'HoneyBee';
+        }
+
+        #next if ($organism !~/human/i);
+				#next if(not defined $list{$sample_accession});
+        next if ( -l "/prometheus/u1/ftp/pub/PeptideAtlas/Repository/$sample_accession" || 
+                  -d "/prometheus/u1/ftp/pub/PeptideAtlas/Repository/$sample_accession" );
+        print "$sample_tag $sample_accession $sample_id\n";
+
+        $organism =~ s/\s+/_/g;
+        if (! -d "$repository_path/$organism" ){
+           mkdir "$repository_path/$organism";
+        }
+        if(! -d "$repository_path/$organism/$sample_accession"){
+					mkdir  "$repository_path/$organism/$sample_accession";
+        }
+        $repository_path = "$repository_path/$organism/$sample_accession";
 
         my @rows2 = $sbeams->selectSeveralColumns($sql2) or 
             die "Couldn't find sample records using $sql2";
@@ -516,19 +438,6 @@ sub write_public_file
             $data_contributors =~ s/\n/ /g;
         }
  
-        $TrancheDescription{sample_description} = $sample_description;
-        $TrancheDescription{data_contributors} = $data_contributors;
-
-        ## write to xml file, the start of the sample tag, and some of the sample info:
-        startSampleTag(
-            sample_accession => $sample_accession,
-            sample_tag => $sample_tag,
-            organism => $organism,
-            description => $sample_description,
-            data_contributors => $data_contributors,
-        );
-
-        
         ######### handle the remaining resources  ####
         #### resource mzXML_format
         #### resource RAW_format
@@ -539,59 +448,49 @@ sub write_public_file
         #### publication citation
         #### resource README
 
-
         ## (1 sample record <--> 1 spectra_description_set). i.e. not pointing to last mzXML file
         ## anymore in the repository xml file for clarity, but the older archive files will still
         ## be present in the apache accessible archive area for anyone dialing up the url directly.
         my $spectra_data_dir = get_spectra_location( sample_id => $sample_id);
+        #if ($organism eq 'HoneyBee'){
+        #  goto TPP;
+        #}
+        if($raw_private{$sample_id}){ goto TPP;}
+				#goto TPP; ## zhi
 
 
         ## get mzXML url, check properties of database with timestamp properties file ( if lagging,
         ## pack up new files etc, or if the archive doesn't already exist create the archive file, etc)
-        my $mzXML_url = get_mzXML_url(  sample_id => $sample_id,
-            sample_accession => $sample_accession, spectra_data_dir => $spectra_data_dir);
-
-        my $mzXML_size = getFileSize( file => $mzXML_url );
-
-        addResourceTag(attr_name => "mzXML_format", 
-            attr_value => $mzXML_url, file_size => $mzXML_size);
-
-        push(@file_array_for_README, $mzXML_url);
-
+        upload_mzXML(  sample_id => $sample_id,
+            sample_accession => $sample_accession, spectra_data_dir => "$spectra_data_dir");
+        goto TPP;
 
         ## get orig data type by searching data dir for known suffixes
-        my $origDataType = get_orig_data_type( data_dir => $spectra_data_dir);
+        my $origDataType = get_orig_data_type( data_dir => "$spectra_data_dir");
 
         if ($origDataType)
         {
             ## get original data url, if don't see it in the public repository, pack up files etc, 
-            ## [this uses a subset of get_data_url, so one day, could redesign those few subs...]
+            ## [this uses a subset of upload_data, so one day, could redesign those few subs...]
             ## For some of the older HUPO datasets, the original spectra aren't available,
             ## so we only have the dtas.  We're giving those a datatype/suffix of dtapack
             ## which means there are a few special edits for it in several places in this
             ## script (search for dta to edit those)
 
-            my $orig_data_url = get_orig_data_url(  
+            upload_orig_data(  
                 sample_id => $sample_id,
                 sample_accession => $sample_accession, 
-                spectra_data_dir => $spectra_data_dir,
+                spectra_data_dir => "$spectra_data_dir",
                 orig_data_type => $origDataType,
             );
-            my $orig_data_size = getFileSize( file => $orig_data_url);       
-            my $attr = $origDataType . "_format";
-
-            ## write xml resource element for this:
-            addResourceTag(attr_name => $attr, attr_value => $orig_data_url,
-                           file_size => $orig_data_size);
-
-            push(@file_array_for_README, $orig_data_url);
         }
 
+       TPP:
         ###########  iterate over all search batches for this sample #############
-	#unlike before, we only want to latest search results
-	#in other words, the highest atlas_search_batch_id
+       	#unlike before, we only want to latest search results
+      	#in other words, the highest atlas_search_batch_id
 
-        my $sql2 = qq~
+        $sql2 = qq~
             SELECT distinct ASB.TPP_version, ASB.atlas_search_batch_id, ASB.data_location,
             ASB.search_batch_subdir
             FROM $TBAT_ATLAS_SEARCH_BATCH ASB
@@ -599,14 +498,15 @@ sub write_public_file
             ON (ASB.atlas_search_batch_id = SDS.atlas_search_batch_id)
             JOIN $TBAT_SAMPLE S ON (S.sample_id = SDS.sample_id)
             WHERE S.sample_id = '$sample_id'
-            AND S.is_public = 'Y' AND S.record_status != 'D'
+            AND --S.is_public = 'Y' AND 
+            S.record_status != 'D'
             ORDER BY ASB.atlas_search_batch_id DESC
         ~;
 
-        my @rows2 = $sbeams->selectSeveralColumns($sql2) or 
+        @rows2 = $sbeams->selectSeveralColumns($sql2) or 
         die "Couldn't find ATLAS_SEARCH_BATCH records for sample $sample_id";
 
-	#Ning changed the following code
+      	#Ning changed the following code
         #foreach my $row2 (@rows2) 
         #{
             my ($TPP_version, $atlas_search_batch_id, $data_location,
@@ -615,7 +515,7 @@ sub write_public_file
             $data_location = $data_location . "/" . $search_batch_subdir;
 
             ## if path has /data3/sbeams/archive/, remove that
-            $data_location =~ s/^(\/data3\/sbeams\/archive\/)(.+)$/$2/gi;
+            $data_location =~ s/^(.*sbeams\/archive\/)(.+)$/$2/gi;
 
             ## if path starts with a /, remove that
             $data_location =~ s/^(\/)(.+)$/$2/gi;
@@ -632,80 +532,37 @@ sub write_public_file
             ## for each row returned, get a url (checking for timestamp properties file, etc)
             ## NOTE, this leads to copy over of the sequest.params file and the qualscore_results
             ## too, so will recover those filenames next with file tests
-            my $search_results_url = get_search_results_url (
+            upload_search_result (
                 TPP_version => $TPP_version,
                 atlas_search_batch_id => $atlas_search_batch_id, 
                 sample_accession => $sample_accession,
                 search_results_dir => $data_location,
             );
 
-            my $search_results_size = getFileSize( file => $search_results_url );
-
-            ## write url to xml file as attribute in a resource element
-            addResourceTag(attr_name => "Search_Results", 
-                attr_value => $search_results_url, file_size => $search_results_size,
-                asbid => $atlas_search_batch_id);
-
-            push(@file_array_for_README, $search_results_url);
-
-            ## retrieve and write tags for sequest.params and qualscore_results 
+            ## retrieve and write tags for params and qualscore_results 
             my $prefix = $sample_accession . "_" . $atlas_search_batch_id;
-            my $sequest_params_file_name = "$prefix" . "_sequest.params";
+            my $search_params_file_name = "$prefix" . "_search.params";
             my $hqus_file_name = "$prefix" . "_qualscore_results";
 
-            my $sequest_params_file_url = get_an_sb_file_url (
-                file_name => $sequest_params_file_name,
-                sb_file_name => "sequest.params",
+            upload_sb_files (
+                file_name => $search_params_file_name,
+                sb_file_name => "params",
                 search_results_dir => $data_location,
             );
 
-            my $hqus_file_url = get_an_sb_file_url (
+            upload_sb_files (
                 file_name => $hqus_file_name,
                 sb_file_name => "qualscore_results",
                 search_results_dir => $data_location,
             );
 
-            $sequest_params_file_name = "$repository_path/$sequest_params_file_name";
-            $hqus_file_name = "$repository_path/$hqus_file_name";
-                
-            if (-e $sequest_params_file_name)
-            {
-                push(@file_array_for_README, $sequest_params_file_url);
-                ## write url to xml file as attribute in a resource element
-                addResourceTag(attr_name => "sequest_params", 
-                    attr_value => $sequest_params_file_url,
-                    asbid => $atlas_search_batch_id);
-            }
-
-            if (-e $hqus_file_name)
-            {
-                push(@file_array_for_README, $hqus_file_url);
-
-                ## write url to xml file as attribute in a resource element
-                addResourceTag(attr_name => "qualscore_results", 
-                    attr_value => $hqus_file_url,
-                    asbid => $atlas_search_batch_id);
-            }
-
-
             ## for each row returned, get a url (checking for timestamp properties file, etc)
-            my $protein_prophet_url = get_protein_prophet_url (
+            upload_protein_prophet_files (
                 TPP_version => $TPP_version,
                 atlas_search_batch_id => $atlas_search_batch_id,
                 sample_accession => $sample_accession,
                 search_results_dir => $data_location,
             );
-
-            ## write url to xml file as attribute in a resource element
-            my $protein_prophet_size = getFileSize( file => $protein_prophet_url );
-            addResourceTag(attr_name => "ProteinProphet_file", 
-                attr_value => $protein_prophet_url, 
-                file_size => $protein_prophet_size,
-                asbid => $atlas_search_batch_id);
-
-            push(@file_array_for_README, $protein_prophet_url);
-
-      #}
 
         ####  handle publication citations  #####
         my $sql3 = qq~
@@ -718,15 +575,11 @@ sub write_public_file
         ~;
 
         my @rows3 = $sbeams->selectSeveralColumns($sql3);
-        $rowbuffer .= qq~ <td class="rep"> ~;
-
         foreach my $row3 (@rows3) 
         {
             my ($pub_name, $pub_url, $pubmed_id) = @{$row3};
 
             ## write url to xml file as attribute in a resource element
-            addPublicationTag( citation => $pub_name, url => $pub_url);
-
             push(@pubmed_id_array_for_README, $pubmed_id);
 
             push(@pub_cit_array_for_README, $pub_name);
@@ -734,87 +587,24 @@ sub write_public_file
             push(@pub_url_array_for_README, $pub_url);
         } 
 
-        $rowbuffer .= "</td>";
         ## writes the readme file and returns its URL
-        my $readme_url = write_readme_and_get_readme_url(
+        write_readme(
             sample_accession => $sample_accession,
             sample_tag => $sample_tag,
             organism => $organism,
             description => $sample_description,
             data_contributors => $data_contributors,
-            array_of_file_urls_ref => \@file_array_for_README,
             array_of_pub_cit_ref => \@pub_cit_array_for_README,
             array_of_pub_url_ref => \@pub_url_array_for_README,
             array_of_pubmed_ids_ref => \@pubmed_id_array_for_README,
         );
-
-        ## write url to xml file as attribute in a resource element
-        addResourceTag(attr_name => "README", attr_value => $readme_url);
-        $buffer .= $rowbuffer;
-        ## write to xml file, the end of the sample tag
-        endSampleTag();
-
+        $repository_path = $repository_path_cp;
     } ## end loop over samples
 
 }
 
 #######################################################################
-# startSampleTag - write sample start tag and sample info to xml file
-# @param sample_accession
-# @param sample_tag
-# @param organism
-# @param description
-# @param data_contributors
-#######################################################################
-sub startSampleTag
-{
-    my %args = @_;
-
-    my $sample_accession = $args{sample_accession} or die "need sample_accession";
-
-    my $sample_tag = $args{sample_tag} or die "need sample_tag";
-
-    my $organism = $args{organism} or die "need organism";
-
-    my $description = $args{description} or die "need description";
-
-    my $data_contributors;
-    if ($TEST)
-    {
-        $data_contributors = $args{data_contributors}; ## dev database isn't annotated
-    } else
-    {
-       $data_contributors = $args{data_contributors}; # zhi or die "need data_contributors";
-    }
-
-
-    ## write opening sample tag information to xml:
-    ## open xml file and writer:
-
-    $buffer .= qq~
-     <tr><td class="rep">$sample_accession</td>
-     <td class="rep">$sample_tag</td>
-     <td class="rep">$organism</td>
-     <td class="rep">
-    ~;
-    $rowbuffer = qq~
-     <td class="rep">$description</td>
-     <td class="rep">$data_contributors</td>
-    ~;
-}
-
-#######################################################################
-# endSampleTag - write end sample tag  to xml file
-#######################################################################
-sub endSampleTag
-{
-    ## open xml file and writer:
-    $buffer.= "</tr>";
-
-}
-
-#######################################################################
-#  get_mzXML_url -- get mzXML url, check properties of database with
+#  upload_mzXML -- get mzXML url, check properties of database with
 #      timestamp properties file and pack up new files if the archive
 #      doesn't already exist to create the archive file
 # @param sample_id
@@ -822,7 +612,7 @@ sub endSampleTag
 # @param spectra_data_dir
 # @return url for gzipped mzXML archive
 #######################################################################
-sub get_mzXML_url
+sub upload_mzXML
 {
     my %args = @_;
 
@@ -848,131 +638,20 @@ sub get_mzXML_url
     ##        else return the url for the already up to date mzXML gzipped archive
     ##    else, there's no versioned mzXML file yet, so create it and create the timestamped
     ##    properties file
-    ## This functionality is generalized in get_data_url so that other operations can use it...
-    my $mzXML_url = get_data_url(
+    ## This functionality is generalized in upload_data so that other operations can use it...
+    
+    upload_data(
         sample_accession => $sample_accession,
         data_dir => $spectra_data_dir,
         file_suffix => "mzXML",
-        file_pattern => "mzXML",
+        file_pattern => "mz*ML",
         properties_ref => \%spectra_properties
     );
 
-    return $mzXML_url;
 }
 
-
 #######################################################################
-#  initializePhp 
-#######################################################################
-sub initializePhp
-{
-  my %args = @_;
-  my $public = $args{public};;
-  if($public){
-    $buffer = `cat /net/dblocal/wwwspecial/peptideatlas/repository/Header_ftp.php`;
-  }else{
-    $notpublic_buffer= `cat /net/dblocal/wwwspecial/peptideatlas/repository/Header_unrelease.php`;
-  }
-
-}
-
-
-
-#######################################################################
-#  finalizePhp -- write root node end tag, and check well-formedness
-#######################################################################
-sub finalizePhp
-{
-  my %args = @_;
-  my $public = $args{public};;
-  if($public){
-  $buffer .= qq~
-    </tbody></table>
-    </form>
-
-    <br/><br/><br/><br/>
-
-    <script language="javascript" type="text/javascript">
-    //<![CDATA[
-      var table_Props =   {
-              col_2: "select",
-              display_all_text: " [ Show all ] ",
-              sort_select: true,
-              col_width: ["250px","200px"],//prevents column width variations
-              alternate_rows: true,
-                                            rows_counter: true,
-              rows_counter_text: "Matched rows: ",
-              btn_reset: true,
-              bnt_reset_text: "Clear all"
-            };
-      setFilterGrid( "table1",table_Props );
-    //]]>
-
-    </script>
-
-
-    </body></html>
-
-    <!-- ------------------------ End of main content ------------------------ -->
-    <!--footer-->
-
-        </td></tr>
-        </table>
-
-        <td height="600" width="1"></td>
-        <tr>
-
-          <td colspan="2" bgcolor="#827975" height="3">
-            <center><span class="copyright">© 2009, Institute for Systems Biology, All Rights Reserved</span>
-            <br></center>
-          </td>
-          <td height="1" width="1">
-            <img src="/images/clear.gif" border="0" height="1" width="1">
-          </td>
-        </tr>
-
-      </tr>
-
-      <tr height="5">
-        <td colspan="2" bgcolor="#294a93" height="5">
-          <img src="/images/clear.gif" border="0" height="5" width="1">
-        </td>
-        <td height="5" width="1">
-          <img src="/images/clear.gif" border="0" height="1" width="1">
-        </td>
-
-      </tr>
-
-      </table>
-      <!-- End Main page table -->
-
-            <script type="text/javascript">
-    var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
-    document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
-    </script>
-    <script type="text/javascript">
-    var pageTracker = _gat._getTracker("UA-2217548-2");
-    pageTracker._setDomainName("none");
-    pageTracker._setAllowLinker(true);
-    pageTracker._initData();
-    pageTracker._trackPageview();
-    </script>
-
-
-    </body>
-    </html>
-   ~;
-  }else{
-     $notpublic_buffer .= qq~
-       </tbody></table>
-       <br/><br/><br/><br/></body></html>
-     ~;
-  }
-}
-
-
-#######################################################################
-# get_data_url -- given sample_accession, search dir, and data_type, 
+# upload_data -- given sample_accession, search dir, and data_type, 
 # gets the url of the gzipped tar file.  
 #
 # Looks for latest gzipped archive file_pattern file in $repository_path
@@ -998,7 +677,7 @@ sub finalizePhp
 #    if files with file_pattern don't exist.  (for example, happens
 #    when original vendor specific spectra are missing)
 #######################################################################
-sub get_data_url
+sub upload_data
 {
     my %args = @_;
 
@@ -1016,15 +695,13 @@ sub get_data_url
 
     my $file_pattern = $args{file_pattern} || die "need file_pattern for list($!)";
 
-    my $data_url;
-
     #### make a file containing files with pattern: ####
     my $fileWithFileNames = "tt.txt";
 
     my $pat = $sample_accession . "*" . $file_pattern . "*" . "gz";
 
     ## files are in $repository_path, but be careful not to include $repository_path/TESTFILES
-    my $cmd = "find $repository_path/ -maxdepth 1 -name \'$pat\'  -print > $fileWithFileNames";
+    my $cmd = "find $repository_path -maxdepth 1 -name \'$pat\'  -print > $fileWithFileNames";
     ## where each file in $fileWithFileNames is given as the absolute path to the file
     print "$cmd\n" if ($VERBOSE);
     system $cmd;
@@ -1047,12 +724,12 @@ sub get_data_url
         ## and return true if it is current, or false if it is not
         my $fileIsCurrent = isFileCurrent( file => $latestFile, properties_ref => $properties_ref);
 
-        if ($fileIsCurrent)
-        {
+       if ($fileIsCurrent)
+       {
             ## [case: versioned file exists and is in sync with database info]
 
-        } else
-        {
+       } else
+       {
             ## [case: versioned file is lagging behind database info]
 
             ## create new properties file and new gzipped archive, 
@@ -1060,7 +737,7 @@ sub get_data_url
             ## for newly created gzipped archive
             ## AND update the database information
       	    ## Ning_added, remove all other versions of mzXML.tar.gz
-	          my $rm_pat = "repository_path/$pat";
+	          my $rm_pat = "$repository_path/$pat";
 	          system "rm -f $rm_pat";
 
             $latestFile = makeNewArchiveAndProperties(
@@ -1069,7 +746,7 @@ sub get_data_url
                 file_suffix => $file_suffix,
                 file_pattern => $file_pattern
             );
-        }
+       }
 
     } else
     {
@@ -1090,33 +767,8 @@ sub get_data_url
         );
     }
 
-    $data_url = convertAbsolutePathToURL( file_path => $latestFile );
-
-#   ## [case: files matching pattern do not exist.  this is expected behavior
-#   ##        for missing orginal data files, for example]
-#   error_message ( 
-#       message => "could not find $file_pattern files in $data_dir",
-#   );
-#   $data_url = "";
-
-    return $data_url;
 }
 
-#######################################################################
-# error_message
-#######################################################################
-sub error_message
-{
-    my %args = @_;
-
-    my $message = $args{message} || die "need message ($!)";
-
-    open(OUTFILE,">>$errorfile") or die "cannot write to $errorfile ($!)";
-
-    print OUTFILE "$message\n";
-
-    close(OUTFILE) or die "cannot close $errorfile ($!)";
-}
 
 #######################################################################
 # get_orig_data_type -- given data_dir, gets orig data type
@@ -1136,38 +788,40 @@ sub get_orig_data_type
     ## check for .RAW files:
     unless ($orig_data_type)
     {
-        my @files = `find $data_dir -maxdepth 1 -name \'*.RAW\'  -print`;
+      foreach my $type (qw(RAW raw wiff WIFF yep baf dtapack)){
+        my @files = `find $data_dir -maxdepth 2 -name \'*.$type*\'  -print`;
 
         if ( $#files > -1)
         {
-            $orig_data_type = "RAW";
+            $orig_data_type = "$type";
         }
+      }
     }
 
 
-    ## check for .raw files:
-    unless ($orig_data_type)
-    {
-        my @files = `find $data_dir -maxdepth 1 -name \'*.raw\' -print`;
-
-        if ( $#files > -1)
-        {
-            $orig_data_type = "raw";
-        }
-    }
-
-
-    ## check for dta.tar files:
-    unless ($orig_data_type)
-    {
-        my @files = `find $data_dir -maxdepth 1 -name \'*_dta.tar\' -print`;
-
-        if ( $#files > -1)
-        {
-            $orig_data_type = "dtapack";
-        }
-    }
-
+#    ## check for .raw files:
+#    unless ($orig_data_type)
+#    {
+#        my @files = `find $data_dir -maxdepth 1 -name \'*.raw\' -print`;
+#
+#        if ( $#files > -1)
+#        {
+#            $orig_data_type = "raw";
+#        }
+#    }
+#
+#
+#    ## check for dta.tar files:
+#    unless ($orig_data_type)
+#    {
+#        my @files = `find $data_dir -maxdepth 1 -name \'*_dta.tar\' -print`;
+#
+#        if ( $#files > -1)
+#        {
+#            $orig_data_type = "dtapack";
+#        }
+#    }
+#
     return $orig_data_type;
 }
 
@@ -1185,7 +839,7 @@ sub get_spectra_location
     my $sample_id = $args{sample_id} or die "need sample_id";
 
     my $sql = qq~
-        SELECT distinct ASB.data_location 
+        SELECT distinct ASB.data_location + '/' + ASB.search_batch_subdir 
         FROM $TBAT_ATLAS_SEARCH_BATCH ASB
         JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB 
         ON (ABSB.atlas_search_batch_id = ASB.atlas_search_batch_id)
@@ -1197,18 +851,23 @@ sub get_spectra_location
     my ($data_path) = $sbeams->selectOneColumn($sql) or 
         die "Could not find atlas_search_batch for sample_id = $sample_id";
 
+print $data_path , "\n";
     ## if $data_path has /data3/sbeams/archive/, remove that
-    $data_path =~ s/^(\/data3\/sbeams\/archive\/)(.+)$/$2/gi;
+    $data_path =~ s/^(.*sbeams\/archive\/)(.+)$/$2/gi;
         
     ## if $data_path starts with a /, remove that
     $data_path =~ s/^(\/)(.+)$/$2/gi;
 
     $data_path = "$sbeams_data_path/$data_path";
+print $data_path , "\n";
 
     ## make sure it exists:
+    if ( ! -d $data_path){
+       $data_path =~ s/(.*)\/.*/$1/;
+    }
     unless (-d $data_path)
     {
-        die "$data_path doesn't exist";
+        die "$sample_id: $data_path doesn't exist";
     }
 
     return $data_path;
@@ -1291,10 +950,11 @@ sub get_notpublic_sample_info
 
         my ($sample_tag, $cell_type, $organism, $data_contributors) = @{$row};
 
-        $data_contributors =~ s/\r/ /g;
+        if($data_contributors){
+          $data_contributors =~ s/\r/ /g;
 
-        $data_contributors =~ s/\n/ /g;
-
+          $data_contributors =~ s/\n/ /g;
+        }
         $sample_info{$sample_tag}->{cell_type} = $cell_type;
 
         $sample_info{$sample_tag}->{organism} = $organism;
@@ -1311,13 +971,13 @@ sub get_notpublic_sample_info
         {
             my ($sample_tag, $cell_type, $organism, $data_contributors) = @{$row};
 
-            if ($sample_info{$sample_tag}->{cell_type} ne $cell_type)
-            {
-                warn "TEST fails for " .
-                    "$sample_info{$sample_tag}->{cell_type} ($!)".
-                    " ($sample_info{$sample_tag}->{cell_type} != " .
-                    " $cell_type)\n";
-            }
+           # if ($sample_info{$sample_tag}->{cell_type} ne $cell_type)
+           # {
+           #     warn "TEST fails for " .
+           #         "$sample_info{$sample_tag}->{cell_type} ($!)".
+           #         " ($sample_info{$sample_tag}->{cell_type} != " .
+           #         " $cell_type)\n";
+           # }
 
             if ($sample_info{$sample_tag}->{organism} ne $organism)
             {
@@ -1441,18 +1101,17 @@ sub write_to_notpublic_file
     my $data_contributors; 
     if ($TEST)
     {
-        $data_contributors = $args{data_contributors}; ## dev database isn't annotated
+        $data_contributors = $args{data_contributors} || ''; ## dev database isn't annotated
     } else
     {
         $data_contributors = $args{data_contributors} || '';
             # or die "need data_contributors for sample_tag $sample_tag";
     }
 
-    $data_contributors =~ s/\r/ /g;
-
-    $data_contributors =~ s/\n/ /g;
-
-
+    if($data_contributors ne ''){
+      $data_contributors =~ s/\r/ /g;
+      $data_contributors =~ s/\n/ /g;
+    }
     my $cell_type = $args{'cell_type'} || "[]"; ## might not be in record
 
    ######## write to xml file: ########
@@ -1694,7 +1353,7 @@ sub writePropertiesFile
 
     my %properties_hash = %{$properties_hash_ref};
 
-    open(OUTFILE, ">$repository_path/$outfile") or die "cannot open $outfile for writing";
+    open(OUTFILE, ">$repository_path/$outfile") or die "cannot open $repository_path/$outfile for writing";
 
     foreach my $key ( keys %properties_hash )
     {
@@ -1788,187 +1447,41 @@ sub mzXML_comparator
     if ($check_mzXML_schema_version eq "yes" )
     {
         ## examples: MsXML, mzXML_2.0, mzXML_2.1, mzXML_1.1.1
-
         my $schema_pattern = '^(.+)_(.+)$';
-
+        
         my $file_version = $propertiesInFile{mzXML_schema};
 
         my $db_version = $propertiesInDatabase{mzXML_schema};
-        
-        if ($file_version =~ /$schema_pattern/)
+        if($file_version =~ /^.+_idx_([\d\.]+).xsd$/)
+        {
+            $file_version = $1;
+        }elsif ($file_version =~ /$schema_pattern/)
         {
             $file_version = $2;
-        } else
+        }else
         {
             $file_version = -1;
         }
-
-        if ($db_version =~ /$schema_pattern/)
+        if($db_version =~ /^(.+)_idx_([\d\.]+).xsd$/)
+        {
+           $db_version = $1;
+        }
+        elsif ($db_version =~ /$schema_pattern/)
         {
             $db_version = $2;
-        } else
+        }
+        else
         {
             $db_version = -1;
         }
-
+        
         ## becomes true when file_version is >= db_version.   
         ## file_version should never be > than db_version though, I think...
         $fileIsCurrent_schema = ($file_version >= $db_version) ? 1 : 0;
-
     } ## end check schema version
 
     $fileIsCurrent = ($fileIsCurrent_software || $fileIsCurrent_schema) ? 1 : 0;
-
-    return $fileIsCurrent;
-}
-
-#######################################################################
-# convertURLToAbsolutePath  -- convert url to absolute file path 
-# @url - URL for file
-# @return path  - absolute path to file
-#######################################################################
-sub convertURLToAbsolutePath
-{
-    my %args = @_;
-
-    my $url = $args{url} or die "need url";
-
-    my $file_path;
-
-    my $file_name = "";
-
-    if ($url =~ /^(http:)(.*)\/(.+\.tar\.gz)$/ )
-    {
-        $file_name = $3;
-        $file_path = $repository_path . "/" . $file_name;
-    }
-
-    ## if this is not a gzipped tar file:
-    if ($file_name eq "")
-    {
-        if ($url =~ /^(http:)(.*)\/(.*)$/ )
-        {
-            $file_name = $3;
-            $file_path = $repository_path . "/" . $file_name;
-        }
-    }
-
-    return $file_path;
-} 
-
-#######################################################################
-# convertURLToFileName  -- convert url to file name
-# @url - URL for file
-# @return filename  - filename within url
-#######################################################################
-sub convertURLToFileName
-{
-    my %args = @_;
-
-    my $url = $args{url} or die "need url";
-
-    my $file_name = "";
-
-    if ($url =~ /^(http:)(.*)\/(.+\.tar\.gz)$/ )
-    {
-        $file_name = $3;
-    }
-
-    return $file_name;
-} 
-
-#######################################################################
-# convertFileNameToURL  -- convert file name to the URL
-# @param file_name  - the relative file name
-# @return URL for file
-#######################################################################
-sub convertFileNameToURL
-{
-    my %args = @_;
-
-    my $file_name = $args{file_name} or die "need file_name";
-
-    my $file_url;
-
-    $file_url = $repository_url . "/" . $file_name;
-
-    return $file_url;
-} 
-#######################################################################
-# convertAbsolutePathToURL  -- convert file path to the full URL
-# @param file_path  - absolute path to file
-# @return URL for file
-#######################################################################
-sub convertAbsolutePathToURL
-{
-    my %args = @_;
-
-    my $file_path = $args{file_path} or die "need file_path";
-
-    my $file_name = $file_path;
- 
-    ## get file name (drop directory path)
-    $file_name =~ s/^(.*)\/(.+\.tar\.gz)$/$2/;
-    $file_name =~ s/^(.*)\/(.+\.gz)$/$2/;
-
-    my $file_url = $repository_url . "/" . $file_name;
-
-    return $file_url;
-} 
-
-#######################################################################
-# deriveFileContentFromName -- derive the file content from the file
-# name.  this is used to fill out an item in the README file
-# @param filename
-# @param brief summary of file content
-#######################################################################
-sub deriveFileContentFromName
-{
-    my %args = @_;
-
-    my $content;
-
-    my $filename = $args{filename} or die "need filename";
-
-    if ($filename =~ /^(.*)mzXML(.*)/ )
-    {
-        $content = "spectra in .mzXML format";
-    }
-
-    unless ($content)
-    {
-        if ( ($filename =~ /^(.*)(\.RAW)(.*)/ ) ||
-        ($filename =~ /^(.*)(\.raw)(.*)/ ) ) 
-        {
-            $content = "spectra in " . $2 . " format";
-        }
-    }
-
-    unless ($content)
-    {
-        if ( ($filename =~ /^(.*)searched(.*)/ ) )
-        {
-            $content = "search/analysis results";
-        }
-    }
-
-    unless ($content)
-    {
-        if ( ($filename =~ /^(.*)prot(.*)/ ) )
-        {
-            $content = "ProteinProphet files";
-        }
-    }
-
-    unless ($content)
-    {
-        if ( ($filename =~ /^(.*)qualscore(.*)/ ) )
-        {
-            $content = "Qualscore list";
-        }
-    }
- 
-    return $content;
+    #return $fileIsCurrent;
 }
 
 #######################################################################
@@ -2035,19 +1548,42 @@ sub makeNewArchiveAndProperties
     system $cmd;
     my $pat = "*$file_pattern";
 
-    ## if file_pattern is 'inter* *ASAP* *.tgz *.html sequest.params', we'll
+    ## if file_pattern is '*.xml *.tgz *.params *ASAP*', we'll
     ## need separate finds
     my @pats = split(" ", $pat);
-    $cmd = "find . -maxdepth 1 -name \'$pats[0]\' -print > $filelist";
-    print "$cmd\n" if ($VERBOSE);
+    $cmd = "find . -maxdepth 2 -name \'$pats[0]*\' -print > $filelist";
+    print "1: $cmd\n" if ($VERBOSE);
     system $cmd;
     for (my $i=1; $i <= $#pats; $i++)
     {
-        $cmd = "find . -maxdepth 1 -name \'$pats[$i]\' -print >> $filelist";
-        print "$cmd\n" if ($VERBOSE);
+        $cmd = "find . -maxdepth 2 -name \'$pats[$i]*\' -print >> $filelist";
+        print "2: $cmd\n" if ($VERBOSE);
         system $cmd;
     }
+    ## check if the search result is in the dir, if not, this might be te combined search result
+    if( $file_suffix =~ /Search_Result/){
+       my @search_result_files = `grep '.xml' $filelist | grep -v inter`;
+       if(@search_result_files == 0 ){
+          print "NO search result found in $data_dir\n" if ($VERBOSE);
+          my @all_search_dirs = Get_OriginalSearchDir(data_dir=> $data_dir);
+          foreach my $search_dir(@all_search_dirs){
+						$data_dir =~ /(.*\/)\.*/;
+						my $str = $1;
+						if($search_dir =~ /$data_dir/){
+							$search_dir =~ s/$data_dir//;
+							 print "1: $str $search_dir\n";
 
+						}elsif($search_dir =~ /$str/){
+						  $search_dir =~ s/$str/..\//;
+							print "2: $str $search_dir\n";
+						}
+					  $search_dir =~ s/^\/\.\./\.\./; 
+            $cmd = "find $search_dir -maxdepth 1 -name '*.pep.xml' -print >> $filelist";
+            print "$cmd\n" if ($VERBOSE);
+            system $cmd;
+          }
+       }
+    }
     ## if filelist is empty, report error message, and set final file to null: 
     if (-z $filelist)
     {
@@ -2062,26 +1598,26 @@ sub makeNewArchiveAndProperties
         my %properties_hash;
 
         ## if this is an mzXML file, get its properties
-        if ( $file_suffix eq "mzXML" )
+        if ( $file_suffix eq "mzXML")
         {
             ## write a properties file with the mzXML characteristics
             my $mzXMLFile = getAFileInFile( fileWithFileNames => $filelist);
 
             my $spectrum_parser = new SpectraDescriptionSetParametersParser();
+            if ($mzXMLFile !~ /\.gz/ &&  $data_dir !~ /smohammed/){
+							$spectrum_parser->setSpectrumXML_file($mzXMLFile);
 
-            $spectrum_parser->setSpectrumXML_file($mzXMLFile);
+							$spectrum_parser->parse();
 
-            $spectrum_parser->parse();
+							my $mzXML_schema = $spectrum_parser->getSpectrumXML_schema();
+							my $conversion_software_name = $spectrum_parser->getConversion_software_name();
 
-            my $mzXML_schema = $spectrum_parser->getSpectrumXML_schema();
-            my $conversion_software_name = $spectrum_parser->getConversion_software_name();
+							my $conversion_software_version = $spectrum_parser->getConversion_software_version();
 
-            my $conversion_software_version = $spectrum_parser->getConversion_software_version();
-
-            %properties_hash = ( mzXML_schema => $mzXML_schema,
-                conversion_software_name => $conversion_software_name,
-                conversion_software_version => $conversion_software_version);
-
+							%properties_hash = ( mzXML_schema => $mzXML_schema,
+									conversion_software_name => $conversion_software_name,
+									conversion_software_version => $conversion_software_version);
+            }
         } elsif ( ($file_suffix =~ /^Search(.*)/) || ($file_suffix =~ /^prot_(.*)/) )
         {
             my $results_parser = new SearchResultsParametersParser();
@@ -2101,28 +1637,14 @@ sub makeNewArchiveAndProperties
 
 
         ## get archive filename from $versioned_compressed_archive_filename
-        my $versioned_archive_filename = $versioned_compressed_archive_filename;
-        $versioned_archive_filename =~ s/\.gz//;
+        #my $versioned_archive_filename = $versioned_compressed_archive_filename;
+        #$versioned_archive_filename =~ s/\.gz//;
 
         ## make tar file
-        my $cmd = "tar -cf $repository_path/$versioned_archive_filename --files-from=$filelist";
+        my $cmd = "tar -v -h -czf $repository_path/$versioned_compressed_archive_filename --files-from=$filelist";
         print "$cmd\n" if ($VERBOSE);
         system $cmd;
     
-        ## compress the tar file:
-        my $cmd = "gzip $repository_path/$versioned_archive_filename";
-        print "$cmd\n" if ($VERBOSE);
-        system $cmd;
-
-        ## move them to $repository_path/  
-        #$cmd = "mv $versioned_compressed_archive_filename $repository_path/";
-        #print "$cmd\n" if ($VERBOSE);
-        #system $cmd;
-
-        #$cmd = "mv $versioned_properties_filename $repository_path/";
-        #print "$cmd\n" if ($VERBOSE);
-        #system $cmd;
-
         my $check_path1 = $repository_path . "/" . $versioned_compressed_archive_filename;
 
         my $check_path2 = $repository_path . "/" . $versioned_properties_filename;
@@ -2149,13 +1671,16 @@ sub makeNewArchiveAndProperties
 
                 if ( $prefix )
                 {
-                    ## if sequest.params exists, copy it over
-                    if (-e "sequest.params")
-                    {
-                        my $new_file_name = "$repository_path/$prefix" . "_sequest.params";
-                        $cmd = "cp sequest.params $new_file_name";
+                    ## if *.params exists, copy it over
+                    my @params_file = `ls {spectrast,sequest,omssa,tandem}.params`;
+                    foreach my $pf (@params_file){
+                      chomp $pf;
+                      if( ! -z $pf){
+                        my $new_file_name = "$repository_path/$prefix" . "_$pf";
+                        $cmd = "cp $pf $new_file_name";
                         print "$cmd\n" if ($VERBOSE);
                         system $cmd;
+                       }
                     }
                     ## if qualscore file exists, copy it over
                     if (-e "qualscore_results")
@@ -2179,6 +1704,31 @@ sub makeNewArchiveAndProperties
     chdir $progwd;
 
     return $versioned_compressed_archive_file_path;
+}
+### 
+sub Get_OriginalSearchDir {
+
+   my  %args = @_;
+   my  $data_dir =  $args{data_dir};
+	 my $iprophetfile = `ls $data_dir/interact*{ipro,combine}*.xml | grep -v prot | grep -v filter`;
+	 chomp $iprophetfile;
+	 my (@inputfiles, @all_search_dirs);
+	if( -e $iprophetfile ){
+		@inputfiles = `grep -m1 -A50 '<analysis_summary analysis="interprophet"' $iprophetfile | grep  '<inputfile name="' `;
+	}
+	if(@inputfiles >=  2){
+		foreach my $f(@inputfiles){
+			chomp $f;
+			$f =~ /<inputfile name="(.*\/)interact.*/;
+      my $search_dir = $1;
+			if($search_dir =~ /^\.\.\/(.*)/){
+				push @all_search_dirs, "$data_dir/../$1";
+			}else{
+				push @all_search_dirs, "$search_dir";
+			}
+		}
+  }
+  return   @all_search_dirs;
 }
 
 
@@ -2206,7 +1756,7 @@ sub get_versioned_compressed_archive_filename
     );
 
 
-    my $file = $file.".gz";
+    $file = $file.".gz";
 
     return $file;
 
@@ -2287,62 +1837,9 @@ sub updateDatabaseSpectrumProperties
 }
 
 
-#######################################################################
-# addResourceTag  add a resource element to public xml file, include attribute
-# @param attr_name
-# @param attr_value
-#######################################################################
-sub addResourceTag
-{
-    my %args = @_;
-
-    my $attr_name = $args{attr_name} or die "need attr_name";
-
-    my $attr_value = $args{attr_value} or die "need attr_value with $attr_name";
-
-    my $file_size = $args{file_size} || 0;
-
-    my $asbid = $args{asbid} || "";
-
-    ## write opening sample tag information to xml:
-    ## open xml file and writer:
-    $file_size = "($file_size)<nobr>" if $file_size;
-    if($attr_name eq 'README'){
-      $buffer .= qq~ <a onmousedown="whichButton=event.button;Mousedown(this)" href="$attr_value">README</a>~;
-   }elsif($attr_name eq 'README_TRANCHE'){
-       $buffer .= qq~
-                <input value="$attr_value" type="hidden"/>
-                </td>
-                ~;
-    }else{
-      $buffer .= qq~
-                <a onmousedown="whichButton=event.button;Mousedown(this)" href="$attr_value">
-                $attr_name</a>$file_size<br/>
-                ~;
-    }
-
-}
 
 #######################################################################
-# addPublicationTag -- add a publication tag to the xml file
-# @param short name for the publication
-# @param url for publication
-#######################################################################
-sub addPublicationTag
-{
-    my %args = @_;
-
-    my $citation = $args{citation} or die "need citation";
-
-    my $url = $args{url} or die "need url for citation: $citation";
-
-    ## write opening sample tag information to xml:
-    $rowbuffer .= qq~ <a href="$url">$citation</a><br/>~;
-}
-
-
-#######################################################################
-# get_orig_data_url  -- get original data URL from public repository, 
+# upload_orig_data  -- get original data URL from public repository, 
 #  or if doesn't exist, packs up files and moves them there, and then
 #  returns url
 # @param sample_id -
@@ -2351,7 +1848,7 @@ sub addPublicationTag
 # @param orig_data_type -
 # @return URL to the archive data file
 #######################################################################
-sub get_orig_data_url
+sub upload_orig_data
 {
     my %args =@_;
 
@@ -2365,10 +1862,6 @@ sub get_orig_data_url
 
     my $orig_data_type = $args{orig_data_type} or die
         "orig_data_type";
-
-    my $data_url;
-
-    my $file_url;
 
     ## does an archive file already exist in the repository?
     my $filelist = "tt.txt";
@@ -2425,8 +1918,14 @@ sub get_orig_data_url
             print "$cmd\n" if ($VERBOSE);
             system $cmd;
             my $pat = "*$orig_data_type";
+            my $maxdepth = 1;
+            if($pat =~ /raw/i){
+             $maxdepth = 2;
+            }
             $pat = "*_dta.tar" if ($orig_data_type eq "dtapack");
-            $cmd = "find . -maxdepth 1 -name \'$pat\' -print  > $filelist";
+            print "$pat\n";
+
+            $cmd = "find . -maxdepth 2 -name \'$pat\' -print  > $filelist";
             print "$cmd\n" if ($VERBOSE);
             system $cmd;
 
@@ -2443,22 +1942,22 @@ sub get_orig_data_url
 
             } else
             {
-                my $tar_file_name = $versioned_archive_filename;
+                #my $tar_file_name = $versioned_archive_filename;
 
                 ## make tar file
-                my $cmd = "tar -cf $repository_path/$tar_file_name --files-from=$filelist";
+                my $cmd = "tar -v -h -czf $repository_path/$versioned_compressed_archive_filename --files-from=$filelist";
                 print "$cmd\n" if ($VERBOSE);
                 system $cmd;
     
                 ## compress the tar file:
-                my $cmd = "gzip $repository_path/$tar_file_name";
-                print "$cmd\n" if ($VERBOSE);
-                system $cmd;
+                #my $cmd = "gzip $repository_path/$sample_accession/$tar_file_name";
+                #print "$cmd\n" if ($VERBOSE);
+                #system $cmd;
 
                 ####  move them to $repository_path/  ####
-                $cmd = "mv $versioned_compressed_archive_filename $versioned_compressed_archive_file_path";
-                print "$cmd\n" if ($VERBOSE);
-                system $cmd;
+                #$cmd = "mv $versioned_compressed_archive_filename $versioned_compressed_archive_file_path";
+                #print "$cmd\n" if ($VERBOSE);
+                #system $cmd;
 
             }
 
@@ -2470,18 +1969,11 @@ sub get_orig_data_url
                 if ($VERBOSE);
         } 
     }
-
-    $data_url = convertAbsolutePathToURL( 
-        file_path => $versioned_compressed_archive_file_path );
-
-    print "url for archive file: $data_url\n" if ($VERBOSE);
-
-    return $data_url;
 }
 
 
 #######################################################################
-# get_an_sb_file_url - looks for file in public archive, and
+# upload_sb_files - looks for file in public archive, and
 # if not there, generates it and puts it there.
 # (this is written to handle sequest.params and qualscore_results)
 # @param file_name - the public archive file name to look for
@@ -2489,7 +1981,7 @@ sub get_orig_data_url
 # @param search_results_dir
 # @return URL for gzipped file of sequest.params file
 #######################################################################
-sub get_an_sb_file_url
+sub upload_sb_files
 {
     my %args =@_;
 
@@ -2500,8 +1992,9 @@ sub get_an_sb_file_url
     my $data_dir = $args{search_results_dir} or die
         "need search_results_dir";
 
-    my $file_url;
-        
+  
+    my $prefix = $file_name;
+    $prefix =~ s/_search.params//;     
     ## does a search_batch for this atlas_search_batch_id already exist in
     ## the archive?  if not, make one:
     my $filelist = "tt.txt";
@@ -2510,22 +2003,32 @@ sub get_an_sb_file_url
     print "$cmd\n" if ($VERBOSE);
     system $cmd;
     my $file_path;
-    my $file_url ="";
+    #if( -e "$repository_path/$prefix"."_sequest.params" and ! -e "$data_dir/sequest.params"){
+    #  `cp "$repository_path/$prefix""_sequest.params" "$data_dir/sequest.params"` ;
+    #   print "cp $repository_path/$prefix _sequest.params $data_dir/sequest.params\n";
+    #}
+    #if( -e "$repository_path/$prefix"."_tandem.params" and ! -e "$data_dir/tandem.params"){
+    #  `cp "$repository_path/$prefix""_tandem.params" "$data_dir/tandem.params"` ;
+    #   print "cp $repository_path/$prefix _tandem.params $data_dir/tandem.params\n";
+    #}
+
+    #if( -e "$repository_path/$prefix"."_spectrast.params" and ! -e "$data_dir/spectrast.params"){
+    #  `cp "$repository_path/$prefix""_spectrast.params" "$data_dir/spectrast.params"` ;
+    #   print "cp $repository_path/$prefix _spectrast.params $data_dir/spectrast.params\n";
+    #}
 
     if (-s $filelist)
     { ## [case: file list is not empty]
-        $file_path = "$repository_path/$file_name.gz";
+        $file_path = "$repository_path/$file_name.tar.gz";
 
         print "Found archive file: $file_path\n" if ($VERBOSE);
-
-        $file_url = convertAbsolutePathToURL( file_path => $file_path );
     }
 
     ## if filelist is empty
     if (-z $filelist)
     {
         my $file_pattern = $sb_file_name;
-
+        my %search_database;
         ## get pwd, chdir to search_batch_dir, gzip file and move it to public archive
         my $progwd = `pwd`;
         chdir $data_dir || die "cannot chdir to $data_dir ($!)";
@@ -2536,34 +2039,126 @@ sub get_an_sb_file_url
         my $cmd = "rm -f $filelist";
         print "$cmd\n" if ($VERBOSE);
         system $cmd;
-        my $pat = "$sb_file_name";
-        $cmd = "find . -maxdepth 1 -name \'$pat\' -print  > $filelist";
+        my $pat = '';
+        if($sb_file_name =~ /params/){
+          $pat = "*.$sb_file_name";
+        }else{
+          $pat = $sb_file_name;
+        }
+        my ($db,$search_type)  = getSearchDatabaseAndSearchType(data_dir => $data_dir);
+                          
+        if($db){
+          $search_database{$db} = $search_type;
+        }
+        $cmd = "find . -maxdepth 1 -name \'$pat\'  -not -empty -print |grep -v '.*\..*\..*' | grep -v 'xinteract' > $filelist";
         print "$cmd\n" if ($VERBOSE);
         system $cmd;
+        if( -z $filelist && $sb_file_name =~ /params/ ){
+          my @all_search_dirs = Get_OriginalSearchDir(data_dir=> $data_dir);
+          foreach my $dir (@all_search_dirs){
+            print "copy  $dir/*.params to $data_dir\n" if ($VERBOSE);
+            `cp $dir/{tandem,spectrast,sequest,omssa}.params  $data_dir`;
+            ($db, $search_type) = getSearchDatabaseAndSearchType(data_dir => "$dir/");
+            if($db ne ''){
+               print "found database $db \n"  if ($VERBOSE);
+               $search_database{$db} = $search_type;
+            }else{
+              print "WARNNING: no search database found for $dir/\n";
+            }
+
+          }
+          `rm $filelist`;
+          print "$cmd\n" if ($VERBOSE);
+          system $cmd; 
+        }
+
         ## if filelist is not empty
         unless (-z $filelist)
         {
-            ## copy the file to repository name and compress it:
-            my $cmd = "cp $sb_file_name $file_name";
-            print "$cmd\n" if ($VERBOSE);
-            system $cmd;
-            my $cmd = "gzip $file_name";
+            my $cmd = "tar -v -h -czf $file_name.tar.gz --files-from=$filelist";
             print "$cmd\n" if ($VERBOSE);
             system $cmd;
             ## move it to $repository_path/
-            $cmd = "mv $file_name.gz $repository_path/";
+            $cmd = "mv $file_name.tar.gz $repository_path/";
             print "$cmd\n" if ($VERBOSE);
             system $cmd;
-            $file_path = "$repository_path/$file_name.gz";
-            $file_url = convertAbsolutePathToURL( file_path => $file_path );
+            ## copy the file to repository name and compress it:
+            if($sb_file_name =~ /params/){
+              my @params_files = `cat $filelist`;
+              foreach (@params_files){
+                chomp;
+                s/\.\///;
+                $cmd = "cp $_ '$repository_path/$prefix''_$_'";
+                print "$cmd\n" if($VERBOSE);
+                system $cmd;
+              }
+            }else{
+              $cmd = "cp $sb_file_name $repository_path/$file_name";
+              print "$cmd\n" if ($VERBOSE);
+              system $cmd;
+            }
+
+            $file_path = "$repository_path/$file_name.tar.gz";
+            
+           ### copy search database
+           foreach my $db (keys %search_database){
+             my $name = $db;
+             $name =~ s/.*\/(.*)/$1/;
+             if( -e $db ){
+               if( ! -e "$repository_path/../../SearchDatabase/$name"){
+                 `cp $db $repository_path/../../SearchDatabase/`;
+               }
+               my $dbname;
+               if($search_database{$db} eq ''){
+                  $dbname = "$repository_path/$prefix"."_searchdatabase.fasta";
+               }else{
+                 if($name =~ /splib/){
+                   $dbname = "$repository_path/$prefix"."_searchdatabase_$search_database{$db}.splib";
+                 }else{
+                   $dbname = "$repository_path/$prefix"."_searchdatabase_$search_database{$db}.fasta";
+                 }
+               }
+               `ln -s "../../SearchDatabase/$name" "$dbname"`;
+              }else{
+                print "WARNNING: $db not found\n";
+              }
+            } 
         }
     }
-
-    return $file_url;
 }
 
+sub getSearchDatabaseAndSearchType {
+  my %args  = @_;
+  my $data_dir = $args{data_dir};
+  my ($search_type, $db);
+  if( -e "$data_dir/sequest.params" ) {
+     $search_type = "sequest";
+      $db = `grep database_name sequest.params | sed 's/.*=//g' `;
+  }elsif( -e "$data_dir/spectrast.params" ){
+    $search_type = "spectrast";
+    $db = `grep '^libraryFile' spectrast.params | sed 's/.*=//g'`; 
+  }else{
+    if( -e "$data_dir/tandem.params" ) {
+      $search_type = "tandem";
+    }
+    $db = `ls $data_dir/*.xml | grep -v inter | tail -1 | xargs grep -m1 'search_database' | cut -f2 -d'"'`;
+  }
+  $db =~ s/\s+//g;
+  if($db && $db =~ /^\/dbase/){
+    $db = "/regis/$db";
+  }
+  if($db =~ /fgcz_7227_2005010.fasta/){
+     $db = '/regis/dbase/users/sbeams/fly_fgcz_7227_20050105.fasta';
+  }
+  if($db =~ /p225_db7_20070808_decoy_wormpep170/){
+    $db ='/regis/sbeams/archive/sschrimp/Celegans/db/decoy_wormpep170.fa';
+  }
+  return ($db, $search_type);
+}
+
+
 #######################################################################
-# get_search_results_url - get repository URL for gzipped tar file
+# upload_search_result - get repository URL for gzipped tar file
 # of search results, check properties of database with
 # timestamp properties file and pack up new files if the archive
 # doesn't already exist to create the archive file;  ALSO, need to
@@ -2575,7 +2170,7 @@ sub get_an_sb_file_url
 # @param search_results_dir
 # @return URL for gzipped tar file of search results
 #######################################################################
-sub get_search_results_url
+sub upload_search_result
 {
     my %args =@_;
 
@@ -2595,13 +2190,11 @@ sub get_search_results_url
 
     my $suffix = "Search_Results_" . $atlas_search_batch_id;
 
-    my $file_url;
-        
     ## does a search_batch for this atlas_search_batch_id already exist in
     ## the archive?  if not, make one:
     my $filelist = "tt.txt";
     my $pat = "$sample_accession*$suffix*gz";
-    my $cmd = "find $repository_path/ -maxdepth 1 -name \'$pat\' -print > $filelist";
+    my $cmd = "find $repository_path -maxdepth 1 -name \'$pat\' -print > $filelist";
     print "$cmd\n" if ($VERBOSE);
     system $cmd;
     my $file_path;
@@ -2616,7 +2209,7 @@ sub get_search_results_url
     ## if filelist is empty
     if (-z $filelist)
     {
-        my $file_pattern = "inter* *ASAP* *.tgz *.html sequest.params";
+        my $file_pattern = "*.xml *.tgz *.params *ASAP*";
 
         my $prefix = $sample_accession . "_" . $atlas_search_batch_id;
 
@@ -2629,15 +2222,11 @@ sub get_search_results_url
         );
 
     }
-
-    $file_url = convertAbsolutePathToURL( file_path => $file_path );
-
-    return $file_url;
 }
 
 
 #######################################################################
-# get_protein_prophet_url - get repository URL for gzipped tar file
+# upload_protein_prophet_files - get repository URL for gzipped tar file
 # of search results, check properties of database with
 # timestamp properties file and pack up new files if the archive
 # doesn't already exist to create the archive file;  ALSO, need to
@@ -2649,7 +2238,7 @@ sub get_search_results_url
 # @param search_results_dir
 # @return URL for gzipped tar file of search results
 #######################################################################
-sub get_protein_prophet_url
+sub upload_protein_prophet_files
 {
     my %args =@_;
 
@@ -2669,13 +2258,11 @@ sub get_protein_prophet_url
 
     my $suffix = "prot_" . $atlas_search_batch_id;
 
-    my $file_url;
-        
     ## does a protein prophet archive for this atlas_search_batch_id already exist in
     ## the archive?  if not, make one:
     my $filelist = "tt.txt";
     my $pat = "$sample_accession*$suffix*gz";
-    my $cmd = "find $repository_path/ -maxdepth 1 -name \'$pat\' -print > $filelist";
+    my $cmd = "find $repository_path -maxdepth 1 -name \'$pat\' -print > $filelist";
     print "$cmd\n" if ($VERBOSE);
     system $cmd;
 
@@ -2700,15 +2287,11 @@ sub get_protein_prophet_url
         );
 
     }
-
-    $file_url = convertAbsolutePathToURL( file_path => $file_path );
-
-    return $file_url;
 }
 
 
 #######################################################################
-# write_readme_and_get_readme_url
+# write_readme
 # @param sample_accession
 # @param sample_tag
 # @param organism
@@ -2721,7 +2304,7 @@ sub get_protein_prophet_url
 # @param array_of_pubmed_ids_ref 
 # @return readme_url
 #######################################################################
-sub write_readme_and_get_readme_url
+sub write_readme
 {
     my %args = @_;
 
@@ -2743,10 +2326,6 @@ sub write_readme_and_get_readme_url
        $data_contributors = $args{data_contributors} or die "need data_contributors";
     }
 
-    my $array_of_file_urls_ref = $args{array_of_file_urls_ref} or
-        die "need array_of_file_urls_ref";
-    my @array_of_file_urls = @{$array_of_file_urls_ref};
-
     my $array_of_pub_url_ref = $args{array_of_pub_url_ref};
     my $array_of_pub_cit_ref = $args{array_of_pub_cit_ref};
     my $array_of_pubmed_ids_ref = $args{array_of_pubmed_ids_ref};
@@ -2764,7 +2343,6 @@ sub write_readme_and_get_readme_url
     my $outfile = "$repository_path/$sample_accession" . "_README";
 
     my $file_name = $sample_accession . "_README";
-    my $readme_url = convertFileNameToURL( file_name => $file_name );
 
     ## write to README file
     open(OUTFILE,">$outfile") or die "cannot open $outfile for writing";
@@ -2815,30 +2393,8 @@ sub write_readme_and_get_readme_url
     print OUTFILE "$str\n\n";
 
     ## File sizes:
-    my $fmt = "%-40s %-10s %-32s\n";
-    $str = sprintf("$fmt", "#File", "size [bytes]", "Content:");
     print OUTFILE "$str";
-
-    for ( my $i = 0; $i <= $#array_of_file_urls ; $i++)
-    {
-        my $url          = $array_of_file_urls[$i];
-        my $file_path    = convertURLToAbsolutePath( url => $url );
-        if (!-e $file_path)
-        {
-            error_message( message => "file does not exist: $file_path");
-        } else
-        {
-            my $file_name    = convertURLToFileName( url => $url );
-            my $file_size    = stat($file_path)->size;
-            my $file_content = deriveFileContentFromName( filename => $file_path );
-            $str = sprintf("$fmt", $file_name, $file_size, $file_content);
-            print OUTFILE "$str";
-        }
-    }
-
     close(OUTFILE) or die "cannot close $outfile ($!)";
-
-    return $readme_url;
 
 }
 
@@ -2888,41 +2444,10 @@ sub formatSampleIDs
 
     return $sample_ids;
 }
-
-
-#######################################################################
-# getFileSize -- get file size in units of MB
-# 
-# @param file
-#######################################################################
-sub getFileSize
+sub error_message
 {
-    my %args = @_;
+	    my %args = @_;
 
-    my $file = $args{file};
-
-    my $file_path    = convertURLToAbsolutePath( url => $file );
-
-    my $file_size;
-
-    if (!-e $file_path)
-    {
-        error_message( message => "file does not exist: $file_path");
-    } else
-    {
-        $file_size = stat($file_path)->size;
-        if($file_size >= 1000000000){
-          $file_size = sprintf("%.3f", $file_size/1000000000);
-          $file_size .= " GB";
-        }elsif($file_size < 1000000000 and $file_size >= 1000000){
-          $file_size = sprintf("%.3f", $file_size/1000000);
-          $file_size .= " MB";
-        }elsif ($file_size < 1000000 and $file_size >= 1000){
-          $file_size = sprintf("%.3f", $file_size/1000);
-          $file_size .= " KB";
-        }
-
-    }
-
-    return $file_size;
+			my $message = $args{message} || die "need message ($!)";
+      die "$message\n";
 }
