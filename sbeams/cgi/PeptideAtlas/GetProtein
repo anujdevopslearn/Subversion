@@ -4569,9 +4569,20 @@ sub displayExternalLinksSection {
   }
 
 
+  my $currentOrganism = $current_page->{organism} || $sbeamsMOD->getCurrentAtlasOrganism(parameters_ref=>{});
+  #### Display the link to PPDB
+  if ($currentOrganism =~ /Arabidopsis/ && $biosequence->{biosequence_name} =~ /^A/ ){
+     
+     $external_links .= $sbeamsMOD->encodeSectionItem(
+        key => 'Plant Proteome Database',
+        tr_info => $tr,
+        value => qq~<div style="display:none"><form name="hpa" method="POST" action="http://ppdb.tc.cornell.edu/dbsearch/gene.aspx?acc=$biosequence->{biosequence_name}" target="_info"><input type="hidden" name="search_str" value="$biosequence->{biosequence_name}"></form></div><a href="javascript:document.hpa.submit()" title="Look up $biosequence->{biosequence_name} in the Plant Proteome Database">$biosequence->{biosequence_name}</a>~,
+        url => "http://ppdb.tc.cornell.edu/dbsearch/gene.aspx?acc=$biosequence->{biosequence_name}",
+      );
+  }
+
 
   #### Display a link to Human Protein Atlas (hpr)
-  my $currentOrganism = $current_page->{organism} || $sbeamsMOD->getCurrentAtlasOrganism(parameters_ref=>{});
   my $entrezGeneID = $biosequence->{synonyms}->{'Entrez Gene Symbol'};
   if ($currentOrganism eq 'Human' && $entrezGeneID) {
     if ($sbeams->output_mode() eq 'html') {
