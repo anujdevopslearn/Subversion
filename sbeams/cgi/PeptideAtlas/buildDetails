@@ -703,6 +703,17 @@ sub get_build_overview {
   WHERE atlas_build_id = $build_id 
   PEP
 
+  my $pep_count = $sbeams->selectrow_hashref( <<"  PEP" );
+  SELECT COUNT(*) cnt,  SUM(n_observations) obs
+	FROM (
+		SELECT DISTINCT PI.PEPTIDE_INSTANCE_ID, PI.N_OBSERVATIONS
+		FROM $TBAT_PEPTIDE_INSTANCE PI
+		JOIN $TBAT_PEPTIDE_MAPPING PM ON (PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID)
+		JOIN $TBAT_BIOSEQUENCE B ON (PM.MATCHED_BIOSEQUENCE_ID = B.BIOSEQUENCE_ID)
+		WHERE  ATLAS_BUILD_ID= $build_id AND B.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
+	) A
+  PEP
+
   my $multi_pep_count = $sbeams->selectrow_hashref( <<"  MPEP" );
   SELECT COUNT(*) cnt, SUM(n_observations) obs
   FROM $TBAT_PEPTIDE_INSTANCE  

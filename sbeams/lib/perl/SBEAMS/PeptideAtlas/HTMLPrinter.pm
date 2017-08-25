@@ -1899,6 +1899,7 @@ sub get_proteome_coverage {
   my $sbeams = $self->getSBEAMS();
 
   my $sql = qq~
+  (
   SELECT COUNT(*), B.dbxref_id, dbxref_name, B.biosequence_set_id 
   FROM $TBAT_ATLAS_BUILD AB
   JOIN $TBAT_BIOSEQUENCE B ON B.biosequence_set_id = AB.biosequence_set_id
@@ -1906,7 +1907,20 @@ sub get_proteome_coverage {
   WHERE atlas_build_id = $build_id
   AND B.dbxref_id IS NOT NULL
   GROUP BY B.dbxref_id, dbxref_name, B.biosequence_set_id
-  ORDER BY B.dbxref_id
+  )
+  UNION 
+  (SELECT COUNT(DISTINCT B2.BIOSEQUENCE_ID) AS CNT, 
+         '', 
+         LEFT (B2.BIOSEQUENCE_NAME, PATINDEX('%[_]%', B2.BIOSEQUENCE_NAME)) AS CAT, 
+         B2.BIOSEQUENCE_SET_ID 
+  FROM $TBAT_ATLAS_BUILD AB2
+  JOIN $TBAT_BIOSEQUENCE B2 ON B2.BIOSEQUENCE_SET_ID = AB2.BIOSEQUENCE_SET_ID
+  WHERE atlas_build_id = $build_id 
+	AND B2.DBXREF_ID IS NULL
+	AND B2.BIOSEQUENCE_NAME LIKE '%\\_%' ESCAPE '\\'
+  AND B2.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
+	GROUP BY B2.BIOSEQUENCE_SET_ID , LEFT (B2.BIOSEQUENCE_NAME, PATINDEX( '%[_]%', B2.BIOSEQUENCE_NAME ))
+  )
   ~;
   my $sth = $sbeams->get_statement_handle( $sql );
   my @names;
@@ -1915,14 +1929,29 @@ sub get_proteome_coverage {
   }
 
   my $obs_sql = qq~
-  SELECT COUNT(DISTINCT biosequence_id), dbxref_id
+  (SELECT COUNT(DISTINCT B.BIOSEQUENCE_ID),convert(varchar(10), B.DBXREF_ID)
   FROM $TBAT_BIOSEQUENCE B
   JOIN $TBAT_PEPTIDE_MAPPING PM 
-    ON PM.matched_biosequence_id = B.biosequence_id
+    ON PM.MATCHED_BIOSEQUENCE_ID = B.BIOSEQUENCE_ID
   JOIN $TBAT_PEPTIDE_INSTANCE PI 
-    ON PM.peptide_instance_id = PI.peptide_instance_id
+    ON PM.PEPTIDE_INSTANCE_ID = PI.PEPTIDE_INSTANCE_ID
   WHERE atlas_build_id = $build_id
-  GROUP BY dbxref_id
+  GROUP BY B.DBXREF_ID
+  )
+  UNION
+  (SELECT COUNT(DISTINCT B2.BIOSEQUENCE_ID) AS CNT, 
+         LEFT (B2.BIOSEQUENCE_NAME, PATINDEX('%[_]%', B2.BIOSEQUENCE_NAME)) AS CAT
+    FROM $TBAT_BIOSEQUENCE B2
+    JOIN $TBAT_PEPTIDE_MAPPING PM2
+      ON PM2.MATCHED_BIOSEQUENCE_ID = B2.BIOSEQUENCE_ID
+    JOIN $TBAT_PEPTIDE_INSTANCE PI2
+      ON PM2.PEPTIDE_INSTANCE_ID = PI2.PEPTIDE_INSTANCE_ID
+    WHERE atlas_build_id = $build_id
+  and B2.dbxref_id is null
+  AND B2.BIOSEQUENCE_NAME LIKE '%\\_%' ESCAPE '\\'
+  AND B2.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
+  GROUP BY LEFT (B2.BIOSEQUENCE_NAME, PATINDEX( '%[_]%', B2.BIOSEQUENCE_NAME ))
+  )
   ~;
   my $obssth = $sbeams->get_statement_handle( $obs_sql );
   my %obs;
@@ -1944,13 +1973,20 @@ sub get_proteome_coverage {
 
   for my $row ( @names ) {
     my $db = $row->[2]; 
+    $db =~ s/\_$//;
     if ( $db eq 'Swiss-Prot' ) {
       $db .= ' (may include Varsplic)';
     } elsif ( $db eq 'UniProt' ) {
       $db .= ' (excludes SwissProt if shown)';
     }
     my $pct = 0;
-    my $obs = $obs{$row->[1]};
+    my $obs = '';
+    if($row->[1] =~ /^\d+$/ && $row->[1] !~ /^0$/){ 
+      $obs = $obs{$row->[1]};
+    }else{
+      $obs = $obs{$row->[2]};
+    }
+
     if ( $obs && $row->[0] ) {
         $pct = sprintf( "%0.1f", 100*($obs/$row->[0]) );
     }
@@ -2032,9 +2068,12 @@ sub get_what_is_new {
 
 
   $sql = qq~
-  SELECT  atlas_build_id,  COUNT(peptide_instance_id) cnt
-  FROM $TBAT_PEPTIDE_INSTANCE
+  SELECT  atlas_build_id,  COUNT(distinct PI.peptide_instance_id) cnt
+  FROM $TBAT_PEPTIDE_INSTANCE PI
+  JOIN $TBAT_PEPTIDE_MAPPING PM ON (PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID)
+  JOIN $TBAT_BIOSEQUENCE B ON (PM.MATCHED_BIOSEQUENCE_ID = B.BIOSEQUENCE_ID)
   WHERE atlas_build_id in ($build_id, $previous_build_id)
+  AND B.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
   GROUP BY atlas_build_id
   ~;
   my %pep_count = $sbeams->selectTwoColumnHash($sql);
