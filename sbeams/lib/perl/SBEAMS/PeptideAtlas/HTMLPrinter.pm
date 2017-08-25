@@ -2074,6 +2074,7 @@ sub get_what_is_new {
   JOIN $TBAT_BIOSEQUENCE B ON (PM.MATCHED_BIOSEQUENCE_ID = B.BIOSEQUENCE_ID)
   WHERE atlas_build_id in ($build_id, $previous_build_id)
   AND B.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
+  AND B.BIOSEQUENCE_NAME NOT LIKE 'CONTAM%'
   GROUP BY atlas_build_id
   ~;
   my %pep_count = $sbeams->selectTwoColumnHash($sql);
