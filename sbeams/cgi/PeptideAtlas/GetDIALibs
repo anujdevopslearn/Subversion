@@ -1504,7 +1504,7 @@ sub get_public_libsets {
                                                width => '800',
                                               align  => [ qw(left left left left ) ],
                                                 rows => \@lib_data,
-                                         chg_bkg_idx => 1, 
+                                         chg_bkg_idx => 0, 
                                             bg_color => '#EAEAEA',
                                             sortable => 0,
                                               nowrap => [1,2,3],
