@@ -3507,13 +3507,13 @@ sub displayAnnotatedSequence {
 #      <script src="https://code.jquery.com/jquery-3.1.0.js"></script>
        
       # update (or remove conditional) when MuPit connection goes live.
-      my $show_mupit = 0;
+      my $show_mupit = 1;
       print q~
       <script src="https://code.jquery.com/jquery-3.1.1.min.js" integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" crossorigin="anonymous"></script>
 
       <script type="text/javascript">
       function check_mupit( prot, offset, num ) {
-        var url = "http://karchin-web02.icm.jhu.edu/MuPIT_Interactive/rest/showstructure/check?pos=" + prot + ":" + offset + "&protquery=y";
+        var url = "http://cravat.us/MuPIT_Interactive/rest/showstructure/check?pos=" + prot + ":" + offset + "&protquery=y";
 
 //        if ( num > 40000 ) {
    
@@ -3594,7 +3594,7 @@ sub displayAnnotatedSequence {
         print "<script type='text/javascript'>check_mupit( '$prot', $var->[3], $var->[1] )</script>" unless $var->[1] eq 'Num'; #  if $class eq 'visible';
         $class = ( $class eq 'hidden' ) ? 'hidden' : 'hidden';
         $prot =~ s/NX_//g;
-        my $mupit_link = "&nbsp;&nbsp;|<a target=_mupit href=http://karchin-web02.icm.jhu.edu/MuPIT_Interactive/?gm=${prot}:$var->[3]&protquery=y title='View this residue highlighted in green in the $prot structure at MuPit Interactive'><img src=$HTML_BASE_DIR/images/3D_smallest.png border=0></a>|";
+        my $mupit_link = "&nbsp;&nbsp;|<a target=_mupit href=http://cravat.us/MuPIT_Interactive/?gm=${prot}:$var->[3]&protquery=y title='View this residue highlighted in green in the $prot structure at MuPit Interactive'><img src=$HTML_BASE_DIR/images/3D_smallest.png border=0></a>|";
         $mupit_link = '' if $var->[3] eq 'End';
         $mupit_link = '' unless $var->[0] eq 'SNP';
         my $div_id = $prot . '_' . $var->[1];
