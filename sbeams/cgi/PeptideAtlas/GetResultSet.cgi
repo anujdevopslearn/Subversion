@@ -254,7 +254,7 @@ sub handle_request {
       my $prm_formatted = get_prm_format( $tsv_formatted );
       for my $row ( @{$prm_formatted} ) {
         $row->[0] =~ s/\s+$//g;
-        print join( "\t", @{$row} ) . "\n";
+        print join( ",", @{$row} ) . "\n";
       }
     } else {
       for my $row ( @{$tsv_formatted} ) {
