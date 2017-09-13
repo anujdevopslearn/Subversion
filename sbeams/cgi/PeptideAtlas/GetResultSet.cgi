@@ -250,6 +250,12 @@ sub handle_request {
         $row->[0] =~ s/\s+$//g;
         print join( "\t", @{$row} ) . "\n";
       }
+    } elsif ( $download =~ /PRM/i ) {
+      my $prm_formatted = get_prm_format( $tsv_formatted );
+      for my $row ( @{$prm_formatted} ) {
+        $row->[0] =~ s/\s+$//g;
+        print join( "\t", @{$row} ) . "\n";
+      }
     } else {
       for my $row ( @{$tsv_formatted} ) {
         print join( "\t", @{$row} ) . "\n";
@@ -297,4 +303,37 @@ sub get_tsv_format {
     }
   }
   return \@tsv;
+}
+
+sub get_prm_format {
+#  Protein	Pre AA	Sequence	Fol AA	Adj SS	Source	Q1_mz	Q1_chg	Q3_mz	Q3_chg	Ion	Rank	RI	SSRT	RT_Cat	N_map
+#  Sequence	Q1_mz	Q1_chg	RT_Cat
+  my $tsv = shift;
+  my %heads;
+  my %prmz;
+  my @prm_heads = ( 'Mass [m/z]', 'Formula [M]','Species','CS [z]',
+                    'Polarity','Start [min]','End [min]','NCE' );
+  my @out = ( \@prm_heads );
+  my $idx = 0;
+  for my $row ( @{$tsv} ) {
+    if ( !$idx ) {
+      my $hidx = 0;
+      for my $h ( @{$row} ) {
+        $heads{$h} = $hidx++;
+      }
+      $idx++;
+      next;
+    }
+    next if $prmz{$row->[$heads{Q1_mz}]}++;
+    my @prm_row = ( $row->[$heads{Q1_mz}] );
+    push @prm_row, ( $row->[$heads{Sequence}] );
+    push @prm_row, '';
+    push @prm_row, ( $row->[$heads{Q1_chg}] );
+    push @prm_row, 'Positive';
+    push @prm_row, '';
+    push @prm_row, '';
+    push @prm_row, '';
+    push @out, \@prm_row;
+  }
+  return \@out;
 }
