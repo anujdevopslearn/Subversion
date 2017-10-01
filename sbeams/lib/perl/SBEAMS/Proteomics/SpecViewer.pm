@@ -127,6 +127,7 @@ sub generateSpectrum {
     my $charge   = $args{'charge'};
     my $massTolerance   = $args{'massTolerance'} || 0.5;
     my $peakDetect   = $args{'peakDetect'} || 'false';
+    my $labelReporters   = $args{'labelReporters'} || 'true';
     my $showA    = $args{'a_ions'} || '[0,0,0]';
     my $showB    = $args{'b_ions'} || '[1,1,0]';
     my $showC    = $args{'c_ions'} || '[0,0,0]';
@@ -142,7 +143,6 @@ sub generateSpectrum {
     my $jsArrayName = $args{'jsArrayName'} || 'ms2peaks';
 
     my ($sequence,$mods, $nmod, $cmod) = &convertMods(modified_sequence => $modified_sequence);
-
 
     my $lorikeet_resources = "$HTML_BASE_DIR/usr/javascript/lorikeet";
 
@@ -163,11 +163,17 @@ sub generateSpectrum {
 	<script type="text/javascript">
 	\$(document).ready(function () {
 
+    %;
+
+    if ( $sequence ) {
+      $lorikeet_html .= qq%
 	    \$("#$html_id").specview({"sequence":"$sequence",
 				      "scanNum":$scanNum,
 				      "charge":$charge,
 				      "massError":$massTolerance,
 				      "peakDetect":$peakDetect,
+				      "showMassErrorPlot":true,
+				      "massErrorPlotDefaultUnit":"ppm",
 				      "precursorMz":$precursorMz,
 				      "fileName":"$fileName",
 				      "width": 650,
@@ -179,6 +185,7 @@ sub generateSpectrum {
 				      "showY":$showY,
 				      "showZ":$showZ,
 				      "peakDetect":$peakDetect,
+				      "labelReporters":$labelReporters,
 				      "variableMods":$mods,
 				      "ntermMod":$nmod,
 				      "ctermMod":$cmod,
@@ -186,6 +193,19 @@ sub generateSpectrum {
 	});
     %;
 
+    } else {
+      $lorikeet_html .= qq%
+	    \$("#$html_id").specview({
+				      "scanNum":$scanNum,
+				      "precursorMz":$precursorMz,
+				      "fileName":"$fileName",
+				      "width": 650,
+				      "height":400,
+				      "peaks":$jsArrayName});
+	});
+    %;
+
+    }
     $lorikeet_html .= "var $jsArrayName = [\n";
     for my $ar_ref (@{$spectrum_aref}) {
 	my $mz = $ar_ref->[0];	
