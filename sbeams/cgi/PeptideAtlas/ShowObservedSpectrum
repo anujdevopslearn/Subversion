@@ -330,10 +330,10 @@ sub processRequest {
 
       @rows = $sbeams->selectSeveralColumns($sql);
 
-      print "sample_accession \t repository_identifiers<BR>\n";
+      #print "sample_accession \t repository_identifiers<BR>\n";
       my ($sample_accession,$repository_identifiers);
       foreach my $row ( @rows ) {
-	print join("\t",@{$row})."<BR>\n";
+	#print join("\t",@{$row})."<BR>\n";
 	($sample_accession,$repository_identifiers) = @{$row};
       }
 
