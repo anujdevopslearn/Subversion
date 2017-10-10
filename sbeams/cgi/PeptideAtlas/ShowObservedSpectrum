@@ -255,6 +255,7 @@ sub processRequest {
     my $charge = $parameters{assumed_charge};
     my $peptidoform = $parameters{peptide};
     my $scanNumber = 0;
+    my $observedPrecursorMz = 0.0;
     my $spectrumName = '';
 
     #### If a Universal Spectral Identifier is supplied, interpret it
@@ -270,6 +271,7 @@ sub processRequest {
 	my $getSpectrumResult = getSpectrumFromMzmlFile( filePath=> $filePath, scanNumber=>$scanNumber, verbose=>0, debug=>0, quiet=>0, outputDestination=>'STDOUT' );
 	if ( $getSpectrumResult->{status} eq 'OK' ) {
 	  @spectrum_array = @{$getSpectrumResult->{mz}};
+	  $observedPrecursorMz = $getSpectrumResult->{observedPrecursorMz};
         } else {
 	  print "ERROR: Unable to read peaks.\n";
           return;
@@ -310,7 +312,7 @@ sub processRequest {
 	my ($seq, $chg, $mz, $mod_seq, $spectrum_id, $spectrum_name, $start_scan,$fragmentation_type_id) = @{$row};
 	$peptidoform = $mod_seq unless ( $peptidoform );
 	$charge = $chg;
-	$parameters{'precursor_mass'} = $mz;
+	$observedPrecursorMz = $mz;
 	$parameters{'spectrum_id'} = $spectrum_id;
 	$spectrumName = $spectrum_name;
 	$scanNumber = $start_scan;
@@ -384,7 +386,7 @@ sub processRequest {
     }
 
     # still some lint here...
-    my $precursor_mass = $parameters{'precursor_mass'};
+    #my $precursor_mass = $parameters{'precursor_mass'};
 
 
     #### If we don't already have the spectrum
@@ -519,7 +521,7 @@ sub processRequest {
       print $lorikeet->generateSpectrum(
         charge            => $charge,
         modified_sequence => $peptidoform,
-        precursor_mass    => $parameters{'precursor_mass'} || 100,
+        precursor_mass    => $observedPrecursorMz || 100,
         scan              => $scanNumber,
         name              => $spectrumName,
         a_ions            => $parameters{'ShowA'},
@@ -1471,7 +1473,7 @@ sub getSpectrumFromMzmlFile {
   }
 
   #### Create a virtual filename to fetch the spectrum
-  my $filename = "/proteomics/sw/tpp/bin/readmzXML -s $filePath $scanNumber |";
+  my $filename = "/proteomics/sw/tpp/bin/readmzXML $filePath $scanNumber |";
 
   #### Try to open the spectrum for reading
   unless (open(DTAFILE,$filename)) {
@@ -1482,11 +1484,21 @@ sub getSpectrumFromMzmlFile {
 
   #### Read the spectrum data
   my @mz_intensities;
+  my $observedPrecursorMz = 0;
   while (my $line = <DTAFILE>) {
     $line =~ s/[\r\n]//g;
     #print "$line<BR>\n";
+
+    #### Extract the precursor mz information from that line
+    if ( $line =~ /precursorMZ: ([\d\.]+)/ ) {
+      $observedPrecursorMz = $1;
+      next;
+    }
+
+    #### Skip if this isn't a mass intensity line
     next if ($line !~ /mass.*inten/);
-    #my @values = split(/\s+/,$line);
+
+    #### Extract and store mass intensity information
     $line =~ /mass\s+(\S+)\s+inten\s+(\S+)/;
     push(@mz_intensities,[$1,$2]);
   }
@@ -1504,6 +1516,7 @@ sub getSpectrumFromMzmlFile {
     message=>scalar(@mz_intensities)." mass-inten pairs read");
 
   $response->{mz} = \@mz_intensities;
+  $response->{observedPrecursorMz} = $observedPrecursorMz;
   return $response;
 
 } # end getSpectrumFromMzmlFile
