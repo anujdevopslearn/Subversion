@@ -3465,6 +3465,8 @@ sub displayAnnotatedSequence {
 
   my $ub_id = $parameters->{uniprot_db_id} || 0;
   my $use_nextprot = ( $parameters->{use_nextprot} ) ? 1 : 0;
+  $alt_enz = [ qw( aspn gluc chymotrypsin ) ];
+  $args{is_trypsin_build} = 'N';
 
   my $html_seq = $sbeamsMOD->get_html_seq_vars( seq => $sequence,
                                           accession => $biosequence->{biosequence_name},
