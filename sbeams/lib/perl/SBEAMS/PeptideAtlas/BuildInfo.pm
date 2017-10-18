@@ -263,6 +263,7 @@ sub pa_build_info_2_tsv {
       build_id => $atlas_build->[$atlas_build_id_idx],
       presence_level => 'subsumed',
     );
+    
     my $subsumed_count = $prot_count_href->{nprots};
     $prot_count_href = get_protein_identification_count (
       build_id => $atlas_build->[$atlas_build_id_idx],
@@ -340,15 +341,15 @@ sub pa_build_info_2_tsv {
 
     $row[$psm_count_idx] = $samples_href->{psm_count};
     $row[$spectra_searched_idx] = $spectra_searched_href->{nspec};
-    $row[$n_canonicals_idx] = qq~<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&presence_level_constraint=1&redundancy_constraint=4&apply_action=QUERY TITLE="Retrieve canonical protein list for Atlas Build $atlas_build->[$atlas_build_name_idx]">$canonical_count</A>~;
+    $row[$n_canonicals_idx] = qq~<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&presence_level_constraint=1&redundancy_constraint=4&biosequence_name_constraint=!DECOY%%3B!CONTAM%&apply_action=QUERY TITLE="Retrieve canonical protein list for Atlas Build $atlas_build->[$atlas_build_name_idx]">$canonical_count</A>~;
 
-    $row[$n_covering_idx] = qq~<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&redundancy_constraint=4&covering_constraint=on&apply_action=QUERY TITLE="Retrieve protein list sufficient to explain all peptides observed in Atlas Build $atlas_build->[$atlas_build_name_idx]">$covering_count</A>~;
+    $row[$n_covering_idx] = qq~<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&redundancy_constraint=4&covering_constraint=on&biosequence_name_constraint=!DECOY%%3B!CONTAM%&apply_action=QUERY TITLE="Retrieve protein list sufficient to explain all peptides observed in Atlas Build $atlas_build->[$atlas_build_name_idx]">$covering_count</A>~;
 
-    $row[$n_canon_dist_idx] = qq~<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&presence_level_constraint=1,2&redundancy_constraint=4&apply_action=QUERY TITLE="Retrieve canonical and possibly-distinguished protein list for Atlas Build $atlas_build->[$atlas_build_name_idx]">$canon_dist_count</A>~;
+    $row[$n_canon_dist_idx] = qq~<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&presence_level_constraint=1,2,9&redundancy_constraint=4&biosequence_name_constraint=!DECOY%%3B!CONTAM%&apply_action=QUERY TITLE="Retrieve canonical and possibly-distinguished protein list for Atlas Build $atlas_build->[$atlas_build_name_idx]">$canon_dist_count</A>~;
 
-    $row[$n_disting_prots_idx] = qq~<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&redundancy_constraint=4&apply_action=QUERY TITLE="Retrieve one protein per distinct peptide set for Atlas Build $atlas_build->[$atlas_build_name_idx]">$distinguishable_prot_count</A>~;
+    $row[$n_disting_prots_idx] = qq~<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&redundancy_constraint=4&biosequence_name_constraint=!DECOY%%3B!CONTAM%&apply_action=QUERY TITLE="Retrieve one protein per distinct peptide set for Atlas Build $atlas_build->[$atlas_build_name_idx]">$distinguishable_prot_count</A>~;
 
-    $row[$n_seq_unique_prots_idx] = qq~<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&redundancy_constraint=1&apply_action=QUERY TITLE="Retrieve a list of sequence-unique proteins for Atlas Build $atlas_build->[$atlas_build_name_idx]">$sequence_unique_prot_count</A>~;
+    $row[$n_seq_unique_prots_idx] = qq~<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&redundancy_constraint=1&biosequence_name_constraint=!DECOY%%3B!CONTAM%&apply_action=QUERY TITLE="Retrieve a list of sequence-unique proteins for Atlas Build $atlas_build->[$atlas_build_name_idx]">$sequence_unique_prot_count</A>~;
 
 # The following query doesn't match splice variants.
 # Correct pattern to match is [ABOPQ]_____;[ABOPQ]_____-%  but the
@@ -481,7 +482,8 @@ sub get_protein_identification_count
 
   my $crap_clause = " ";
   if (! $count_crap) {
-    $crap_clause = "AND NOT BS.biosequence_desc LIKE \'%common contaminant%\'";
+    $crap_clause = "AND NOT BS.biosequence_desc LIKE \'%common contaminant%\'" .
+                   "AND NOT BS.biosequence_name LIKE \'CONTAM%\'";
   }
 
   my $sql =<<"  END";
