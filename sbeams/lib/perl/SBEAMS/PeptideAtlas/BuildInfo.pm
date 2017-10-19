@@ -230,7 +230,7 @@ sub pa_build_info_2_tsv {
   foreach my $atlas_build ( @atlas_builds ) {
     my @row;
     my $selected = '';
-
+#next if ($atlas_build->[$atlas_build_id_idx] != 462);
     print "#$atlas_build->[$atlas_build_id_idx] " if $VERBOSE;
 
     # Retrieve the infos
@@ -243,6 +243,7 @@ sub pa_build_info_2_tsv {
     );
 
     # get 7 different protein counts. could be faster.
+
     my $prot_count_href;
     $prot_count_href = get_protein_identification_count (
       build_id => $atlas_build->[$atlas_build_id_idx],
@@ -261,6 +262,12 @@ sub pa_build_info_2_tsv {
     $poss_dist_count += $prot_count_href->{nprots};
     $prot_count_href = get_protein_identification_count (
       build_id => $atlas_build->[$atlas_build_id_idx],
+      presence_level => 'representative',
+    );
+    $poss_dist_count += $prot_count_href->{nprots};
+
+    $prot_count_href = get_protein_identification_count (
+      build_id => $atlas_build->[$atlas_build_id_idx],
       presence_level => 'subsumed',
     );
     
@@ -274,11 +281,23 @@ sub pa_build_info_2_tsv {
       build_id => $atlas_build->[$atlas_build_id_idx],
     );
     my $covering_count = $prot_count_href->{nprots};
+    
+    $prot_count_href = get_protein_identification_count (
+      build_id => $atlas_build->[$atlas_build_id_idx],
+      presence_level => 'indistinguishable representative',
+    );
+    my $indistinguishable_id_count = $prot_count_href->{nprots};
+    $prot_count_href = get_protein_identification_count (
+      build_id => $atlas_build->[$atlas_build_id_idx],
+      presence_level => 'indistinguishable',
+    );
+    $indistinguishable_id_count += $prot_count_href->{nprots};
+
     $prot_count_href = get_protein_relationship_count (
       build_id => $atlas_build->[$atlas_build_id_idx],
       relationship_name => 'indistinguishable',
     );
-    my $indistinguishable_count = $prot_count_href->{nprots};
+    my $indistinguishable_count += $prot_count_href->{nprots};
     my $swiss_count = get_swissprot_coverage (
       build_id => $atlas_build->[$atlas_build_id_idx],
     );
@@ -297,6 +316,7 @@ sub pa_build_info_2_tsv {
 	 $poss_dist_count +
 	 $subsumed_count +
 	 $ntt_subsumed_count +
+   $indistinguishable_id_count +
 	 $indistinguishable_count || "";
 
 
@@ -345,11 +365,11 @@ sub pa_build_info_2_tsv {
 
     $row[$n_covering_idx] = qq~<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&redundancy_constraint=4&covering_constraint=on&biosequence_name_constraint=!DECOY%%3B!CONTAM%&apply_action=QUERY TITLE="Retrieve protein list sufficient to explain all peptides observed in Atlas Build $atlas_build->[$atlas_build_name_idx]">$covering_count</A>~;
 
-    $row[$n_canon_dist_idx] = qq~<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&presence_level_constraint=1,2,9&redundancy_constraint=4&biosequence_name_constraint=!DECOY%%3B!CONTAM%&apply_action=QUERY TITLE="Retrieve canonical and possibly-distinguished protein list for Atlas Build $atlas_build->[$atlas_build_name_idx]">$canon_dist_count</A>~;
+    $row[$n_canon_dist_idx] = qq~<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&presence_level_constraint=1,2,16,9&redundancy_constraint=4&biosequence_name_constraint=!DECOY%%3B!CONTAM%&apply_action=QUERY TITLE="Retrieve canonical and possibly-distinguished protein list for Atlas Build $atlas_build->[$atlas_build_name_idx]">$canon_dist_count</A>~;
 
-    $row[$n_disting_prots_idx] = qq~<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&redundancy_constraint=4&biosequence_name_constraint=!DECOY%%3B!CONTAM%&apply_action=QUERY TITLE="Retrieve one protein per distinct peptide set for Atlas Build $atlas_build->[$atlas_build_name_idx]">$distinguishable_prot_count</A>~;
+    $row[$n_disting_prots_idx] = qq~<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&presence_level_constraint=1,2,3,6,9,16&redundancy_constraint=4&biosequence_name_constraint=!DECOY%%3B!CONTAM%&apply_action=QUERY TITLE="Retrieve one protein per distinct peptide set for Atlas Build $atlas_build->[$atlas_build_name_idx]">$distinguishable_prot_count</A>~;
 
-    $row[$n_seq_unique_prots_idx] = qq~<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&redundancy_constraint=1&biosequence_name_constraint=!DECOY%%3B!CONTAM%&apply_action=QUERY TITLE="Retrieve a list of sequence-unique proteins for Atlas Build $atlas_build->[$atlas_build_name_idx]">$sequence_unique_prot_count</A>~;
+    $row[$n_seq_unique_prots_idx] = qq~<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&presence_level_constraint=1,2,3,6,7,9,11,16&redundancy_constraint=1&biosequence_name_constraint=!DECOY%%3B!CONTAM%&apply_action=QUERY TITLE="Retrieve a list of sequence-unique proteins for Atlas Build $atlas_build->[$atlas_build_name_idx]">$sequence_unique_prot_count</A>~;
 
 # The following query doesn't match splice variants.
 # Correct pattern to match is [ABOPQ]_____;[ABOPQ]_____-%  but the
@@ -482,8 +502,7 @@ sub get_protein_identification_count
 
   my $crap_clause = " ";
   if (! $count_crap) {
-    $crap_clause = "AND NOT BS.biosequence_desc LIKE \'%common contaminant%\'" .
-                   "AND NOT BS.biosequence_name LIKE \'CONTAM%\'";
+    $crap_clause = "AND NOT BS.biosequence_name LIKE \'CONTAM%\'";
   }
 
   my $sql =<<"  END";
@@ -561,21 +580,57 @@ sub get_protein_relationship_count
 
   my $crap_clause = " ";
   if (! $count_crap) {
-    $crap_clause = "AND NOT BS.biosequence_desc LIKE \'%common contaminant%\'";
+    $crap_clause = "AND NOT BS.biosequence_name LIKE \'CONTAM%\'";
   }
 
-  my $sql =<<"  END";
-  SELECT BR.atlas_build_id ab, COUNT(BR.related_biosequence_id) nprots
-  FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR  JOIN
-    $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT ON
-     BRT.biosequence_relationship_type_id = BR.relationship_type_id
-    JOIN $TBAT_BIOSEQUENCE BS ON 
-     BS.biosequence_id = BR.related_biosequence_id
-  WHERE BR.atlas_build_id = $build_id
-  AND BRT.relationship_name = \'$relationship_name\'
-  $decoy_clause
-  $crap_clause
-  GROUP BY BR.atlas_build_id
+#  my $sql =<<"  END";
+#  SELECT BR.atlas_build_id ab, COUNT(BR.related_biosequence_id) nprots
+#  FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR  JOIN
+#    $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT ON
+#     BRT.biosequence_relationship_type_id = BR.relationship_type_id
+#    JOIN $TBAT_BIOSEQUENCE BS ON 
+#     BS.biosequence_id = BR.related_biosequence_id
+#  WHERE BR.atlas_build_id = $build_id
+#  AND BRT.relationship_name = \'$relationship_name\'
+#  $decoy_clause
+#  $crap_clause
+#  GROUP BY BR.atlas_build_id
+#  END
+
+my $sql =<<"  END";
+		SELECT  AB.ATLAS_BUILD_ID,COUNT(BR.RELATED_BIOSEQUENCE_ID) NPROTS
+		FROM $TBAT_PROTEIN_IDENTIFICATION PID
+		INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BR
+			ON ( BR.REFERENCE_BIOSEQUENCE_ID = PID.BIOSEQUENCE_ID AND
+				 BR.ATLAS_BUILD_ID = PID.ATLAS_BUILD_ID )
+		INNER JOIN $TBAT_ATLAS_BUILD AB
+			ON ( AB.ATLAS_BUILD_ID = PID.ATLAS_BUILD_ID )
+		INNER JOIN $TBAT_BIOSEQUENCE_SET BSS
+			ON ( BSS.BIOSEQUENCE_SET_ID = AB.BIOSEQUENCE_SET_ID )
+		INNER JOIN SBEAMS.DBO.ORGANISM O
+			ON ( O.ORGANISM_ID = BSS.ORGANISM_ID )
+		INNER JOIN $TBAT_BIOSEQUENCE BS_REF
+			ON ( BS_REF.BIOSEQUENCE_ID = PID.BIOSEQUENCE_ID )
+			AND ( BS_REF.BIOSEQUENCE_SET_ID = BSS.BIOSEQUENCE_SET_ID)
+		INNER JOIN $TBAT_BIOSEQUENCE BS_REP
+			ON ( BS_REP.BIOSEQUENCE_ID = PID.REPRESENTED_BY_BIOSEQUENCE_ID )
+			AND ( BS_REP.BIOSEQUENCE_SET_ID = BSS.BIOSEQUENCE_SET_ID)
+		INNER JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL
+			ON ( PPL.PROTEIN_PRESENCE_LEVEL_ID = PID.PRESENCE_LEVEL_ID )
+		INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT
+			ON ( BRT.BIOSEQUENCE_RELATIONSHIP_TYPE_ID =
+						BR.RELATIONSHIP_TYPE_ID )
+		LEFT JOIN $TBAT_BIOSEQUENCE BS_REL
+			ON ( BS_REL.BIOSEQUENCE_ID = BR.RELATED_BIOSEQUENCE_ID )
+		AND ( BS_REL.BIOSEQUENCE_SET_ID = BSS.BIOSEQUENCE_SET_ID )
+		WHERE 1 = 1
+		AND AB.ATLAS_BUILD_ID IN ( 462 )
+		AND ( BS_REL.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
+			 AND BS_REL.BIOSEQUENCE_NAME NOT LIKE 'CONTAM%'
+		 )
+		AND PPL.PROTEIN_PRESENCE_LEVEL_ID IN ( 7,9,11,16,1,2,6,3 )
+		AND BRT.BIOSEQUENCE_RELATIONSHIP_TYPE_ID IN ( 1 )
+    GROUP BY            AB.ATLAS_BUILD_ID
   END
 
   my $result_hash = $sbeams->selectrow_hashref( $sql );
