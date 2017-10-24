@@ -39,7 +39,7 @@ use SBEAMS::PeptideAtlas::ProtInfo;
 use File::Basename;
 use Data::Dumper;
 
-use lib "/net/db/projects/Proteomics/devED/lib";
+use lib "/net/db/projects/Proteomics/lib";
 use Proteomics::Spectra::UniversalSpectrumIdentifier;
 use Proteomics::Response qw(processParameters);
 use Proteomics::Config;
