@@ -17,6 +17,8 @@
                 peakDetect: true,
                 calculatedMz: null,
                 precursorMz: null,
+                selWinLow: null,
+                selWinHigh: null,
                 precursorIntensity: null,
                 staticMods: [],
                 variableMods: [],
@@ -38,7 +40,8 @@
                 zoomMs1: false,
                 width: 700, 	// width of the ms/ms plot
                 height: 450, 	// height of the ms/ms plot
-                massError: 0.5, // mass tolerance for labeling peaks
+                massError: 0.5, // mass tolerance (in th) for labeling peaks
+                massErrorUnit: massErrorTypeTh, // 'Th' or 'ppm'
                 extraPeakSeries:[],
                 showIonTable: true,
                 showViewingOptions: true,
@@ -50,7 +53,11 @@
                 labelReporters: false,
 				tooltipZIndex: null,
                 showMassErrorPlot: false,
-                massErrorPlotDefaultUnit: massErrorType_Da
+                massErrorPlotDefaultUnit: null,
+                // Use these option to set the x-axis range (m/z) that will be displayed when the MS/MS plot is initialized or is fully zoomed out.
+                // Default range is the min and max peak m/z.
+                minDisplayMz: null,
+                maxDisplayMz: null
         };
 			
 	    var options = $.extend(true, {}, defaults, opts); // this is a deep copy
@@ -64,11 +71,12 @@
 	};
 
     var index = 0;
-    var massErrorType_Da = 'Da';
-    var massErrorType_ppm = 'ppm';
+    var massErrorTypeTh = 'Th';		// Th are units of m/z
+    var massErrorTypePpm = 'ppm';
 
     var elementIds = {
             massError: "massError",
+            massErrorUnit: "massErrorUnit",
             msPlot: "msPlot",
             massErrorPlot: "massErrorPlot",
             massErrorPlot_unit: "massErrorPlot_unit",
@@ -156,17 +164,32 @@
             options.calculatedMz = Ion.getMz(mass, options.charge);
         }
 
+        if(!options.minDisplayMz)
+        {
+            options.minDisplayMz = options.peaks[0][0];
+        }
+        if(!options.maxDisplayMz)
+        {
+            options.maxDisplayMz = options.peaks[options.peaks.length - 1][0];
+        }
+
+        if(options.massErrorUnit !== massErrorTypeTh && options.massErrorUnit !== massErrorTypePpm)
+        {
+            console.warn("Invalid mass error unit given: " + options.massErrorUnit + ". Setting to " + massErrorTypeTh + ".");
+            options.massErrorUnit = massErrorTypeTh;
+        }
+        if(!options.massErrorPlotDefaultUnit)
+        {
+            options.massErrorPlotDefaultUnit = options.massErrorUnit;
+        }
 
         var container = createContainer(parent_container);
         // alert(container.attr('id')+" parent "+container.parent().attr('id'));
         storeContainerData(container, options);
         initContainer(container);
 
-        if(options.charge) {
-            makeOptionsTable(container, Math.max(1,options.charge-1));
-        }
-        else
-            makeOptionsTable(container, 1);
+        var defaultSelectedIons = getDefaultSelectedIons(options);
+        makeOptionsTable(container,[1,2,3], defaultSelectedIons);
 
         makeViewingOptions(container, options);
 
@@ -185,19 +208,6 @@
         // Calculate reporter ion labels, if required
         calculateReporterIons(container);
 
-        // if defined ShowA to ShowZ not empty
-        var ion_choice = new Object();
-        set_ion_choice(options, ion_choice)
-
-        var ionChoiceContainer = $(getElementSelector(container, elementIds.ion_choice));
-        ionChoiceContainer.find("input:checkbox").each(function() {
-          var id = $(this).attr('id');
-          if( ion_choice[id] == 1){
-            $(this).attr('checked', 'checked');
-          }else{
-            $(this).attr('checked', "");
-          }
-        });
 
         createPlot(container, getDatasets(container)); // Initial MS/MS Plot
 
@@ -270,27 +280,55 @@
         }
     }
 
-    function set_ion_choice(options,ion_choice){ 
-       var showion = new Array();
-       var ion_type = new Array('a','b','c','x','y','z');
-       showion[0]=options.showA;
-       showion[1]=options.showB;
-       showion[2]=options.showC;
-       showion[3]=options.showX;
-       showion[4]=options.showY;
-       showion[5]=options.showZ; 
-       for (i=0; i<6; i++){
-         for (j=0; j<3; j++){
-           var n=j+1;
-           if (showion[i][j] == 1){
-             ion_choice[ion_type[i]+'_'+n] = 1;
-           }else{
-             ion_choice[ion_type[i]+'_'+n] = 0;
+    function getDefaultSelectedIons(options)
+    {
+        var userDefined = false;
+        var defaultSelected = {};
+        if(options.showA.length > 0)
+        {
+            userDefined = true;
+            defaultSelected['a'] = options.showA;
            }
+        if(options.showB.length > 0)
+        {
+            userDefined = true;
+            defaultSelected['b'] = options.showB;
          }
+        if(options.showC.length > 0)
+        {
+            userDefined = true;
+            defaultSelected['c'] = options.showC;
        }
+        if(options.showX.length > 0)
+        {
+            userDefined = true;
+            defaultSelected['x'] = options.showX;
     }
-
+        if(options.showY.length > 0)
+        {
+            userDefined = true;
+            defaultSelected['y'] = options.showY;
+        }
+        if(options.showZ.length > 0)
+        {
+            userDefined = true;
+            defaultSelected['z'] = options.showZ;
+        }
+        if(!userDefined)
+        {
+            var selected = [1];
+            if(options.charge)
+            {
+                for (var i = 2; i < options.charge; i += 1)
+                {
+                    selected.push(1);
+                }
+            }
+            defaultSelected['b'] = selected;
+            defaultSelected['y'] = selected;
+        }
+        return defaultSelected;
+    }
     // trim any 0 intensity peaks from the end of the ms/ms peaks array
     function trimPeaksArray(options)
     {
@@ -327,7 +365,6 @@
         container.data("ionSeries", {a: [], b: [], c: [], x: [], y: [], z: []});
         container.data("ionSeriesLabels", {a: [], b: [], c: [], x: [], y: [], z: []});
         container.data("ionSeriesMatch", {a: [], b: [], c: [], x: [], y: [], z: []});
-        container.data("massError", options.massError);
 
         var maxInt = getMaxInt(options);
         var __xrange = getPlotXRange(options);
@@ -375,11 +412,18 @@
 	}
 	
 	function setMassError(container) {
+        var options = container.data("options");
    		var me = parseFloat($(getElementSelector(container, elementIds.massError)).val());
-		if(me != container.data("massError")) {
-			container.data("massError", me);
+        var unit = getMassErrorUnit(container);
+		if(me != options.massError) {
+            options.massError = me;
 			container.data("massErrorChanged", true);
 		}
+        else if(options.massErrorUnit !== unit)
+        {
+            options.massErrorUnit = unit;
+            container.data("massErrorChanged", true);
+        }
 		else {
 			container.data("massErrorChanged", false);
 		}
@@ -404,13 +448,19 @@
 		// the MS/MS plot should have been created by now.  This is a hack to get the plots aligned.
 		// We will set the y-axis labelWidth to this value.
 		var labelWidth = container.data("plot").getAxes().yaxis.labelWidth;
-		
+
+        var precursorSelectionWin = [];
+        if(options.selWinLow && options.selWinHigh)
+        {
+            precursorSelectionWin = [{ color:"#ccd8e2", xaxis:{from:options.selWinLow, to:options.selWinHigh}, }];
+        }
 		var ms1plotOptions = {
 				series: { peaks: {show: true, shadowSize: 0}, shadowSize: 0},
 				grid: { show: true, 
 						hoverable: true, 
 						autoHighlight: true,
 						clickable: true,
+                        markings: precursorSelectionWin,
 						borderWidth: 1,
 						labelMargin: 1},
 				selection: { mode: "xy", color: "#F0E68C" },
@@ -514,18 +564,9 @@
 	function createPlot(container, datasets) {
 
         var plot;
-    	if(!container.data("zoomRange")) {
-		// Set the default X range to be from 50 to the MW of the peptide.
-		// This allows easier comparison of different spectra from the
-                // same peptide ion in different browser tabs. One can blink back
-                // and forth when the display range is identical.
-    		var selectOpts = {};
-        	var options = container.data("options");
-                var neutralMass = options.peptide.getNeutralMassMono() + Ion.MASS_O + Ion.MASS_H;
-		selectOpts.xaxis = { min: 50, max: neutralMass };
-    		plot = $.plot(getElementSelector(container, elementIds.msmsplot), datasets,
-                      $.extend(true, {}, container.data("plotOptions"), selectOpts));
-    		//plot = $.plot($(getElementSelector(container, elementIds.msmsplot)), datasets,  container.data("plotOptions"));
+    	if(!container.data("zoomRange"))
+        {
+            plot = $.plot($(getElementSelector(container, elementIds.msmsplot)), datasets,  container.data("plotOptions"));
         }
     	else {
             var zoomRange = container.data("zoomRange");
@@ -565,8 +606,9 @@
     }
 
     function getPlotXRange(options) {
-        var xmin = options.peaks[0][0];
-        var xmax = options.peaks[options.peaks.length - 1][0];
+
+        var xmin = options.minDisplayMz;
+        var xmax = options.maxDisplayMz;
         var xpadding = (xmax - xmin) * 0.025;
         // console.log("x-axis padding: "+xpadding);
         return {xmin:xmin - xpadding, xmax:xmax + xpadding};
@@ -576,7 +618,7 @@
         var data = [];
         var options = container.data("options");
 
-        var daError = options.massErrorPlotDefaultUnit === 'Da';
+        var ppmError = options.massErrorPlotDefaultUnit === massErrorTypePpm;
 
         var minMassError = 0;
         var maxMassError = 0;
@@ -590,7 +632,7 @@
                     var observedMz = seriesData[j][0];
                     var theoreticalMz = seriesData[j][2];
                     var massError = theoreticalMz - observedMz;
-                    if (!daError) {
+                    if (ppmError) {
                         massError = ((massError) / observedMz) * 1000000;
                     }
                     minMassError = Math.min(minMassError, massError);
@@ -600,15 +642,29 @@
                 data.push({data:s_data, color:series.color, labelType:'none'});
             }
         }
+
         var placeholder = $(getElementSelector(container, elementIds.massErrorPlot));
 
         var __xrange = getPlotXRange(options);
+        var zoomRange = container.data("zoomRange");
+        if(zoomRange)
+        {
+            // Sync zooming with the MS/MS plot.
+            __xrange.xmin = zoomRange.xaxis.from;
+            __xrange.xmax = zoomRange.xaxis.to;
+        }
 
         var ypadding = Math.abs(maxMassError - minMassError) * 0.025;
 
         // the MS/MS plot should have been created by now.  This is a hack to get the plots aligned.
         // We will set the y-axis labelWidth to this value.
         var labelWidth = container.data("plot").getAxes().yaxis.labelWidth;
+
+        if(data.length === 0)
+        {
+            // Add dummy data to show an empty plot.
+            data.push({data:[__xrange.xmin, 0], color:'#000000', labelType:'none'});
+        }
 
         var massErrorPlotOptions = {
             series:{data:data, points:{show:true, fill:true, radius:1}, shadowSize:0},
@@ -635,28 +691,29 @@
 
         // TOOLTIPS
         $(getElementSelector(container, elementIds.massErrorPlot)).bind("plothover", function (event, pos, item) {
-
             displayTooltip(item, container, options, "m/z", "error");
         });
 
-        // CHECKBOX TO SHOW OR HIDE MASS ERROR PLOT
         var massErrorPlot = $.plot(placeholder, data, massErrorPlotOptions);
+
+        // Display clickable mass error unit.
         var o = massErrorPlot.getPlotOffset();
         placeholder.append('<div id="' + getElementId(container, elementIds.massErrorPlot_unit) + '" class="link"  '
             + 'style="position:absolute; left:'
             + (o.left + 5) + 'px;top:' + (o.top + 4) + 'px;'
             + 'background-color:yellow; font-style:italic">'
             + options.massErrorPlotDefaultUnit + '</div>');
+        // Toggle mass error unit on click.
         $(getElementSelector(container, elementIds.massErrorPlot_unit)).click(function () {
             var unit = $(this).text();
 
-            if (unit === massErrorType_Da) {
-                $(this).text(massErrorType_ppm);
-                options.massErrorPlotDefaultUnit = massErrorType_ppm;
+            if (unit === massErrorTypeTh) {
+                $(this).text(massErrorTypePpm);
+                options.massErrorPlotDefaultUnit = massErrorTypePpm;
             }
-            else if (unit === massErrorType_ppm) {
-                $(this).text(massErrorType_Da);
-                options.massErrorPlotDefaultUnit = massErrorType_Da;
+            else if (unit === massErrorTypePpm) {
+                $(this).text(massErrorTypeTh);
+                options.massErrorPlotDefaultUnit = massErrorTypeTh;
             }
             plotPeakMassErrorPlot(container, datasets);
         });
@@ -746,7 +803,7 @@
 		// PEAK ASSIGNMENT TYPE CHANGED; PEAK LABEL TYPE CHANGED
 		var ionChoiceContainer = $(getElementSelector(container, elementIds.ion_choice));
 		ionChoiceContainer.find("input").click(function() {
-            plotAccordingToChoices(container)
+            plotAccordingToChoices(container);
         });
 
         $(getElementSelector(container, elementIds.immoniumIons)).click(function() {
@@ -757,7 +814,7 @@
             plotAccordingToChoices(container);
         });
 
-		
+		// Plot neutral loss options
 		var neutralLossContainer = $(getElementSelector(container, elementIds.nl_choice));
 		neutralLossContainer.find("input").click(function() {
 			container.data("selectedNeutralLossChanged", true);
@@ -765,11 +822,14 @@
             container.data("options").peptide.recalculateLossOptions(selectedNeutralLosses, container.data("options").maxNeutralLossCount);
 			plotAccordingToChoices(container);
 		});
-		
+
+        // Mass type options
 	    container.find("input[name='"+getRadioName(container, "massTypeOpt")+"']").click(function() {
 	    	container.data("massTypeChanged", true);
 	    	plotAccordingToChoices(container);
 	    });
+
+        // Peak detect checkbox
         $(getElementSelector(container, elementIds.peakDetect)).click(function() {
             container.data("peakAssignmentTypeChanged", true);
             plotAccordingToChoices(container);
@@ -1055,7 +1115,7 @@
                                 {mass:120.0813, aa:'F'},
                                 {mass:101.0715, aa:'Q'},
                                 {mass:136.0762, aa:'Y'},
-                                {mass:159.0922, aa:'W'}]
+                                {mass:159.0922, aa:'W'}];
 
         var immoniumIonMatches = [];
         var labels = [];
@@ -1072,23 +1132,56 @@
         container.data("immoniumIons", {data: immoniumIonMatches, labels: labels, color: "#008000"});
     }
 
-    function calculatePrecursorPeak(container)
-    {
+    function calculatePrecursorPeak(container) {
         var options = container.data("options");
-        if(options.labelPrecursorPeak && options.theoreticalMz)
-        {
+
+        if(options.labelPrecursorPeak && options.theoreticalMz) {
+            var precursorMzMatches = [];
+            var labels = [];
+
             var peaks = options.peaks;
             var precursorMz = options.theoreticalMz;
+            var peptide = options.peptide;
+            var charge = options.charge ? options.charge : 1;
+            var label = 'M';
+            for(var i = 0; i < charge; i += 1) label += "+";
+
             var match = getMatchingPeakForMz(container, peaks, precursorMz);
-            if(match.bestPeak)
-            {
-                var label = 'M';
-                if(options.charge)
-                {
-                    for(var i = 0; i < options.charge; i += 1) label += "+";
-                }
-                container.data("precursorPeak", {data: [[match.bestPeak[0], match.bestPeak[1]]], labels: [label], color: "#ffd700"})
+            if(match.bestPeak) {
+                precursorMzMatches.push([match.bestPeak[0], match.bestPeak[1]]);
+                labels.push(label);
             }
+
+            // neutral losses...
+            for(var lossKey in peptide.lorikeetPotentialLosses) {
+                var loss = peptide.lorikeetPotentialLosses[lossKey];
+                if(!loss)
+                    continue;
+
+                //console.log("L-loss:"+lossKey+" -- Label:"+loss.label());
+
+                match = getMatchingPeakForMz(container, peaks, precursorMz-loss.monoLossMass/charge);
+                if(match.bestPeak) {
+                    precursorMzMatches.push([match.bestPeak[0], match.bestPeak[1]]);
+                    labels.push(label+" "+loss.label());
+                }
+            }
+            for(var lossKey in peptide.customPotentialLosses) {
+                var loss = peptide.customPotentialLosses[lossKey];
+                if(!loss)
+                    continue;
+
+                //console.log("C-loss:"+lossKey+" -- Label:"+loss.label()); //+" -- Num:"+LossCombinationList(3).getLossCombinationCount());
+
+                match = getMatchingPeakForMz(container, peaks, precursorMz-loss.monoLossMass/charge);
+                if(match.bestPeak) {
+                    precursorMzMatches.push([match.bestPeak[0], match.bestPeak[1]]);
+                    labels.push(label+" "+loss.label());
+                }
+            }
+
+            if (precursorMzMatches.length > 0)
+                container.data("precursorPeak", {data: precursorMzMatches, labels: labels, color: "#ffd700"});
         }
     }
 
@@ -1189,7 +1282,9 @@
 		for(var i = 0; i < selectedIonTypes.length; i += 1) {
 			var sion = selectedIonTypes[i];
 			if(sion.type == "a" || sion.type == "b" || sion.type == "c") 
+            {
 				ntermIons.push(sion);
+		}
 		}
 		ntermIons.sort(function(m,n) {
 			if(m.type == n.type) {
@@ -1293,10 +1388,16 @@
 					for(var j = 0; j < todoIonSeries.length; j += 1) {
 						var tion = todoIonSeries[j];
 						var ionSeriesData = todoIonSeriesData[j];
+
+                        var ion = Ion.getSeriesIon(tion, container.data("options").peptide, i, massType);
+                        // Put the ion masses in increasing value of m/z, For c-term ions the array will have to be
+                        // populated backwards.
 						if(tion.term == "n")
-							ionSeriesData.push(sion = Ion.getSeriesIon(tion, container.data("options").peptide, i, massType));
+                            // Add to end of array
+							ionSeriesData.push(ion);
 						else if(tion.term == "c")
-							ionSeriesData.unshift(sion = Ion.getSeriesIon(tion, container.data("options").peptide, i, massType));
+                            // Add to beginning of array
+							ionSeriesData.unshift(ion);
 					}
 				}
 			}
@@ -1306,6 +1407,11 @@
     function getMassType(container)
     {
         return container.find("input[name='"+getRadioName(container, "massTypeOpt")+"']:checked").val();
+    }
+
+    function getMassErrorUnit(container)
+    {
+        return container.find("input[name='"+getRadioName(container, "massErrorUnit")+"']:checked").val();
     }
 
     function getPeakAssignmentType(container)
@@ -1330,12 +1436,13 @@
 		var peakAssignmentType = getPeakAssignmentType(container);
 		var peakLabelType = container.find("input[name='"+getRadioName(container, "peakLabelOpt")+"']:checked").val();
         var massType = getMassType(container);
+        var massErrorUnit = getMassErrorUnit(container);
 
         var ionSeriesMatch = container.data("ionSeriesMatch");
         var ionSeries = container.data("ionSeries");
         var ionSeriesLabels = container.data("ionSeriesLabels");
         var options = container.data("options");
-        var massError = container.data("massError");
+        var massError = container.data("options").massError;
         var peaks = getPeaks(container);
 
 		for(var j = 0; j < selectedIonTypes.length; j += 1) {
@@ -1347,7 +1454,7 @@
 				if(recalculate(container) || !ionSeriesMatch.a[ion.charge]) { // re-calculate only if mass error has changed OR
 																		// matching peaks for this series have not been calculated
 					// calculated matching peaks
-					var adata = calculateMatchingPeaks(container, ionSeries.a[ion.charge], peaks, massError, peakAssignmentType, massType);
+					var adata = calculateMatchingPeaks(container, ionSeries.a[ion.charge], peaks, massError, massErrorUnit, peakAssignmentType, massType);
 					if(adata && adata.length > 0) {
 						ionSeriesMatch.a[ion.charge] = adata[0];
 						ionSeriesLabels.a[ion.charge] = adata[1];
@@ -1360,7 +1467,7 @@
 				if(recalculate(container) || !ionSeriesMatch.b[ion.charge]) { // re-calculate only if mass error has changed OR
 																		// matching peaks for this series have not been calculated
 					// calculated matching peaks
-					var bdata = calculateMatchingPeaks(container, ionSeries.b[ion.charge], peaks, massError, peakAssignmentType, massType);
+					var bdata = calculateMatchingPeaks(container, ionSeries.b[ion.charge], peaks, massError, massErrorUnit, peakAssignmentType, massType);
 					if(bdata && bdata.length > 0) {
 						ionSeriesMatch.b[ion.charge] = bdata[0];
 						ionSeriesLabels.b[ion.charge] = bdata[1];
@@ -1373,7 +1480,7 @@
 				if(recalculate(container) || !ionSeriesMatch.c[ion.charge]) { // re-calculate only if mass error has changed OR
 																		// matching peaks for this series have not been calculated
 					// calculated matching peaks
-					var cdata = calculateMatchingPeaks(container, ionSeries.c[ion.charge], peaks, massError, peakAssignmentType, massType);
+					var cdata = calculateMatchingPeaks(container, ionSeries.c[ion.charge], peaks, massError, massErrorUnit, peakAssignmentType, massType);
 					if(cdata && cdata.length > 0) {
 						ionSeriesMatch.c[ion.charge] = cdata[0];
 						ionSeriesLabels.c[ion.charge] = cdata[1];
@@ -1386,7 +1493,7 @@
 				if(recalculate(container) || !ionSeriesMatch.x[ion.charge]) { // re-calculate only if mass error has changed OR
 																		// matching peaks for this series have not been calculated
 					// calculated matching peaks
-					var xdata = calculateMatchingPeaks(container, ionSeries.x[ion.charge], peaks, massError, peakAssignmentType, massType);
+					var xdata = calculateMatchingPeaks(container, ionSeries.x[ion.charge], peaks, massError, massErrorUnit, peakAssignmentType, massType);
 					if(xdata && xdata.length > 0) {
 						ionSeriesMatch.x[ion.charge] = xdata[0];
 						ionSeriesLabels.x[ion.charge] = xdata[1];
@@ -1399,7 +1506,7 @@
 				if(recalculate(container) || !ionSeriesMatch.y[ion.charge]) { // re-calculate only if mass error has changed OR
 																		// matching peaks for this series have not been calculated
 					// calculated matching peaks
-					var ydata = calculateMatchingPeaks(container, ionSeries.y[ion.charge], peaks, massError, peakAssignmentType, massType);
+					var ydata = calculateMatchingPeaks(container, ionSeries.y[ion.charge], peaks, massError, massErrorUnit, peakAssignmentType, massType);
 					if(ydata && ydata.length > 0) {
 						ionSeriesMatch.y[ion.charge] = ydata[0];
 						ionSeriesLabels.y[ion.charge] = ydata[1];
@@ -1412,7 +1519,7 @@
 				if(recalculate(container) || !ionSeriesMatch.z[ion.charge]) { // re-calculate only if mass error has changed OR
 																		// matching peaks for this series have not been calculated
 					// calculated matching peaks
-					var zdata = calculateMatchingPeaks(container, ionSeries.z[ion.charge], peaks, massError, peakAssignmentType, massType);
+					var zdata = calculateMatchingPeaks(container, ionSeries.z[ion.charge], peaks, massError, massErrorUnit, peakAssignmentType, massType);
 					if(zdata && zdata.length > 0) {
 						ionSeriesMatch.z[ion.charge] = zdata[0];
 						ionSeriesLabels.z[ion.charge] = zdata[1];
@@ -1452,7 +1559,7 @@
         return ionmz;
     }
 
-	function calculateMatchingPeaks(container, ionSeries, allPeaks, massTolerance, peakAssignmentType, massType) {
+	function calculateMatchingPeaks(container, ionSeries, allPeaks, massTolerance, massErrorUnit, peakAssignmentType, massType) {
 
         // console.log("calculating matching peaks");
 		var peakIndex = 0;
@@ -1462,6 +1569,7 @@
 		matchData[1] = []; // labels -- ions;
 
         var peptide = container.data("options").peptide;
+
 		for(var i = 0; i < ionSeries.length; i += 1) {
 			
 			var sion = ionSeries[i];
@@ -1470,7 +1578,7 @@
             var minIndex = Number.MAX_VALUE;
             var neutralLossOptions = peptide.getPotentialLosses(sion);
 
-            var index = getMatchForIon(sion, matchData, allPeaks, peakIndex, massTolerance, peakAssignmentType, null, massType);
+            var index = getMatchForIon(sion, matchData, allPeaks, peakIndex, massTolerance, massErrorUnit, peakAssignmentType, null, massType);
             minIndex = Math.min(minIndex, index);
 
             for(var n = 1; n < neutralLossOptions.length; n += 1)
@@ -1479,7 +1587,7 @@
                 for(var k = 0; k < loss_options_with_n_losses.lossCombinationCount(); k += 1)
                 {
                     var lossCombination = loss_options_with_n_losses.getLossCombination(k);
-                    var index = getMatchForIon(sion, matchData, allPeaks, peakIndex, massTolerance, peakAssignmentType, lossCombination, massType);
+                    var index = getMatchForIon(sion, matchData, allPeaks, peakIndex, massTolerance, massErrorUnit, peakAssignmentType, lossCombination, massType);
                     minIndex = Math.min(minIndex, index);
                 }
             }
@@ -1495,14 +1603,14 @@
 	// allPeaks -- array with all the scan peaks
 	// peakIndex -- current index in peaks array
 	// Returns the index of the matching peak, if one is found
-    function getMatchForIon(sion, matchData, allPeaks, peakIndex, massTolerance, peakAssignmentType, neutralLosses, massType) {
+    function getMatchForIon(sion, matchData, allPeaks, peakIndex, massTolerance, massErrorUnit, peakAssignmentType, neutralLosses, massType) {
 		
 		if(!neutralLosses)
 			sion.match = false; // reset;
 		var ionmz = ionMz(sion, neutralLosses, massType);
         var peakLabel = getLabel(sion, neutralLosses);
 
-		var __ret = getMatchingPeak(peakIndex, allPeaks, ionmz, massTolerance, peakAssignmentType);
+		var __ret = getMatchingPeak(peakIndex, allPeaks, ionmz, massTolerance, massErrorUnit, peakAssignmentType);
 
         peakIndex = __ret.peakIndex;
         var bestPeak = __ret.bestPeak;
@@ -1522,25 +1630,35 @@
 
     function getMatchingPeakForMz(container, allPeaks, ionMz)
     {
-        var massError = container.data("massError");
+        var massError = container.data("options").massError;
+        var massErrorUnit = getMassErrorUnit(container);
         var peakAssignmentType = getPeakAssignmentType(container);
-        return getMatchingPeak(0, allPeaks, ionMz, massError, peakAssignmentType);
+        return getMatchingPeak(0, allPeaks, ionMz, massError, massErrorUnit, peakAssignmentType);
     }
 
-    function getMatchingPeak(peakIndex, allPeaks, ionmz, massTolerance, peakAssignmentType) {
+    function getMatchingPeak(peakIndex, allPeaks, ionmz, massTolerance, toleranceUnit, peakAssignmentType) {
 
         var bestDistance;
         var bestPeak;
+        var tolerantPeakMin = ionmz - massTolerance;
+        var tolerantPeakMax = ionmz + massTolerance;
+
         for (var j = peakIndex; j < allPeaks.length; j += 1) {
 
             var peak = allPeaks[j];
 
+            if(toleranceUnit === massErrorTypePpm)
+            {
+                var tolerance = (massTolerance * peak[0])/1000000;
+                tolerantPeakMin = ionmz - tolerance;
+                tolerantPeakMax = ionmz + tolerance;
+            }
             // peak is before the current ion we are looking at
-            if (peak[0] < ionmz - massTolerance)
+            if (peak[0] < tolerantPeakMin)
                 continue;
 
             // peak is beyond the current ion we are looking at
-            if (peak[0] > ionmz + massTolerance) {
+            if (peak[0] > tolerantPeakMax) {
                 peakIndex = j;
                 break;
             }
@@ -1795,8 +1913,8 @@
 		var ctermIons = getSelectedCtermIons(selectedIonTypes);
 		
 		var myTable = '' ;
-		myTable += '<table id="'+getElementId(container, elementIds.ionTable)+'" cellpadding="2" class="font_small '+elementIds.ionTable+'">' ;
-		myTable +=  "<thead>" ;
+		myTable += '<table id="'+getElementId(container, elementIds.ionTable)+'" cellpadding="2" class="font_small '+elementIds.ionTable+'">';
+		myTable +=  "<thead>";
 		myTable +=   "<tr>";
 
 		// nterm ions
@@ -1810,10 +1928,10 @@
 		for(var i = 0; i < ctermIons.length; i += 1) {
 			myTable +=    "<th>" +ctermIons[i].label+  "</th>"; 
 		}
-		myTable +=   "</tr>" ;
-		myTable +=  "</thead>" ;
+		myTable +=   "</tr>";
+		myTable +=  "</thead>";
 		
-		myTable +=  "<tbody>" ;
+		myTable +=  "<tbody>";
 
         var ionSeries = container.data("ionSeries");
 
@@ -1864,7 +1982,7 @@
 			}
 			
 		}
-		myTable +=   "</tr>" ;
+		myTable +=   "</tr>";
 		
 		myTable += "</tbody>";
 		myTable += "</table>";
@@ -2139,7 +2257,7 @@
 	//---------------------------------------------------------
 	// OPTIONS TABLE
 	//---------------------------------------------------------
-	function makeOptionsTable(container, charge) {
+	function makeOptionsTable(container, defaultChargeStates, defaultSelectedIons) {
 
         var options = container.data("options");
 
@@ -2153,64 +2271,22 @@
 		myTable += '<b>Ions:</b> ';
 		myTable += '<div id="'+getElementId(container, elementIds.ion_choice)+'" style="margin-bottom: 10px"> ';
 		myTable += '<!-- a ions --> ';
-		myTable += '<nobr> ';
-		myTable += '<span style="font-weight: bold;">a</span> ';
-		myTable += '<input type="checkbox" value="1" id="a_1"/>1<sup>+</sup> ';
-		myTable += '<input type="checkbox" value="2" id="a_2"/>2<sup>+</sup> ';
-		myTable += '<input type="checkbox" value="3" id="a_3"/>3<sup>+</sup> ';
-		myTable += '</nobr> ';
+        myTable += addIonToOptionsTable('a', defaultChargeStates, defaultSelectedIons['a']);
 		myTable += '<br/> ';
 		myTable += '<!-- b ions --> ';
-		myTable += '<nobr> ';
-		myTable += '<span style="font-weight: bold;">b</span> ';
-		myTable += '<input type="checkbox" value="1" id="b_1" checked="checked"/>1<sup>+</sup> ';
-		if(charge >= 2)
-			myTable += '<input type="checkbox" value="2" id="b_2" checked="checked"/>2<sup>+</sup> ';
-		else
-			myTable += '<input type="checkbox" value="2" id="b_2"/>2<sup>+</sup> ';
-		if(charge >= 3)
-			myTable += '<input type="checkbox" value="3" id="b_3" checked="checked"/>3<sup>+</sup> ';
-		else
-			myTable += '<input type="checkbox" value="3" id="b_3"/>3<sup>+</sup> ';
-		myTable += '</nobr> ';
+        myTable += addIonToOptionsTable('b', defaultChargeStates, defaultSelectedIons['b']);
 		myTable += '<br/> ';
 		myTable += '<!-- c ions --> ';
-		myTable += '<nobr> ';
-		myTable += '<span style="font-weight: bold;">c</span> ';
-		myTable += '<input type="checkbox" value="1" id="c_1"/>1<sup>+</sup> ';
-		myTable += '<input type="checkbox" value="2" id="c_2"/>2<sup>+</sup> ';
-		myTable += '<input type="checkbox" value="3" id="c_3"/>3<sup>+</sup> ';
-		myTable += '</nobr> ';
+        myTable += addIonToOptionsTable('c', defaultChargeStates, defaultSelectedIons['c']);
 		myTable += '<br/> ';
 		myTable += '<!-- x ions --> ';
-		myTable += '<nobr> ';
-		myTable += '<span style="font-weight: bold;">x</span> ';
-		myTable += '<input type="checkbox" value="1" id="x_1"/>1<sup>+</sup> ';
-		myTable += '<input type="checkbox" value="2" id="x_2"/>2<sup>+</sup> ';
-		myTable += '<input type="checkbox" value="3" id="x_3"/>3<sup>+</sup> ';
-		myTable += '</nobr> ';
+        myTable += addIonToOptionsTable('x', defaultChargeStates, defaultSelectedIons['x']);
 		myTable += '<br/> ';
 		myTable += '<!-- y ions --> ';
-		myTable += '<nobr> ';
-		myTable += '<span style="font-weight: bold;">y</span> ';
-		myTable += '<input type="checkbox" value="1" id="y_1" checked="checked"/>1<sup>+</sup> ';
-		if(charge >= 2)
-			myTable += '<input type="checkbox" value="2" id="y_2" checked="checked"/>2<sup>+</sup> ';
-		else 
-			myTable += '<input type="checkbox" value="2" id="y_2"/>2<sup>+</sup> ';
-		if(charge >= 3)
-			myTable += '<input type="checkbox" value="3" id="y_3" checked="checked"/>3<sup>+</sup> ';
-		else
-			myTable += '<input type="checkbox" value="3" id="y_3"/>3<sup>+</sup> ';
-		myTable += '</nobr> ';
+        myTable += addIonToOptionsTable('y', defaultChargeStates, defaultSelectedIons['y']);
 		myTable += '<br/> ';
 		myTable += '<!-- z ions --> ';
-		myTable += '<nobr> ';
-		myTable += '<span style="font-weight: bold;">z</span> ';
-		myTable += '<input type="checkbox" value="1" id="z_1"/>1<sup>+</sup> ';
-		myTable += '<input type="checkbox" value="2" id="z_2"/>2<sup>+</sup> ';
-		myTable += '<input type="checkbox" value="3" id="z_3"/>3<sup>+</sup> ';
-		myTable += '</nobr> ';
+        myTable += addIonToOptionsTable('z', defaultChargeStates, defaultSelectedIons['z']);
 		myTable += '<br/> ';
 		myTable += '<span id="'+getElementId(container, elementIds.deselectIonsLink)+'" style="font-size:8pt;text-decoration: underline; color:sienna;cursor:pointer;">[Deselect All]</span> ';
 		myTable += '</div> ';
@@ -2245,12 +2321,12 @@
         myTable+= '<input type="checkbox" value="true" ';
         if(options.labelImmoniumIons == true)
         {
-            myTable+=checked="checked"
+            myTable+=checked="checked";
         }
         myTable+= ' id="'+getElementId(container, elementIds.immoniumIons)+'"/><span style="font-weight:bold;">Immonium ions</span>';
 
         // Reporter ions
-        myTable += "<br/>"
+        myTable += "<br/>";
         myTable+= '<input type="checkbox" value="true" ';
         if(options.labelReporters == true)
         {
@@ -2260,7 +2336,7 @@
 
 		myTable += '</td> </tr> ';
 		
-		// mass type, mass tolerance etc.
+		// mass type
 		myTable += '<tr><td class="optionCell"> ';
 		myTable += '<div> Mass Type:<br/> ';
 		myTable += '<nobr> ';
@@ -2274,9 +2350,25 @@
         myTable += '/><span style="font-weight: bold;">Avg</span> ';
 		myTable += '</nobr> ';
 		myTable += '</div> ';
+        // mass tolerance
 		myTable += '<div style="margin-top:10px;"> ';
-		myTable += '<nobr>Mass Tol: <input id="'+getElementId(container, elementIds.massError)+'" type="text" value="'+options.massError+'" size="4"/></nobr> ';
-		myTable += '</div> ';
+		myTable += '<nobr>';
+        myTable += 'Mass Tol: <input id="'+getElementId(container, elementIds.massError)+'" type="text" value="'+options.massError+'" style="width:3em;"/>';
+		myTable += '</nobr>';
+        myTable += '<br>';
+        myTable += '<input type="radio" name="'+getRadioName(container, "massErrorUnit")+'" value="' + massErrorTypeTh + '"';
+        if(options.massErrorUnit === massErrorTypeTh)
+        {
+            myTable += ' checked = "checked" ';
+        }
+        myTable += '/><span style="font-weight: bold;">' + massErrorTypeTh + '</span> ';
+        myTable += '<input type="radio" name="'+getRadioName(container, "massErrorUnit")+'" value="' + massErrorTypePpm + '"';
+        if(options.massErrorUnit === massErrorTypePpm)
+        {
+            myTable += ' checked = "checked" ';
+        }
+        myTable += '/><span style="font-weight: bold;">' + massErrorTypePpm + '</span> ';
+        myTable += '</div> ';
 		myTable += '<div style="margin-top:10px;" align="center"> ';
 		myTable += '<input id="'+getElementId(container, elementIds.update)+'" type="button" value="Update"/> ';
 		myTable += '</div> ';
@@ -2290,7 +2382,7 @@
         myTable+= '<input type="checkbox" value="true" ';
         if(options.peakDetect == true)
         {
-            myTable+=checked="checked"
+            myTable+=checked="checked";
         }
         myTable+= ' id="'+getElementId(container, elementIds.peakDetect)+'"/><span style="font-weight:bold;">Peak Detect</span>';
 		myTable+= '</div> ';
@@ -2322,5 +2414,21 @@
         }
 	}
 
+    function addIonToOptionsTable(ionLabel, charges, selected)
+    {
+        if(!selected) selected = [];
+        var ionRow = "";
+        ionRow += '<nobr> ';
+        ionRow += '<span style="font-weight: bold;">' + ionLabel + '</span> ';
+        for (var i = 0; i < charges.length; i += 1)
+        {
+            var id = ionLabel + "_" + charges[i];
+            var checked = (selected[i] && selected[i] == 1) ? 'checked="checked"' : "";
+            ionRow += '<input type="checkbox" value="' + charges[i] + '" id="' + id + '" ' + checked + '/>' + charges[i] + '<sup>+</sup> ';
+        }
+        ionRow += '</nobr> ';
+        return ionRow;
+    }
+	
 	
 })(jQuery);
