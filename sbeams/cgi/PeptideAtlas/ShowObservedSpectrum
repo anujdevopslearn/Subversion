@@ -32,7 +32,6 @@ use SBEAMS::PeptideAtlas::PeptideFragmenter;
 
 use SBEAMS::Proteomics::Tables;
 use SBEAMS::Proteomics::PeptideMassCalculator;
-#$massCalculator = new SBEAMS::Proteomics::PeptideMassCalculator;
 use SBEAMS::Proteomics::SpecViewer;
 use SBEAMS::PeptideAtlas::ProtInfo;
 
@@ -43,6 +42,7 @@ use lib "/net/db/projects/Proteomics/lib";
 use Proteomics::Spectra::UniversalSpectrumIdentifier;
 use Proteomics::Response qw(processParameters);
 use Proteomics::Config;
+use Proteomics::Spectra::Spectrum;
 
 use Carp;
 $SIG{__DIE__} = sub { &Carp::confess };
@@ -599,10 +599,6 @@ sub spectrumAnalysisWorkbench {
   my $spectrum_array = $args{spectrum_array};
   my $hidden_form_fields = $args{hidden_form_fields};
 
-  use lib "/net/db/projects/spectrumPrediction/lib";
-  use Spectrum;
-
-
   #### Serialize the spectrum so that it can be parsed by the spectrum library
   my @spectrumBuffer;
   push(@spectrumBuffer,"Name: $peptideIon");
@@ -799,10 +795,7 @@ sub showSpectrumText {
   my $peptideIon = $args{'peptideIon'};
   my $spectrumBuffer = $args{'spectrumBuffer'};
 
-  use lib "/net/db/projects/spectrumPrediction/lib";
-  use Spectrum;
-
-  my $spectrum = Spectrum->new(peptideIon=>$peptideIon);
+  my $spectrum = Proteomics::Spectra::Spectrum->new(peptideIon=>$peptideIon);
 
   #### If ETD is specified, then set that fragmenation type to ETD
   if ($parameters->{SAWB_fragmentation} eq 'ETD') {
