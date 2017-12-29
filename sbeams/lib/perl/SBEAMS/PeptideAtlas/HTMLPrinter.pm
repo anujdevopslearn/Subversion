@@ -1919,6 +1919,7 @@ sub get_proteome_coverage {
 	AND B2.DBXREF_ID IS NULL
 	AND B2.BIOSEQUENCE_NAME LIKE '%\\_%' ESCAPE '\\'
   AND B2.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
+  AND B2.BIOSEQUENCE_NAME NOT LIKE 'ENST%'
 	GROUP BY B2.BIOSEQUENCE_SET_ID , LEFT (B2.BIOSEQUENCE_NAME, PATINDEX( '%[_]%', B2.BIOSEQUENCE_NAME ))
   )
   ~;
@@ -2195,6 +2196,136 @@ sub print_html_table_to_tsv{
 
 }
 
+sub displayExperiment_contri_plotly{
+  my $self = shift;
+  my %args = @_;
+  my $data_ref = $args{data_ref};
+  my $tr = $args{tr};
+  my $column_name_ref = $args{column_name_ref};
+  my $idx = 0;
+  my @sample_label = ();
+  my (@cumpepx, @cumpepy,@idvpepy,@cumprotx, @cumproty,@idvproty);
+  my $pre_cum_n_good_spectra;
+
+  foreach my $row(@$data_ref){
+    my $n_good_spectra = $row->[3];
+    my $n_distinct_peptides = $row->[4];
+    my $cumulative_n_peptides = $row->[7];
+    my $n_canonical_proteins = $row->[8];
+    my $cumulative_n_proteins = $row->[9];
+    my $sample_tag =  $row->[1];
+    $sample_tag =~ s/.*sample_id=\d+\'>//;
+    $sample_tag =~ s/<.*//;
+    push @sample_label, ($sample_tag,'','');
+
+		if ($idx ==0 ){
+				push @cumpepx, 0;
+			}else{
+				push @cumpepx, $pre_cum_n_good_spectra;
+        push @cumpepx, $pre_cum_n_good_spectra;
+			}
+			push @cumpepx, $pre_cum_n_good_spectra+$n_good_spectra;
+      
+			push @cumpepy, ($cumulative_n_peptides,$cumulative_n_peptides,0);
+			push @idvpepy, ($n_distinct_peptides,$n_distinct_peptides,0);
+			push @cumproty, ($cumulative_n_proteins,$cumulative_n_proteins,0);
+			push @idvproty, ($n_canonical_proteins,$n_canonical_proteins,0);
+			$pre_cum_n_good_spectra += $n_good_spectra;
+			$idx++;
+  }
+  my $cumpepx_str = join(",", @cumpepx);
+  my $cumpepy_str = join(",", @cumpepy);  
+  my $idvpepy_str = join(",", @idvpepy);
+  my $cumproty_str = join(",", @cumproty);
+  my $idvproty_str = join(",", @idvproty);
+  my $sample_label_str = join("','", @sample_label);
+  my $plot_js = qq~
+			l=['$sample_label_str']
+			var cum = {
+				x: [$cumpepx_str],
+				y: [$cumpepy_str],
+				fill: 'tonexty',
+        fillcolor:'red',
+				name:'cumulative_n_peptides',
+				hovertext:l,
+				haveron:"fills",
+        hoverinfo:"x+y+text",
+			};
+			var idv = {
+				x: [$cumpepx_str],
+				y: [$idvpepy_str],
+				fill: 'tonexty',
+        fillcolor:'blue',
+				name:'n_distinct_multiobs_peptides',
+				hovertext:l,
+        hoverinfo:"x+y+text",
+				haveron:"fills"
+			};
+
+			var layout = {
+					width: 1100,
+				height: 800,
+				font: {
+					size: 18
+				},
+				xaxis:{title:'Cumulative Number of MS/MS Spectra Identified'},
+				yaxis:{title:'Number of Distinct Peptides'}
+			};
+			var data = [idv,cum];
+			Plotly.newPlot('plot_div', data,layout);
+
+      var cum2 = {
+        x: [$cumpepx_str],
+        y: [$cumproty_str],
+        fill: 'tonexty',
+        fillcolor:'red',
+        name:'cumulative_n_proteins',
+        hovertext:l,
+        hoverinfo:"x+y+text",
+        haveron:"fills"
+      };
+      var idv2 = {
+        x: [$cumpepx_str],
+        y: [$idvproty_str],
+        fill: 'tonexty',
+        fillcolor:'blue',
+        name:'n_canonical_proteins',
+        hovertext:l,
+        hoverinfo:"x+y+text",
+        haveron:"fills"
+      };
+      var layout = {
+        width: 1100,
+        height: 800,
+        font: {
+          size: 18
+        },
+        xaxis:{title:'Cumulative Number of MS/MS Spectra Identified'},
+        yaxis:{title:'Number of Distinct Proteins'}
+      };
+
+      var data2 = [idv2,cum2];
+      Plotly.newPlot('plot_div2', data2,layout);
+  ~;
+  #print "$plot_js<BR>";
+
+  my $chart = qq~
+     <!-- Latest compiled and minified plotly.js JavaScript -->
+     <script type="text/javascript" src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+     <TR $tr><TD><p class=plot_caption><b>Plot below shows the number of peptides contributed by each sample,</b> and the cumulative number of distinct peptides for the build as of that sample.</TD></TR> 
+     <TR $tr><TD><div id="plot_div" style="width: 100%;"></div><br></TD></TR>
+     <TR $tr><TD><p class=plot_caption><b>Plot below shows cumulative number of canonical proteins contributed by each experiment.</b>
+     Height of blue bar is number of proteins identified in experiment; 
+     height of red bar is cumulatie number of proteins, 
+     width of the bar (x-axis) shows the number of spectra identified (PSMs) above the threshold, for each experiment.</TD></TR>
+     <TR $tr><TD><div id="plot_div2" style="width: 100%;"></div><br><br></TD></TR>
+		<script type="text/javascript" charset="utf-8">
+      $plot_js
+		</script>
+  ~;
+  return $chart;
+  
+}
 
 1;
 

@@ -130,8 +130,8 @@ my $show_image = 0;
     }
 
     my ( $chart_div, $header );
+		my ( $sample_table, $sample_arrayref ,$column_name_ref ) = get_sample_info( $build_id );
     if (! $section || $section =~ /SampleContribution/i){
-			my ( $sample_table, $sample_arrayref ,$column_name_ref ) = get_sample_info( $build_id );
       if ($params->{output_mode} =~ /tsv/i && $section){
         $atlas->print_html_table_to_tsv( data_ref => $sample_arrayref,
                                          column_name_ref => $column_name_ref,
@@ -161,7 +161,10 @@ my $show_image = 0;
 			# Add graphic
 
 			if ( $show_image ) {
-				my $plots = $page = get_build_plots ( $build_id, $chart_div ); 
+				my $plots = $page = get_build_plots ( build_id => $build_id, 
+                                              chart_div => $chart_div,
+                                              sample_arrayref => $sample_arrayref, 
+                                              column_name_ref => $column_name_ref); 
 				print $plots;
 			}
 			
@@ -372,8 +375,11 @@ center left) ],
 
 # less informative sample contribution plot
 sub get_build_plots {
-  my $build_id = shift;
-  my $chart_div = shift;
+  my %args = @_;
+  my $build_id = $args{build_id};
+  my $chart_div = $args{chart_div};
+  my $sample_arrayref = $args{sample_arrayref};
+  my $column_name_ref = $args{column_name_ref};
   my $table = "<TABLE WIDTH=900>\n";
 
   my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'build_plot',
@@ -388,93 +394,103 @@ sub get_build_plots {
       link => $link
   );
 
-  # Eric Deutsch's idl-created GIF experiment contribution plots
-  my $cp_img_path = "$PHYSICAL_BASE_DIR/images/tmp";
-  my $img_path = "$HTML_BASE_DIR/images/tmp";
-  my $build_path = get_build_path( build_id => $build_id );
-  my ( $gif_filename, $multobs_string, $caption );
+  my $chart = $atlas->displayExperiment_contri_plotly(
+      tr => $tr,
+      data_ref=>$sample_arrayref,
+      column_name_ref => $column_name_ref, 
+  );
 
-  # See whether we have a plot describing all peptides
-  # or a plot describing only multiply observed peptides (pre-Sep09).
-  if ( -e "$build_path/analysis/ncumpep_vs_nspec.gif" ) {
-    $gif_filename = "ncumpep_vs_nspec.gif";
-    $multobs_string = "";
-  } elsif ( -e "$build_path/analysis/ncumpep_vs_nspec-multobs.gif" ) {
-    $gif_filename = "ncumpep_vs_nspec-multobs.gif";
-    $multobs_string = "multiply observed ";
-  }
-  $caption = "<b>Plot below shows cumulative number of distinct ${multobs_string}identified peptides contributed by each experiment.</b> Height of blue bar is number of peptides identified in experiment; height of red bar is cumulative number of peptides, width of the bar (x-axis) shows the number of spectra identified (PSMs) above the threshold, for each experiment.";
-  if ( defined $gif_filename ) {
-    $table = insert_image_and_caption_into_html_table (
-      tr_info => $tr,
-      caption => $caption,
-      img_path => $img_path,
-      cp_img_path => $cp_img_path,
-      build_id => $build_id,
-      build_path => $build_path,
-      gif_filename => $gif_filename,
-      table => $table,
-    );
-  }
+#  # Eric Deutsch's idl-created GIF experiment contribution plots
+#  my $cp_img_path = "$PHYSICAL_BASE_DIR/images/tmp";
+#  my $img_path = "$HTML_BASE_DIR/images/tmp";
+#  my $build_path = get_build_path( build_id => $build_id );
+#  my ( $gif_filename, $multobs_string, $caption );
+#
+#  # See whether we have a plot describing all peptides
+#  # or a plot describing only multiply observed peptides (pre-Sep09).
+#  if ( -e "$build_path/analysis/ncumpep_vs_nspec.gif" ) {
+#    $gif_filename = "ncumpep_vs_nspec.gif";
+#    $multobs_string = "";
+#  } elsif ( -e "$build_path/analysis/ncumpep_vs_nspec-multobs.gif" ) {
+#    $gif_filename = "ncumpep_vs_nspec-multobs.gif";
+#    $multobs_string = "multiply observed ";
+#  }
+#  $caption = "<b>Plot below shows cumulative number of distinct ${multobs_string}identified peptides contributed by each experiment.</b> Height of blue bar is number of peptides identified in experiment; height of red bar is cumulative number of peptides, width of the bar (x-axis) shows the number of spectra identified (PSMs) above the threshold, for each experiment.";
+#  if ( defined $gif_filename ) {
+#    $table = insert_image_and_caption_into_html_table (
+#      tr_info => $tr,
+#      caption => $caption,
+#      img_path => $img_path,
+#      cp_img_path => $cp_img_path,
+#      build_id => $build_id,
+#      build_path => $build_path,
+#      gif_filename => $gif_filename,
+#      table => $table,
+#    );
+#  }
+#
+#  # See whether we have a plot describing all proteins
+#  if ( -e "$build_path/analysis/ncumprot_vs_nspec.gif" ) {
+#    $gif_filename = "ncumprot_vs_nspec.gif";
+#    $caption = "<b>Plot below shows cumulative number of canonical proteins contributed by each experiment.</b> Height of blue bar is number of proteins identified in experiment; height of red bar is cumulative number of proteins, width of the bar (x-axis) shows the number of spectra identified (PSMs) above the threshold, for each experiment.";
+#    $table = insert_image_and_caption_into_html_table (
+#      tr_info => $tr,
+#      caption => $caption,
+#      img_path => $img_path,
+#      cp_img_path => $cp_img_path,
+#      build_id => $build_id,
+#      build_path => $build_path,
+#      gif_filename => $gif_filename,
+#      table => $table,
+#    );
+#  }
+#
+#  sub insert_image_and_caption_into_html_table {
+#    my %args = @_;
+#    my $tr_info = $args{tr_info};
+#    my $caption = $args{caption};
+#    my $img_path = $args{img_path};
+#    my $cp_img_path = $args{cp_img_path};
+#    my $build_id = $args{build_id};
+#    my $build_path = $args{build_path};
+#    my $gif_filename = $args{gif_filename};
+#    my $table = $args{table};
+#
+#    # Craft a table row for the caption, and one for the image.
+#    my $build_image_rows =<<"    END";
+#    <TR $tr><TD>&nbsp;</TD></TR>
+#    <TR $tr><TD class=plot_caption>$caption</TD></TR>
+#    <TR $tr><TD><IMG WIDTH=800 SRC=$img_path/${build_id}_$gif_filename></IMG></TD></TR> 
+#    END
+#    # Try copying image to $cp_img_path. If successful, add rows to table
+#    system "cp  $build_path/analysis/$gif_filename $cp_img_path/${build_id}_$gif_filename";
+#    if ( -e "$cp_img_path/${build_id}_$gif_filename" ) {
+#      $table .= $build_image_rows;
+#    } 
+#    return $table;
+#  }
 
-  # See whether we have a plot describing all proteins
-  if ( -e "$build_path/analysis/ncumprot_vs_nspec.gif" ) {
-    $gif_filename = "ncumprot_vs_nspec.gif";
-    $caption = "<b>Plot below shows cumulative number of canonical proteins contributed by each experiment.</b> Height of blue bar is number of proteins identified in experiment; height of red bar is cumulative number of proteins, width of the bar (x-axis) shows the number of spectra identified (PSMs) above the threshold, for each experiment.";
-    $table = insert_image_and_caption_into_html_table (
-      tr_info => $tr,
-      caption => $caption,
-      img_path => $img_path,
-      cp_img_path => $cp_img_path,
-      build_id => $build_id,
-      build_path => $build_path,
-      gif_filename => $gif_filename,
-      table => $table,
-    );
-  }
-
-  sub insert_image_and_caption_into_html_table {
-    my %args = @_;
-    my $tr_info = $args{tr_info};
-    my $caption = $args{caption};
-    my $img_path = $args{img_path};
-    my $cp_img_path = $args{cp_img_path};
-    my $build_id = $args{build_id};
-    my $build_path = $args{build_path};
-    my $gif_filename = $args{gif_filename};
-    my $table = $args{table};
-
-    # Craft a table row for the caption, and one for the image.
-    my $build_image_rows =<<"    END";
-    <TR $tr><TD>&nbsp;</TD></TR>
-    <TR $tr><TD class=plot_caption>$caption</TD></TR>
-    <TR $tr><TD><IMG WIDTH=800 SRC=$img_path/${build_id}_$gif_filename></IMG></TD></TR> 
-    END
-    # Try copying image to $cp_img_path. If successful, add rows to table
-    system "cp  $build_path/analysis/$gif_filename $cp_img_path/${build_id}_$gif_filename";
-    if ( -e "$cp_img_path/${build_id}_$gif_filename" ) {
-      $table .= $build_image_rows;
-    } 
-    return $table;
-  }
-
-  return $table if ( -e "$cp_img_path/${build_id}_$gif_filename" );
+#  return $table if ( -e "$cp_img_path/${build_id}_$gif_filename" );
 
 #  dynamically drawn experiment contribution plot
 #		<DIV ALIGN=center><H3>Experiment Contribution Plot</H3></DIV>
 #  <TR $tr><TD><IMG SRC=buildPlot?atlas_build_id=$build_id></IMG></TD></TR>
 #    $chart_div
-  $table .=<<"  END";
-  <TR $tr><TD>&nbsp;</TD></TR>
-  <TR $tr><TD class=plot_caption><b>Plot below shows the number of distinct <i>multiply observed</i> (n_obs > 1) peptides contributed by each sample,</b> and the cumulative number of distinct multiply-observed peptides for the build as of that sample.</TD></TR>
-  <TR $tr><TD>&nbsp;</TD></TR>
-  <TR $tr><TD>$chart_div</TD></TR>
-  <TR $tr><TD>&nbsp;</TD></TR>
-  END
-   
-
-  $table .= "\n</TABLE>\n";
-	
+#  $table .=<<"  END";
+#  <TR $tr><TD>&nbsp;</TD></TR>
+#  <TR $tr><TD class=plot_caption><b>Plot below shows the number of distinct <i>multiply observed</i> (n_obs > 1) peptides contributed by each sample,</b> and the cumulative number of distinct multiply-observed peptides for the build as of that sample.</TD></TR>
+#  <TR $tr><TD>&nbsp;</TD></TR>
+#  <TR $tr><TD>$chart_div</TD></TR>
+#  <TR $tr><TD>&nbsp;</TD></TR>
+#  END
+#   
+#
+#  $table .= "\n</TABLE>\n";
+  $table .= qq~
+    $chart
+    </TABLE>
+  ~;
+ 
   return $table;
 }
 
