@@ -957,17 +957,16 @@ sub get_spectrum
 
   #### 2014-05-07 Eric disables RAW library reading because spectra are seriously altered!
   #if ( 0 && ( -e $library_idx_file || -e $comp_idx_file ) ){
-  if ( -e $library_idx_file || -e $comp_idx_file ) {
+  @mass_intensities = $spectra->getSpectrumPeaks(
+    proteomics_search_batch_id => $search_batch_id,
+    spectrum_name => $spectrum_name,
+    fraction_tag => $fraction_tag,
+  );
+  if ( ! @mass_intensities and (-e $library_idx_file || -e $comp_idx_file )) {
     @mass_intensities = $spectra->getSpectrumPeaks_Lib(
     spectrum_name => $spectrum_name,
     library_idx_file => $library_idx_file,
    );
-  }else{
-   @mass_intensities = $spectra->getSpectrumPeaks(
-    proteomics_search_batch_id => $search_batch_id,
-    spectrum_name => $spectrum_name,
-    fraction_tag => $fraction_tag,
-    );
   }
 
 
