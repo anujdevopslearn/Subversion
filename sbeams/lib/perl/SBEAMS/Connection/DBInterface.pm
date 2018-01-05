@@ -3586,28 +3586,13 @@ sub displayResultSetControls {
     # Sensible default, avoid div by zero
 		$rs_params{page_size} ||= 50;
 
-#    my $npages = int($nrowsminus / $rs_params{page_size}) + 1;
-#    for ($i=0; $i<$npages; $i++) {
-#      my $pg = $i+1;
-#
-#      if ( ( $i % 50 ) == 0 ) {
-#          print "<BR>";
-#      }
-#
-#      if ($i == $rs_params{page_number}) {
-#        print "[<font color=red>$pg</font>] \n";
-#      } else {
-#        print "<A HREF=\"$base_url${separator}apply_action=VIEWRESULTSET&".
-#          "rs_set_name=$rs_params{set_name}&".
-#          "rs_page_size=$rs_params{page_size}&".
-#          "rs_page_number=$pg\">$pg</A> \n";
-#      }
-#    }
-#    print "of $npages<BR>\n";
 
 
     #### Print out a form to control some variable parameters
     my $this_page = $rs_params{page_number} + 1;
+    $base_url =~ /.*TABLE_NAME=(\S+)$/;
+    my $table_name = $1;
+
     print qq~
       <script type="text/javascript" src="$CGI_BASE_DIR/../usr/javascript/lorikeet/js/jquery.min.js"></script>
       <script type="text/javascript" src="$CGI_BASE_DIR/../usr/javascript/simplePagination/jquery.simplePagination.js"></script>
@@ -3627,13 +3612,13 @@ sub displayResultSetControls {
   			\$(function() {
            var itemsOnPage = \$("[name='rs_page_size']").val();
            var rs_page_number = \$("[name='rs_page_number']").val();
-
 			  	 \$('#compact-pagination').pagination({
 							items: $nrows,
 							itemsOnPage: itemsOnPage,
 							cssStyle: 'light-theme',
               rs_page_number: rs_page_number,
-							rs_set_name: "$rs_params{set_name}"
+              table_name: '$table_name',
+							rs_set_name: "$rs_params{set_name}",
 					});
 			  });
 			</script>
@@ -3720,7 +3705,7 @@ sub displayResultSetControls {
       if ($value gt '' && $key ne 'TABLE_NAME') {
         $param_string .= "&" if ($param_string);
         $value = uri_escape($value);
-	$value =~ s/\+/\%2b/g;
+				$value =~ s/\+/\%2b/g;
         $param_string .= "$key=$value";
       }
     }
