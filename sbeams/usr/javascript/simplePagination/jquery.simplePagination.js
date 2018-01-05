@@ -303,11 +303,16 @@
         $link = $('<span class="current">' + (options.text) + '</span>');
 
 			} else {
+        var table_str = '' 
+        if (o.table_name !== ''){
+          table_str = '&TABLE_NAME=' + o.table_name;
+        }
+
 				$link = $('<a href="' + 
                 o.hrefTextPrefix + (pageIndex + 1) + 
                 '&rs_page_size=' + o.itemsOnPage +
                 '&rs_set_name=' + o.rs_set_name + 
-                '&TABLE_NAME=' + o.table_name + 
+                table_str + 
                 o.hrefTextSuffix + '" class="page-link">' + (options.text) + '</a>');
 				$link.click(function(event){
 					return methods._selectPage.call(self, pageIndex, event);
@@ -361,8 +366,10 @@
 								if ((val>0)&&(val<=o.pages)){
                   $link =  o.hrefTextPrefix + val +
                           '&rs_page_size=' + o.itemsOnPage +
-                          '&rs_set_name=' + o.rs_set_name + 
-                          '&TABLE_NAME=' + o.table_name;
+                          '&rs_set_name=' + o.rs_set_name
+                  if (o.table_name !== ''){
+                    $link += '&TABLE_NAME=' + o.table_name;
+                  }
 								  methods._selectPage.call(self, val - 1);
                   window.open($link,"_self"); 
                 }
