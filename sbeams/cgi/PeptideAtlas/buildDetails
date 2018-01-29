@@ -754,6 +754,7 @@ sub get_build_overview {
   AND PPL.level_name = 'canonical'
   AND BS.biosequence_name NOT LIKE 'DECOY%'
   AND BS.biosequence_name NOT LIKE '%UNMAPPED%'
+  AND BS.biosequence_name NOT LIKE '%CONTAM%'
   AND BS.biosequence_desc NOT LIKE '%common contaminant%'
   PROT
 
