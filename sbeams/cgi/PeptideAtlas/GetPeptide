@@ -1201,6 +1201,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
 
   #### If a result is returned
+  my $display_ce = 0;
+
   if ( scalar @mod_peps ) {
     $modHTML .= $sbeams->getPopupDHTML();
 
@@ -1291,9 +1293,9 @@ if ($apply_action =~ /QUERY|GO/i ) {
         }
         
         $ce_link = "<A HREF='ShowCESpectralPlot?$param_str' TARGET='_CE_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
-
+        $display_ce=1;
       }
-      $pep->[$ce_idx] = $ce_link unless ($sbeams->isGuestUser() || $is_origene);
+      $pep->[$ce_idx] = $ce_link unless ($sbeams->isGuestUser() || $is_origene || ! $display_ce);
 
 
       # Final formatting for list items
@@ -1312,9 +1314,11 @@ if ($apply_action =~ /QUERY|GO/i ) {
     }
 
     #### Add table column headings
-    my $column_headings = ['Modified Sequence', 'Charge', 'Mono Parent m/z', 'Best Prob', '# Obs', '# Siblings', 'Sample IDs', 'Consensus Spectra', '<div title="Filter applies to Individual Spectra section below">Spectrum Filter</div>' ];
+    my $column_headings = ['Modified Sequence', 'Charge', 'Mono Parent m/z', 'Best Prob', '# Obs', '# Siblings', 'Sample IDs', 'Consensus Spectra' ];
     push @{$column_headings},  '<div title ="Synthetic Peptide Reference Spectra from SRM Atlas">Reference</div>' unless ($sbeams->isGuestUser() || $is_origene);
-    push @{$column_headings},  'CE_range' unless ($sbeams->isGuestUser() || $is_origene);
+    push @{$column_headings},  'CE_range' unless ($sbeams->isGuestUser() || $is_origene || ! $display_ce);
+    push @{$column_headings}, '<div title="Filter applies to Individual Spectra section below">Spectrum Filter</div>';
+
     unshift @mod_peps, $column_headings;
 
     #### Format table
