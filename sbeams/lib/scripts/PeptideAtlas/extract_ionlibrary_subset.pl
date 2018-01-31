@@ -126,14 +126,34 @@ open(OUT,">$options{output_file}") || die("ERROR: Unable to write output file $o
 open INFILE, $options{input_file} || die "ERROR: Unable to read '$options{input_file}'";
 my $cnt = 0;
 my %ion2bin;
+
+# Use for library validation
+my $ntabs;
 while ( my $line = <INFILE>) {
+  chomp $line;
+  my @line = split( /\t/, $line );
   unless ( $cnt++ ) {
+    $ntabs = scalar( @line );
+    my $format_error = 0;
+    if ( $options{format} eq 'peakview' ) {
+      $format_error++ unless $line =~ /stripped_sequence/;
+    } else {
+      $format_error++ unless $line =~ /PrecursorMz/;
+    }
+    if ( $format_error ) {
+      print STDERR "Illegal library file - missing required fields for $options{format} format\n";
+      exit;
+    }
     print OUT $line;
     next;
   }
+
+  if ( scalar( @line ) != $ntabs ) {
+    print STDERR "Illegal library file - discrepancy in number of fields\n";
+    exit;
+  }
+
   $stats{count}++;
-  chomp $line;
-  my @line = split( /\t/, $line );
 
 
   my $q1 = ( $options{format} eq 'peakview' ) ? $line[0] : $line[$colmap{PrecursorMz}];
@@ -418,7 +438,9 @@ sub process_options {
   my $infile = $options{input_file} || printUsage( "input file required" );
   my $outfile = $options{output_file} || printUsage( "outfile required" );
 
-  if ( !$options{format} || $options{format} eq 'openswath' ) {
+  $options{format} ||= 'peakview';
+
+  if ( $options{format} eq 'openswath' ) {
     open INFILE, $options{input_file} || die "ERROR: Unable to read '$options{input_file}'";
     while ( my $line = <INFILE> ) {
       chomp $line;
@@ -433,7 +455,6 @@ sub process_options {
     }
     close INFILE;
   }
-  $options{format} ||= 'peakview';
 }
 
 sub calculate_swath_bins {
@@ -467,6 +488,17 @@ sub calculate_swath_bins {
       $line =~ s/\r//g;
       chomp $line;
       my @line = split( /\s+/, $line );
+
+      if ( !defined $line[0] || ! defined $line[1] ||
+           $line[0] =~ /^$/  || $line[1] =~ /^$/   ||
+           $line[0] !~ /\d/  || $line[1] !~ /\d/   ||
+   $line[0] !~ /^\d*\.*\d*$/ || $line[1] !~ /^\d*\.*\d*$/ ) {
+        print STDERR "Illegal SWATHs file, cannot continue\n";
+        exit;
+      }
+
+
+
       $swath_bins{$line[0]} = $line[1];
       $options{prec_min_mz} ||= $line[0];
       $options{prec_min_mz} = $line[0] if $line[0] < $options{prec_min_mz};
