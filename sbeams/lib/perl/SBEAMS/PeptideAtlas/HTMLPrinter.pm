@@ -2076,6 +2076,8 @@ sub get_what_is_new {
   WHERE atlas_build_id in ($build_id, $previous_build_id)
   AND B.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
   AND B.BIOSEQUENCE_NAME NOT LIKE 'CONTAM%'
+  AND B.biosequence_name NOT LIKE '%UNMAPPED%'
+  AND B.biosequence_desc NOT LIKE '%common contaminant%'
   GROUP BY atlas_build_id
   ~;
   my %pep_count = $sbeams->selectTwoColumnHash($sql);
@@ -2092,6 +2094,7 @@ sub get_what_is_new {
   AND BS.biosequence_name NOT LIKE 'DECOY%'
   AND BS.biosequence_name NOT LIKE '%UNMAPPED%'
   AND BS.biosequence_desc NOT LIKE '%common contaminant%'
+  AND BS.BIOSEQUENCE_NAME NOT LIKE 'CONTAM%'
   GROUP BY PID.atlas_build_id
   ~;
   my %prot_count = $sbeams->selectTwoColumnHash($sql);
