@@ -397,7 +397,8 @@ sub processRequest {
       my %spectrum;
       ($proteomics_search_batch_id, %spectrum) = get_spectrum(
         spectrum_identification_id => $parameters{spectrum_identification_id},
-        atlas_build_id => $parameters{atlas_build_id}
+        atlas_build_id => $parameters{atlas_build_id},
+        parameters => \%parameters,
       );
 
       #### If the spectrum did not come back, then we error out
@@ -469,7 +470,6 @@ sub processRequest {
       }
     }
 
-
     if ( 0 == 1 ) {
       print "<PRE>\n";
       print "charge=$charge,\n";
@@ -518,20 +518,24 @@ sub processRequest {
     #### Create a SpecViewer object and generate a Lorikeet display
     if ( $peptidoform ) {
       my $lorikeet = new SBEAMS::Proteomics::SpecViewer;
-      print $lorikeet->generateSpectrum(
-        charge            => $charge,
-        modified_sequence => $peptidoform,
-        precursor_mass    => $observedPrecursorMz || 100,
-        scan              => $scanNumber,
-        name              => $spectrumName,
-        a_ions            => $parameters{'ShowA'},
-        b_ions            => $parameters{'ShowB'},
-        c_ions            => $parameters{'ShowC'},
-        x_ions            => $parameters{'ShowX'},
-        y_ions            => $parameters{'ShowY'},
-        z_ions            => $parameters{'ShowZ'},
-        spectrum          => \@spectrum_array
-      );
+        print $lorikeet->generateSpectrum(
+          charge            => $charge,
+          modified_sequence => $peptidoform,
+          precursor_mass    => $observedPrecursorMz || 100,
+          scan              => $scanNumber,
+          name              => $spectrumName,
+          a_ions            => $parameters{'ShowA'},
+          b_ions            => $parameters{'ShowB'},
+          c_ions            => $parameters{'ShowC'},
+          x_ions            => $parameters{'ShowX'},
+          y_ions            => $parameters{'ShowY'},
+          z_ions            => $parameters{'ShowZ'},
+          spectrum          => \@spectrum_array,
+          selWinLow         => $parameters{selWinLow},
+          selWinHigh        => $parameters{selWinHigh},
+          ms1scanLabel      => $parameters{ms1scanLabel},
+          ms1peaks          => $parameters{ms1peaks},
+        );
     } else {
       print "<BR><BR>The Lorikeet spectrum viewer is currently unable to display spectrum without any peptide ion interpretation. A temporary hack while we fix this is to set the sequence to 'PEPTIDE'<BR><BR>\n";
     }
@@ -568,13 +572,12 @@ sub processRequest {
     ~;
 
     print &printUserAnnotations(
-	spectrum_id => $parameters{'spectrum_id'},
-	modified_sequence => $peptidoform,
-	charge => $parameters{'assumed_charge'},
-	spectrum_identification_id => $parameters{'spectrum_identification_id'},
-	form_fields => $hidden_form_fields
+			spectrum_id => $parameters{'spectrum_id'},
+			modified_sequence => $peptidoform,
+			charge => $parameters{'assumed_charge'},
+			spectrum_identification_id => $parameters{'spectrum_identification_id'},
+			form_fields => $hidden_form_fields
     ) if ($parameters{'spectrum_identification_id'});
-
 
     #### Display the spectrum analysis workbench
     spectrumAnalysisWorkbench(
@@ -583,8 +586,6 @@ sub processRequest {
       peptideIon => "$peptidoform/$charge",
       hidden_form_fields => $hidden_form_fields,
     );
-
-
 
 } # end processRequest
 
@@ -885,6 +886,7 @@ sub get_spectrum
 
   my $spectrum_identification_id = $args{'spectrum_identification_id'};
   my $atlas_build_id = $args{'atlas_build_id'};
+  my $parameters = $args{parameters};
   unless ($spectrum_identification_id) {
     print "\nERROR: get_spectrum needs spectrum_identification_id. ".
           "Got atlas_build_id $atlas_build_id.\n\n";
@@ -957,11 +959,20 @@ sub get_spectrum
 
   #### 2014-05-07 Eric disables RAW library reading because spectra are seriously altered!
   #if ( 0 && ( -e $library_idx_file || -e $comp_idx_file ) ){
+  my %spectrum;
+  @mass_intensities = $spectra->getSpectrumPeaks_plotmsms(
+    proteomics_search_batch_id => $search_batch_id,
+    spectrum_name => $spectrum_name,
+    fraction_tag => $fraction_tag,
+    parameters => $parameters,
+  );
+
   @mass_intensities = $spectra->getSpectrumPeaks(
     proteomics_search_batch_id => $search_batch_id,
     spectrum_name => $spectrum_name,
     fraction_tag => $fraction_tag,
-  );
+  ) if ( ! @mass_intensities);
+
   if ( ! @mass_intensities and (-e $library_idx_file || -e $comp_idx_file )) {
     @mass_intensities = $spectra->getSpectrumPeaks_Lib(
     spectrum_name => $spectrum_name,
@@ -984,7 +995,6 @@ sub get_spectrum
     push(@intensities,$mass_intensities[$i]->[1]);
   }
 
-  my %spectrum;
   $spectrum{n_peaks} = $#mass_intensities + 1;
 
 

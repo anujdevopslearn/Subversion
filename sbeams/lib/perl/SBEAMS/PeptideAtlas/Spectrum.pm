@@ -22,6 +22,8 @@ things related to PeptideAtlas spectra
 use strict;
 use DB_File ;
 use Data::Dumper;
+use IO::Uncompress::Gunzip qw(gunzip $GunzipError) ;
+
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK);
 require Exporter;
 @ISA = qw();
@@ -120,7 +122,7 @@ sub loadBuildSpectra {
   #### We now support two different file types
   #### First try to find the PAidentlist file
   my $filetype = 'PAidentlist';
-  my $expected_n_columns = 14;
+  my $expected_n_columns = 15;
   my $peplist_file = "$atlas_build_directory/".
     "PeptideAtlasInput_concat.PAidentlist";
 
@@ -169,14 +171,14 @@ sub loadBuildSpectra {
   $n=0;
   while ( my $line = <INFILE>) {
     chomp $line;
-    @columns = split(/\t/,$line);
+    @columns = split("\t",$line,-1);
     #print "cols = ".scalar(@columns)."\n";
     unless (scalar(@columns) == $expected_n_columns) {
-      if ($expected_n_columns == 14 && scalar(@columns) == 11) {
+      if ($expected_n_columns == 16 && (scalar(@columns) == 11 || scalar(@columns) == 12)) {
 				print "WARNING: Unexpected number of columns (".
 				scalar(@columns)."!=$expected_n_columns) in\n$line\n".
 					"This is likely missing ProteinProphet information, which is bad, but we will allow it until this bug is fixed.\n";
-      } elsif (scalar(@columns) == 15) {
+      } elsif (scalar(@columns) == 16 || scalar(@columns) == 15) {
 				#### This is okay for now: experimental SpectraST addition
       } else {
 				die("ERROR: Unexpected number of columns (".
@@ -188,7 +190,7 @@ sub loadBuildSpectra {
         $preceding_residue,$modified_sequence,$following_residue,$charge,
         $probability,$massdiff,$protein_name,$proteinProphet_probability,
         $n_proteinProphet_observations,$n_sibling_peptides,
-        $SpectraST_probability, $ptm_sequence);
+        $SpectraST_probability, $ptm_sequence,$chimera_level);
     if ($filetype eq 'peplist') {
       ($search_batch_id,$peptide_sequence,$modified_sequence,$charge,
         $probability,$protein_name,$spectrum_name) = @columns;
@@ -197,7 +199,7 @@ sub loadBuildSpectra {
         $preceding_residue,$modified_sequence,$following_residue,$charge,
         $probability,$massdiff,$protein_name,$proteinProphet_probability,
         $n_proteinProphet_observations,$n_sibling_peptides,
-        $SpectraST_probability) = @columns;
+        $chimera_level) = @columns;
       #### Correction for occasional value '+-0.000000'
       $massdiff =~ s/\+\-//;
     } else {
@@ -220,7 +222,8 @@ sub loadBuildSpectra {
        probability => $probability,
        protein_name => $protein_name,
        spectrum_name => $spectrum_name,
-       massdiff => $massdiff,);
+       massdiff => $massdiff,
+       chimera_level => $chimera_level);
 
     $n++;
     if($pre_search_batch_id ne $search_batch_id){
@@ -260,10 +263,11 @@ sub insertSpectrumIdentification {
   my $spectrum_name = $args{spectrum_name}
     or die("ERROR[$METHOD]: Parameter spectrum_name not passed");
   my $massdiff = $args{massdiff};
-  
+  my $chimera_level = $args{chimera_level}; 
   my $probability = $args{probability};
   die("ERROR[$METHOD]: Parameter probability not passed") if($probability eq '');
 
+  return if ($modified_sequence =~ /[JUO]/);
   our $counter;
 
   #### Get the modified_peptide_instance_id for this peptide
@@ -291,14 +295,17 @@ sub insertSpectrumIdentification {
 
   #### If not, INSERT it
   unless ($spectrum_id) {
+    if ($chimera_level eq ''){
+      $chimera_level = 'NULL';
+    }
+
     $spectrum_id = $self->insertSpectrumRecord(
       sample_id => $sample_id,
       spectrum_name => $spectrum_name,
       proteomics_search_batch_id => $search_batch_id,
+      chimera_level => $chimera_level,
     );
   }
-
-
   #### Check to see if this spectrum_identification is in the database
   my $spectrum_identification_id = $self->get_spectrum_identification_id(
     modified_peptide_instance_id => $modified_peptide_instance_id,
@@ -554,7 +561,7 @@ sub insertSpectrumRecord {
     or die("ERROR[$METHOD]: Parameter spectrum_name not passed");
   my $proteomics_search_batch_id = $args{proteomics_search_batch_id}
     or die("ERROR[$METHOD]: Parameter proteomics_search_batch_id not passed");
-
+  my $chimera_level = $args{chimera_level} ;
 
   #### Parse the name into components
   my ($fraction_tag,$start_scan,$end_scan);
@@ -578,6 +585,7 @@ sub insertSpectrumRecord {
     spectrum_name => $spectrum_name,
     start_scan => $start_scan,
     end_scan => $end_scan,
+    chimera_level => $chimera_level,
     scan_index => -1,
   );
 
@@ -709,7 +717,6 @@ sub getSpectrumPeaks_Lib {
       my $len = $line[3];
       my $filename = $comp_lib_idx_file;
       $filename =~ s/.compspecidx/.sptxt.gz/;
-
       $peaks = $consensus->get_spectrum_peaks( file_path => $filename, 
                                                entry_idx => $off, 
                                                  rec_len => $len, 
@@ -786,6 +793,115 @@ sub getSpectrumPeaks_Lib {
 
 } # end getSpectrumPeaks_Lib
 
+###############################################################################
+# getSpectrumPeaks_plotmsms --
+###############################################################################
+sub getSpectrumPeaks_plotmsms {
+  my $METHOD = 'getSpectrumPeaks_plotmsms';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+
+  #### Process parameters
+  my $proteomics_search_batch_id = $args{proteomics_search_batch_id}
+    or die("ERROR[$METHOD]: Parameter proteomics_search_batch_id not passed");
+  my $spectrum_name = $args{spectrum_name}
+    or die("ERROR[$METHOD]: Parameter spectrum_name not passed");
+  my $fraction_tag = $args{fraction_tag}
+    or die("ERROR[$METHOD]: Parameter fraction_tag not passed");
+  my $parameters = $args{parameters};
+  
+
+  #### Infomational/problem message buffer, only printed if get fails
+  my $buffer = '';
+
+  #### Get the data_location of the spectrum
+  my $data_location = $self->get_data_location(
+    proteomics_search_batch_id => $proteomics_search_batch_id,
+  );
+  $buffer .= "data_location = $data_location<br>\n";
+ 
+  ($data_location, $buffer) = $self->groom_data_location(
+    data_location => $data_location,
+    history_buffer => $buffer,
+  );
+  $buffer .= "data_location = $data_location<br>\n";
+
+  my $filename;
+  #### First try to fetch the spectrum from an mzXML file
+  my $mzXML_filename;
+  
+  if($fraction_tag =~ /.mzML/){
+    $mzXML_filename = "$data_location/$fraction_tag";
+    if ( ! -e $mzXML_filename ){
+      $mzXML_filename = "$data_location/$fraction_tag.mzML";
+    }
+  }else{
+    $mzXML_filename = "$data_location/$fraction_tag.mzML";
+  }
+
+  if ( ! -e $mzXML_filename){
+    $mzXML_filename .= ".gz";
+  }
+
+  if( ! -e $mzXML_filename){
+     $mzXML_filename = "$data_location/$fraction_tag.mzXML";
+  }
+
+  if ( ! -e $mzXML_filename){
+    $mzXML_filename .= ".gz";
+  } 
+ 
+  $buffer .= "INFO: Looking for '$mzXML_filename'<BR>\n";
+  if ( -e $mzXML_filename ) {
+    $buffer .= "INFO: Found '$mzXML_filename'<BR>\n";
+    my $spectrum_number;
+    if ($spectrum_name =~ /(\d+)\.(\d+)\.\d$/) {
+      $spectrum_number = $1;
+      $buffer .= "INFO: Spectrum number is $spectrum_number<BR>\n";
+    } 
+    my $org_request_method = $ENV{"REQUEST_METHOD"};
+    my $org_query_string = $ENV{"QUERY_STRING"};
+    $ENV{"REQUEST_METHOD"} = 'GET';
+    $ENV{"QUERY_STRING"} = "Dta=$data_location/$fraction_tag/$spectrum_name.dta";
+    my $content = `/proteomics/sw/tpp/cgi-bin/plot-msms-js.cgi`;
+    my (@ms1, @ms2);
+		my @lines = split ("\n", $content);
+		my ($ms1scanLabel, $selWinHigh,$selWinLow);
+		my @ms1;
+		my @ms2;
+		my $ms2_flag =0;
+		foreach my $line (@lines){
+			if ($line =~ /var\s+ms1scanLabel.*=\s?"(.*)".*/){
+				$ms1scanLabel = $1;
+			}elsif($line =~ /var\s+selWinHigh.*=\s?([\d\.]+)/){
+        $selWinHigh = $1;
+      }elsif($line =~ /var\s+selWinLow.*=\s?([\d\.]+)/){
+        $selWinLow = $1;
+      }
+
+			if ($line =~ /ms2peaks/){
+				$ms2_flag = 1;
+			}
+			if ($line =~ /.*\[([\d\.]+),([\d\.]+)].*/){
+				if ($ms2_flag){
+					push(@ms2,[($1,$2)]);
+				}else{
+					push(@ms1,[($1,$2)]);
+				}
+			}
+			if ($line =~ /.*\[[\d\.]+,[\d\.]+\]\];/){
+				$ms2_flag = 0;
+			}
+		}
+    $ENV{"REQUEST_METHOD"} = $org_request_method;
+    $ENV{"QUERY_STRING"}  = $org_query_string;
+    $parameters->{ms1scanLabel} = $ms1scanLabel;
+    $parameters->{selWinLow} = $selWinLow;
+    $parameters->{selWinHigh} = $selWinHigh;
+    $parameters->{ms1peaks} = \@ms1;
+    return @ms2;
+  }
+}
 ###############################################################################
 # getSpectrumPeaks --
 ###############################################################################
@@ -953,7 +1069,6 @@ sub getSpectrumPeaks {
     print $buffer;
     return;
   }
-
   #### Return result
   print "   ".scalar(@mz_intensities)." mass-inten pairs loaded\n"
     if ($VERBOSE);
@@ -1166,24 +1281,34 @@ sub loadSpectrum_Fragmentation_Type {
     or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
 
   my $sql = qq~
-    SELECT DISTINCT ASB.DATA_LOCATION
+    SELECT DISTINCT ASB.DATA_LOCATION, COALESCE(E.fragmentation_type_ids,S.fragmentation_type_ids)
     FROM $TBAT_SPECTRUM SP
     JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON (SP.SAMPLE_ID = ASB.SAMPLE_ID)
     JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON (ABSB.ATLAS_SEARCH_BATCH_ID  = ASB.ATLAS_SEARCH_BATCH_ID )
     JOIN $TBAT_SAMPLE  S ON (ABSB.SAMPLE_ID = S.SAMPLE_ID)
+    JOIN $TBPR_SEARCH_BATCH PSB ON (PSB.SEARCH_BATCH_ID = ASB.PROTEOMICS_SEARCH_BATCH_ID)
+    JOIN $TBPR_PROTEOMICS_EXPERIMENT E ON (E.EXPERIMENT_ID = PSB.EXPERIMENT_ID)
     JOIN $TBPR_INSTRUMENT I ON (I.INSTRUMENT_ID = S.INSTRUMENT_MODEL_ID)
     JOIN $TBPR_INSTRUMENT_TYPE IT ON (I.INSTRUMENT_TYPE_ID = IT.INSTRUMENT_TYPE_ID)
     WHERE ABSB.ATLAS_BUILD_ID = $atlas_build_id
     AND SP.FRAGMENTATION_TYPE_ID IS NULL
   ~;
-  my @directories = $sbeams->selectOneColumn($sql);
   
-  foreach my $dir (@directories){
+  my %directories = $sbeams->selectTwoColumnHash($sql);
+  my $commit_interval = 50;
+  $sbeams->initiate_transaction();
+  my ($start, $diff);
+ 
+	my $cnt_update = 0;
+  foreach my $dir (keys %directories){
+    my $ids = $directories{$dir};
+
+    $start = [gettimeofday];
 		my $sql = qq~
 			SELECT SP.SPECTRUM_ID,
-						 SP.SPECTRUM_NAME + ',' +
-						 ASB.DATA_LOCATION + ',' + 
-						 ASB.SEARCH_BATCH_SUBDIR + ','+
+						 SP.SPECTRUM_NAME, 
+						 ASB.DATA_LOCATION,
+						 ASB.SEARCH_BATCH_SUBDIR,
 						 IT.INSTRUMENT_TYPE_NAME
 			FROM $TBAT_SPECTRUM SP
 			JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON (SP.SAMPLE_ID = ASB.SAMPLE_ID)
@@ -1196,17 +1321,41 @@ sub loadSpectrum_Fragmentation_Type {
       AND ASB.DATA_LOCATION = '$dir' 
 			ORDER BY SP.SPECTRUM_NAME, DATA_LOCATION
 		~;
-
-		print "Loading SPECTRUM_ID in $dir";
-		my %results = $sbeams->selectTwoColumnHash($sql);
+		print "Loading SPECTRUM_ID in $dir \n";
+		my @rows = $sbeams->selectSeveralColumns($sql);
 		my %spectrum=();
 		my %fragmentation_type=();
 		my $pre_file='';
 		my $cnt = 0;
-		my $cnt_update = 0;
+    if ($ids ne '' && $ids !~ /,/){
+       foreach my $row (@rows){
+         my ($spectrum_id, $spectrum_name,$data_location,$subdir, $instrument_type_name)= @$row;
+         my %rowdata = (
+           fragmentation_type_id => $ids,
+         );
+         my $response = $sbeams->updateOrInsertRow(
+           update=>1,
+           table_name=>$TBAT_SPECTRUM,
+           rowdata_ref=>\%rowdata,
+           PK => 'spectrum_id',
+           PK_value=> $spectrum_id,
+           return_PK => 1,
+           verbose=>$VERBOSE,
+           testonly=> $TESTONLY
+        );
+        if($cnt_update % 1000 == 0){
+           print "$cnt_update...";
+        }
+        $cnt_update++;
+        $sbeams->commit_transaction() if($cnt_update > $commit_interval && $cnt_update % $commit_interval);
 
-		foreach my $spectrum_id (keys %results){
-			my ( $spectrum_name,$data_location,$subdir, $instrument_type_name)= split(",", $results{$spectrum_id});
+       }
+       next;
+    }
+   
+     
+		foreach my $row (@rows){
+			my ($spectrum_id, $spectrum_name,$data_location,$subdir, $instrument_type_name)= @$row; 
 			$spectrum_name=~ /^(.*)\.\d+\.(\d+)\.\d+$/;
 			my $filename = $1;
 			my $scan = $2;
@@ -1222,7 +1371,8 @@ sub loadSpectrum_Fragmentation_Type {
 					if(! -e $file){
 						 $file ="/regis/sbeams/archive/$data_location/$subdir/$filename.mzXML.gz";
 						 if ( ! -e $file){
-							 die "cannot find mzXML/mzML file: /regis/sbeams/archive/$data_location/$subdir/$filename\n";
+							 print "cannot find mzXML/mzML file: /regis/sbeams/archive/$data_location/$subdir/$filename\n";
+               next;
 						 }
 					}
 				}
@@ -1231,16 +1381,30 @@ sub loadSpectrum_Fragmentation_Type {
 			my $type = 0;
 			## decide type 4 
 			if ($instrument_type_name  =~ /tof/i){$type= 4;};
+      if ($ids !~ /,/ && $ids ne ''){
+         $type = $ids;
+      }
+      if ($file =~ /lbrill.Hs_hESC_NSC_phospho/){
+        if( $file =~ /ETD/){
+          $type = 6;
+        }else{
+          $type = 5;
+        }
+      }
+       
+
 			## if not type 4, read file
 			if ($pre_file ne $file && ! $type ){ 
 				%fragmentation_type = ();
-				print "$file\n";
+				#print "$file\n";
+        $start = [gettimeofday];
 				get_fragmentation_type( file => $file,
 															fragmentation_type => \%fragmentation_type);
-				print scalar keys %fragmentation_type , "\n";
-				if(scalar keys %fragmentation_type == 0){
-					print "no update: $file\n";
-				}
+        print "read $file\n";
+				#print scalar keys %fragmentation_type , "\n";
+				#if(scalar keys %fragmentation_type == 0){
+			 	#	print "no update: $file\n";
+				#}
 			}
 			$pre_file = $file;
 			if( $type == 4 || defined $fragmentation_type{$scan}){ 
@@ -1264,11 +1428,15 @@ sub loadSpectrum_Fragmentation_Type {
 					print "$cnt_update...";
 				}
 				$cnt_update++;
+        $sbeams->commit_transaction() if($cnt_update > $commit_interval && $cnt_update % $commit_interval);
 			}
-			$cnt++;
-		}  
+		} 
+     
+    $sbeams->commit_transaction() if ! ($commit_interval % $cnt_update);
+		$cnt++;
     print "\n$cnt_update of $cnt updated\n";
   }
+  $sbeams->reset_dbh();
 }
 
 sub get_fragmentation_type {
@@ -1276,10 +1444,11 @@ sub get_fragmentation_type {
   my $file = $args{file};
   my $fragmentation_type = $args{fragmentation_type};
   my $fh;
-  if($file =~ /.gz$/){
+  if($file =~ /\.gz/){ 
+    return if($file =~ /HapMapQuantitativeProteome/);
    	open ($fh, "zcat $file|") or die "cannot open $file\n";
   }else{
-    open ($fh, "<$file");
+    open ($fh, "<$file") or die "cannot open $file\n";
   }
 	my %filterstr = ();
   my %instrumentConfiguration =();

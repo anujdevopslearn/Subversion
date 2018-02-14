@@ -140,10 +140,14 @@ sub generateSpectrum {
     my $modified_sequence = $args{'modified_sequence'};
     my $precursorMz = $args{'precursor_mass'};
     my $spectrum_aref = $args{'spectrum'};
+		my $selWinLow     =$args{selWinLow} || 0;
+		my $selWinHigh    =$args{selWinHigh} || 0;
+		my $ms1scanLabel  =$args{ms1scanLabel} || '';
+		my $ms1peaks_ref  =$args{ms1peaks};
     my $jsArrayName = $args{'jsArrayName'} || 'ms2peaks';
+    my $jsArrayName_ms1 = $args{'jsArrayName_ms1'} || 'ms1peaks';
 
     my ($sequence,$mods, $nmod, $cmod) = &convertMods(modified_sequence => $modified_sequence);
-
     my $lorikeet_resources = "$HTML_BASE_DIR/usr/javascript/lorikeet";
 
     my $lorikeet_html = qq%
@@ -189,7 +193,13 @@ sub generateSpectrum {
 				      "variableMods":$mods,
 				      "ntermMod":$nmod,
 				      "ctermMod":$cmod,
-				      "peaks":$jsArrayName});
+              "selWinLow":$selWinLow,
+              "selWinHigh":$selWinHigh,
+              "ms1scanLabel":"$ms1scanLabel",
+              "ms1peaks":$jsArrayName_ms1,
+              "zoomMs1":"true",
+				      "peaks":$jsArrayName,
+              });
 	});
     %;
 
@@ -208,15 +218,23 @@ sub generateSpectrum {
     }
     $lorikeet_html .= "var $jsArrayName = [\n";
     for my $ar_ref (@{$spectrum_aref}) {
-	my $mz = $ar_ref->[0];	
-	my $in = $ar_ref->[1];
-	$lorikeet_html .= "[$mz,$in],\n";
+				my $mz = $ar_ref->[0];	
+				my $in = $ar_ref->[1];
+				$lorikeet_html .= "[$mz,$in],\n";
     }
     $lorikeet_html .= "];\n";
-
+    if ($ms1peaks_ref){
+			$lorikeet_html .= "var $jsArrayName_ms1 = [\n";
+			for my $ar_ref (@{$ms1peaks_ref}) {
+					my $mz = $ar_ref->[0];
+					my $in = $ar_ref->[1];
+					$lorikeet_html .= "[$mz,$in],\n";
+			}
+			$lorikeet_html .= "];\n";
+    }else{
+       $lorikeet_html .= "var $jsArrayName_ms1 = [[0.0,0.0]];\n";
+    }
     $lorikeet_html .= "</script>\n";
-
-
     return $lorikeet_html;
 }
 
