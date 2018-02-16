@@ -515,7 +515,7 @@ AT_consensus_library_spectrum_peak	7	charge	Charge State	int	4	0	N		N			N				Y	Y
 AT_consensus_spectrum_type	1	consensus_spectrum_type_id	Consensus Spectrum Type ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_consensus_spectrum_type	2	consensus_spectrum_type_name	Consensus Spectrum Type Name	varchar	50	0	N		N			Y	text	30		Y	Y	N	"Spectrum Type Name (i.e., consensus, replicate, or single)"		
 AT_consensus_spectrum_type	3	consensus_spectrum_type_description	Consensus Spectrum Type Description	varchar	1024	0	N		N			Y	text	30		Y	Y	N	Spectrum Type Description		
-AT_spectrum_identification	1	spectrum_identification_id	Spectrum Identification ID	int	4	0	N		Y							N	N				PkDEFAULT
+AT_spectrum_identification	1	spectrum_identification_id	Spectrum Identification ID	bigint	4	0	N		Y							N	N				PkDEFAULT
 AT_spectrum_identification	2	modified_peptide_instance_id	Modified Peptide Instance ID	int	4	0	N		N	AT_modified_peptide_instance	modified_peptide_instance_id	Y	text	10		Y	Y		Parent modified_peptide_instance_id		
 AT_spectrum_identification	3	probability	Probability	real	4	0	N		N			Y	text	10		Y	Y	N	PeptideProphet probability for assignment to peptide		
 AT_spectrum_identification	4	spectrum_id	Spectrum ID	int	4	0	N		N	AT_spectrum	spectrum_id	Y	text	10		Y	Y		spectrum_id		
@@ -535,6 +535,7 @@ AT_spectrum	12	collision_energy	Collision Energy	real	4	0	Y		N			N		 		Y	Y	N	Ins
 AT_spectrum	13	ionization_energy	Ionization Energy	real	4	0	Y		N			N		 		Y	Y	N	Ionization Energy 		
 AT_spectrum	14	fragmentation_type_id	Fragmentation Type id	int	4	0	Y		N	AT_fragmentation_type	fragmentation_type_id	N					N	N	Fragmentation Type id		
 AT_spectrum	15	chimera_level	Chimera Level	int	4	0	Y		N			N				Y	Y		Chimera Level		
+AT_spectrum	16	signal_to_noise	Signal to Noise Ratio	real	4	0	Y		N			N		 		Y	Y	N	Signal to Noise Ratio		
 AT_spectrum_peak	1	spectrum_peak_id	Spectrum Peak ID	int	4	0	N		Y							N	N				PkDEFAULT
 AT_spectrum_peak	2	spectrum_id	Spectrum ID	int	4	0	N		N	AT_spectrum	spectrum_id	Y	text	10		Y	Y		spectrum_id		
 AT_spectrum_peak	3	mz	M/Z	float	8	0	N		N			Y	text	10		Y	Y	N	Fragment ion M/Z		
@@ -559,7 +560,7 @@ AT_GetMRMList	14	n_peptides_per_protein	Number of peptides per protein constrain
 AT_GetMRMList	15	include_validated_transitions	Include contributed validated transitions									N	checkbox	1		Y	Y	N	Include contributed validated transitions.  These will take precedence over transitions derived from the consensus library.		
 AT_GetMRMList	16	include_theoretical_peptides	Include theoretical peptide information									N	checkbox	1		Y	N	N	Include theoretical peptide information.  These will be used if not enough peptides or transitions were observed to fulfill # peptides and # transitions options.		
 AT_spectrum_annotation	1	spectrum_annotation_id	Spectrum Annotation ID	int	4	0	N		Y							N	N				pkDEFAULT
-AT_spectrum_annotation	2	spectrum_identification_id	Spectrum Identification ID	int	4	0	N		N	AT_spectrum_identification	spectrum_identification_id					Y	Y	Y	Spectrum Identification ID		
+AT_spectrum_annotation	2	spectrum_identification_id	Spectrum Identification ID	bigint	4	0	N		N	AT_spectrum_identification	spectrum_identification_id					Y	Y	Y	Spectrum Identification ID		
 AT_spectrum_annotation	3	spectrum_id	Spectrum ID	int	4	0	N		N	AT_spectrum	spectrum_id	Y	text	10		Y	Y		spectrum_id		
 AT_spectrum_annotation	4	identified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Sequence of the peptide including modification notations		
 AT_spectrum_annotation	5	identified_peptide_charge	Peptide Charge	int	4	0	N		N			Y	text	10		Y	Y	Y	Charge on the precursor ion		
@@ -1034,7 +1035,7 @@ AT_proteotypic_peptide_xspecies_mapping	4	n_human_mapping	Number of Human Protei
 AT_proteotypic_peptide_xspecies_mapping	5	n_mouse_mapping	Number of Mouse Protein Mapping 	int	4	0	Y		N			N							Number of distinct accession numbers (proteins) for peptide in Mouse		
 AT_proteotypic_peptide_xspecies_mapping	6	n_yeast_mapping	Number of Yeast Protein Mapping 	int	4	0	Y		N			N							Number of distinct accession numbers (proteins) for peptide in Yeast		
 AT_GetNextProtChromMapping	2	nextprot_mapping_id	neXtProt Mapping									N	optionlist	4		Y	Y	N	Select desired neXtProt mapping date	"if ($parameters{current_username} = 'guest')  SELECT ID, convert (char (10), PA_MAPPING_DATE,20) as mapping_time FROM $TBAT_NEXTPROT_MAPPING where atlas_build_id = $parameters{atlas_build_id} and is_public ='Y' ORDER BY ID DESC else  SELECT ID, convert (char (10), PA_MAPPING_DATE,20) as mapping_time FROM $TBAT_NEXTPROT_MAPPING where atlas_build_id = $parameters{atlas_build_id}  ORDER BY ID DESC"	
-AT_GetNextProtChromMapping	1	atlas_build_id	Atlas Build									N	optionlist	4	refreshDocument()	Y	Y	N	Select desired Atlas Build to include in query.	"select distinct NM.atlas_build_id , A.atlas_build_name FROM $TBAT_NEXTPROT_MAPPING NM  join $TBAT_ATLAS_BUILD A on(A.atlas_build_id = NM.atlas_build_id) order by NM.atlas_build_id desc "	
+AT_GetNextProtChromMapping	1	atlas_build_id	Atlas Build									N	optionlist	4	refreshDocument()	Y	Y	N	Select desired Atlas Build to include in query.	"select distinct NM.atlas_build_id , A.atlas_build_name FROM $TBAT_NEXTPROT_MAPPING NM  join $TBAT_ATLAS_BUILD A on(A.atlas_build_id = NM.atlas_build_id) order by A.atlas_build_name desc"	
 AT_GetNextProtChromMapping	3	biosequence_name_constraint	Protein Name Constraint									N	text	40		Y	Y	N	Constraint for the Protein Name (accession). 		
 AT_GetNextProtChromMapping	4	upload_file	Upload File Of Proteins	varchar	255	0	Y		N			N	file	40		Y	Y	N	"Path to file with list of Protein Names, one per line, to be uploaded via the web interface (NOTE: if proteins are not found, search defaults to printing all proteins of the selected Atlas build)"		
 AT_GetNextProtChromMapping	5	biosequence_gene_name_constraint	Gene Name Constraint										text	40		Y	Y	N	Constraint for the  Gene Name. 		
@@ -1050,7 +1051,7 @@ AT_GetNextProtChromMapping	14	protein_evidence_level_constraint	Protein Evidence
 AT_GetNextProtChromMapping	15	peptideatlas_category_constraint	PeptideAtlas Category									N	multioptionlist	4		Y	Y	N	"<a href=""http://www.peptideatlas.org/docs/protein_ident_terms.php"">Protein Identification Terminology</a>"	"select   protein_presence_level_id , level_name from $TBAT_PROTEIN_PRESENCE_LEVEL ORDER BY LEVEL_NAME"	
 AT_GetNextProtChromMapping	16	redundancy_constraint	No Redundancy									N	checkbox	0		Y	Y	N	remove redundant nextprot accession entries		
 AT_spectrum_ptm_identification	1	spectrum_ptm_identification_id	Spectrum PTM Identification ID	int	4	0	N		Y			N							spectrum_ptm_identification_id		
-AT_spectrum_ptm_identification	2	spectrum_identification_id	Spectrum Identification ID	int	4	0	N		N	AT_spectrum_identification	spectrum_identification_id	N							spectrum_identification_id		
+AT_spectrum_ptm_identification	2	spectrum_identification_id	Spectrum Identification ID	bigint	4	0	N		N	AT_spectrum_identification	spectrum_identification_id	N							spectrum_identification_id		
 AT_spectrum_ptm_identification	3	ptm_sequence	PTM sequence	varchar	255	0	N		N			N							ptm_sequence		
 AT_putative_protein	1	putative_protein_id	PutativeProteinID	int	4	0	N		Y			N									pkDEFAULT
 AT_putative_protein	2	biosequence_id	BiosequenceID	int	4	0	N		N	AT_biosequence	biosequence_id		text	20		Y	Y	N	biosequence_id		
@@ -1100,7 +1101,7 @@ AT_public_data_repository	10	instrument	Instrument	varchar	1000	0	Y		N				text	2
 AT_public_data_repository	11	datasetDescription	Dataset Description	text	16	0	Y		N				textarea	4		Y	Y	N	Additional Description		
 AT_public_data_repository	12	contributor	Contributor	varchar	255	0	Y		N			Y	text	40		Y	Y	N			
 AT_public_data_repository	13	publication	Publication	varchar	1000	0	Y		N			Y	text	50		Y	Y	N	Publication		
-AT_public_data_repository	14	project_id	Owner Project	int	4	0	Y	NULL	N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
+AT_public_data_repository	14	project_id	Owner Project	int	4	0	Y	NULL	N	project	project_id	N	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
 AT_public_data_repository	15	publicReleaseDate	Public Release Date	datetime	8	0	N		N				text	20		Y	N	N	Date on which the data becomes publicly available		
 AT_public_data_repository	16	record_status	Record Status	char	1	0	N	N	N			N				N	N				
 AT_public_data_repository	17	date_created	date_created	datetime	8	0	Y		N			N					Y	N			
@@ -1108,7 +1109,8 @@ AT_public_data_repository	18	created_by_id	created_by_id	int	4	0	Y		N			Y					N	
 AT_public_data_repository	19	date_modified	date_modified	datetime	8	0	Y		N			Y					N	N			
 AT_public_data_repository	20	modified_by_id	modified_by_id	int	4	0	Y		N			N					N	N			
 AT_public_data_repository	21	owner_group_id	owner_group_id	int	4	0	Y		N			N					N	N			
-AT_public_data_repository	22	related_database_entries	related_database_entries	text	16	0	N		N			Y	textarea	3		Y	Y	N	"Comma-separated identifiers from, e.g., ProteomeExchange"		
+AT_public_data_repository	22	related_database_entries	related_database_entries	text	16	0	Y		N			N	textarea	3		Y	Y	N	"Comma-separated identifiers from, e.g., ProteomeExchange"		
+AT_public_data_repository	23	comment	Comment	varchar	255	0	Y		N			N	text	50		Y	Y	N	Additional comments		
 AT_fragmentation_type	1	fragmentation_type_id	Fragmentation Type ID	int	4	0	Y		Y								N	Y	Primary Key		pkDEFAULT
 AT_fragmentation_type	2	fragmentation_type	Fragmentation Type	varchar	255	0	N		N			N	text	20		Y	Y	N	Type of Fragmentation		
 AT_fragmentation_type	3	comment	Comment	text	16	0	Y		N			Y	textarea	4		Y	Y	N	Additional comments		
