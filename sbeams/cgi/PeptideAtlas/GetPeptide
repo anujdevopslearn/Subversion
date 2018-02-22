@@ -1410,12 +1410,14 @@ if ($apply_action =~ /QUERY|GO/i ) {
     ["spectrum", "SI.spectrum_identification_id","Spectrum"],
     ["chromatogram", "''","Chromatogram"],
     ["chimera_level", "S.chimera_level","Chimera Level"],
-    ["precursor_intensity", "precursor_intensity", "Precursor Intensity"],
+    ["precursor_intensity", "S.precursor_intensity", "Precursor Intensity (x10^6)"],
     ["scan_time", "scan_time", "RT"],
     ["collision_energy","collision_energy", "CE"],
     ["ptm_sequence", "SPI.ptm_sequence","PTM Sequence"],
     ["sal_prob", "COUNT(SAL.level_probability)","SAL Prob"],
     ["sample_tag", "SMP.sample_tag", "Sample Tag"],
+    ["total_ion_current", "S.total_ion_current", "TIC (x10^6)"],
+    ["signal_to_noise", "S.signal_to_noise", "S/N"],
    );
   my $columns_clause = $sbeams->build_SQL_columns_list(
     column_array_ref=>\@column_array,
@@ -1471,10 +1473,14 @@ if ($apply_action =~ /QUERY|GO/i ) {
      $ispectra_clause
   GROUP BY modified_peptide_sequence, MPI.peptide_charge,
          SMP.sample_id,I.instrument_name, SI.probability, S.spectrum_name,
-         SI.spectrum_identification_id, SMP.sample_tag, precursor_intensity, scan_time,
+         SI.spectrum_identification_id, SMP.sample_tag,scan_time,
          collision_energy, SPI.ptm_sequence, FRG.FRAGMENTATION_TYPE,
-         S.chimera_level
-  ORDER BY modified_peptide_sequence, MPI.peptide_charge, S.spectrum_name ASC
+         S.chimera_level,S.precursor_intensity,S.total_ion_current,S.signal_to_noise
+  ORDER BY modified_peptide_sequence,
+           MPI.peptide_charge,
+           S.precursor_intensity DESC,
+           S.total_ion_current DESC,
+           S.signal_to_noise DESC 
   ~;
 
   #$sbeams->display_sql(sql=>$modSQL);
@@ -1888,6 +1894,8 @@ sub postProcessResultset {
 	# 14 SPI.ptm_sequence,
 	# 15 COUNT(SAL.level_probability)
 	# 16 SMP.sample_tag
+	# 17 total_ion_current
+	# 18 signal_to_noise 
 	#-------------------------------------------------- 
 
   # First few $blah_idx variables refer both to query results
@@ -1916,7 +1924,8 @@ sub postProcessResultset {
   my $ptm_idx = 14;       # ptm sequence
   my $ann_count_idx = 15; # n user annotations
   my $sample_tag_idx = 16;   
-  
+  my $tic_idx = 17;
+  my $sn_idx = 18; 
 
 	my @display_peps;
 	my $at_least_one_chromatogram = 0;
@@ -2132,9 +2141,13 @@ sub postProcessResultset {
         push @$ptm_peps_ref, \@ptm_pep;
         $pep->[$mseq_idx] =~ s/(\([\d\.]+\))//g;
       }
-     
+    
+      $pep->[$it_idx] = ( $pep->[$it_idx] ) ?  sprintf("%.2f", $pep->[$it_idx]/1000000) : $sbeams->makeInactiveText('n/a'); 
+      $pep->[$tic_idx] = ( $pep->[$tic_idx] ) ?  sprintf("%.2f", $pep->[$tic_idx]/1000000): $sbeams->makeInactiveText('n/a');
+      $pep->[$sn_idx] = ( $pep->[$sn_idx] ) ? sprintf("%.0f", $pep->[$sn_idx]) : $sbeams->makeInactiveText('n/a');
+
+
       if ( $has_header_info ) {
-        $pep->[$it_idx] = ( $pep->[$it_idx] ) ? $sbeams->formatScientific( number=> $pep->[$it_idx], precision=>1, output_mode => $sbeams->get_output_mode() ): $sbeams->makeInactiveText('n/a'); 
         $pep->[$rt_idx] = ( $pep->[$rt_idx] ) ? sprintf( "%0.1f", $pep->[$rt_idx]/60 ) : $sbeams->makeInactiveText('n/a'); 
         $pep->[$ce_idx] = ( $pep->[$ce_idx] ) ? sprintf( "%0.1f", $pep->[$ce_idx] ) : $sbeams->makeInactiveText('n/a'); 
       }
@@ -2147,9 +2160,10 @@ sub postProcessResultset {
     $hidden_cols->{"chimera_level"} = 1 if (! $at_least_one_chimera) ; 
     $hidden_cols->{"chromatogram"} = 1 if ( ! $at_least_one_chromatogram);
     if ( ! $has_header_info){
-      $hidden_cols->{'precursor_intensity'} = 1;
+      #$hidden_cols->{'precursor_intensity'} = 1;
       $hidden_cols->{'scan_time'} =1;
       $hidden_cols->{'collision_energy'} =1;
+      $hidden_cols->{'avg_prob'} =1;
     }
     
     $hidden_cols->{'ptm_sequence'} = 1;
@@ -2413,7 +2427,10 @@ sub get_table_help {
                  { key => 'Spectrum Name', value => 'Name of spectrum, typically filename.scan.scan' },
                  { key => 'Avg Eval', value => 'Average manual evaluation score for peptide-spectrum match  (if applicable)' },
                  { key => 'Fragmentation Type', value => 'Fragmentation method used to generate spectrum.  IT = IonTrap, CID = Collision Induced Dissociation, etc.' },
-                 { key => 'Spectrum', value => 'Link to display of actual spectrum' },
+                 { key => 'Spectrum', value => 'Link to display of actual spectrum'},
+                 { key => 'Precursor Intensity', value => 'Precursor Intensity in Millions'},
+                 { key => 'TIC', value=>'Total ion current in Millions'},
+                 { key => 'S/N', value=> 'Signal to noise'},
         );
                  
     $heading = 'Individual Spectra';

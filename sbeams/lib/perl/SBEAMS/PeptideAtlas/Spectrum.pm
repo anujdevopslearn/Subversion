@@ -174,12 +174,14 @@ sub loadBuildSpectra {
     @columns = split("\t",$line,-1);
     #print "cols = ".scalar(@columns)."\n";
     unless (scalar(@columns) == $expected_n_columns) {
-      if ($expected_n_columns == 16 && (scalar(@columns) == 11 || scalar(@columns) == 12)) {
-				print "WARNING: Unexpected number of columns (".
-				scalar(@columns)."!=$expected_n_columns) in\n$line\n".
-					"This is likely missing ProteinProphet information, which is bad, but we will allow it until this bug is fixed.\n";
-      } elsif (scalar(@columns) == 16 || scalar(@columns) == 15) {
-				#### This is okay for now: experimental SpectraST addition
+      #if (($expected_n_columns == 17|| $expected_n_columns == 18) && (scalar(@columns) == 15 || scalar(@columns) == 14)) {
+        ## won't happen now. All spectra should has S/N value, then should have 17/18 columns
+			#	print "WARNING: Unexpected number of columns (".
+			#	scalar(@columns)."!=$expected_n_columns) in\n$line\n".
+			#		"This is likely missing ProteinProphet information, which is bad, but we will allow it until this bug is fixed.\n";
+      #} 
+      if (scalar(@columns) == 18 || scalar(@columns) == 17) {
+				
       } else {
 				die("ERROR: Unexpected number of columns (".
 				scalar(@columns)."!=$expected_n_columns) in\n$line");
@@ -190,16 +192,30 @@ sub loadBuildSpectra {
         $preceding_residue,$modified_sequence,$following_residue,$charge,
         $probability,$massdiff,$protein_name,$proteinProphet_probability,
         $n_proteinProphet_observations,$n_sibling_peptides,
-        $SpectraST_probability, $ptm_sequence,$chimera_level);
+        $SpectraST_probability, $ptm_sequence,$precursor_intensity,
+        $total_ion_current,$signal_to_noise,$chimera_level);
     if ($filetype eq 'peplist') {
       ($search_batch_id,$peptide_sequence,$modified_sequence,$charge,
         $probability,$protein_name,$spectrum_name) = @columns;
     } elsif ($filetype eq 'PAidentlist') {
-      ($search_batch_id,$spectrum_name,$peptide_accession,$peptide_sequence,
-        $preceding_residue,$modified_sequence,$following_residue,$charge,
-        $probability,$massdiff,$protein_name,$proteinProphet_probability,
-        $n_proteinProphet_observations,$n_sibling_peptides,
-        $chimera_level) = @columns;
+      ($search_batch_id,
+				$spectrum_name,
+				$peptide_accession,
+				$peptide_sequence,
+				$preceding_residue,
+				$modified_sequence,
+				$following_residue,
+				$charge,
+				$probability,
+				$massdiff,
+				$protein_name,
+				$proteinProphet_probability,
+				$n_proteinProphet_observations,
+				$n_sibling_peptides,
+				$precursor_intensity,
+				$total_ion_current,
+				$signal_to_noise,
+				$chimera_level) = @columns;
       #### Correction for occasional value '+-0.000000'
       $massdiff =~ s/\+\-//;
     } else {
@@ -223,6 +239,9 @@ sub loadBuildSpectra {
        protein_name => $protein_name,
        spectrum_name => $spectrum_name,
        massdiff => $massdiff,
+			 precursor_intensity => $precursor_intensity,
+			 total_ion_current => $total_ion_current,
+			 signal_to_noise => $signal_to_noise,
        chimera_level => $chimera_level);
 
     $n++;
@@ -266,6 +285,9 @@ sub insertSpectrumIdentification {
   my $chimera_level = $args{chimera_level}; 
   my $probability = $args{probability};
   die("ERROR[$METHOD]: Parameter probability not passed") if($probability eq '');
+  my $precursor_intensity = $args{precursor_intensity};
+  my $total_ion_current = $args{total_ion_current};
+  my $signal_to_noise = $args{signal_to_noise};
 
   return if ($modified_sequence =~ /[JUO]/);
   our $counter;
@@ -298,12 +320,14 @@ sub insertSpectrumIdentification {
     if ($chimera_level eq ''){
       $chimera_level = 'NULL';
     }
-
     $spectrum_id = $self->insertSpectrumRecord(
       sample_id => $sample_id,
       spectrum_name => $spectrum_name,
       proteomics_search_batch_id => $search_batch_id,
       chimera_level => $chimera_level,
+      precursor_intensity => $precursor_intensity,
+      total_ion_current => $total_ion_current,
+      signal_to_noise => $signal_to_noise
     );
   }
   #### Check to see if this spectrum_identification is in the database
@@ -562,6 +586,9 @@ sub insertSpectrumRecord {
   my $proteomics_search_batch_id = $args{proteomics_search_batch_id}
     or die("ERROR[$METHOD]: Parameter proteomics_search_batch_id not passed");
   my $chimera_level = $args{chimera_level} ;
+  my $precursor_intensity = $args{precursor_intensity};
+  my $total_ion_current = $args{total_ion_current};
+  my $signal_to_noise = $args{signal_to_noise};
 
   #### Parse the name into components
   my ($fraction_tag,$start_scan,$end_scan);
@@ -587,6 +614,10 @@ sub insertSpectrumRecord {
     end_scan => $end_scan,
     chimera_level => $chimera_level,
     scan_index => -1,
+    precursor_intensity => $precursor_intensity,
+    total_ion_current => $total_ion_current,
+    signal_to_noise => $signal_to_noise
+
   );
 
 
@@ -863,7 +894,7 @@ sub getSpectrumPeaks_plotmsms {
     my $org_query_string = $ENV{"QUERY_STRING"};
     $ENV{"REQUEST_METHOD"} = 'GET';
     $ENV{"QUERY_STRING"} = "Dta=$data_location/$fraction_tag/$spectrum_name.dta";
-    my $content = `/proteomics/sw/tpp/cgi-bin/plot-msms-js.cgi`;
+    my $content = `/proteomics/sw/tpp-latest/cgi-bin/plot-msms-js.cgi`;
     my (@ms1, @ms2);
 		my @lines = split ("\n", $content);
 		my ($ms1scanLabel, $selWinHigh,$selWinLow);

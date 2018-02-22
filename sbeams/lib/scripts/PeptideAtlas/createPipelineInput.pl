@@ -519,52 +519,74 @@ sub pepXML_start_element {
   if ($localname eq 'spectrum_query') {
     $self->{pepcache}->{spectrum} = $attrs{spectrum};
     $self->{pepcache}->{charge} = $attrs{assumed_charge};
+    $self->{pepcache}->{precursor_intensity} = $attrs{precursor_intensity};
+    $self->{pepcache}->{total_ion_current} = $attrs{total_ion_current};
+    $self->{pepcache}->{signal_to_noise} = $attrs{signal_to_noise};
   }
 
   #### If this is the search_hit, then store some attributes
   #### Note that this whole logic will break if there's more than one
   #### search_hit, which shouldn't be true so far
-  #if ($localname eq 'search_hit' ){
-  #  die("ERROR:  $self->{pepcache}->{spectrum}  Multiple search_hits not yet supported!")
-  #    if (exists($self->{pepcache}->{peptide}));
-  if ($localname eq 'search_hit'  and not exists $self->{pepcache}->{peptide} ){ 
-    $self->{pepcache}->{peptide} = $attrs{peptide};
-    $self->{pepcache}->{peptide_prev_aa} = $attrs{peptide_prev_aa};
-    $self->{pepcache}->{peptide_next_aa} = $attrs{peptide_next_aa};
-    $self->{pepcache}->{protein_name} = [$attrs{protein}];
-    $self->{pepcache}->{massdiff} = $attrs{massdiff};
+  #
+  #### myrimatch has more than one top 1 search hit. (201606)
+  if ($localname eq 'search_hit' ){
+    if (not exists $self->{pepcache}->{peptide} ){
+      $self->{pepcache}->{peptide} = $attrs{peptide};
+      $self->{pepcache}->{peptide_prev_aa} = $attrs{peptide_prev_aa};
+      $self->{pepcache}->{peptide_next_aa} = $attrs{peptide_next_aa};
+      $self->{pepcache}->{protein_name} = [$attrs{protein}];
+      $self->{pepcache}->{massdiff} = $attrs{massdiff};
+    }else{
+      goto FOO;
+    }
   }
 
   #### If this is an alternative protein, push the protein name
   #### onto the current peptide's list of protein names
   if ($localname eq 'alternative_protein') {
-    if ($attrs{protein}) {
-      push (@{$self->{pepcache}->{protein_name}}, $attrs{protein});
+    if (not exists $self->{pepcache}->{scores}->{probability} ){
+      if ($attrs{protein}) {
+        push (@{$self->{pepcache}->{protein_name}}, $attrs{protein});
+      }
+    }else{
+      goto FOO;
     }
   }
 
 
   #### If this is the mass mod info, then store some attributes
   if ($localname eq 'modification_info') {
-    if ($attrs{mod_nterm_mass}) {
-      $self->{pepcache}->{modifications}->{0} = $attrs{mod_nterm_mass};
-    }
-    if ($attrs{mod_cterm_mass}) {
-      my $pos = length($self->{pepcache}->{peptide})+1;
-      $self->{pepcache}->{modifications}->{$pos} = $attrs{mod_cterm_mass};
+    if (not exists $self->{pepcache}->{scores}->{probability} ){
+			if ($attrs{mod_nterm_mass}) {
+				$self->{pepcache}->{modifications}->{0} = $attrs{mod_nterm_mass};
+			}
+			if ($attrs{mod_cterm_mass}) {
+				my $pos = length($self->{pepcache}->{peptide})+1;
+				$self->{pepcache}->{modifications}->{$pos} = $attrs{mod_cterm_mass};
+			}
+    }else{
+      goto FOO
     }
   }
 
 
   #### If this is the mass mod info, then store some attributes
   if ($localname eq 'mod_aminoacid_mass') {
-    $self->{pepcache}->{modifications}->{$attrs{position}} = $attrs{mass};
+    if (not exists $self->{pepcache}->{scores}->{probability} ){
+     $self->{pepcache}->{modifications}->{$attrs{position}} = $attrs{mass};
+    }else{
+      goto FOO
+    }
   }
 
 
   #### If this is the search score info, then store some attributes
   if ($localname eq 'search_score') {
-    $self->{pepcache}->{scores}->{$attrs{name}} = $attrs{value};
+    if (not exists $self->{pepcache}->{scores}->{probability} ){
+     $self->{pepcache}->{scores}->{$attrs{name}} = $attrs{value};
+    }else{
+      goto FOO
+    }
   }
 
 
@@ -585,14 +607,17 @@ sub pepXML_start_element {
   if ($localname eq 'interprophet_result') {
     $self->{pepcache}->{scores}->{probability} = $attrs{probability};
   }
-  ### ptm result
+  ### ptm result. only parse PTMProphet_STY result.
   if ($localname eq 'ptmprophet_result'){
     #prior="0.285714" ptm="PTMProphet_STY79.9663"
     #ptm_peptide="AY(0.000)VY(0.000)ADWVEHAT(0.026)S(0.026)EIEPGT(0.961)T(0.493)T(0.493)VLR">
-    $self->{pepcache}->{ptm_peptide} = $attrs{ptm_peptide};
+    if ($attrs{ptm} =~ /PTMProphet_STY/){
+      $self->{pepcache}->{ptm_peptide} = $attrs{ptm_peptide};
+    }
   }
 
   #### Push information about this element onto the stack
+  FOO:
   my $tmp;
   $tmp->{name} = $localname;
   push(@{$self->object_stack},$tmp);
@@ -712,7 +737,6 @@ sub protXML_start_element {
       if (scalar @indis > 1) {
 	# Select the preferred protID of all, and if different from
 	# original, do some swapping.
-
 	$preferred_protein_name = 
 	  SBEAMS::PeptideAtlas::ProtInfo::get_preferred_protid_from_list(
 	    protid_list_ref=>\@indis,
@@ -842,33 +866,37 @@ sub pepXML_end_element {
       my $peptide_accession = &main::getPeptideAccession(
         sequence => $peptide_sequence,
       );
-
       
       #### Select a protein_name to store.
       #my $protein_name = pop(@{$self->{pepcache}->{protein_name}});
+
       my $protein_name ='';
       $protein_name = 
       SBEAMS::PeptideAtlas::ProtInfo::get_preferred_protid_from_list(
         protid_list_ref=>$self->{pepcache}->{protein_name},
-	preferred_patterns_aref => $preferred_patterns_aref,
-	swiss_prot_href => $swiss_prot_href,
+				preferred_patterns_aref => $preferred_patterns_aref,
+				swiss_prot_href => $swiss_prot_href,
       );
+
       #### Store the information for this peptide into an array for caching
       push(@{ $self->{pep_identification_list} },
           [$self->{search_batch_id},
-	       $self->{pepcache}->{spectrum},
-	       $peptide_accession,
-	       $peptide_sequence,
-	       $self->{pepcache}->{peptide_prev_aa},
-	       $modified_peptide,
-	       $self->{pepcache}->{peptide_next_aa},
-	       $charge,
+					 $self->{pepcache}->{spectrum},
+					 $peptide_accession,
+					 $peptide_sequence,
+					 $self->{pepcache}->{peptide_prev_aa},
+					 $modified_peptide,
+					 $self->{pepcache}->{peptide_next_aa},
+					 $charge,
            $probability,
            $self->{pepcache}->{massdiff},
            #need to store protein_name in case no protXML info
            #$self->{pepcache}->{protein_name},
            $protein_name,
-	  ]
+           $self->{pepcache}->{precursor_intensity},
+           $self->{pepcache}->{total_ion_current},
+           $self->{pepcache}->{signal_to_noise}
+					]
       );
     }
 
@@ -1172,6 +1200,8 @@ sub modified_peptide_string {
 		 $modified_peptide .= $aa;
     }
     if ($modifications->{$i}) {
+      print $modifications->{$i} ."\n";
+
       #$modified_peptide .= 'c['.int($modifications->{$i}).']';
       $modified_peptide .= 'c['. sprintf("%.0f", $modifications->{$i}) .']';
     }
@@ -1359,11 +1389,23 @@ sub main {
   my %decoy_corrections;
   my $combined_identlist_file = "DATA_FILES/PeptideAtlasInput_concat.PAidentlist";
   my $sorted_identlist_file = "DATA_FILES/PeptideAtlasInput_sorted.PAidentlist";
-  my @column_names = qw ( search_batch_id spectrum_query peptide_accession
-    peptide_sequence preceding_residue modified_peptide_sequence
-    following_residue charge probability massdiff protein_name
-    protXML_nsp_adjusted_probability
-    protXML_n_adjusted_observations protXML_n_sibling_peptides );
+  my @column_names = qw ( search_batch_id
+                          spectrum_query
+                          peptide_accession
+                          peptide_sequence
+                          preceding_residue
+                          modified_peptide_sequence
+                          following_residue
+                          charge
+                          probability
+                          massdiff
+                          protein_name
+                          protXML_nsp_adjusted_probability
+                          protXML_n_adjusted_observations
+                          protXML_n_sibling_peptides
+                          precursor_intensity
+                          total_ion_current
+                          signal_to_noise );
 
   unless ($APD_only) {
     #### If a list of search_batch_ids was provided, find the corresponding
@@ -1371,15 +1413,15 @@ sub main {
     if ($search_batch_ids && 0) {
       my @search_batch_ids = split(/,/,$search_batch_ids);
       foreach my $search_batch_id (@search_batch_ids) {
-	my $ProteinProphet_file = guess_source_file(
-	  search_batch_id => $search_batch_id,
-	);
-	if ($ProteinProphet_file) {
-	  #$documents{$ProteinProphet_file}->{search_batch_id} = $search_batch_id;
-	} else {
-	  die("ERROR: Unable to determine document for search_batch_id ".
-	      "$search_batch_id");
-	}
+				my $ProteinProphet_file = guess_source_file(
+					search_batch_id => $search_batch_id,
+				);
+				if ($ProteinProphet_file) {
+					#$documents{$ProteinProphet_file}->{search_batch_id} = $search_batch_id;
+				} else {
+					die("ERROR: Unable to determine document for search_batch_id ".
+							"$search_batch_id");
+				}
       }
     }
   }
@@ -1775,39 +1817,39 @@ sub main {
 
        for my $pepseq (@peplist) {
 
-	# The below may be undefined if it's an indistinguishable peptide.
-	# No harm -- its prots should be stored under its twin.
-	if (defined $CONTENT_HANDLER->{ProteinProphet_prot_data}->
-	   {pep_prot_hash}->{$pepseq} ) {
-	  my @pep_protlist = @{$CONTENT_HANDLER->{ProteinProphet_prot_data}->
-	     {pep_prot_hash}->{$pepseq}};
-          # add each protein that this pep maps to to the atlas prot list
-	  for my $protid (@pep_protlist) {
-	    $CONTENT_HANDLER->{ProteinProphet_prot_data}->{atlas_prot_list}->
-	       {$protid} = 1;
-	  }
-	} else {
-          #03/18/10: we should never get here anymore, because we are
-          # getting the peps from the protXML directly.
-	  $peps_not_found{$pepseq} = 1;
-	}
+				# The below may be undefined if it's an indistinguishable peptide.
+				# No harm -- its prots should be stored under its twin.
+				if (defined $CONTENT_HANDLER->{ProteinProphet_prot_data}->
+					 {pep_prot_hash}->{$pepseq} ) {
+					my @pep_protlist = @{$CONTENT_HANDLER->{ProteinProphet_prot_data}->
+						 {pep_prot_hash}->{$pepseq}};
+								# add each protein that this pep maps to to the atlas prot list
+					for my $protid (@pep_protlist) {
+						$CONTENT_HANDLER->{ProteinProphet_prot_data}->{atlas_prot_list}->
+							 {$protid} = 1;
+					}
+				} else {
+								#03/18/10: we should never get here anymore, because we are
+								# getting the peps from the protXML directly.
+					$peps_not_found{$pepseq} = 1;
+				}
       }
 
       my @peps_not_found = keys %peps_not_found;
       if (scalar(@peps_not_found) > 0) {
-	#03/18/10: we should never get here anymore, because we are
-	# getting the peps from the protXML directly.
-	print "\nWARNING: No proteins will be stored in PAprotlist for the ";
-	print "following\ncombined PAidentlist peptides, because they were ";
-	print "not found in the\nmaster protXML file. ";
-	print "If few, and all contain L or I,\nthey are probably ";
-	print "indistinguishable and the prots are stored\nunder their twins. ";
-	print "Otherwise, probably your master protXML was created from\n";
-	print "different pepXML files than your PAidentlist was,\n";
-	print "and your PAprotlist will be incomplete.\n";
-	for my $pep (@peps_not_found) {
-	  print "$pep\n";
-	}
+				#03/18/10: we should never get here anymore, because we are
+				# getting the peps from the protXML directly.
+				print "\nWARNING: No proteins will be stored in PAprotlist for the ";
+				print "following\ncombined PAidentlist peptides, because they were ";
+				print "not found in the\nmaster protXML file. ";
+				print "If few, and all contain L or I,\nthey are probably ";
+				print "indistinguishable and the prots are stored\nunder their twins. ";
+				print "Otherwise, probably your master protXML was created from\n";
+				print "different pepXML files than your PAidentlist was,\n";
+				print "and your PAprotlist will be incomplete.\n";
+				for my $pep (@peps_not_found) {
+					print "$pep\n";
+				}
       }
 
       my $num_atlas_prots = scalar(keys(%{$CONTENT_HANDLER->
@@ -1824,183 +1866,183 @@ sub main {
       my @group_list = keys(%{$CONTENT_HANDLER->{ProteinProphet_group_data}});
       for my $group_num (@group_list) {
 
-	my $proteins_href = $CONTENT_HANDLER->{ProteinProphet_group_data}->
-		     {$group_num}->{proteins};
-	my @protein_list = keys %{$proteins_href};
+				my $proteins_href = $CONTENT_HANDLER->{ProteinProphet_group_data}->
+							 {$group_num}->{proteins};
+				my @protein_list = keys %{$proteins_href};
 
-	my $nproteins = scalar(@protein_list);
-	my $highest_prob = -1.0;
-	my $highest_nobs = -1;
-	my $highest_enz_termini = -1;
-	my $prot_group_rep = "";
+				my $nproteins = scalar(@protein_list);
+				my $highest_prob = -1.0;
+				my $highest_nobs = -1;
+				my $highest_enz_termini = -1;
+				my $prot_group_rep = "";
 
-	# If any proteins in this group will be in atlas ...
-	if ( $nproteins > 0 ) {
-	  # ... determine each protein's presence_level.
+				# If any proteins in this group will be in atlas ...
+				if ( $nproteins > 0 ) {
+					# ... determine each protein's presence_level.
 
-	  # First, find the highest prob / PSM count protein
-	  foreach my $protein (@protein_list) {
-	    my $prot_href = $proteins_href->{$protein};
+					# First, find the highest prob / PSM count protein
+					foreach my $protein (@protein_list) {
+						my $prot_href = $proteins_href->{$protein};
 
             # Make this protein the newest $prot_group_rep
             # if it has a higher prob, or same prob but more PSMs,
             # or same prob/PSMs but more enz termini.
-	    my $most_likely = 
-	    SBEAMS::PeptideAtlas::ProtInfo::more_likely_protein_identification(
-	      preferred_patterns_aref=>$preferred_patterns_aref,
-	      swiss_prot_href => $swiss_prot_href,
-	      protid1=>$prot_group_rep,
-	      protid2=>$protein,
-	      prob1=>$highest_prob,
-	      prob2=>$prot_href->{probability},
-	      nobs1=>$highest_nobs,
-	      nobs2=>$prot_href->{PSM_count},
-	      enz_termini1=>$highest_enz_termini,
-	      enz_termini2=>$prot_href->{total_enzymatic_termini},
-            );
-            if ($most_likely eq $protein) {
-	      $prot_group_rep = $protein;
-	      $highest_prob = $prot_href->{probability};
-	      $highest_nobs = $prot_href->{PSM_count};
-	      $highest_enz_termini = $prot_href->{total_enzymatic_termini};
-	    }
-	  }
+						my $most_likely = 
+						SBEAMS::PeptideAtlas::ProtInfo::more_likely_protein_identification(
+							preferred_patterns_aref=>$preferred_patterns_aref,
+							swiss_prot_href => $swiss_prot_href,
+							protid1=>$prot_group_rep,
+							protid2=>$protein,
+							prob1=>$highest_prob,
+							prob2=>$prot_href->{probability},
+							nobs1=>$highest_nobs,
+							nobs2=>$prot_href->{PSM_count},
+							enz_termini1=>$highest_enz_termini,
+							enz_termini2=>$prot_href->{total_enzymatic_termini},
+									);
+									if ($most_likely eq $protein) {
+							$prot_group_rep = $protein;
+							$highest_prob = $prot_href->{probability};
+							$highest_nobs = $prot_href->{PSM_count};
+							$highest_enz_termini = $prot_href->{total_enzymatic_termini};
+						}
+					}
 
           #Next, label subsumed all proteins declared subsumed in protXML
 
           my @remaining_proteins;
-	  foreach my $protein (@protein_list) {
-	    my $prot_href = $proteins_href->{$protein};
-	    my $is_subsumed = defined $prot_href->{subsuming_protein_entry};
-	    $prot_href->{represented_by} = $prot_group_rep;
-	    if ( $is_subsumed ) {
-	      $prot_href->{presence_level} = "subsumed";
-              # create a comma separated list of subsuming proteins
-              # using preferred protIDs
-	      my $subsuming_proteins = $prot_href->{subsuming_protein_entry};
-	      my @subsuming_proteins = split(/ /,$subsuming_proteins);
-	      my %matches = ();
-	      if ($subsuming_proteins ne "") {
-		for my $subsuming_prot (@subsuming_proteins) {
-		  my $preferred_protID = $CONTENT_HANDLER->
-		       {ProteinProphet_prot_data}->
-		       {preferred_protID_hash}->{$subsuming_prot};
-		  if (defined $preferred_protID) {
-		    $subsuming_prot = $preferred_protID;
-		  } else {
-		    print "WARNING: subsuming prot for $protein, ".
-		      "$subsuming_prot, doesn't have preferred protID ".
-		      " stored in hash.\n";
-		  }
-		  my @match = grep /^$subsuming_prot$/, @protein_list;
-		  if (scalar(@match) > 0) {
-		    $matches{$subsuming_prot} = 1;
-		  }
-		}
-		my $nmatches = scalar(keys %matches);
-		my $nsubsuming = scalar(@subsuming_proteins);
-		if ( $nmatches > 0 ) {
-		  $prot_href->{subsumed_by} = join(' ',keys %matches);
-		} else {
-		  print "WARNING: $protein has peptides in this build, but ".
-			 "none of its subsuming_protein_entries do: ".
-			 "$subsuming_proteins\n";
-		  $prot_href->{subsumed_by} = '';
-		}
+					foreach my $protein (@protein_list) {
+						my $prot_href = $proteins_href->{$protein};
+						my $is_subsumed = defined $prot_href->{subsuming_protein_entry};
+						$prot_href->{represented_by} = $prot_group_rep;
+						if ( $is_subsumed ) {
+							$prot_href->{presence_level} = "subsumed";
+										# create a comma separated list of subsuming proteins
+										# using preferred protIDs
+							my $subsuming_proteins = $prot_href->{subsuming_protein_entry};
+							my @subsuming_proteins = split(/ /,$subsuming_proteins);
+							my %matches = ();
+							if ($subsuming_proteins ne "") {
+					for my $subsuming_prot (@subsuming_proteins) {
+						my $preferred_protID = $CONTENT_HANDLER->
+								 {ProteinProphet_prot_data}->
+								 {preferred_protID_hash}->{$subsuming_prot};
+						if (defined $preferred_protID) {
+							$subsuming_prot = $preferred_protID;
+						} else {
+							print "WARNING: subsuming prot for $protein, ".
+								"$subsuming_prot, doesn't have preferred protID ".
+								" stored in hash.\n";
+						}
+						my @match = grep /^$subsuming_prot$/, @protein_list;
+						if (scalar(@match) > 0) {
+							$matches{$subsuming_prot} = 1;
+						}
+					}
+					my $nmatches = scalar(keys %matches);
+					my $nsubsuming = scalar(@subsuming_proteins);
+					if ( $nmatches > 0 ) {
+						$prot_href->{subsumed_by} = join(' ',keys %matches);
+					} else {
+						print "WARNING: $protein has peptides in this build, but ".
+						 "none of its subsuming_protein_entries do: ".
+						 "$subsuming_proteins\n";
+						$prot_href->{subsumed_by} = '';
+					}
 	      } else {
-		print "WARNING: $protein has empty subsuming_protein_entries ".
-		       "attribute.\n";
-		$prot_href->{subsumed_by} = '';
-	      }
-	    } elsif ($protein ne $prot_group_rep) {
-              # create a list of proteins yet to be labeled
-              push (@remaining_proteins, $protein);
-	    }
-	  }
+					print "WARNING: $protein has empty subsuming_protein_entries ".
+								 "attribute.\n";
+					$prot_href->{subsumed_by} = '';
+							}
+						} elsif ($protein ne $prot_group_rep) {
+										# create a list of proteins yet to be labeled
+										push (@remaining_proteins, $protein);
+						}
+					}
 
 
-	  # A subset of the atlas proteins in a group is canonical,
-	  # defined as follows:
-	  # - subset includes protein_group_representative (found above)
-	  # - all members of subset are independent of each other
-	  # - each non-member of the subset is non-independent of at
-	  #    least one member of the subset.
-	  # Find one such subset
+					# A subset of the atlas proteins in a group is canonical,
+					# defined as follows:
+					# - subset includes protein_group_representative (found above)
+					# - all members of subset are independent of each other
+					# - each non-member of the subset is non-independent of at
+					#    least one member of the subset.
+					# Find one such subset
 
-	  my @canonical_set = ($prot_group_rep);
+					my @canonical_set = ($prot_group_rep);
 
-	  # Sort remaining proteins by probability so we will favor
-	  # high prob proteins for canonicals
-	  sub protids_by_decreasing_probability {
-	    my $a_info = get_protinfo_href ($a);
-	    my $b_info = get_protinfo_href ($b);
-	    - ( $a_info->{probability} <=> $b_info->{probability} );
-	  }
+					# Sort remaining proteins by probability so we will favor
+					# high prob proteins for canonicals
+					sub protids_by_decreasing_probability {
+						my $a_info = get_protinfo_href ($a);
+						my $b_info = get_protinfo_href ($b);
+						- ( $a_info->{probability} <=> $b_info->{probability} );
+					}
 
-	  @remaining_proteins =
+					@remaining_proteins =
 	     (sort protids_by_decreasing_probability @remaining_proteins);
 
-	  my @remaining_proteins_copy = @remaining_proteins;
+				my @remaining_proteins_copy = @remaining_proteins;
 
-	  # Find canonicals and remove from list
-	  for my $prot (@remaining_proteins_copy) {
-	    # if this prot is independent from all canonicals in set
-	    # so far, add it to the set.
-	    if (is_independent_from_set($prot, \@canonical_set,
-		     $proteins_href)) {
-	      push (@canonical_set, $prot);
-	      my $found = remove_string_from_array($prot, \@remaining_proteins);
-	      if (! $found) {
-		print "BUG: $prot not found in @remaining_proteins\n";
-	      }
-	    }
-	  }
+				# Find canonicals and remove from list
+				for my $prot (@remaining_proteins_copy) {
+					# if this prot is independent from all canonicals in set
+					# so far, add it to the set.
+					if (is_independent_from_set($prot, \@canonical_set,
+						 $proteins_href)) {
+						push (@canonical_set, $prot);
+						my $found = remove_string_from_array($prot, \@remaining_proteins);
+						if (! $found) {
+				print "BUG: $prot not found in @remaining_proteins\n";
+						}
+					}
+				}
 
-	  @remaining_proteins_copy = @remaining_proteins;
+				@remaining_proteins_copy = @remaining_proteins;
 
-	  # For each non-canonical, check to see whether it has same peptide
-	  # set to any canonical, but better ntt or probability.
-	  # If so, swap in.
-	  for my $prot (@remaining_proteins_copy) {
+				# For each non-canonical, check to see whether it has same peptide
+				# set to any canonical, but better ntt or probability.
+				# If so, swap in.
+				for my $prot (@remaining_proteins_copy) {
 
-	    sub prot1_is_better_than_prot2 {
-	      my $prot1 = shift;
-	      my $prot2 = shift;
-	      my $protinfo1 = get_protinfo_href ($prot1);
-	      my $protinfo2 = get_protinfo_href ($prot2);
-	      return
-	      ( SBEAMS::PeptideAtlas::ProtInfo::more_likely_protein_identification(
-		  preferred_patterns_aref=>$preferred_patterns_aref,
-		  swiss_prot_href => $swiss_prot_href,
-		  protid1=>$prot1,
-		  protid2=>$prot2,
-		  prob1=>$protinfo1->{probability},
-		  prob2=>$protinfo2->{probability},
-		  npeps1=>$protinfo1->{npeps},
-		  npeps2=>$protinfo2->{npeps},
-		  nobs1=>$protinfo1->{PSM_count},
-		  nobs2=>$protinfo2->{PSM_count},
-		  enz_termini1=>$protinfo1->{total_enzymatic_termini},
-		  enz_termini2=>$protinfo2->{total_enzymatic_termini},
-		) eq $prot1 );
-	    };
+					sub prot1_is_better_than_prot2 {
+						my $prot1 = shift;
+						my $prot2 = shift;
+						my $protinfo1 = get_protinfo_href ($prot1);
+						my $protinfo2 = get_protinfo_href ($prot2);
+						return
+						( SBEAMS::PeptideAtlas::ProtInfo::more_likely_protein_identification(
+					preferred_patterns_aref=>$preferred_patterns_aref,
+					swiss_prot_href => $swiss_prot_href,
+						protid1=>$prot1,
+						protid2=>$prot2,
+						prob1=>$protinfo1->{probability},
+						prob2=>$protinfo2->{probability},
+						npeps1=>$protinfo1->{npeps},
+						npeps2=>$protinfo2->{npeps},
+						nobs1=>$protinfo1->{PSM_count},
+						nobs2=>$protinfo2->{PSM_count},
+						enz_termini1=>$protinfo1->{total_enzymatic_termini},
+						enz_termini2=>$protinfo2->{total_enzymatic_termini},
+					) eq $prot1 );
+						};
 
-	    sub replace_in_list {
-	      my $prot1 = shift; # we want this in the list
-	      my $prot2 = shift; # we want to remove this from list
-	      my $list_aref = shift;
-	      remove_string_from_array ( $prot2, $list_aref );
-	      push  (@{$list_aref}, $prot1);
-	    }
+						sub replace_in_list {
+							my $prot1 = shift; # we want this in the list
+							my $prot2 = shift; # we want to remove this from list
+							my $list_aref = shift;
+							remove_string_from_array ( $prot2, $list_aref );
+							push  (@{$list_aref}, $prot1);
+						}
 
-	    for my $prot2 (@canonical_set) {
+						for my $prot2 (@canonical_set) {
 	      if ( same_pep_set($prot, $prot2) ) {
-		if ( prot1_is_better_than_prot2($prot, $prot2) ) {
-		  replace_in_list($prot, $prot2, \@canonical_set);
-		  # add the one being replaced back into the list
-		  remove_string_from_array ( $prot, \@remaining_proteins );
-		  push ( @remaining_proteins, $prot2 );
-		}
+					if ( prot1_is_better_than_prot2($prot, $prot2) ) {
+						replace_in_list($prot, $prot2, \@canonical_set);
+						# add the one being replaced back into the list
+						remove_string_from_array ( $prot, \@remaining_proteins );
+						push ( @remaining_proteins, $prot2 );
+					}
 	      }
 	    }
 	  }
@@ -2271,34 +2313,83 @@ sub main {
       my %PAidentlist_prots;
       my $n_PSMs;
       # for each of the two files
+      ## get chimera_level
+      open (IN, "<$combined_identlist_file");
+      my %chimera_level =();
+      my $flag =0;
+			while (my $line =<IN>){
+				chomp $line;
+				my @columns = split("\t", $line);
+				my $spectrum_name = $columns[1];
+				my $id = $columns[0];
+				$spectrum_name =~ /^(.*\.\d+)\.\d+\.\d+$/;
+				$id = "$id-$1";
+				$chimera_level{"$id"}  = '';
+				if ($spectrum_name =~ /^([^\.]+?)((\_rs)+)(\.\d+)\.\d+\.\d+/){
+					my $root = $1;
+					my $rs = $2;
+					my $scan = $4;
+					$root = $root.$scan;
+					my @n = $rs=~ /\_rs/g;
+					$chimera_level{"$id"} = 1 + scalar @n;
+          $flag =1;
+				}
+			}
+			foreach my $spec (keys %chimera_level){
+				if ($spec =~ /\_rs\./){
+					$spec =~ /^([^\.]+)((\_rs)+)(\.\d+)$/;
+					$spec = $1.$4;
+					if (defined $chimera_level{$spec}){
+						$chimera_level{$spec} = 1;
+					}
+				}else{
+           if ($flag){
+             $chimera_level{$spec} = 0;
+           }
+        }
+			}
+			
+        
+
       for my $file ( $combined_identlist_file, $sorted_identlist_file ) {
-	if ( -e $file ) {
-	  open (IDENTLISTFILE, $file) ||
-	    die("ERROR: Unable to open for reading '$file'");
-	  open (OUTFILE, ">$temp_file") ||
-	    die("ERROR: Unable to open for writing '$temp_file'");
-	  print "Writing new protids for $file\n";
-	  $n_PSMs = 0;
-	  # copy header line
-	  my $line = <IDENTLISTFILE>;
-	  print OUTFILE $line;
-	  while ($line = <IDENTLISTFILE>) {
-	    chomp ($line);
-	    my @fields = split(" ", $line);
-	    my $pepseq = $fields[3];
-	    my $identlist_protid = $fields[10];
-	    # Replace field 11 (index 10) if this peptide (or one
-	    # indistinguishable from it) is in our hash.
-	    my $pep_protlist_aref = $CONTENT_HANDLER->{ProteinProphet_prot_data}->
-	       {pep_prot_hash}->{$pepseq};
-	    if (! defined $pep_protlist_aref ) {
-	      my @indis = get_leu_ile_indistinguishables($pepseq);
-	      for my $indis (@indis) {
-		$pep_protlist_aref = $CONTENT_HANDLER->
-		   {ProteinProphet_prot_data}->{pep_prot_hash}->{$indis};
-		if ( defined $pep_protlist_aref ) {
-		  last;
-		}
+				if ( -e $file ) {
+					open (IDENTLISTFILE, $file) ||
+						die("ERROR: Unable to open for reading '$file'");
+					open (OUTFILE, ">$temp_file") ||
+						die("ERROR: Unable to open for writing '$temp_file'");
+					print "Writing new protids for $file\n";
+					$n_PSMs = 0;
+					# copy header line
+					my $line = <IDENTLISTFILE>;
+					print OUTFILE $line;
+					while ($line = <IDENTLISTFILE>) {
+						chomp ($line);
+						my @fields = split("\t", $line);
+						my $pepseq = $fields[3];
+						my $identlist_protid = $fields[10];
+						my $spectrum_name = $fields[1];
+						my $id = $fields[0];
+						$spectrum_name =~ /^(.*\.\d+)\.\d+\.\d+$/;
+						$id = "$id-$1";
+						#if (scalar @fields == 11 ){
+					  #	push @fields, ("", "", "");
+						#}elsif(scalar @fields == 12){
+						#	push @fields, ("", "");
+						#}
+						push @fields, $chimera_level{$id};
+
+						# Replace field 11 (index 10) if this peptide (or one
+						# indistinguishable from it) is in our hash.
+						my $pep_protlist_aref = $CONTENT_HANDLER->{ProteinProphet_prot_data}->
+							 {pep_prot_hash}->{$pepseq};
+						if (! defined $pep_protlist_aref ) {
+							my @indis = get_leu_ile_indistinguishables($pepseq);
+							for my $indis (@indis) {
+					$pep_protlist_aref = $CONTENT_HANDLER->
+						 {ProteinProphet_prot_data}->{pep_prot_hash}->{$indis};
+					if ( defined $pep_protlist_aref ) {
+						last;
+					}
 	      }
 	    }
 	    if ( defined $pep_protlist_aref ) {
@@ -2579,11 +2670,23 @@ sub writePepIdentificationListFile {
     || die("ERROR: Unable to open '$output_file' for write");
 
   #### Write out the column names
-  my @column_names = qw ( search_batch_id spectrum_query peptide_accession
-    peptide_sequence preceding_residue modified_peptide_sequence
-    following_residue charge probability massdiff protein_name
-    protXML_nsp_adjusted_probability
-    protXML_n_adjusted_observations protXML_n_sibling_peptides );
+  my @column_names = qw ( search_batch_id 
+                          spectrum_query 
+                          peptide_accession
+                          peptide_sequence 
+                          preceding_residue 
+                          modified_peptide_sequence
+                          following_residue 
+                          charge 
+                          probability 
+                          massdiff 
+                          protein_name
+                          protXML_nsp_adjusted_probability
+                          protXML_n_adjusted_observations 
+                          protXML_n_sibling_peptides
+                          precursor_intensity  
+                          total_ion_current 
+                          signal_to_noise );
 
   print OUTFILE join("\t",@column_names)."\n";
 
@@ -2675,12 +2778,14 @@ sub writePepIdentificationListFile {
       $n_adjusted_observations = $info->{n_adjusted_observations};
       $n_sibling_peptides = $info->{n_sibling_peptides};
       #push(@{$identification},$adjusted_probability,$n_adjusted_observations,$n_sibling_peptides);
-      $extra_cols_array[$idx] = "$identification->[8],$identification->[9],$identification->[10],$adjusted_probability,$n_adjusted_observations,$n_sibling_peptides";
+      $extra_cols_array[$idx] = "$identification->[8],$identification->[9],$identification->[10],$adjusted_probability,$n_adjusted_observations,$n_sibling_peptides".
+                                ",$identification->[11],$identification->[12],$identification->[13]";
       if ($initial_probability) {
 				$probability_adjustment_factor = $adjusted_probability / $initial_probability;
       }
     }else{
-      $extra_cols_array[$idx] = "$identification->[8],$identification->[9],$identification->[10]";
+      $extra_cols_array[$idx] = "$identification->[8],$identification->[9],$identification->[10],,,".
+                                ",$identification->[11],$identification->[12],$identification->[13]";
     }
     #### If there is spectral library information, look at that
     #print "spectral_library_data = $spectral_library_data\n";
@@ -2767,7 +2872,8 @@ sub writePepIdentificationListFile {
       ## force prob_cutoff >= 0.9
       if( $probability < 0.9){
         $fdr = 1 - ($prob_sum /($counter -1));
-        $prob_cutoff = $last_probability;
+        $prob_cutoff = $last_probability; 
+        $counter--;
       }
 
       # If we exceed the FDR threshold, note the probability of the
@@ -2812,16 +2918,15 @@ sub writePepIdentificationListFile {
     chomp $line;
     my @columns = split("\t", $line);
     if($extra_cols_array[$idx]){
-			pop @columns;
-			pop @columns;
-			pop @columns;
-      push @columns, split(",", $extra_cols_array[$idx]);
+      splice(@columns,$#columns-5,6);
+      push @columns, split(",", $extra_cols_array[$idx],-1);
     }else{
       print "WARINING: only 7 columns\n";
     }
     my $probability = $columns[8];
     ### warns that can't compare strings with >= but can't find
-    ###  function to explicitly convert to float
+    #    ###  function to explicitly convert to float
+            next if($columns[3] =~ /[JUZBOX]/);
     
     if (($P_threshold && $probability >= $P_threshold) || ($FDR_threshold && defined $selected_rows{$idx} )) {
       print OUTFILE join("\t", @columns);
@@ -2831,6 +2936,8 @@ sub writePepIdentificationListFile {
     }
     $idx++;
   }
+
+
   print "\n  - wrote $counter peptides to identification list file.\n";
 
   # List those peptides for which the protein ID from the pepXML is printed
@@ -2993,7 +3100,8 @@ sub getPeptideAccession {
   my %args = @_;
   my $sequence = $args{'sequence'};
 
-
+  $sequence =~ /(\w).*/;
+  my $firstAA = $1;
   #### If we haven't loaded the peptide accessions hash yet, do it now
   unless (%peptide_accessions) {
     #my $sql = qq~
@@ -3005,8 +3113,17 @@ sub getPeptideAccession {
          FROM $TBAPD_PEPTIDE_IDENTIFIER
     ~;
     print "Fetching all peptide accessions...\n";
-    %peptide_accessions = $sbeams->selectTwoColumnHash($sql);
-    print "  Loaded ".scalar(keys(%peptide_accessions))." peptides.\n";
+    #%peptide_accessions = $sbeams->selectTwoColumnHash($sql);
+    my $cnt = 0;
+    my @rows = $sbeams->selectSeveralColumns($sql);
+    foreach my $row(@rows){
+      my ($peptide, $peptide_identifier_str)= @$row;
+      $peptide=~ /(\w).*/;
+      $peptide_accessions{$1}{$peptide} = $peptide_identifier_str;
+      $cnt++;
+    }
+    #print "  Loaded ".scalar(keys(%peptide_accessions))." peptides.\n";
+    print "  Loaded $cnt peptides\n";
     #### Just in case the table is empty, put in a bogus hash entry
     #### to prevent triggering a reload attempt
     $peptide_accessions{' '} = ' ';
@@ -3018,7 +3135,7 @@ sub getPeptideAccession {
   #  die("ERROR: peptide_accession is $peptide_accession");
   #}
 
-  return $peptide_accessions{$sequence} if ($peptide_accessions{$sequence});
+  return $peptide_accessions{$firstAA}{$sequence} if ($peptide_accessions{$firstAA}{$sequence});
 
 
   #### FIXME: The following is code stolen from
@@ -3043,7 +3160,7 @@ sub getPeptideAccession {
   #### If we get exactly one back, then return it
   if (scalar(@peptides) == 1) {
     #### Put this new one in the hash for the next lookup
-    $peptide_accessions{$sequence} = $peptides[0];
+    $peptide_accessions{$firstAA}{$sequence} = $peptides[0];
     return $peptides[0];
   }
 
@@ -3098,7 +3215,7 @@ sub getPeptideAccession {
   $sbeams->commit_transaction();
 
   #### Put this new one in the hash for the next lookup
-  $peptide_accessions{$sequence} = $identifier;
+  $peptide_accessions{$firstAA}{$sequence} = $identifier;
 
   return($identifier);
 
@@ -3378,6 +3495,16 @@ sub coalesceIdentifications {
   }
   #print Dumper( [$columns] );
 
+  ## get enzyme ids 
+  my $sql = qq~
+    SELECT SB.SEARCH_BATCH_ID, 
+           PE.PROTEASE_ID 
+    FROM $TBPR_SEARCH_BATCH SB
+    JOIN $TBPR_PROTEOMICS_EXPERIMENT PE ON (PE.EXPERIMENT_ID = SB.EXPERIMENT_ID) 
+    ORDER BY SB.SEARCH_BATCH_ID DESC
+  ~;
+  my %sb_enzyme_id = $sbeams->selectTwoColumnHash($sql);
+
   #### Loop over each row, organizing the information
   foreach my $row ( @{$rows} ) {
     my $peptide_sequence = $row->[$columns->{peptide_sequence}];
@@ -3398,6 +3525,11 @@ sub coalesceIdentifications {
     my $search_batch_id = $row->[$columns->{search_batch_id}];
     $info->{search_batch_ids}->{$search_batch_id}++;
 
+    ## if enzyme is missing, leave empty, when display will assume it is trypsin
+    my $enzyme = '';
+    $enzyme = $sb_enzyme_id{$search_batch_id} if ( $sb_enzyme_id{$search_batch_id});
+    $info->{enzyme_ids}{$enzyme} = 1;
+ 
 
     #### Now store information for this modification of the peptide
     my $modified_sequence = $row->[$columns->{modified_peptide_sequence}];
@@ -3406,7 +3538,7 @@ sub coalesceIdentifications {
     $info->{modifications}->{$modified_sequence}->{$charge}->{n_instances}++;
     my $modinfo = $info->{modifications}->{$modified_sequence}->{$charge};
     if (!defined($modinfo->{best_probability}) ||
-	$modinfo->{best_probability} < $row->[$columns->{probability}]) {
+					$modinfo->{best_probability} < $row->[$columns->{probability}]) {
       $modinfo->{best_probability} = $row->[$columns->{probability}];
     }
 
@@ -3498,6 +3630,10 @@ sub writeToPAxmlFile {
 
   #### Loop over all peptides and write out as XML
   while (my ($peptide_sequence,$attributes) = each %{$peptide_summary}) {
+    my $enzyme_ids = join(", ", keys %{$attributes->{enzyme_ids}});
+    $enzyme_ids =~ s/^,\s+//;
+    $enzyme_ids =~ s/, $//;
+    $enzyme_ids =~ s/,\s+,/,/g;
 
     my $buffer = encodeXMLEntity(
       entity_name => 'peptide_instance',
@@ -3512,6 +3648,7 @@ sub writeToPAxmlFile {
         best_probability => $attributes->{best_probability},
         n_observations => $attributes->{n_instances},
         search_batch_ids => join(",",keys(%{$attributes->{search_batch_ids}})),
+        enzyme_ids => join(",", keys %{$attributes->{enzyme_ids}}),
         best_adjusted_probability => $attributes->{best_adjusted_probability},
         n_adjusted_observations => $attributes->{n_adjusted_observations},
         n_sibling_peptides => $attributes->{n_sibling_peptides},
@@ -3860,7 +3997,8 @@ sub writePepIdentificationListTemplateFile {
   #### Write out the column names
   my @column_names = qw ( search_batch_id spectrum_query peptide_accession
     peptide_sequence preceding_residue modified_peptide_sequence
-    following_residue charge probability massdiff protein_name );
+    following_residue charge probability massdiff protein_name 
+    precursor_intensity total_ion_current signal_to_noise);
 
   print OUTFILE join("\t",@column_names)."\n";
 
@@ -3868,6 +4006,7 @@ sub writePepIdentificationListTemplateFile {
 
   my $counter = 0;
   foreach my $identification ( @{$pep_identification_list} ) {
+    next if ($identification->[3] =~ /[JUZBOX]/);
     print OUTFILE join("\t",@{$identification})."\n";
     $counter++;
     print "$counter... " if ($counter % 1000 == 0);
