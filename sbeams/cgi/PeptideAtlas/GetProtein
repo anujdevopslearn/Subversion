@@ -1093,7 +1093,7 @@ sub handle_request {
 #    ["peptide_accession","P.peptide_accession","Accession DIV"],
 #
   my $group_by_clause = '';
-  my @labels = ( 'Accession', 'Pre AA', 'Sequence', 'Fol AA', 'ESS', 'NET', 'NMC' ,'Best Prob', 'Best Adj Prob', 'N Obs', 'EOS', 'SSRT', 'N Prot Map', 'N Gen Loc', 'N Samples', 'Subpep of' );
+  my @labels = ( 'Accession', 'Pre AA', 'Sequence', 'Fol AA', 'ESS', 'NET', 'NMC' ,'Best Prob', 'Best Adj Prob', 'N Obs', 'EOS', 'SSRT', 'N Prot Map', 'N Gen Loc', 'N Experiments', 'Subpep of' );
   push @labels, 'Avg Eval' if $parameters{'ann'};
 
   my @column_array = (
@@ -1121,7 +1121,7 @@ sub handle_request {
     ["SSRCalc_relative_hydrophobicity","STR(P.SSRCalc_relative_hydrophobicity,7,2)","<DIV TITLE='SSRCalc Relative Hydrophobicity score'>SSRT</DIV>"],
     ["n_protein_mappings","PI.n_protein_mappings","<DIV TITLE='Number of proteins in the reference database to which this peptide maps'>N Prot Map</DIV>"],
     ["n_genome_locations","PI.n_genome_locations","<DIV TITLE='Number of discrete genome locations which encode this amino acid sequence'>N Gen Loc</DIV>"],
-    ["sample_ids","PI.sample_ids","N Samples"],
+    ["sample_ids","PI.sample_ids","N Experiments"],
     #["sample_ids","PI.sample_ids","<DIV TITLE='Samples in which this sequence was seen'>Sample IDs</DIV>"],
     #["is_subpeptide_of","PI.is_subpeptide_of","<DIV TITLE='Observed peptides of which this peptide is a subsequence'>Parent Peptides</DIV>"],
     ["is_subpeptide_of","PI.is_subpeptide_of",'Subpep of'],

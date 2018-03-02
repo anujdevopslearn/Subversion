@@ -646,7 +646,7 @@ sub handle_request {
       ["n_observations","PI.n_observations","N Obs"],
       ["empirical_proteotypic_score","STR(PI.empirical_proteotypic_score,7,2)","Empirical Proteotypic Score"],
       ["SSRCalc_relative_hydrophobicity","STR(P.SSRCalc_relative_hydrophobicity,7,2)","SSRCalc Relative Hydrophob"],
-      ["n_samples","PI.n_samples","N Samples"],
+      ["n_samples","PI.n_samples","N Experiments"],
 
       ["n_protein_mappings","PI.n_protein_mappings","N Protein Mappings"],
       ["n_genome_locations","PI.n_genome_locations","N Unique Locations on Genome"],
@@ -823,8 +823,8 @@ sub handle_request {
           'Peptides that include this sequence' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides?_tab=2&atlas_build_id=$parameters{atlas_build_id}&peptide_ids_constraint=\%$colnameidx{is_subpeptide_of}V&action=QUERY",
           'Peptides that include this sequence_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show peptides with these IDs\'; return true"',
 
-          'Sample IDs'  => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$parameters{atlas_build_id}&searchWithinThis=Peptide+Name&searchForThis=\%$colnameidx{peptide_accession}V&action=QUERY",
-          'Sample IDs_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show sample summaries for this peptide\'; return true"',
+          'Experiment IDs'  => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$parameters{atlas_build_id}&searchWithinThis=Peptide+Name&searchForThis=\%$colnameidx{peptide_accession}V&action=QUERY",
+          'Experiment IDs_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show experiment summaries for this peptide\'; return true"',
 
           'Start Position'  => "$chrom_url_link",
           'Start Position_ATAG' => 'TARGET="_blank" ONMOUSEOVER="window.status=\'Show peptide in genome viewer\'; return true"',
@@ -1071,7 +1071,7 @@ sub get_table_help {
       { key => 'Empirical Proteotypic Score', value => 'In PeptideAtlas, the fraction of observations of this protein that are supported by at least one observation of this peptide. Values range from 0 to 1; close to 1 means that this peptide is likely to be observed whenever this protein is observed.' },
       { key => 'SSRCalc Relative Hydrophob', value => 'A measure of the hydrophobicity of this peptide' },
 
-      { key => 'N Samples', value => 'Number of samples this peptide was observed in for this atlas build' },
+      { key => 'N Experiments', value => 'Number of experiments this peptide was observed in for this atlas build' },
       { key => 'N Protein Mappings', value => 'Number of protein identifiers that this peptide maps to for the biosequence set associated with this atlas build' },
       { key => 'N Unique Locations on Genome', value => 'Number of genome locations that this peptide maps to' },
       { key => 'Spans exons?', value => 'Does the peptide span multiple exons?' },

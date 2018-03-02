@@ -5236,8 +5236,9 @@ sub display_input_form {
 
   #### Query to obtain column information about this table or query
   $sql = qq~
-      SELECT column_name,column_title,is_required,input_type,input_length,
-             is_data_column,is_display_column,column_text,
+      SELECT column_name,replace(column_title,'Sample', 'Experiment') as column_title,is_required,input_type,input_length,
+             is_data_column,is_display_column,
+             replace(convert (varchar (MAX), column_text),'sample', 'experiment') as column_text,
              optionlist_query,onChange
         FROM $TB_TABLE_COLUMN
        WHERE table_name='$TABLE_NAME'

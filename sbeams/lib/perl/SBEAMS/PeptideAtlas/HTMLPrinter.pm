@@ -962,12 +962,12 @@ sub getSamplePlotDisplay {
 
   my $header = '';
   if ( $args{link} ) {
-    $header .= $self->encodeSectionHeader( text => 'Observed in Samples:',
+    $header .= $self->encodeSectionHeader( text => 'Observed in Experiments:',
                                           anchor => 'samples',
                                           link => $args{link},
                                          );
   } else {
-    $header .= $self->encodeSectionHeader( text => 'Observed in Samples:',
+    $header .= $self->encodeSectionHeader( text => 'Observed in Experiments:',
                                           anchor => 'samples'
                                          );
   }
@@ -1033,12 +1033,12 @@ sub getSampleMapDisplay {
 
   my $header = '';
   if ( $args{link} ) {
-    $header .= $self->encodeSectionHeader( text => 'Sample peptide map:',
+    $header .= $self->encodeSectionHeader( text => 'Experiment peptide map:',
                                           link => $args{link},
                                           anchor => 'samples'
                                           );
   } else {
-    $header .= $self->encodeSectionHeader( text => 'Sample peptide map:',
+    $header .= $self->encodeSectionHeader( text => 'Experiment peptide map:',
                                           anchor => 'samples'
                                          );
   }
@@ -1381,7 +1381,7 @@ sub getDetailedSampleDisplay {
      push @samples, [$id, $title, $nobs,$ins,$enzyme,$pub_name];
      $pre_id = $id;
   }
-  unshift @samples, [qw( SampleID SampleName NObs Instrument Enzyme Publication)];
+  unshift @samples,['Experiment ID','Experiment Name','NObs','Instrument','Enzyme','Publication'];
   my $table = $self->encodeSectionTable( header => 1, 
                                          width => '600',
                                          tr_info => $args{tr_info},
@@ -1580,13 +1580,13 @@ sub getSampleDisplay {
   }
   if ($sortable){
     my @headings = ();
-    push @headings, 'Sample ID','';
-    push @headings, 'Sample Title','';
+    push @headings, 'Experiment ID','';
+    push @headings, 'Experiment Title','';
     push @headings, 'Publication','';
-    my $headings = $self->make_sort_headings( headings => \@headings, default => 'Sample ID');
+    my $headings = $self->make_sort_headings( headings => \@headings, default => 'Experiment ID');
     unshift @samples, ($headings);
   }else{
-		unshift @samples, [('Sample ID', 'Sample Title', 'Publication')];
+		unshift @samples, [('Experiment ID', 'Experiment Title', 'Publication')];
   }
   my $table = $self->encodeSectionTable( header => 1,
                                          width => '600',
@@ -2099,7 +2099,7 @@ sub get_what_is_new {
   ~;
   my %prot_count = $sbeams->selectTwoColumnHash($sql);
 
-  push @return , ['# Samples', $sample_cnt{$build_id}, $sample_cnt{$previous_build_id}];
+  push @return , ['# Experiments', $sample_cnt{$build_id}, $sample_cnt{$previous_build_id}];
   push @return , ['Distinct_Peptides', $pep_count{$build_id}, $pep_count{$previous_build_id}];
   push @return , ['Canonical_Proteins', $prot_count{$build_id}, $prot_count{$previous_build_id}];
 
@@ -2315,7 +2315,7 @@ sub displayExperiment_contri_plotly{
   my $chart = qq~
      <!-- Latest compiled and minified plotly.js JavaScript -->
      <script type="text/javascript" src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-     <TR $tr><TD><p class=plot_caption><b>Plot below shows the number of peptides contributed by each sample,</b> and the cumulative number of distinct peptides for the build as of that sample.</TD></TR> 
+     <TR $tr><TD><p class=plot_caption><b>Plot below shows the number of peptides contributed by each experiment,</b> and the cumulative number of distinct peptides for the build as of that experiment.</TD></TR> 
      <TR $tr><TD><div id="plot_div" style="width: 100%;"></div><br></TD></TR>
      <TR $tr><TD><p class=plot_caption><b>Plot below shows cumulative number of canonical proteins contributed by each experiment.</b>
      Height of blue bar is number of proteins identified in experiment; 

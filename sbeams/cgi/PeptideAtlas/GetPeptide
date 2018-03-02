@@ -839,11 +839,11 @@ if ($apply_action =~ /QUERY|GO/i ) {
   }
 
   if ( defined $epscore[0] ) {
-    $summ .= $sbeamsMOD->encodeSectionItem( key   => '# Samples',
+    $summ .= $sbeamsMOD->encodeSectionItem( key   => '# Experiments',
                                             tr_info => $tr,
                                             value => "$nsamp[0]",
                                            );
-    $summ .= $sbeamsMOD->encodeSectionItem( key   => '# Protein Samples',
+    $summ .= $sbeamsMOD->encodeSectionItem( key   => '# Protein Experiments',
                                             tr_info => $tr,
                                             value => "$nprotsamp[0]",
                                            );
@@ -1314,7 +1314,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
     }
 
     #### Add table column headings
-    my $column_headings = ['Modified Sequence', 'Charge', 'Mono Parent m/z', 'Best Prob', '# Obs', '# Siblings', 'Sample IDs', 'Consensus Spectra' ];
+    my $column_headings = ['Modified Sequence', 'Charge', 'Mono Parent m/z', 'Best Prob', '# Obs', '# Siblings', 'Experiment IDs', 'Consensus Spectra' ];
     push @{$column_headings},  '<div title ="Synthetic Peptide Reference Spectra from SRM Atlas">Reference</div>' unless ($sbeams->isGuestUser() || $is_origene);
     push @{$column_headings},  'CE_range' unless ($sbeams->isGuestUser() || $is_origene || ! $display_ce);
     push @{$column_headings}, '<div title="Filter applies to Individual Spectra section below">Spectrum Filter</div>';
@@ -1415,7 +1415,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
     ["collision_energy","collision_energy", "CE"],
     ["ptm_sequence", "SPI.ptm_sequence","PTM Sequence"],
     ["sal_prob", "COUNT(SAL.level_probability)","SAL Prob"],
-    ["sample_tag", "SMP.sample_tag", "Sample Tag"],
+    ["sample_tag", "SMP.sample_tag", "Experiment Tag"],
     ["total_ion_current", "S.total_ion_current", "TIC (x10^6)"],
     ["signal_to_noise", "S.signal_to_noise", "S/N"],
    );
@@ -2421,7 +2421,7 @@ sub get_table_help {
     @entries = ( 
                  { key => 'Modified Sequence', value => 'Amino acid sequence of detected pepide, including any mass modifications.' },
                  { key => 'Chg', value => 'Charge on observed peptide ion.' },
-                 { key => 'Smpl', value => 'Sample ID from which this spectrum was obtained.' },
+                 { key => 'Smpl', value => 'Experiment ID from which this spectrum was obtained.' },
                  { key => 'Instr', value => 'Model of mass spectrometer on which transition pair was validated.' },
                  { key => 'Prob', value => 'Probability assigned peptide-spectrum match (iProphet).' },
                  { key => 'Spectrum Name', value => 'Name of spectrum, typically filename.scan.scan' },

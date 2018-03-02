@@ -492,7 +492,7 @@ sub get_passel_resultset {
   );
 
   # AFU
-  my %url_cols = ( sample => 'GetSELTransitions?stripped_peptide_sequence_constraint=%6V;SEL_experiments=%7V;QUERY_NAME=AT_GetSELTransitions;action=QUERY;apply_action=QUERY' );
+  my %url_cols = ( experiment => 'GetSELTransitions?stripped_peptide_sequence_constraint=%6V;SEL_experiments=%7V;QUERY_NAME=AT_GetSELTransitions;action=QUERY;apply_action=QUERY' );
 
   my %max_widths;
   my %hidden_cols = ( sequence => 1, sample_id => 1, SEL_experiment_id => 1);
@@ -636,9 +636,9 @@ sub post_process_passel_resultset {
   }
   my $prec = [ 255, 255, 4, 255, 255, 4, 255, 4 ]; 
   my $types = [ qw( varchar varchar int, varchar, varchar, int, varchar, int ) ]; 
-  my $col_list = [ 'sample',
+  my $col_list = [ 'experiment',
                    'organism',
-                   'sample_id',
+                   'experiment_id',
                    'charges',
                    'fragments',
                    'N_Obs',

@@ -234,7 +234,7 @@ sub get_table_help {
                  { key => 'Build Description', value => 'More detailed information about build. ' },
                  { key => 'Reference Database', value => 'Database to which peptides were mapped, generally different than search database.  This mapping is done by running BLAST, and allows the peptides to be mapped the the organism\'s genomic sequence. ' },
                  { key => 'Build Date', value => 'Date upon which build was finished. ' },
-                 { key => '# Samples', value => 'The number of individual samples which comprise this build.  Each sample contains one or more LCMS/MS runs, and generally corresponds to a single scientific experiment.' } ,
+                 { key => '# Experiments', value => 'The number of individual experiments which comprise this build.  Each experiment contains one or more LCMS/MS runs, and generally corresponds to a single scientific experiment.' } ,
                  { key => 'Distinct Peptides', value => 'This shows the number of distinct peptide sequences that were seen in this build.  Observations of the peptide in different charge states or with different modifications are coalesced.' } ,
                  { key => 'Total Observations ', value => 'The total number of spectra that yeilded identifications above the build threshold.  Observations of the same base peptide sequences multiple times or in various charge states/modifications, whould each contribute to the total' },
                  { key => 'Probability threshold', value => 'iProphet probability threshold applied to each experiment in this build' },
@@ -249,24 +249,24 @@ sub get_table_help {
 
 
   } elsif ( $name eq 'batch' ) {
-    @entries = ( { key => 'ID', value => 'Database ID for this sample (search batch) ' },
-                 { key => 'Sample_Name', value => 'Simple name for this sample/experiment. ' },
-                 { key => '#_Spectra_Searched', value => 'The total number of spectra searched in the sample. ' },
+    @entries = ( { key => 'ID', value => 'Database ID for this experiment (search batch) ' },
+                 { key => 'Experiment_Name', value => 'Simple name for this experiment. ' },
+                 { key => '#_Spectra_Searched', value => 'The total number of spectra searched in the experiment. ' },
                  { key => "#_Spectra_ID'd", value => 'The number of spectra identifed with a probability greater than the atlas threshold ' },
-                 { key => '#_Distinct', value => 'The number of distinct peptide sequences, seen more than once (multiobs), in this build that are seen in this sample. ' },
-                 { key => '#_Unique', value => "The number of distinct, multiobs peptides that are seen only in this sample (unique contribution).  This discriminates against smaller samples, and is less useful in atlas' with a large number of samples. " },
-                 { key => '#_Progressive', value => 'Order-dependent unique multiobs peptides contributed by a given sample.  The contribution for each sample is based on the samples that have gone before it, so later samples tend to have a lower progressive contribution. ' },
-                 { key => '#_Cumulative', value => 'Order-dependent cumulative number of unique multiobs peptides contributed to build by this and previous samples. ' },
-                 { key => '#_Proteins', value => 'The number of canonical (highly distinguishable, non-redundant) protein sequences identified from the peptides in this sample.' },
-                 { key => '#_Cum_Prots', value => 'Order-dependent cumulative number of canonical proteins contributed to build by this and previous samples.<br>Counts non-human contaminants, so final tally may be greater than Canonical Proteins count in Build Overview. ' },
+                 { key => '#_Distinct', value => 'The number of distinct peptide sequences, seen more than once (multiobs), in this build that are seen in this experiment. ' },
+                 { key => '#_Unique', value => "The number of distinct, multiobs peptides that are seen only in this experiment (unique contribution).  This discriminates against smaller experiments, and is less useful in atlas' with a large number of experiments. " },
+                 { key => '#_Progressive', value => 'Order-dependent unique multiobs peptides contributed by a given experiment.  The contribution for each experiment is based on the experiments that have gone before it, so later experiments tend to have a lower progressive contribution. ' },
+                 { key => '#_Cumulative', value => 'Order-dependent cumulative number of unique multiobs peptides contributed to build by this and previous experiments. ' },
+                 { key => '#_Proteins', value => 'The number of canonical (highly distinguishable, non-redundant) protein sequences identified from the peptides in this experiment.' },
+                 { key => '#_Cum_Prots', value => 'Order-dependent cumulative number of canonical proteins contributed to build by this and previous experiments.<br>Counts non-human contaminants, so final tally may be greater than Canonical Proteins count in Build Overview. ' },
 #                 { key => 'Sens', value => 'The sensitivity of the Peptide Prophet model at a probablility of 0.9, the percent of true positives that would be included at that threshold was used as a cutoff. ' },
                  { key => 'FDR_(%)', value => 'The error rate of peptides above the threshold Peptide Prophet model at a probablility of 0.9, the percent of false positives that would be included at the build threshold. ' },
-                 { key => 'Sample_Date', value => ''},
+                 { key => 'Experiment_Date', value => ''},
                  { key => 'Pubmed_ID', value => ''}, 
                  { key => 'Other_Repos', value=>''}
         );
-    $heading = 'Sample Overview'; 
-    $description = 'These values pertain to individual samples within the atlas';
+    $heading = 'Experiment Overview'; 
+    $description = 'These values pertain to individual experiments within the atlas';
 
   } elsif ( $name eq 'mayu' ) {
    @entries = ( { key => 'nr_runs', value => 'Number of MS runs contributing to this build '},
@@ -389,7 +389,7 @@ sub get_build_plots {
                                                   sticky  => 1 );
 
   $table .= $atlas->encodeSectionHeader(
-      text => 'Sample Contribution Plot',
+      text => 'Experiment Contribution Plot',
       span => 4,
       link => $link
   );
@@ -509,7 +509,7 @@ sub getSampleMapDisplay {
                                                   imglink => 1,
                                                   sticky  => 1 );
 
-  my $header .= $atlas->encodeSectionHeader( text => 'Sample Protein Map:',
+  my $header .= $atlas->encodeSectionHeader( text => 'Experiment Protein Map:',
                                              'link' => $link );
   
   my $html = '';
@@ -809,7 +809,7 @@ sub get_build_overview {
                             value => $build_info->{set_name}, vspan => 3 ) . "\n";
   $table .= $atlas->encodeSectionItem( key   => 'Build Date', tr_info => $tr,
                             value => $build_info->{build_date} ) . "\n";
-  $table .= $atlas->encodeSectionItem( key   => '# Samples', tr_info => $tr,
+  $table .= $atlas->encodeSectionItem( key   => '# Experiments', tr_info => $tr,
                             value => $smpl_count->{cnt}, align => 'right' ) . "\n";
   $table .= $atlas->encodeSectionItem( key   => 'PSM FDR threshold', tr_info => $tr,
                             value => $build_info->{protpro_PSM_FDR_per_expt}, align => 'right' ) . "\n";
@@ -947,7 +947,7 @@ sub get_sample_info {
   my $headings_ref = $atlas->make_sort_headings( headings => \@headings, default => '#_Cumulative' );
 
   $table .= $atlas->encodeSectionHeader(
-      text => 'Sample Contribution',
+      text => 'Experiment Contribution',
       link => $link,
       width => 920
   );

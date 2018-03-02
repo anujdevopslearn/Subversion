@@ -191,7 +191,7 @@ sub pa_build_info_2_tsv {
   my @headers;
   $headers[$build_name_idx] = 'Build Name';
   $headers[$distinct_peps_idx] = 'distinct peptides';
-  $headers[$smpl_count_idx] = 'samples';
+  $headers[$smpl_count_idx] = 'Experiments';
   $headers[$org_idx] = 'Organism';
   $headers[$peptide_inclusion_idx] = 'Peptide Inclusion Cutoff';
   $headers[$descr_idx] = 'Description';
@@ -357,7 +357,7 @@ sub pa_build_info_2_tsv {
     $row[$org_idx] = $atlas_build->[$org_name_idx];
     $row[$peptide_inclusion_idx] = $cutoff_str;
 
-    $row[$smpl_count_idx] = qq~<A HREF=buildDetails?atlas_build_id=$atlas_build->[$atlas_build_id_idx] TITLE="View samples included in Atlas Build $atlas_build->[$atlas_build_name_idx]">$samples_href->{smpl_count}</A>~;
+    $row[$smpl_count_idx] = qq~<A HREF=buildDetails?atlas_build_id=$atlas_build->[$atlas_build_id_idx] TITLE="View experiments included in Atlas Build $atlas_build->[$atlas_build_name_idx]">$samples_href->{smpl_count}</A>~;
 
     $row[$psm_count_idx] = $samples_href->{psm_count};
     $row[$spectra_searched_idx] = $spectra_searched_href->{nspec};
