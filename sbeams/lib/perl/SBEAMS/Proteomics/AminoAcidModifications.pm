@@ -85,8 +85,8 @@ sub new {
       'K[142]' => 14.015650,    # Methylation  (Unimod 34)
       'K[154]' => 26.015650,    # Acetaldehyde +26
       'K[156]' => 28.031300,    # di-Methylation  (Unimod 36)
-      'K[164]' => 36.07567,     # DiMethyl-Heavy   (Unimod)
       'K[160]' => 32.056407,    # DiMethyl-CHD2   (Unimod)
+      'K[164]' => 36.07567,     # DiMethyl-Heavy   (Unimod)
       'K[162]' => 34.063117,    # Lys [Avg] Dimethyl:2H(4)13C(2),
       'K[170]' =>	42.010565,    #	Acetylation          
       'K[188]' => 42.04695,     # tri-Methylation  (Unimod 37)
@@ -103,6 +103,7 @@ sub new {
       'K[467]' => 339.161662,   #	NHS-LC-Biotin
       'K[582]' => 454.18121,    # pyroQQTGG SUMO
       'K[599]' => 471.20776,    # QQTGG SUMO
+
       'L[119]' => 6.020129,     # 13C(6) Silac label (Unimod)
       'L[120]' => 7.017164,     # 13C(6)15N(1) Silac label (Unimod)
       'L[129]' => 15.994915,    # Oxidation (UniMod)
@@ -121,14 +122,15 @@ sub new {
       'Q[111]' => -17.026549,   # Pyro-glu from Q (UniMod)
       'Q[129]' =>	0.984016,     #	Deamidation 
       'Q[142]' => 14.01565,     # Methlyation of Q (UniMod)
+
       'S[69]' => -18.010565,    # Dehydration
       'S[91]' =>	4.007099,     # 13C3 15N1 label for SILAC
       'S[129]' => 42.010565,    # Acetylation  (Unimod 1)
-      'S[130]' => 43.005814,      # Carbamylation  (Unimod)
+      'S[130]' => 43.005814,    # Carbamylation  (Unimod)
       'S[167]' => 79.966331,    # Phosphorylation (UniMod 21) (incorrect)
       'S[166]' => 79.966331,    # Phosphorylation (UniMod 21)
       'S[201]'  => 114.042927,  #   ubiquitinylation residue
-      'T[83]'  => -18.010565,    # Dehydration
+      'T[83]'  => -18.010565,   # Dehydration
       'T[85]' => -15.994915,    # Deoxy (UniMod)
       'T[143]' => 42.010565,    # Acetylation  (Unimod 1)
       'T[181]' => 79.966331,    # Phosphorylation (UniMod)
@@ -136,6 +138,7 @@ sub new {
       'V[104]' => 5.016774,     # 13C(5) Silac label (Unimod)
       'V[105]' => 6.013809,     # 13C(5)15N(1) Silac label (Unimod)
       'W[202]' => 15.994915,    # Oxidation (UniMod)
+
       'Y[243]' => 79.966331,    # Phosphorylation (UniMod)
       'Y[307]' => 144.1059,     # 4 plex
       'Y[392]' => 229.162932,   # 6 plex
