@@ -642,10 +642,10 @@ sub handle_request {
       ["peptide_accession","P.peptide_accession","Peptide Accession"],
       ["peptide_sequence","P.peptide_sequence","Peptide Sequence"],
 
-      ["best_probability","STR(PI.best_probability,7,3)","Best Prob"],
+      ["best_probability","round(PI.best_probability,2)","Best Prob"],
       ["n_observations","PI.n_observations","N Obs"],
-      ["empirical_proteotypic_score","STR(PI.empirical_proteotypic_score,7,2)","Empirical Proteotypic Score"],
-      ["SSRCalc_relative_hydrophobicity","STR(P.SSRCalc_relative_hydrophobicity,7,2)","SSRCalc Relative Hydrophob"],
+      ["empirical_proteotypic_score","round(PI.empirical_proteotypic_score,2)","Empirical Proteotypic Score"],
+      ["SSRCalc_relative_hydrophobicity","round(P.SSRCalc_relative_hydrophobicity,2)","SSRCalc Relative Hydrophob"],
       ["n_samples","PI.n_samples","N Experiments"],
 
       ["n_protein_mappings","PI.n_protein_mappings","N Protein Mappings"],
