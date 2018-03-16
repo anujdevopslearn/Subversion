@@ -998,17 +998,24 @@ sub handle_request {
       print "<table><tr>";
       my $alt_text;
 
-      $venn_img_file3 =~ s|/net/dblocal/www/html|http://db|;
+# Don't see how these ever worked...
+#      $venn_img_file3 =~ s|/net/dblocal/www/html|http://db|;
+#      $venn_img_file2 =~ s|/net/dblocal/www/html|http://db|;
+#      $histo_img_file =~ s|/net/dblocal/www/html|http://db|;
+
+      $histo_img_file = "$HTML_BASE_DIR/$tmp_img_path/$pid" . 'CBP_histo.png';
+      $venn_img_file2 = "$HTML_BASE_DIR/$tmp_img_path/$pid" . 'CBP_Venn2.png';
+      $venn_img_file3 = "$HTML_BASE_DIR/$tmp_img_path/$pid" . 'CBP_Venn3.png';
+
+
       $alt_text = "Venn diagram showing overlap of canonical protein identifiers for two builds with exhaustive identifiers for second build.";
       print "<td><img src=\"$venn_img_file3\" alt=\"$alt_text\"></td>\n";
 
-      $venn_img_file2 =~ s|/net/dblocal/www/html|http://db|;
       $alt_text = "Venn diagram showing overlap of canonical protein identifiers in two builds.)";
       print "<td><img src=\"$venn_img_file2\" alt=\"$alt_text\"></td>\n";
 
       print "<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>\n";
 
-      $histo_img_file =~ s|/net/dblocal/www/html|http://db|;
       $alt_text = "Histogram showing overlap of canonical protein identifiers in two builds.)";
       print "<td><img src=\"$histo_img_file\" alt=\"$alt_text\"></td>";
 
