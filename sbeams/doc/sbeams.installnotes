@@ -63,10 +63,8 @@ Time::HiRes
 XML::Parser
 XML::XPath
 
-Two specially modified modules must be obtained at
+A specially modified module must be obtained at
 http://www.sbeams.org/download/:
-
-Data-ShowTable-3.3b
 GDGraph-1.35a
 
 Some versions of perl may require the following module be installed
