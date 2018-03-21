@@ -1365,7 +1365,7 @@ sub get_html_seq {
     unless ( $cnt % 10 ) {
       push @posn, '<SPAN CLASS=white_bg>&nbsp;</SPAN>';
     }
-    push @posn, "\n" unless ( $cnt % 70 );
+    push @posn, "\n" unless ( $cnt % 100 );
     push @values, \@posn;
   }
   push @values, ['</SPAN></PRE>'];
@@ -1615,16 +1615,16 @@ sub get_html_seq_vars {
   for my $pep ( @{$peps} ) {
     $peps{$pep}++;
   }
-  my $whitespace = '<SPAN CLASS=white_bg>&nbsp;</SPAN>';
+  my $whitespace = '<SPAN CLASS="white_bg">&nbsp;</SPAN>';
 
   my $cnt = 0;
   my $line_len = 0;
   my $prev_aa = '-';
 
-  my %values = ( tryp =>  [ ['<PRE><SPAN CLASS=pa_sequence_font>'] ],
-                inter => [ ['<PRE><SPAN CLASS=pa_sequence_font>'] ],
-              alt_enz => [ ['<PRE><SPAN CLASS=pa_sequence_font>'] ],
-                 nosp =>  [ ['<PRE><SPAN CLASS=pa_sequence_font>'] ] );
+  my %values = ( tryp =>    [ ['<PRE><SPAN CLASS="pa_sequence_font">'] ],
+		 inter =>   [ ['<PRE><SPAN CLASS="pa_sequence_font">'] ],
+		 alt_enz => [ ['<PRE><SPAN CLASS="pa_sequence_font">'] ],
+                 nosp =>    [ ['<PRE><SPAN CLASS="pa_sequence_font">'] ] );
 
   for my $aa ( split( "", $seq ) ) {
     my @posn;
@@ -1645,8 +1645,8 @@ sub get_html_seq_vars {
     unless ( $cnt % 10 ) {
       push @iposn, $whitespace;
     }
-    push @nsposn, "\n" unless ( $cnt % 70 );
-    push @iposn, "\n" unless ( $cnt % 70 );
+    push @nsposn, " <span class='pa_sequence_counter'>$cnt</span>\n" unless ( $cnt % 100 );
+    push @iposn,  " <span class='pa_sequence_counter'>$cnt</span>\n" unless ( $cnt % 100 );
 
     if ( $aa =~ /\*/ || $prev_aa =~ /\*/ ) {
       my $idx = scalar( @{$values{tryp}} );
@@ -1654,7 +1654,7 @@ sub get_html_seq_vars {
     } elsif ( $prev_aa =~ /[KR]/ && $aa ne 'P' ) {
       my $idx = scalar( @{$values{tryp}} );
       push @{$values{tryp}->[$idx]}, $whitespace;
-      if ( $line_len > 70 ) {
+      if ( $line_len > 100 ) {
         push @{$values{tryp}->[$idx]}, "\n";
         $line_len = 0;
       }
@@ -1674,10 +1674,10 @@ sub get_html_seq_vars {
     $alt_enzyme_info = $self->get_alt_enzyme( %args );
   }
 
-  push @{$values{tryp}},  ['</SPAN></PRE>'];
-  push @{$values{nosp}},  ['</SPAN></PRE>'];
-  push @{$values{alt_enz}},  ['</SPAN></PRE>'];
-  push @{$values{inter}}, ['</SPAN></PRE>'];
+  push @{$values{tryp}},   ['</SPAN></PRE>'];
+  push @{$values{nosp}},   ['</SPAN></PRE>'];
+  push @{$values{alt_enz}},['</SPAN></PRE>'];
+  push @{$values{inter}},  ['</SPAN></PRE>'];
   my $str = qq~
     <SCRIPT TYPE="text/javascript">
     function setSeqView() {
@@ -1706,7 +1706,7 @@ sub get_html_seq_vars {
       push @{$values{$enz}->[$posn]}, $whitespace; 
       $row_posn += $posn - $prev;
 #      $log->warn( "enz is $enz, posn is $posn, prev is $prev, and rowposn $row_posn" );
-      if ( $row_posn >= 70 ) {
+      if ( $row_posn >= 100 ) {
 #        $log->warn( "Adding newline" );
         push @{$values{$enz}->[$posn]}, "\n"; 
         $row_posn = 0;
