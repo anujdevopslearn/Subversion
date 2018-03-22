@@ -49,13 +49,13 @@ use vars qw($VERBOSE $TESTONLY $sbeams $atlas);
 # Constructor
 ###############################################################################
 sub new {
-    my $this = shift;
-    my $class = ref($this) || $this;
-    my $self = {};
-    bless $self, $class;
-    $VERBOSE = 0;
-    $TESTONLY = 0;
-    return($self);
+  my $this = shift;
+  my $class = ref($this) || $this;
+  my $self = {};
+  bless $self, $class;
+  $VERBOSE = 0;
+  $TESTONLY = 0;
+  return($self);
 } # end new
 
 
@@ -63,18 +63,18 @@ sub new {
 # setSBEAMS: Receive the main SBEAMS object
 ###############################################################################
 sub setSBEAMS {
-    my $self = shift;
-    $sbeams = shift;
-    return($sbeams);
+  my $self = shift;
+  $sbeams = shift;
+  return($sbeams);
 } # end setSBEAMS
 
 ###############################################################################
 # setAtlas: Receive peptide atlas object 
 ###############################################################################
 sub setAtlas {
-    my $self = shift;
-    $atlas = shift;
-    return($atlas);
+  my $self = shift;
+  $atlas = shift;
+  return($atlas);
 } # end setAtlas
 
 
@@ -83,8 +83,8 @@ sub setAtlas {
 # getSBEAMS: Provide the main SBEAMS object
 ###############################################################################
 sub getSBEAMS {
-    my $self = shift;
-    return $sbeams || SBEAMS::Connection->new();
+  my $self = shift;
+  return $sbeams || SBEAMS::Connection->new();
 } # end getSBEAMS
 
 
@@ -93,9 +93,9 @@ sub getSBEAMS {
 # setTESTONLY: Set the current test mode
 ###############################################################################
 sub setTESTONLY {
-    my $self = shift;
-    $TESTONLY = shift;
-    return($TESTONLY);
+  my $self = shift;
+  $TESTONLY = shift;
+  return($TESTONLY);
 } # end setTESTONLY
 
 
@@ -104,9 +104,9 @@ sub setTESTONLY {
 # setVERBOSE: Set the verbosity level
 ###############################################################################
 sub setVERBOSE {
-    my $self = shift;
-    $VERBOSE = shift;
-    return($TESTONLY);
+  my $self = shift;
+  $VERBOSE = shift;
+  return($TESTONLY);
 } # end setVERBOSE
 
 
@@ -231,37 +231,37 @@ sub getBestPeptides {
       }
       if ($lowest_n_missed_cleavages > 0){
         $suitability_score *= 0.67;
-         push @annot, 'MC';
+	push @annot, 'MC';
       }
-    }else{
-			if($args{is_trypsin_build} eq 'Y'){
-				my $ntt = 0;
-				# N Terminal side
-				if ( $preceding_residue =~ /[RK]/ && $peptide_sequence !~ /^P/ ) {
-					$ntt++;
-				} elsif ( $preceding_residue =~ /-/ ) {
-					$ntt++;
-				}
+    } else {
+      if($args{is_trypsin_build} eq 'Y'){
+	my $ntt = 0;
+	# N Terminal side
+	if ( $preceding_residue =~ /[RK]/ && $peptide_sequence !~ /^P/ ) {
+	  $ntt++;
+	} elsif ( $preceding_residue =~ /-/ ) {
+	  $ntt++;
+	}
 
-					# CTerminal side
-				if ( $following_residue eq '-' ) {
-					$ntt++;
-				} elsif ( $peptide_sequence =~ /[RK]$/ && $following_residue ne 'P' ) {
-					$ntt++;
-				}
+	# CTerminal side
+	if ( $following_residue eq '-' ) {
+	  $ntt++;
+	} elsif ( $peptide_sequence =~ /[RK]$/ && $following_residue ne 'P' ) {
+	  $ntt++;
+	}
 
-				## Penalty for ntt < 2 
-				unless ( $ntt == 2 ) {
-					$suitability_score *= 0.2;
-					push @annot, 'ST';
-				}
+	## Penalty for ntt < 2 
+	unless ( $ntt == 2 ) {
+	  $suitability_score *= 0.2;
+	  push @annot, 'ST';
+	}
 
-				## Penalty for missed cleavage
-				if ( $peptide_sequence =~ /([KR][^P])/) {
-					$suitability_score *= 0.67;
-					push @annot, 'MC';
-				}
-			} ## if not trypsin build skip, this step. 
+	## Penalty for missed cleavage
+	if ( $peptide_sequence =~ /([KR][^P])/) {
+	  $suitability_score *= 0.67;
+	  push @annot, 'MC';
+	}
+      } ## if not trypsin build skip, this step. 
     }
 
     if ( $args{build_weight} ) {
@@ -270,7 +270,7 @@ sub getBestPeptides {
     }
 
     $resultset_ref->{data_ref}->[$i]->[$cols->{suitability_score}] =
-      sprintf("%.2f",$suitability_score);
+	sprintf("%.2f",$suitability_score);
 
     if ( $args{annotate} ) {
 #      $log->debug( "joining annotations to " . join( ',', @annot ) );
@@ -282,7 +282,6 @@ sub getBestPeptides {
   $self->sortBySuitabilityScore( $resultset_ref );
 
   return $resultset_ref;
-
 } # end getBestPeptides
 
 
@@ -315,25 +314,24 @@ sub getBestPeptidesDisplay {
 
   #### Define the hypertext links for columns that need them
   my %url_cols = (
-    	       'Peptide Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
-             'Peptide Accession_ATAG' => "TITLE='View information for this peptide in the current build'",
+    'Peptide Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
+    'Peptide Accession_ATAG' => "TITLE='View information for this peptide in the current build'",
   );
 
   my %hidden_cols;
 
   $sbeams->displayResultSet(
-      resultset_ref=>$resultset_ref,
-      query_parameters_ref=>$query_parameters_ref,
-      #rs_params_ref=>\%rs_params,
-      url_cols_ref=>\%url_cols,
-      hidden_cols_ref=>\%hidden_cols,
-      #max_widths=>\%max_widths,
-      column_titles_ref=>$column_titles_ref,
-      base_url=>$base_url,
+    resultset_ref=>$resultset_ref,
+    query_parameters_ref=>$query_parameters_ref,
+    #rs_params_ref=>\%rs_params,
+    url_cols_ref=>\%url_cols,
+    hidden_cols_ref=>\%hidden_cols,
+    #max_widths=>\%max_widths,
+    column_titles_ref=>$column_titles_ref,
+    base_url=>$base_url,
   );
 
   return 1;
-
 } # end getBestPeptidesDisplay
 
 
@@ -449,7 +447,6 @@ sub getHighlyObservablePeptides {
   $result->{mapping_biosequence_id} = $biosequence_ids[0];
 
   return $result;
-
 } # end getHighlyObservablePeptides
 
 ###############################################################################
@@ -562,7 +559,6 @@ sub getHighlyObservablePeptides_PTP {
   $result->{column_titles_ref} = \@column_titles;
 
   return $result;
-
 } # end getHighlyObservablePeptides
 
 sub getHighlyObservablePeptides_old {
@@ -634,7 +630,6 @@ sub getHighlyObservablePeptides_old {
   $result->{column_titles_ref} = \@column_titles;
 
   return $result;
-
 } # end getHighlyObservablePeptides
 
 
@@ -659,7 +654,6 @@ sub getHighlyObservablePeptidesDisplay {
 
   my %pep2mappings;
   if ( $args{add_num_mapped} ) {
-
     my @peps;
 
     for my $line ( @{$args{best_peptide_information}->{resultset_ref}->{data_ref}} ) {
@@ -686,11 +680,9 @@ sub getHighlyObservablePeptidesDisplay {
       $pep2mappings{$row[0]} = $row[1];
     }
 
-
     $resultset_ref->{column_hash_ref}->{num_prot_mappings} = 11;
     push @{$resultset_ref->{column_list_ref}}, 'num_prot_mappings';
     push @{$resultset_ref->{types_list_ref}}, 'int';
-
   }
 
 
@@ -705,7 +697,7 @@ sub getHighlyObservablePeptidesDisplay {
       $row->[$idx] = sprintf( "%0.2f", $row->[$idx] );
     }
     my $nmappings = $pep2mappings{$row->[2]} || 'na';
-		$nmappings = "<FONT COLOR=RED>$nmappings</FONT>" if $nmappings > 1;
+    $nmappings = "<FONT COLOR=RED>$nmappings</FONT>" if $nmappings > 1;
     my @data_row = @{$row}[0..6,8..10];
     if ( $args{add_num_mapped} ) {
       push @data_row, $nmappings;
@@ -749,7 +741,7 @@ sub getHighlyObservablePeptidesDisplay {
 
   my $coldefs = $atlas->get_column_defs( labels => \@headings );
   my $table_help = $atlas->make_table_help( entries => $coldefs,
-                                           description => "Theoretical tryptic peptides ranked by combined predictor score (PSS)" );
+					    description => "Theoretical tryptic peptides ranked by combined predictor score (PSS)" );
 
 
   my $align = [qw(center right left left right right right right right right right)];
@@ -795,10 +787,10 @@ sub sortBySuitabilityScore {
 
   my @newrows = sort { $b->[$cols->{suitability_score}] <=> $a->[$cols->{suitability_score}]
 	                    || 
-                     $b->[$cols->{empirical_proteotypic_score}] <=> $a->[$cols->{empirical_proteotypic_score}]
+                       $b->[$cols->{empirical_proteotypic_score}] <=> $a->[$cols->{empirical_proteotypic_score}]
 	                    || 
-                     $b->[$cols->{n_observations}] <=> $a->[$cols->{n_observations}]
-											} @rows; 
+                       $b->[$cols->{n_observations}] <=> $a->[$cols->{n_observations}]
+               } @rows; 
 
   $resultset_ref->{data_ref} = \@newrows;
 
@@ -823,14 +815,14 @@ sub getBuildOrganism {
 
 sub getStaticInstrumentMap {
   my $self = shift;
-	my %args = @_;
+  my %args = @_;
   my %instruments = ( QTrap4000 => 'Q',
-                     QTrap5500 => 'S',
-                     Orbitrap => 'B',
-                    Predicted => 'P',
-                    IonTrap => 'I',
-                    PATR => 'R',
-                    QTOF => 'T' );
+		      QTrap5500 => 'S',
+		      Orbitrap => 'B',
+		      Predicted => 'P',
+		      IonTrap => 'I',
+		      PATR => 'R',
+		      QTOF => 'T' );
   if ( $args{invert} ) {
     my %code2instr = reverse( %instruments );
     return \%code2instr;
@@ -839,22 +831,22 @@ sub getStaticInstrumentMap {
 }
 
 sub isGlycoBuild {
-	my $self = shift;
-	my %args = @_;
-	if ( $args{pabst_build_id} ) {
-		for my $build ( 154,164,165 ) {
-			if ( $build == $args{pabst_build_id} ) {
-				return 1;
-			}
-		}
-	}
-	return 0;
+  my $self = shift;
+  my %args = @_;
+  if ( $args{pabst_build_id} ) {
+    for my $build ( 154,164,165 ) {
+      if ( $build == $args{pabst_build_id} ) {
+	return 1;
+      }
+    }
+  }
+  return 0;
 }
 
 
 sub getInstrumentMap {
   my $self = shift;
-	my %args = @_;
+  my %args = @_;
   my $sql = "SELECT DISTINCT instrument_type_id, instrument_type_name FROM $TBAT_INSTRUMENT_TYPE";
   if ( $args{src_only} ) {
     $sql .= " WHERE is_source_instrument = 'Y'";
@@ -870,15 +862,15 @@ sub getInstrumentMap {
 
   my %instr;
   while( my @row = $sth->fetchrow_array() ) {
-		if ( $args{inhibit_predicted} ) {
-			next if $row[1] =~ /Predicted/;
+    if ( $args{inhibit_predicted} ) {
+      next if $row[1] =~ /Predicted/;
 		}
     $instr{$row[1]} = $row[0];
   }
-	if ( $args{invert} ) {
-		my %code2instr = reverse( %instr );
-		return \%code2instr;
-	}
+  if ( $args{invert} ) {
+    my %code2instr = reverse( %instr );
+    return \%code2instr;
+  }
   return \%instr;
 } 
 
@@ -895,9 +887,8 @@ sub bySuitabilityScore {
 # observability and sequence features/mapping info.  Works as current (04/2009)
 # version of getBestPeptides routine
 sub calc_suitability_score {
-	my $self = shift;
-	my %args = @_;
-
+  my $self = shift;
+  my %args = @_;
 
 }
 
@@ -906,8 +897,8 @@ sub calc_suitability_score {
 # to a separate module?
 
 sub get_pabst_scoring_defs {
-	my $self = shift;
-	my %args = @_;
+  my $self = shift;
+  my %args = @_;
 
 # Deprecated
 #                   NG => ' Dipeptide NG',
@@ -965,9 +956,9 @@ sub get_pabst_scoring_defs {
 # @narg show_defs     Ret scalar with keys/scores/defs instead of score hashref
 #
 sub get_default_pabst_scoring {
-	my $self = shift;
-	my %args = @_;
-	$args{show_defs} ||= 0;
+  my $self = shift;
+  my %args = @_;
+  $args{show_defs} ||= 0;
 
 # Deprecated
 #                  NG => 1,
@@ -1006,16 +997,16 @@ sub get_default_pabst_scoring {
                  bAA => 0,
                 );
 
-	if ( !$args{show_defs} ) {
-	  return \%scores;
-	} else {
-		my $defs = $self->get_pabst_scoring_defs();
-		my @score_defs;
-		for my $k ( sort( keys ( %scores ) ) ) {
+  if ( !$args{show_defs} ) {
+    return \%scores;
+  } else {
+    my $defs = $self->get_pabst_scoring_defs();
+    my @score_defs;
+    for my $k ( sort( keys ( %scores ) ) ) {
       push @score_defs, "$k\t$scores{$k}\t# $defs->{$k}";
-		}
-		return ( wantarray() ) ? @score_defs : join( "\n", @score_defs, '' );
-	}
+    }
+    return ( wantarray() ) ? @score_defs : join( "\n", @score_defs, '' );
+  }
 }
 
 sub get_pabst_peptides {
@@ -1033,7 +1024,7 @@ sub get_pabst_peptides {
 
   my $obs = $self->get_pabst_observed_peptides( 
                                         atlas_build => $args{atlas_build_id},
-                                        protein_in_clause => $bioseq_in, 
+                                  protein_in_clause => $bioseq_in, 
                                               );
 
   my $theo = $self->get_pabst_theoretical_peptides( 
@@ -1147,7 +1138,7 @@ sub get_pabst_static_peptide_transitions_display {
 
   my $align = [qw(right left right center right center right center left right right)];
 
-  my $html = $atlas->encodeSectionTable( header => 1, 
+  my $html = $atlas->encodeSectionTable(        header => 1, 
                                                  width => '600',
                                                tr_info => $args{tr},
                                                 align  => $align,
@@ -1162,9 +1153,9 @@ sub get_pabst_static_peptide_transitions_display {
                                               sortable => 1,
                                               table_id => 'pabst',
                                            close_table => 1,
-                                              );
-    #### Display table
-    return "<TABLE WIDTH=600><BR>$html\n";
+                                        );
+  #### Display table
+  return "<TABLE WIDTH=600><BR>$html\n";
 
 } # End get_pabst_static_peptide_transitions_display
 
@@ -1257,7 +1248,7 @@ sub get_dirty_peptide_display {
 
   my $align = [qw(left left right right right right center right right right right right left )];
 
-  my $html = $atlas->encodeSectionTable( header => 1, 
+  my $html = $atlas->encodeSectionTable(        header => 1, 
                                                  width => '600',
                                                tr_info => $args{tr},
                                                 align  => $align,
@@ -1267,14 +1258,13 @@ sub get_dirty_peptide_display {
                                           bkg_interval => 3, 
 #     set_download => 'Download peptides', 
 #                                           file_prefix => 'best_peptides_', 
-                                                header => 1,
                                               bg_color => '#EAEAEA',
                                               sortable => 1,
                                               table_id => 'dirty_peps',
                                            close_table => 1,
-                                              );
-    #### Display table
-    return "<TABLE WIDTH=600><BR>$html\n";
+                                        );
+  #### Display table
+  return "<TABLE WIDTH=600><BR>$html\n";
 
 } # End dirty_peptide display
 
@@ -1303,8 +1293,6 @@ sub get_pabst_static_peptide_display {
     $pabst_build_id = $self->get_pabst_build();
   }
 #  $log->debug( "build is $pabst_build_id!" );
-  
-
 
 
   $args{patr_peptides} ||= {};
@@ -1384,7 +1372,7 @@ sub get_pabst_static_peptide_display {
   ~;
 
   my @columns = ( 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'ESS', 'PSS', 
-                   'SSRT', 'N Gen Loc', 'N Obs', 'Annot', 'Org', 'PATR' );
+		  'SSRT', 'N Gen Loc', 'N Obs', 'Annot', 'Org', 'PATR' );
   my $coldefs = $atlas->get_column_defs( labels => \@columns );
   my @headings;
   my @rs_headings;
@@ -1393,18 +1381,18 @@ sub get_pabst_static_peptide_display {
     push @rs_headings, $def->{key};
   }
   my $table_help = $atlas->make_table_help( entries => $coldefs,
-                                           description => "Possible peptides ranked by PABST score" );
+					    description => "Possible peptides ranked by PABST score" );
 #                                             help_text => $table_help,
 
 
   # Defer for now...
   if ( 0 && $dp_data ) {
     push @headings, ( ESPP => 'Carr ESP predictor score',
-                     Detected => 'Peptide observations',
-                     n_prots => 'Number of  proteins to which peptide maps' ,
+		      Detected => 'Peptide observations',
+		      n_prots => 'Number of  proteins to which peptide maps' ,
                       Status => 'Status of peptide' );
 
-  } 
+  }
 
   my @peptides = ( $self->make_sort_headings( headings => \@headings,
                                               default => 'Adj SS' )  );
@@ -1431,26 +1419,25 @@ sub get_pabst_static_peptide_display {
 #         CASE WHEN Status = 'A' THEN 'Anlyzed' 
       if ( $dirty_peptides{$row[1]} ) {
         my @dp =  @{$dirty_peptides{$row[1]}};
-        
+
         my $det = '';
         if ( $dp[2] ) {
           $det = 'QQQ';
         } elsif  ( $dp[3] ) {
           $det = 'qqq';
-        } 
-        
+        }
+
         $dp[1] = sprintf( "%0.2f", $dp[1] );
         if ( $dp[4] ) {
           $det = ( $det ) ? "$det,Orbi" : 'Orbi';
         }
 
 
-
         push @row, ( $dp[1], $det, $dp[5], $dp[6] ); 
       } else {
         push @row,$naa,$naa,$naa,$naa;
       }
-    } 
+    }
 
     $row[4] = sprintf( "%0.2f", $row[4] );
     $row[5] = sprintf( "%0.2f", $row[5] );
@@ -1484,7 +1471,7 @@ sub get_pabst_static_peptide_display {
       push @{$pep2org{$row[0]}}, $row[1];
     }
   }
-	$sth->finish();
+  $sth->finish();
 
   my $seen_sql = qq~
   SELECT DISTINCT peptide_sequence 
@@ -1522,7 +1509,7 @@ sub get_pabst_static_peptide_display {
 
   my $align = [qw(right left left right right right right right right left left left)];
 
-  my $html = $atlas->encodeSectionTable( header => 1, 
+  my $html = $atlas->encodeSectionTable(        header => 1, 
                                                  width => '600',
                                                tr_info => $args{tr},
                                                 align  => $align,
@@ -1541,8 +1528,8 @@ sub get_pabst_static_peptide_display {
                                               table_id => 'pabst',
                                            close_table => 1,
                                               );
-    #### Display table
-    return "<TABLE WIDTH=600><BR>$html\n";
+  #### Display table
+  return "<TABLE WIDTH=600><BR>$html\n";
 
 } # End get pabst static display
 
@@ -1572,7 +1559,6 @@ sub get_pabst_mapped_id {
   
   my @ids = $sbeams->selectrow_array( $sql );
   return $ids[0] || '';
-
 }
 
 
@@ -1592,7 +1578,7 @@ sub get_pabst_bss_id {
   while ( my @row = $sth->fetchrow_array() ) {
     return $row[0];
   }
-	return '';
+  return '';
 }
 
 #+
@@ -1751,7 +1737,7 @@ sub get_pabst_peptide_display {
 
   my @peptides = ( $self->make_sort_headings( headings => \@headings,
                                               default => 'adj_SS' )  );
-  
+
   my $naa = $sbeams->makeInactiveText( 'n/a' );
 
   my $atlas_build_id = $atlas->getCurrentAtlasBuildID( parameters_ref => {} );
@@ -1792,7 +1778,7 @@ sub get_pabst_peptide_display {
       $pep_row->[5] = $naa;
     }
     $pep_row->[13] ||= $naa; 
-    
+
     my $prots = $protein_info->{$pep_row->[2]} || '';
     if ( $self->{_cached_acc} && $self->{_cached_acc}->{$pep_row->[2]} ) {
       my $acc = $self->{_cached_acc}->{$pep_row->[2]};
@@ -1805,7 +1791,7 @@ sub get_pabst_peptide_display {
 #                   EOS => 'Empirical observability score',
   my $align = [qw(right left right right left center center center right right)];
 
-  my $html = $atlas->encodeSectionTable( header => 1, 
+  my $html = $atlas->encodeSectionTable(        header => 1, 
                                                  width => '600',
                                                tr_info => $args{tr},
                                                 align  => $align,
@@ -1822,8 +1808,8 @@ sub get_pabst_peptide_display {
                                            close_table => 1,
                                            change_form => $change_form 
                                               );
-    #### Display table
-    return "<TABLE WIDTH=600><BR>$html\n";
+  #### Display table
+  return "<TABLE WIDTH=600><BR>$html\n";
 
 } # End get_pabst_peptide_display
 
@@ -1924,8 +1910,8 @@ sub get_change_form {
   my $self = shift;
   my %args = @_;
 
-	my $penalties = $self->get_pabst_penalty_values();
-	my @pen_defs = $self->get_pabst_scoring_defs();
+  my $penalties = $self->get_pabst_penalty_values();
+  my @pen_defs = $self->get_pabst_scoring_defs();
 
   my $pen_defs = {};
   my @pen_names;
@@ -1944,7 +1930,7 @@ sub get_change_form {
   }
 
   my $noop = ( $args{noop} ) ? "Feature temporarily unavailable" : '';
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'pabst_penalty_form',
+  my ( $tr, $link ) = $sbeams->make_table_toggle(  name => 'pabst_penalty_form',
                                                 visible => 1,
                                                 tooltip => 'Show/Hide penalty form',
                                                  sticky => 1,
@@ -2003,8 +1989,6 @@ sub get_change_form {
   </FORM>
   ~;
   return $form;
-
-
 }
 
 sub make_sort_headings {
@@ -2023,7 +2007,7 @@ sub make_sort_headings {
     my $title = shift @{$args{headings}};
     my $link = qq~ <DIV TITLE="$title" ONCLICK="ts_resortTable(this,'$cnt');return false;" class=sortheader>$head<span class=sortarrow>&nbsp;$arrow</span></DIV>~;
     push @marked, $link;
-     
+
     last if $cnt++ > 100; # danger Will Robinson
   }
   return \@marked;
@@ -2031,7 +2015,6 @@ sub make_sort_headings {
 
 # Copied shamelessly from g_p_o_p, but don't want to mess up the former yet.
 sub get_pabst_multibuild_observed_peptides_depr {
-
   my $self = shift;
   my %args = @_;
 
@@ -2214,10 +2197,10 @@ sub get_pabst_multibuild_observed_peptides_depr {
 
 #  push @{$proteins{$curr_prot}}, $sorted[0];
 
-  
+
   print STDERR "Observed " . scalar( keys( %proteins ) ) . "  total proteins and $pep_cnt peptides\n" if $args{verbose};
 #  my $cnt = 0; for my $k ( keys ( %proteins ) ) { print "$k\n"; last if $cnt++ >= 10; }
-  
+
   my $headings = $self->get_pabst_headings( as_col_hash => 1 );
   my $scores = $self->get_pabst_penalty_values();
   # Score adjustment for observed peptides!!!
@@ -2230,7 +2213,7 @@ sub get_pabst_multibuild_observed_peptides_depr {
 #    for my $row ( @{$proteins{$prot}} ) { print STDERR "Before EPS is $row->[4], SS is $row->[5] for $row->[2]\n"; }
 
     $self->getBestPeptides( resultset_ref => { data_ref => $proteins{$prot}, 
-                          column_hash_ref => $headings },
+					column_hash_ref => $headings },
                                  annotate => 1,
                                 ss_adjust => $obs_adjustment,
                              build_weight => \%build2weight,
@@ -2248,7 +2231,6 @@ sub get_pabst_multibuild_observed_peptides_depr {
 
 # Copied shamelessly from g_p_o_p, but don't want to mess up the former yet.
 sub get_pabst_multibuild_observed_peptides {
-
   my $self = shift;
   my %args = @_;
 
@@ -2429,7 +2411,7 @@ sub get_pabst_multibuild_observed_peptides {
 #    for my $row ( @{$proteins{$prot}} ) { print STDERR "Before EPS is $row->[4], SS is $row->[5] for $row->[2]\n"; }
 
     $self->getBestPeptides( resultset_ref => { data_ref => $proteins{$prot}, 
-                          column_hash_ref => $headings },
+				        column_hash_ref => $headings },
                                  annotate => 1,
                                 ss_adjust => $obs_adjustment,
                              build_weight => \%build2weight,
@@ -2443,6 +2425,7 @@ sub get_pabst_multibuild_observed_peptides {
   }
   return \%protein_hash;
 }
+
 sub get_pabst_observed_peptides {
   my $self = shift;
   my %args = @_;
@@ -2511,7 +2494,7 @@ sub get_pabst_observed_peptides {
 #  print STDERR "Saw a respectable " . scalar( keys( %proteins ) ) . "  total proteins and $pep_cnt peptides\n";
   print STDERR "Observed " . scalar( keys( %proteins ) ) . "  total proteins and $pep_cnt peptides\n" if $args{verbose};
 #  my $cnt = 0; for my $k ( keys ( %proteins ) ) { print "$k\n"; last if $cnt++ >= 10; }
-  
+
   my $headings = $self->get_pabst_headings( as_col_hash => 1 );
   my $scores = $self->get_pabst_penalty_values();
   # Score adjustment for observed peptides!!!
@@ -2526,7 +2509,7 @@ sub get_pabst_observed_peptides {
     $self->getBestPeptides( resultset_ref => { data_ref => $proteins{$prot}, 
                                         column_hash_ref => $headings },
                                  annotate => 1,
-                                 ss_adjust => $obs_adjustment
+                                ss_adjust => $obs_adjustment
                           );
     $protein_hash{$prot} ||= {};
     for my $row ( @{$proteins{$prot}} ) {
@@ -2694,8 +2677,8 @@ sub merge_pabst_peptides {
         } else {
 #          print "seeing $pep_row->[2] for the first time, nobs is $pep_row->[13]\n";
           $seen_peptides{$pep_key} = { n_obs => $pep_row->[13],
-                                            eps => $pep_row->[4],
-                                            ess => $pep_row->[5] };
+				         eps => $pep_row->[4],
+				         ess => $pep_row->[5] };
         }
       }
     }
@@ -2876,7 +2859,7 @@ sub set_pabst_penalty_values {
   # only have to set a subset, the rest will be filled with default values
   $self->{_penalties} ||= {};
 
-	my $default = $self->get_default_pabst_scoring();
+  my $default = $self->get_default_pabst_scoring();
 
   for my $k ( keys( %{$default} ) ) {
     if ( defined $args{$k} ) { # Use passed value if it is defined
@@ -2906,7 +2889,7 @@ sub get_pabst_penalty_values {
     return $self->{_penalties} 
   }
   # _penalties not yet set, this call will set to defaults and return them.
-    $log->debug( "returning newly set values!" );
+  $log->debug( "returning newly set values!" );
   return $self->set_pabst_penalty_values();
 }
 
@@ -2936,8 +2919,8 @@ sub pabst_evaluate_peptides {
   return undef unless $args{peptides};
 
   # Moved defs to standalone routine
-	my $pen_ref = $self->get_pabst_penalty_values();
-	my %pen_defs = %{$pen_ref};
+  my $pen_ref = $self->get_pabst_penalty_values();
+  my %pen_defs = %{$pen_ref};
 
   # Allow user override, resolve passed penalties, but only once per run unless
   # clear_cache param set.
@@ -3097,14 +3080,12 @@ sub pabst_evaluate_peptides {
         }
 
       } elsif( $k eq 'BA' && $is_penalized{$k} ) {
-         
         if ( $bnum > 4 || (length($seq)*115/$bnum < 300) ) {
           $scr *= $pen_defs{$k};
           push @pen_codes, $k;
         }
 
       } elsif ( $k eq 'EC2' && $is_penalized{$k} ) {  # each step away is penalized more heavily
-
         my $delta = abs( $bnum - 2 );
         if ( $delta ) {
           $scr *= $pen_defs{$k}**$delta;
@@ -3112,17 +3093,17 @@ sub pabst_evaluate_peptides {
         }
 
       } elsif( $k eq 'Hper' && $is_penalized{$k} ) {
-         my $safe_seq = $seq;
-         my $cnt = $safe_seq =~ tr/FILVWM/FILVWM/;
-         if ( $cnt && $cnt/length($seq) > 0.75 ) {
-           $scr *= $pen_defs{$k};
-           push @pen_codes, $k;
-         }
+	my $safe_seq = $seq;
+	my $cnt = $safe_seq =~ tr/FILVWM/FILVWM/;
+	if ( $cnt && $cnt/length($seq) > 0.75 ) {
+	  $scr *= $pen_defs{$k};
+	  push @pen_codes, $k;
+	}
       } elsif( $k eq 'bAA' && $is_penalized{$k} ) {
-         if ( $seq !~ /^[ACDEFGHIKLMNPQRSTVWY]+$/ ) {
-           $scr *= $pen_defs{$k};
-           push @pen_codes, $k;
-         }
+	if ( $seq !~ /^[ACDEFGHIKLMNPQRSTVWY]+$/ ) {
+	  $scr *= $pen_defs{$k};
+	  push @pen_codes, $k;
+	}
       } elsif( $rx{$k} ) {
         for my $rx ( @{$rx{$k}} ) {
           if ( $pep->[$args{seq_idx}] =~ /$rx/ ) {
@@ -3175,7 +3156,6 @@ sub pabst_evaluate_peptides {
 }
       
 sub calculate_CE {
- 
   my $self = shift;
   my %args = @_;
 
@@ -3216,7 +3196,6 @@ sub get_peptide_mass {
                                                     charge => $args{charge} );
 
   return $mass;
-
 }
 
 # Generate theoretical fragments from a peptide sequence
@@ -3225,7 +3204,6 @@ sub get_peptide_mass {
 # @narg min_mz  (default 0)
 # @narg precursor_excl (default 0)
 sub generate_fragment_ions {
-
   my $self = shift;
   my %args = ( max_mz => 10000,
                min_mz => 0,
@@ -3233,7 +3211,7 @@ sub generate_fragment_ions {
                add_score => 1,
                type => 'P',
                charge => 2,
-              @_ );
+	       @_ );
 
   $self->{_mass_calc} ||= new SBEAMS::Proteomics::PeptideMassCalculator;
 
@@ -3261,8 +3239,8 @@ sub generate_fragment_ions {
   my $residues = $atlas->fragment_peptide( $args{peptide_seq} );
 
   my $mass = $self->{_mass_calc}->getPeptideMass( sequence => $args{peptide_seq},
-                                                         mass_type => 'monoisotopic',
-                                                            charge => 0 );
+						 mass_type => 'monoisotopic',
+						    charge => 0 );
 
   my $hydrogen_mass = 1.007825;
   my $mz = ($mass + $args{charge} * $hydrogen_mass)/$args{charge};
@@ -3307,7 +3285,7 @@ sub generate_fragment_ions {
       if ( $ions->{$series_class}->[$i] < $args{min_mz} ||  
            $ions->{$series_class}->[$i] > $args{max_mz} ||
            abs( $mz - $ions->{$series_class}->[$i] ) < $args{precursor_excl} 
-         ) {
+	  ) {
 
         # user-defined out-of-range
 #        print "$series_class $ions->{indices}->[$i] failed! $ions->{$series_class}->[$i]\n";
@@ -3357,7 +3335,6 @@ sub generate_fragment_ions {
     }
   }
   return \@frags;
-
 } # End generate_fragment_ions
 
 # Cheap 'n dirty fragment sorter.
@@ -3419,9 +3396,7 @@ sub get_charge_ratios {
     return "Unknown instrument type $args{instrument_type}";
   }
 
-
   my $mass = $args{mass} || $len * 115;
-
 }
 
 sub generate_ratio_matrix {
@@ -3461,7 +3436,6 @@ sub generate_ratio_matrix {
 }
 
 sub get_expected_charge {
-
   my $self = shift;
   my %args = @_;
   return undef unless $args{sequence};
@@ -3473,8 +3447,6 @@ sub get_expected_charge {
 
   my $bnum = 1 + $lys + $arg + $his;
   return $bnum;
-
-
 }
 
 sub get_predicted_charge {
@@ -3528,42 +3500,40 @@ sub get_charge_matrix {
     $matrix{$vals[0]}->{$vals[1]} = $vals[2];
   }
   return \%matrix;
-
 }
 
 
 sub get_pabst_build_select {
-
   my $self = shift || die ("self not passed");
   my %args = ( build_id => '', @_ );
 
-	my $project_string = join( ', ', $sbeams->getAccessibleProjects() );
-	return unless $project_string;
+  my $project_string = join( ', ', $sbeams->getAccessibleProjects() );
+  return unless $project_string;
 
 
-	if ( $args{build_id} && $args{build_id} =~ /^\d+$/ ) {
-	  my $sth = $sbeams->get_statement_handle( "SELECT build_name FROM $TBAT_PABST_BUILD WHERE pabst_build_id = $args{build_id}" );
+  if ( $args{build_id} && $args{build_id} =~ /^\d+$/ ) {
+    my $sth = $sbeams->get_statement_handle( "SELECT build_name FROM $TBAT_PABST_BUILD WHERE pabst_build_id = $args{build_id}" );
     while ( my @row = $sth->fetchrow_array() ) {
       $args{build_name} = $row[0];
       last;
     }
   }
 
-	my $project_string = join( ', ', $sbeams->getAccessibleProjects() );
-	return unless $project_string;
+  my $project_string = join( ', ', $sbeams->getAccessibleProjects() );
+  return unless $project_string;
 
-	my $onchange_script = '';
-	my $onchange = '';
+  my $onchange_script = '';
+  my $onchange = '';
   if ($args{set_onchange}) {
-	  $onchange = 'onchange="switchAtlasBuild()"';
-		$onchange_script =  qq~
+    $onchange = 'onchange="switchAtlasBuild()"';
+    $onchange_script =  qq~
 		<SCRIPT LANGUAGE=javascript TYPE=text/javascript>
 		function switchAtlasBuild() {
 			document.$args{form_name}.submit();
 		}
 		</SCRIPT>
 		~;
-	}
+  }
 
   my $sql = qq~
     SELECT pabst_build_id, build_name 
@@ -3571,17 +3541,17 @@ sub get_pabst_build_select {
 		 WHERE project_id IN ( $project_string )
      ORDER BY build_name
   ~;
-	my $sth = $sbeams->get_statement_handle( $sql );
-	my $select = "<SELECT NAME=build_id $onchange>\n";
-	while ( my @row = $sth->fetchrow_array() ) {
-		# default to first one
-		$args{build_name} ||= $row[1];
-		my $selected = ( $row[1] =~ /^$args{build_name}$/ ) ? 'SELECTED' : '';
-		$select .= "<OPTION VALUE=$row[0] $selected> $row[1] </OPTION>";
-	}
-	$select .= "</SELECT>\n";
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my $select = "<SELECT NAME=build_id $onchange>\n";
+  while ( my @row = $sth->fetchrow_array() ) {
+    # default to first one
+    $args{build_name} ||= $row[1];
+    my $selected = ( $row[1] =~ /^$args{build_name}$/ ) ? 'SELECTED' : '';
+    $select .= "<OPTION VALUE=$row[0] $selected> $row[1] </OPTION>";
+  }
+  $select .= "</SELECT>\n";
 
-	return ( wantarray() ) ? ($select, $onchange_script) :  $select . $onchange_script; 
+  return ( wantarray() ) ? ($select, $onchange_script) :  $select . $onchange_script; 
 }
 
 ###############################################################################
