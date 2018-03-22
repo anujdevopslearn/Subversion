@@ -755,26 +755,25 @@ sub getHighlyObservablePeptidesDisplay {
   my $align = [qw(center right left left right right right right right right right)];
 
   my $html = $atlas->encodeSectionTable( header => 1, 
-                                                 width => '600',
-                                               tr_info => $args{tr},
-                                                align  => $align,
-                                                  rows => \@data,
-                                          rows_to_show => 20,
-                                             help_text => $table_help,
-                                              max_rows => 500,
-                                                nowrap => [1..11],
-                                          bkg_interval => 3, 
-                                          set_download => 'Download peptides', 
-                                           rs_headings => \@headings,
-                                           file_prefix => 'highly_observable', 
-                                                header => 1,
-                                              bg_color => '#EAEAEA',
-                                              sortable => 1,
-                                              table_id => 'highly_observable',
-                                           close_table => 1,
-                                              );
+					 tr_info => $args{tr},
+					 align  => $align,
+					 rows => \@data,
+					 rows_to_show => 20,
+					 help_text => $table_help,
+					 max_rows => 500,
+					 nowrap => [1..11],
+					 bkg_interval => 4,
+					 set_download => 'Download peptides', 
+					 rs_headings => \@headings,
+					 file_prefix => 'highly_observable', 
+					 header => 1,
+					 bg_color => '#EAEAEA',
+					 sortable => 1,
+					 table_id => 'highly_observable',
+					 close_table => 1,
+      );
   
-  return "<TABLE WIDTH=600>$html\n";
+  return "<TABLE>$html\n";
 } # end getHighlyObservablePeptidesDisplay
 
 
