@@ -42,15 +42,15 @@ sub match_count {
 # Routine finds and returns 0-based start/end coordinates of pepseq in protseq
 # -
 sub map_peptide_to_protein {
-	my $self = shift;
-	my %args = @_;
-	my $pep_seq = $args{pepseq};
-	my $protein_seq = $args{protseq};
+  my $self = shift;
+  my %args = @_;
+  my $pep_seq = $args{pepseq};
+  my $protein_seq = $args{protseq};
   die 'doh' unless $pep_seq && $protein_seq;
 
   if ( $args{multiple_mappings} ) {
     my $posn = $self->get_site_positions( seq => $protein_seq,
-                                      pattern => $pep_seq );
+					  pattern => $pep_seq );
     my @posn;
     for my $pos ( @$posn ) {
       my @p = ( $pos, $pos + length( $pep_seq ) );
@@ -59,13 +59,13 @@ sub map_peptide_to_protein {
     return \@posn;
   }
 	
-	if ( $protein_seq =~ /$pep_seq/ ) {
-		my $start_pos = length($`);    
-		my $stop_pos = length($pep_seq) + $start_pos;  
-		return ($start_pos, $stop_pos);	
-	}else{
-		return;
-	}
+  if ( $protein_seq =~ /$pep_seq/ ) {
+    my $start_pos = length($`);    
+    my $stop_pos = length($pep_seq) + $start_pos;  
+    return ($start_pos, $stop_pos);	
+  } else {
+    return;
+  }
 }
 
 #+
@@ -112,7 +112,6 @@ sub do_simple_digestion {
   
   my @peps = split( /$regex{$enz}/, $args{aa_seq} );
 
-
   my @fullpeps;
   my $cnt = 0;
   for my $pep ( @peps ) {
@@ -150,7 +149,6 @@ sub do_simple_digestion {
     return \@posns;
   }
   return \@fullpeps;
-  
 }
 
 
@@ -199,12 +197,12 @@ sub do_LysC_digestion {
       $peptide .= ( $args{flanking} ) ? "$prev.$curr" : $curr; 
       $length++;
       if ( $curr =~ /[K]/i ) {
-          $peptide .= ( $args{flanking} ) ? ".$next" : ''; 
-          if ( $length <= $args{max_len} && $length >= $args{min_len} ) {
-            push @peptides, $peptide 
-          }
-          $peptide = '';
-          $length = 0;
+	$peptide .= ( $args{flanking} ) ? ".$next" : ''; 
+	if ( $length <= $args{max_len} && $length >= $args{min_len} ) {
+	  push @peptides, $peptide 
+	}
+	$peptide = '';
+	$length = 0;
       }
     } elsif ( $curr !~ /[a-zA-Z]/ ) { # Probably a modification symbol
       $peptide .= $curr;
@@ -270,7 +268,6 @@ sub do_full_tryptic_digestion {
     return \@peptides;
   }
 
-  
   # previous, current, next amino acid
   my ( $prev, $curr, $next );
 
@@ -410,7 +407,7 @@ sub do_chymotryptic_digestion {
     $missing = ( $missing ) ? $missing . ',' . $param : $param if !defined $args{$param};
   }
   die "Missing required parameter(s) $missing" if $missing;
-  
+
   # Set default param values
   $args{flanking} ||= 0;
   $args{min_len} ||= 1;
@@ -418,7 +415,7 @@ sub do_chymotryptic_digestion {
 
   # Store list to pass back
   my @peptides;
-  
+
   # previous, current, next amino acid
   my ( $prev, $curr, $next );
 
@@ -500,7 +497,7 @@ sub do_gluc_digestion {
     $missing = ( $missing ) ? $missing . ',' . $param : $param if !defined $args{$param};
   }
   die "Missing required parameter(s) $missing" if $missing;
-  
+
   # Set default param values
   $args{flanking} ||= 0;
   $args{min_len} ||= 1;
@@ -508,7 +505,7 @@ sub do_gluc_digestion {
 
   # Store list to pass back
   my @peptides;
-  
+
   # previous, current, next amino acid
   my ( $prev, $curr, $next );
 
@@ -592,8 +589,7 @@ sub getDigestPeptide {
 # Add predicted tryptic peptides, plus glycosite record if appropriate.
 #
 sub getGlycoPeptides {
-
-	my $self = shift;
+  my $self = shift;
   my %args = @_;
   my $sbeams = $self->getSBEAMS();
   my $idx = $args{index} || 0;
@@ -608,7 +604,7 @@ sub getGlycoPeptides {
 
   # Arrayref of glycosite locations
   my $sites = $self->get_site_positions( seq => $args{seq},
-                                     pattern => 'N[^P][S|T]' );
+					 pattern => 'N[^P][S|T]' );
 #  $log->debug( "Sites found at:\n" . join( "\n", @$sites ) );
 
   my $peptides = $self->do_tryptic_digestion( aa_seq => $args{seq} );
@@ -654,8 +650,7 @@ sub getGlycoPeptides {
       $glyco_peptides{$curr_start + $idx} = $peptide;
 #      $glyco_residue{$peptide . '::' . $curr_start} = [ $site - $curr_start ];
       $site = shift( @$sites );
-
-    } 
+    }
 #
     # get the next site not in this peptide
     while( defined $site && $site < $p_end ) {
@@ -671,7 +666,6 @@ sub getGlycoPeptides {
 #      $log->debug( "burning $site: " . substr( $args{seq}, $site, 3 ) );
       $site = shift( @$sites );
 #      $log->debug( "Set 
-      
     }
   }
   # If user desires motif-bound N's to be annotated
@@ -735,25 +729,25 @@ sub get_current_prophet_cutoff {
 sub get_coverage_hash {
   my $self = shift;
   my %args = @_;
-	my $error = '';
+  my $error = '';
 
   my $coverage = {};
 
   # check for required args
-	for my $arg( qw( seq peptides ) ) {
-		next if defined $args{$arg};
-		my $err_arg = ( $error ) ? ", $arg" : $arg;
+  for my $arg( qw( seq peptides ) ) {
+    next if defined $args{$arg};
+    my $err_arg = ( $error ) ? ", $arg" : $arg;
     $error ||= 'Missing required param(s): ';
-		$error .= $err_arg
-	}
-	if ( $error ) {
-		$log->error( $error );
-		return;
-	}
-	unless ( ref $args{peptides} eq 'ARRAY' ) {
-		$log->error( $error );
-		return;
-	}
+    $error .= $err_arg
+  }
+  if ( $error ) {
+    $log->error( $error );
+    return;
+  }
+  unless ( ref $args{peptides} eq 'ARRAY' ) {
+    $log->error( $error );
+    return;
+  }
   $args{offset} ||= 0;
 
   my $seq = $args{seq};
@@ -761,7 +755,7 @@ sub get_coverage_hash {
   for my $peptide ( @{$args{peptides}}  )  {
 
     my $posn = $self->get_site_positions( pattern => $peptide,
-                                              seq => $seq );
+					  seq => $seq );
 
 #    die Dumper $posn if $peptide eq 'CQSFLDHMK';
 
@@ -769,10 +763,10 @@ sub get_coverage_hash {
       for ( my $i = 0; $i < length($peptide); $i++ ){
         my $covered_posn = $p + $i + $args{offset};
         $coverage->{$covered_posn}++;
-    	}
-		}
-	}
-	return $coverage;
+      }
+    }
+  }
+  return $coverage;
 }
 
 #+
@@ -787,29 +781,29 @@ sub highlight_sequence {
   my $self = shift;
   my %args = @_;
 
-	my $error = '';
+  my $error = '';
   
   # check for required args
-	for my $arg( qw( seq coverage ) ) {
-		next if defined $args{$arg};
-		my $err_arg = ( $error ) ? ", $arg" : $arg;
+  for my $arg( qw( seq coverage ) ) {
+    next if defined $args{$arg};
+    my $err_arg = ( $error ) ? ", $arg" : $arg;
     $error ||= 'Missing required param(s): ';
-		$error .= $err_arg
-	}
-	if ( $error ) {
-		$log->error( $error );
-		return $args{seq};
-	}
+    $error .= $err_arg
+  }
+  if ( $error ) {
+    $log->error( $error );
+    return $args{seq};
+  }
 
   # Default value
-	my $class = $args{cov_class} || 'pa_observed_sequence';
-	$args{sec_cover} ||= {};
+  my $class = $args{cov_class} || 'pa_observed_sequence';
+  $args{sec_cover} ||= {};
 
-	if ( $args{sec_cover} ) {
-		$args{sec_class} ||= $args{cov_class};
-	}
+  if ( $args{sec_cover} ) {
+    $args{sec_class} ||= $args{cov_class};
+  }
 
-	my $coverage = $args{coverage};
+  my $coverage = $args{coverage};
 
   my @aa = split( '', $args{seq} );
   my $return_seq = '';
@@ -818,7 +812,7 @@ sub highlight_sequence {
   my $span_closed = 1;
 
   my %class_value = ( curr => 'pri',
-	                    prev => 'sec' );
+		      prev => 'sec' );
 
 
   for my $aa ( @aa ) {
@@ -826,14 +820,14 @@ sub highlight_sequence {
     $class_value{prev} = $class_value{curr};
 
     # use secondary color if applicable
-		if ( $args{sec_cover}->{$cnt} ) {
+    if ( $args{sec_cover}->{$cnt} ) {
       $class_value{curr} = 'sec';
-  	  $class = $args{sec_class} 
-		} else {
+      $class = $args{sec_class} 
+    } else {
       $class_value{curr} = 'pri';
-  	  $class = $args{cov_class} 
-		}
-		my $class_close = ( $class_value{curr} eq  $class_value{prev} ) ? 0 : 1;
+      $class = $args{cov_class} 
+    }
+    my $class_close = ( $class_value{curr} eq  $class_value{prev} ) ? 0 : 1;
 
     if ( $aa eq '-' ) {
       if ( $in_coverage && !$span_closed ) {
@@ -871,7 +865,7 @@ sub highlight_sequence {
 
   # Finish up
   if ( $in_coverage && !$span_closed ) {
-  $return_seq .= '</span>';
+    $return_seq .= '</span>';
   }
   return $return_seq;
 }
@@ -915,7 +909,7 @@ sub set_prophet_cutoff {
   my $cutoff = shift || return;
   my $sbeams = $self->getSBEAMS();
   $sbeams->setSessionAttribute( key => 'glyco_prophet_cutoff',
-                              value => $cutoff );
+				value => $cutoff );
   return 1;
 }
 
@@ -928,7 +922,7 @@ sub clean_pepseq {
   $seq =~ s/M\#/m/g;
   $seq =~ s/d/n/g;
   $seq =~ s/U/n/g;
-  
+
   # Phospho
   $seq =~ s/T\*/t/g;
   $seq =~ s/S\*/s/g;
@@ -1108,7 +1102,7 @@ sub calculatePeptideMass {
       print "mod is $mod, orig is $orig, seq is $args{sequence}\n";
     }
   }
-  
+
 
   my $seq = uc( $args{sequence} );
   my @seq = split( "", $seq );
@@ -1448,7 +1442,7 @@ sub assess_protein_peptides {
     }
   }
 
-  
+
   my %len_ok;
   my %len; # failing len peptides
   for my $pep ( @{$peps} ) {
@@ -1511,7 +1505,7 @@ sub assess_protein_peptides {
       $status ||= 'SIG';
       $fail_status{SIG}++;
       $sig_peps{$pep}++;
-      
+
     } else {
       for my $pos ( sort { $a <=> $b } ( keys( %sig ) ) ) {
         if ( $pos >= $start && $pos <= $end ) {
@@ -1551,29 +1545,29 @@ sub assess_protein_peptides {
       $failing{$pep}++;
     }
     push @pepinfo, { seq => $pep, 
-                   start => $start, 
+		     start => $start, 
                      end => $end, 
-                  status => $status,
-                    len => length( $pep ),
-                    ssr => $all_ssr{$pep} || 0
-                     };
+		     status => $status,
+		     len => length( $pep ),
+		     ssr => $all_ssr{$pep} || 0
+    };
   }
   
   my @passing = keys( %passing );
   my @failing = keys( %failing );
   return ( { peptides => \@pepinfo,
              pass_len => $passing,
-              failure =>  \%fail,
-            total_len => $total,
-              passing => \%passing,
-              failing => \%failing,
-          num_passing => scalar( @passing ),
-           likely_str => $likely_str,
-                  ssr => \%ssr,
-                  len => \%len,
-                   tm => \%tm_peps,
-                  sig => \%sig_peps, 
-       percent_likely => sprintf( "%0.1f", 100*($passing/$total)) } );
+	     failure =>  \%fail,
+	     total_len => $total,
+	     passing => \%passing,
+	     failing => \%failing,
+	     num_passing => scalar( @passing ),
+	     likely_str => $likely_str,
+	     ssr => \%ssr,
+	     len => \%len,
+	     tm => \%tm_peps,
+	     sig => \%sig_peps, 
+	     percent_likely => sprintf( "%0.1f", 100*($passing/$total)) } );
 }
 
 
@@ -1594,7 +1588,7 @@ sub get_html_seq_vars {
   my $seq = $args{seq} || return '';
 
   my $ruler = '';
- my $ruler_cnt = ' ';
+  my $ruler_cnt = ' ';
   my $acnt = 1;
   for my $aa ( split //, $seq ) {
     if ( $acnt % 10 ) {
@@ -1603,7 +1597,7 @@ sub get_html_seq_vars {
       $ruler_cnt .= sprintf( "% 10d", $acnt );;
       $ruler .= '|';
     }
-    
+
     $acnt++;
   }
   $ruler_cnt =~ s/ /\&nbsp;/g;
@@ -1668,7 +1662,7 @@ sub get_html_seq_vars {
     $line_len++;
   }
 
-  
+
   my $alt_enzyme_info = {};
   if( $is_trypsin_build eq 'N'){
     $alt_enzyme_info = $self->get_alt_enzyme( %args );
@@ -1736,7 +1730,7 @@ sub get_html_seq_vars {
     $display_div =~ s/display:none/display:block/g;
     $display_div =~ s/ID=tryp/ID=seq_display/;
     $tselect = "selected";
-  }else{
+  } else {
     $display_div = $div_txt{inter};
     $display_div =~ s/display:none/display:block/g;
     $display_div =~ s/ID=inter/ID=seq_display/;
@@ -1755,8 +1749,8 @@ sub get_html_seq_vars {
   my %lc2name = ( aspn => 'AspN', 
                   gluc => 'GluC',
                   lysc => 'LysC',
-               trypsin => 'Trypsin',
-          chymotrypsin => 'Chymotrypsin' );
+		  trypsin => 'Trypsin',
+		  chymotrypsin => 'Chymotrypsin' );
 
   for my $enz ( @alt_enz ) {
     next if $enz =~ /^trypsin/;
@@ -1807,16 +1801,16 @@ sub get_html_seq_vars {
   my @global_clustal = ( [ '', $ruler_cnt], [ '', $ruler ] );
   my $primary_clustal = [ 'Primary', $seq ];
   $coverage_coords{$primary_clustal->[0]} = $self->get_coverage_hash( seq => $seq, 
-                                                                 peptides => $peps, 
-                                                                   offset => 0,
-                                                                  nostrip => 1 );
+								      peptides => $peps, 
+								      offset => 0,
+								      nostrip => 1 );
   push @global_clustal, $primary_clustal;
 
   my %type2display = ( VARIANT => 'SNP',
-                         CHAIN => 'Chain',
-                      INIT_MET => 'InitMet',
-                        SIGNAL => 'Signal',
-                        PROPEP => 'Propep',
+		       CHAIN => 'Chain',
+		       INIT_MET => 'InitMet',
+		       SIGNAL => 'Signal',
+		       PROPEP => 'Propep',
                        PEPTIDE => 'Chain',
                       );
 
@@ -1835,15 +1829,13 @@ sub get_html_seq_vars {
 
       push @global_clustal, [ $pepname, $entry->{seq} ];
       $coverage_coords{$pepname} = $self->get_coverage_hash( seq => $entry->{seq}, 
-                                                        peptides => $peps, 
-                                                          offset => 0,
-                                                          nostrip => 1 );
+							     peptides => $peps, 
+							     offset => 0,
+							     nostrip => 1 );
       my $var_string = '';
       $pepcnt++;
       my ( $vtype, $vnum ) = split( /_/, $pepname );
       if ( $type eq 'VARIANT' ) {
-
-
         my %sorted;
         for my $key ( keys( %coverage_coords ) ) {
           $sorted{$key} ||= [];
@@ -1896,8 +1888,8 @@ sub get_html_seq_vars {
     # First see which peptides map to primary sequence
     for my $pep ( keys( %{$pnobs} ) ) {
       my $posn = $self->get_site_positions( seq => $args{seq},
-                                        pattern => $pep, 
-                                           l_agnostic => 1 );
+					    pattern => $pep, 
+					    l_agnostic => 1 );
 
       if ( scalar( @{$posn} ) ) {
         $primary{$pep} = $posn->[0];
@@ -1931,7 +1923,7 @@ sub get_html_seq_vars {
       while ( my @row = $sth->fetchrow_array() ) {
         next if $row[1] > 1;
         my $seq = $inst2seq{$row[0]};
-		    $unique_evidence{$seq} = $row[1];
+	$unique_evidence{$seq} = $row[1];
       }
     }
 
@@ -1978,8 +1970,8 @@ sub get_html_seq_vars {
       for my $spep ( keys( %snp_only ) ) {
 
         my $snp_posn = $self->get_site_positions( seq => $snpped_seq,
-                                              pattern => $spep,
-                                              l_agnostic => 1 );
+						  pattern => $spep,
+						  l_agnostic => 1 );
 
         if ( scalar( @{$snp_posn} ) ) {
 #          print "$spep seems to map to to snpped sequence for $site<br>\n";
@@ -2019,13 +2011,13 @@ sub get_html_seq_vars {
   $trypsites =~ s/[^KR]/-/g;
   push @global_clustal, [ 'TrypticSites', $trypsites ];
 
-	my $clustal_display .= $self->get_clustal_display( alignments => \@global_clustal, 
-			                                                dup_seqs => {},
-			                                                  pepseq => 'ZORRO',
-                                                        snp_cover => $snp_cover,
-																					       			coverage => \%coverage_coords,
-																       			 		acc2bioseq_id => {},
-																			      			         %args );
+  my $clustal_display .= $self->get_clustal_display( alignments => \@global_clustal, 
+						     dup_seqs => {},
+						     pepseq => 'ZORRO',
+						     snp_cover => $snp_cover,
+						     coverage => \%coverage_coords,
+						     acc2bioseq_id => {},
+						     %args );
 
 #  die Dumper( $clustal_display );
 
@@ -2045,7 +2037,7 @@ sub get_alt_enzyme {
   for my $enz( sort( @{$args{alt_enz}} ) ) {
     my $posn = $self->do_simple_digestion( aa_seq => $args{seq},
                                            enzyme => $enz,
-                                        positions => 1 );
+					   positions => 1 );
     $return{$enz} = $posn;
   }
   return \%return;
@@ -2169,7 +2161,7 @@ sub get_uniprot_variant_seq {
                   substr( $args{fasta_seq}, $args{start} - 1, $args{end} - $args{start} + 1 ) .
                   '-' x ($seqlen - $args{end});
 
-  } elsif ( $args{type} eq 'VARIAT' ) { # SNP showz as stand-alone peptide 
+  } elsif ( $args{type} eq 'VARIANT' ) { # SNP showz as stand-alone peptide
 
     my $tryp = $self->do_tryptic_digestion( aa_seq => $args{fasta_seq} );
     my $pos = -1;
@@ -2332,7 +2324,7 @@ sub get_uniprot_annotation {
   my @results = $sbeams->selectrow_array( $sql );
 
   my $entry = $self->read_uniprot_dat_entry( path => $results[0],
-                                           offset => $results[1] );
+					     offset => $results[1] );
 
   if ( !$entry ) {
     return \%annot;
@@ -2432,7 +2424,7 @@ sub read_uniprot_dat_entry {
 sub get_clustal_coordinates {
   my $self = shift;
   my $coords = { start => 999, len => 999, seq => '', alignment => {} };
-	my $clustal = shift || return $coords;  
+  my $clustal = shift || return $coords;  
 
   my $seq = $clustal->[1]->[1];
   $seq =~ /^(-*)([^-]+)(-*)/;
@@ -2451,14 +2443,11 @@ sub get_clustal_coordinates {
 }
 
 
-
-
 sub get_clustal_display {
-
   my $self = shift;
-	my %args = ( acc_color => '#0090D0',
-	             @_  
-						 );
+  my %args = ( acc_color => '#0090D0',
+	       @_  
+      );
 
   my $sbeams = $self->getSBEAMS();
 
@@ -2467,16 +2456,15 @@ sub get_clustal_display {
   my $table_rows = '';
   my $scroll_class = ( scalar( @{$args{alignments}} ) > 16 ) ? 'clustal_peptide' : 'clustal';
 
-
-	for my $seq ( @{$args{alignments}} ) {
-		my $sequence = $seq->[1];
-		if ( $seq->[0] =~ /\&nbsp;/  ) {
-		} else {
- 			$sequence = $self->highlight_sites( seq => $sequence, 
+  for my $seq ( @{$args{alignments}} ) {
+    my $sequence = $seq->[1];
+    if ( $seq->[0] =~ /\&nbsp;/  ) {
+    } else {
+      $sequence = $self->highlight_sites( seq => $sequence, 
                                           acc => $seq->[0], 
                                           nogaps => 1,
-			                               coverage => $args{coverage}->{$seq->[0]}
-																 );
+					  coverage => $args{coverage}->{$seq->[0]}
+	  );
     }
 
     if ( $args{snp_cover} ) {
@@ -2500,8 +2488,7 @@ sub get_clustal_display {
       </TR>
       ~;
     }
-	}
-
+  }
 
 
   my $scroll_js = q(
@@ -2547,72 +2534,69 @@ sub get_clustal_display {
   </DIV>
   );
 
-	my $display = qq~
+  my $display = qq~
   $scroll_js
 
-	<DIV CLASS="$scroll_class" ID="clustal">
-   <FORM METHOD=POST NAME=custom_alignment>
-  	<TABLE BORDER=0 CELLPADDNG=3>
-    $table_rows
-    </TABLE>
-  </DIV>
+   <DIV CLASS="$scroll_class" ID="clustal">
+     <FORM METHOD=POST NAME="custom_alignment">
+     <TABLE BORDER=0 CELLPADDNG=3>
+        $table_rows
+     </TABLE>
+   </DIV>
 	~;
 
-
-
-	return $display;
+  return $display;
 }
 
 
 sub highlight_sites {
-
   my $self = shift;
   my %args = @_;
 #  die Dumper( %args ) if $args{acc} eq 'SNP_38';
-	my $coverage = $args{coverage};
+  my $coverage = $args{coverage};
   my @aa = split( '', $args{seq} );
   my $return_seq = '';
   my $cnt = 0;
-	my $in_coverage = 0;
+  my $in_coverage = 0;
   my $seq_started = 0;
   for my $aa ( @aa ) {
 
     if ( $args{nogaps} && $aa eq '-' ) {
       if ( $seq_started ) {
-    	  if ( $in_coverage ) {
-	    	  $return_seq .= "</span>$aa";
+	if ( $in_coverage ) {
+	  $return_seq .= "</span>$aa";
           $in_coverage = 0;
        	} else {
-    		 	$return_seq .= $aa;
-  	  	}
+	  $return_seq .= $aa;
+	}
       } else {
-    		$return_seq .= $aa;
+	$return_seq .= $aa;
       }
-		} else { # it is an amino acid
+    } else { # it is an amino acid
       $seq_started++;
-			if ( $coverage->{$cnt} ) {
-				if ( $in_coverage ) { # already in
-			    $return_seq .= $aa;
-				} else {
-					$in_coverage++;
-				  $return_seq .= "<span class=pa_observed_sequence>$aa";
-				}
-			} else { # posn not covered!
-				if ( $in_coverage ) { # were in, close now
-				  $return_seq .= "</span>$aa";
-					$in_coverage = 0;
-				} else {
-				  $return_seq .= $aa;
-				}
-			}
-		}
-		$cnt++;
+      if ( $coverage->{$cnt} ) {
+	if ( $in_coverage ) { # already in
+	  $return_seq .= $aa;
+	} else {
+	  $in_coverage++;
+	  $return_seq .= "<span class=pa_observed_sequence>$aa";
 	}
-	if ( $in_coverage ) {
-		$return_seq .= '</span>';
+      } else { # posn not covered!
+	if ( $in_coverage ) { # were in, close now
+	  $return_seq .= "</span>$aa";
+	  $in_coverage = 0;
+	} else {
+	  $return_seq .= $aa;
 	}
+      }
+    }
+    $cnt++;
+  }
+  if ( $in_coverage ) {
+    $return_seq .= '</span>';
+  }
 #  print Dumper( $return_seq ) if $args{acc} eq 'SNP_38';
-	return $return_seq;
+  return $return_seq;
 
   my $dump = "$return_seq\n";
   if ( $args{acc} =~ /Chain/ ) {
@@ -2626,7 +2610,7 @@ sub highlight_sites {
 
 sub make_qtrap5500_target_list {
   my $self = shift;
-	my %args = @_;
+  my %args = @_;
 
   my $data = $args{data} || die;
   my $col_idx = $args{col_idx} || 
@@ -2666,13 +2650,13 @@ sub make_qtrap5500_target_list {
   for my $row ( @{$data} ) {
     next unless $head++;
     my $protein = $self->extract_link( $row->[$col_idx->{Protein}] );
-		my $seq = $row->[$col_idx->{Sequence}];
-		if ( $args{remove_mods} ) {
-		  $seq =~ s/\[\d+\]//g;
-		}
-		my $ce = $self->get_qtrap5500_ce( medium_only => 1, mz => $row->[$col_idx->{q1_mz}], charge => $row->[$col_idx->{q1_chg}] );
+    my $seq = $row->[$col_idx->{Sequence}];
+    if ( $args{remove_mods} ) {
+      $seq =~ s/\[\d+\]//g;
+    }
+    my $ce = $self->get_qtrap5500_ce( medium_only => 1, mz => $row->[$col_idx->{q1_mz}], charge => $row->[$col_idx->{q1_chg}] );
     my $seq_string = join( '.', $seq, $protein, $row->[$col_idx->{q1_chg}] . $row->[$col_idx->{Label}] . '-' . $row->[$col_idx->{q3_chg}] );
-		my $rt = $args{rt_file}->{$seq} || 'RT';
+    my $rt = $args{rt_file}->{$seq} || 'RT';
     $csv_file .= join( ',', $row->[$col_idx->{q1_mz}], $row->[$col_idx->{q3_mz}], $rt, $seq_string, $ce, 'Auto-generated' ) . "\n";
   }
   my $sbeams = $self->getSBEAMS();
@@ -2767,7 +2751,6 @@ sub calculate_abisciex_ce {
 }
 
 sub get_qqq_unscheduled_transition_list {
-
   my $self = shift;
   my %opts = @_;
 
@@ -2783,13 +2766,13 @@ Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Dwell	Fragmentor	C
   my $f = 125;
   my $d = 10;
   my $v = 5;
-	my $u = 'Unit';
-	my $p = 'Positive';
+  my $u = 'Unit';
+  my $p = 'Positive';
 
   my %ce;
 
-	for my $row ( @{$tsv} ) {
-		my @line = @{$row};
+  for my $row ( @{$tsv} ) {
+    my @line = @{$row};
     next if $line[0] eq 'Protein';
     my $acc = $line[0];
     $acc =~ s/\s+$//g;
@@ -2813,7 +2796,7 @@ Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Dwell	Fragmentor	C
     if ( !$curr_ce ) {
       my $deisotoped_sequence = $self->clear_isotope( sequence => $seq );
       $curr_ce = $self->calculate_agilent_ce( mz => $q1, charge => $q1c, empirical_ce => $opts{empirical_ce},
-                                             seq => $deisotoped_sequence, ion => $full_lbl );
+					      seq => $deisotoped_sequence, ion => $full_lbl );
     }
     $ce{$ce_key} = $curr_ce unless $opts{empirical_ce};
 
@@ -2824,13 +2807,12 @@ Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Dwell	Fragmentor	C
     $istd = 'True'  if $seq =~ /6\]$/;
 
     $method .= join( "\t", $name, $istd, $q1, $w, $q3, $u, $d, $f, $curr_ce, $v, $p ) . "\n";
-	}
+  }
   return $method;
 }
 ## END
 
 sub get_qqq_dynamic_transition_list {
-
   my $self = shift;
   my %opts = @_;
 
@@ -2853,8 +2835,8 @@ sub get_qqq_dynamic_transition_list {
 
   my %ce;
 
-	for my $row ( @{$tsv} ) {
-		my @line = @{$row};
+  for my $row ( @{$tsv} ) {
+    my @line = @{$row};
     next if $line[0] eq 'Protein';
     my $acc = $line[0];
     $acc =~ s/\s+$//g;
@@ -2866,10 +2848,10 @@ sub get_qqq_dynamic_transition_list {
     my $q3c = $line[9];
     my $lbl = $line[10];
 		
-		# Ion for
+    # Ion for
     my $ion = $lbl . '-' . $q3c;
 
-	  # Changed DSC 2012-05-15 - should use column names!!!
+    # Changed DSC 2012-05-15 - should use column names!!!
     my $rt = $line[14];
     my $rtd = 5;
 
@@ -2883,7 +2865,7 @@ sub get_qqq_dynamic_transition_list {
     if ( !$curr_ce ) {
       my $deisotoped_sequence = $self->clear_isotope( sequence => $seq ); 
       $curr_ce = $self->calculate_agilent_ce( mz => $q1, charge => $q1c, empirical_ce => $opts{empirical_ce},
-                                             seq => $deisotoped_sequence, ion => $full_lbl );
+					      seq => $deisotoped_sequence, ion => $full_lbl );
     }
     $ce{$ce_key} = $curr_ce unless $opts{empirical_ce};
 
@@ -2899,7 +2881,7 @@ sub get_qqq_dynamic_transition_list {
       push @rowdata, $est_rt;
     }
     $method .= join( "\t", @rowdata ) . "\n";
-	}
+  }
   return $method;
 }
 
@@ -2921,7 +2903,6 @@ sub clear_massmods {
 }
 
 sub get_qtrap_mrmms_method {
-
   my $self = shift;
   my %opts = @_;
   my $tsv = $opts{method} || return '';
@@ -2933,11 +2914,10 @@ sub get_qtrap_mrmms_method {
 #  my $method = join($sep, qw(Q1 Q3 Dwell peptide.protein.Cso CE)) . "\r\n";
   my $method = '';
 
-
-	my $dwell = 10;
+  my $dwell = 10;
   my %ce = {};
-	for my $row ( @{$tsv} ) {
-		my @line = @{$row};
+  for my $row ( @{$tsv} ) {
+    my @line = @{$row};
     next if $line[0] eq 'Protein';
 
     my $acc = $line[0];
@@ -2951,7 +2931,7 @@ sub get_qtrap_mrmms_method {
     my $lbl = $line[10];
     my $label = $seq . '.' . $acc . '.' . $q1c . $lbl; 
 #		$label .= '-' . $q3c if $q3c > 1;
-		$label .= '-' . $q3c;
+    $label .= '-' . $q3c;
 
     my $ce_key = $seq . $q1c;
     $ce{$ce_key} ||= $self->calculate_abisciex_ce( mz => $q1, charge => $q1c );
@@ -2960,11 +2940,9 @@ sub get_qtrap_mrmms_method {
     $method .= join( $sep, $q1, $q3, $dwell, $label, $ce{$ce_key} ) . "\r\n";
   }
   return $method;
-
 }
 
 sub get_qtrap_mrm_method {
-
   my $self = shift;
   my %opts = @_;
   my $tsv = $opts{method} || return '';
@@ -2976,8 +2954,8 @@ sub get_qtrap_mrm_method {
   my $method = '';
 
   my %ce = {};
-	for my $row ( @{$tsv} ) {
-		my @line = @{$row};
+  for my $row ( @{$tsv} ) {
+    my @line = @{$row};
     next if $line[0] eq 'Protein';
 
     my $acc = $line[0];
@@ -2991,13 +2969,12 @@ sub get_qtrap_mrm_method {
     my $lbl = $line[10];
     my $rt = $line[14];
 
-
     my $ce_key = $seq . $q1c;
     $ce{$ce_key} ||= $self->calculate_abisciex_ce( mz => $q1, charge => $q1c );
 
     my $label = $seq . '.' . $acc . '.' . $q1c . $lbl; 
 #		$label .= '-' . $q3c if $q3c > 1;
-		$label .= '-' . $q3c;
+    $label .= '-' . $q3c;
     $method .= join($sep, $q1, $q3, $rt, $label, $ce{$ce_key} ) . "\r\n";
   }
   return $method;
@@ -3005,10 +2982,8 @@ sub get_qtrap_mrm_method {
 
 
 sub get_skyline_export {
-
   my $self = shift;
-
-	my %args = @_;
+  my %args = @_;
 
   my $tsv = $args{method} || return '';
 
@@ -3017,8 +2992,8 @@ sub get_skyline_export {
 #  my $method = join( $sep, qw( Accession Sequence Precursor_mz Product_mz ModSequence )  ) . "\n";
   my $method = '';
 
-	for my $row ( @{$tsv} ) {
-		my @line = @{$row};
+  for my $row ( @{$tsv} ) {
+    my @line = @{$row};
     next if $line[0] eq 'Protein';
 
     my $acc = $line[0];
@@ -3029,19 +3004,15 @@ sub get_skyline_export {
     my $q1 = $line[6];
     my $q3 = $line[8];
 
-  	$method .= join( $sep, $acc, $clean_seq, $q1, $q3, $mod_seq ) . "\n";
+    $method .= join( $sep, $acc, $clean_seq, $q1, $q3, $mod_seq ) . "\n";
   }
   return $method;
 }
 
 
-
-
 sub get_thermo_tsq_mrm_method {
-
   my $self = shift;
-
-	my %args = @_;
+  my %args = @_;
 
   my $tsv = $args{method} || return '';
 
@@ -3050,8 +3021,8 @@ sub get_thermo_tsq_mrm_method {
   my $method = join( $sep, ("Q1","Q3","CE","Start time (min)","Stop time (min)","Polarity","Trigger","Reaction category","Name"))."\r\n";
 
   my %ce = {};
-	for my $row ( @{$tsv} ) {
-		my @line = @{$row};
+  for my $row ( @{$tsv} ) {
+    my @line = @{$row};
     next if $line[0] eq 'Protein';
 
     my $acc = $line[0];
@@ -3070,7 +3041,7 @@ sub get_thermo_tsq_mrm_method {
     $ce{$ce_key} ||= $self->calculate_thermo_ce( mz => $q1, charge => $q1c );
 
     my $label = $seq . '.' . $acc . '.' . $q3c . $lbl . $q3; 
-  	$method .= join( $sep, $q1, $q3, $ce{$ce_key}, $rt - $rt_delta, $rt + $rt_delta,1,'1.00E+04',1,$label) . "\r\n";
+    $method .= join( $sep, $q1, $q3, $ce{$ce_key}, $rt - $rt_delta, $rt + $rt_delta,1,'1.00E+04',1,$label) . "\r\n";
   }
   return $method;
 }
@@ -3106,9 +3077,9 @@ sub make_resultset {
              precisions_list_ref => [] };
 
   $self->getSBEAMS()->writeResultSet( resultset_file_ref => \$rs_name,
-                                resultset_ref => $rs_ref,
-                                  file_prefix => $args{file_prefix},
-                         query_parameters_ref => $args{rs_params}  );
+				           resultset_ref => $rs_ref,
+                                             file_prefix => $args{file_prefix},
+                                    query_parameters_ref => $args{rs_params}  );
 
 
   $self->{_cached_resultsets} ||= {};
@@ -3121,12 +3092,12 @@ sub get_cached_resultset {
   my $self = shift;
   my %args = @_;
   return undef unless $args{rs_name};
-	if ( $self->{_cached_resultsets} ) {
+  if ( $self->{_cached_resultsets} ) {
     return $self->{_cached_resultsets}->{$args{rs_name}};
-	} else {
-		$log->error( "Requested non-existent resultset!" );
-		return undef;
-	}
+  } else {
+    $log->error( "Requested non-existent resultset!" );
+    return undef;
+  }
 }
 
 
@@ -3136,26 +3107,25 @@ sub get_cached_resultset {
 ###This method counts the total number of Public builds in which peptide found along with number of organisms in which peptide found
 
 sub PeptideCount {
+  my $self = shift;
+  my $sbeams = $self->getSBEAMS();
 
-my $self = shift;
-my $sbeams = $self->getSBEAMS();
+  my %args=@_;
 
-my %args=@_;
+  my ($atlas_project_clause,$peptide_clause);
 
-my ($atlas_project_clause,$peptide_clause);
+  $atlas_project_clause=$args{atlas_project_clause};
 
-$atlas_project_clause=$args{atlas_project_clause};
-
-$peptide_clause=$args{peptide_clause};
+  $peptide_clause=$args{peptide_clause};
 
 
-unless ($peptide_clause && $atlas_project_clause) {
+  unless ($peptide_clause && $atlas_project_clause) {
 
     print "The Required clause parameters not found. Unable to generate the count of Builds in which peptide Found";
     return;
 
-}
-my $sql = qq~
+  }
+  my $sql = qq~
 
    SELECT  distinct AB.atlas_build_name, OZ.organism_name
       FROM $TBAT_PEPTIDE_INSTANCE PI
@@ -3174,50 +3144,47 @@ my $sql = qq~
       
    ~;
    
-my @rows = $sbeams->selectSeveralColumns($sql) or print " Error in the SQL query";
-my(@build_names,%seen_organisms);
+  my @rows = $sbeams->selectSeveralColumns($sql) or print " Error in the SQL query";
+  my(@build_names,%seen_organisms);
 
-if (@rows) {
+  if (@rows) {
+    foreach my $row (@rows) {
 
-      foreach my $row (@rows) {
+      my ($build_name,$org_name)=@{$row};
+      $seen_organisms{$row->[1]}++;
 
-	  my ($build_name,$org_name)=@{$row};
-            $seen_organisms{$row->[1]}++;
+      push(@build_names, $row->[0]);
 
-            push(@build_names, $row->[0]);
+    }# End For Loop
 
-      }# End For Loop
-
-} # End if Loop
+  } # End if Loop
 
 
-my @distinct_organisms = keys( %seen_organisms );
+  my @distinct_organisms = keys( %seen_organisms );
 
-my $no_distinct_organisms= scalar(@distinct_organisms);
-my $no_builds= scalar(@build_names);
-return ($no_distinct_organisms,$no_builds);
-
+  my $no_distinct_organisms= scalar(@distinct_organisms);
+  my $no_builds= scalar(@build_names);
+  return ($no_distinct_organisms,$no_builds);
 }
 
 
 sub getAnnotationColumnDefs {
   my $self = shift;
   my @entries = (
-      { key => 'Sequence', value => 'Amino acid sequence of detected pepide, including any mass modifications.' },
-      { key => 'Charge', value => 'Charge on Q1 (precursor) peptide ion.' },
-      { key => 'q1_mz', value => 'Mass to charge ratio of precursor peptide ion.' },
-      { key => 'q3_mz', value => 'Mass to charge ratio of fragment ion.' },
-      { key => 'Label', value => 'Ion-series designation for fragment ion (Q3).' },
-      { key => 'Intensity', value => 'Intensity of peak in CID spectrum' },
-      { key => 'CE', value => 'Collision energy, the kinetic energy conferred to the peptide ion and resulting in peptide fragmentation. (eV)' },
-      { key => 'RT', value => 'Peptide retention time( in minutes ) in the LC/MS system.' },
-      { key => 'SSRCalc', value => "Sequence Specific Retention Factor provides a hydrophobicity measure for each peptide using the algorithm of Krohkin et al. Version 3.0 <A HREF=http://hs2.proteome.ca/SSRCalc/SSRCalc.html target=_blank>[more]</A>" },
-      { key => 'Instr', value => 'Model of mass spectrometer on which transition pair was validated.' },
-      { key => 'Annotator', value => 'Person/lab who contributed validated transition.' },
-      { key => 'Quality', value => 'Crude scale of quality for the observation, currently one of Best, OK, and No. ' },
+    { key => 'Sequence', value => 'Amino acid sequence of detected pepide, including any mass modifications.' },
+    { key => 'Charge', value => 'Charge on Q1 (precursor) peptide ion.' },
+    { key => 'q1_mz', value => 'Mass to charge ratio of precursor peptide ion.' },
+    { key => 'q3_mz', value => 'Mass to charge ratio of fragment ion.' },
+    { key => 'Label', value => 'Ion-series designation for fragment ion (Q3).' },
+    { key => 'Intensity', value => 'Intensity of peak in CID spectrum' },
+    { key => 'CE', value => 'Collision energy, the kinetic energy conferred to the peptide ion and resulting in peptide fragmentation. (eV)' },
+    { key => 'RT', value => 'Peptide retention time( in minutes ) in the LC/MS system.' },
+    { key => 'SSRCalc', value => "Sequence Specific Retention Factor provides a hydrophobicity measure for each peptide using the algorithm of Krohkin et al. Version 3.0 <A HREF=http://hs2.proteome.ca/SSRCalc/SSRCalc.html target=_blank>[more]</A>" },
+    { key => 'Instr', value => 'Model of mass spectrometer on which transition pair was validated.' },
+    { key => 'Annotator', value => 'Person/lab who contributed validated transition.' },
+    { key => 'Quality', value => 'Crude scale of quality for the observation, currently one of Best, OK, and No. ' },
       );
   return \@entries;
-
 }
 
 sub fragment_peptide {
@@ -3240,46 +3207,45 @@ sub fragment_peptide {
 }
 
 sub get_qtrap5500_ce {
-	my $self = shift;
+  my $self = shift;
   my %args = @_;
 
   my $ce = '';
-	if ( $args{charge} && $args{mz} ) {
-		my ($m, $i);
-		if ( $args{charge} == 1 ) {
-			$m = 0.058;
-			$i = 9;
-		} elsif ( $args{charge} == 2 ) {
-			$m = 0.044;
-			$i = 5.5;
-		} elsif ( $args{charge} == 3 ) {
-			$m = 0.051;
-			$i = 0.5;
-		} else {
-			$m = 0.05;
-			$i = 3;
-  	}
-		$ce = sprintf( "%0.1f", $m*$args{mz} + $i );
-	}
+  if ( $args{charge} && $args{mz} ) {
+    my ($m, $i);
+    if ( $args{charge} == 1 ) {
+      $m = 0.058;
+      $i = 9;
+    } elsif ( $args{charge} == 2 ) {
+      $m = 0.044;
+      $i = 5.5;
+    } elsif ( $args{charge} == 3 ) {
+      $m = 0.051;
+      $i = 0.5;
+    } else {
+      $m = 0.05;
+      $i = 3;
+    }
+    $ce = sprintf( "%0.1f", $m*$args{mz} + $i );
+  }
   return sprintf( "%0.2f", $ce );
 }
 
 sub get_Agilent_ce {
-
-	my $self = shift;
+  my $self = shift;
   my %args = @_;
 
   my %ce = ( low => '', mlow => '', medium => '', mhigh => '', high => '' );
-	if ( $args{charge} && $args{mz} ) {
+  if ( $args{charge} && $args{mz} ) {
 
     if ( $args{charge} == 2 ) {
       $ce{medium} = ( (2.93*$args{mz})/100 ) + 6.72;
     } else {
       $ce{medium} = ( (3.6* $args{mz} )/100 ) -4.8;
     }
-	  if ( $args{medium_only} ) {
-			return $ce{medium};
-	  }
+    if ( $args{medium_only} ) {
+      return $ce{medium};
+    }
 
     my $delta = 0;
     if ( $args{charge} == 2 ) {
@@ -3295,57 +3261,53 @@ sub get_Agilent_ce {
     $ce{mhigh} = sprintf ( "%0.1f", $ce{medium} + $delta );
     $ce{high} = sprintf ( "%0.1f", $ce{medium} + ( 2 * $delta ) );
     $ce{medium} = sprintf ( "%0.1f", $ce{medium} );
-	} 
-	return \%ce;
-
-
+  } 
+  return \%ce;
 }
 
 
-
 sub calc_ions {
-
   my $self = shift;
-    my %args = @_;
+  my %args = @_;
 
-    my $masses = $self->getMonoResidueMasses();
+  my $masses = $self->getMonoResidueMasses();
 
-    my $charge = $args{charge};
-    my $length = length($args{sequence});
-    my @residues = split( '', $args{sequence} );
+  my $charge = $args{charge};
+  my $length = length($args{sequence});
+  my @residues = split( '', $args{sequence} );
 
-    my $Nterm = 1.0078;
-    my $Bion = 0.0;
-    my $Yion  = 19.0184;  ## H_2 + O
+  my $Nterm = 1.0078;
+  my $Bion = 0.0;
+  my $Yion  = 19.0184;  ## H_2 + O
 
-    my %masslist;
-    my (@aminoacids, @indices, @rev_indices, @Bions, @Yions);
+  my %masslist;
+  my (@aminoacids, @indices, @rev_indices, @Bions, @Yions);
 
 
-    #### Compute the ion masses
-    for ( my $i = 0; $i<=$length; $i++) {
+  #### Compute the ion masses
+  for ( my $i = 0; $i<=$length; $i++) {
 
-      #### B index & Y index
-      $indices[$i] = $i;
-      $rev_indices[$i] = $length-$i;
+    #### B index & Y index
+    $indices[$i] = $i;
+    $rev_indices[$i] = $length-$i;
 
 #      $Bion += $masses[$i];
-      $Bion += $masses->{$residues[$i]};
-      $Yion += $masses->{$residues[$rev_indices[$i]]} if $i > 0;
+    $Bion += $masses->{$residues[$i]};
+    $Yion += $masses->{$residues[$rev_indices[$i]]} if $i > 0;
 #      $Yion += $masses[ $rev_indices[$i] ]  if ($i > 0);
 
-      #### B ion mass & Y ion mass
-      $Bions[$i+1] = ($Bion + $charge*$Nterm)/$charge;
-      $Yions[$i] = ($Yion + $charge*$Nterm)/$charge - $Nterm;
-    }
+    #### B ion mass & Y ion mass
+    $Bions[$i+1] = ($Bion + $charge*$Nterm)/$charge;
+    $Yions[$i] = ($Yion + $charge*$Nterm)/$charge - $Nterm;
+  }
 
-    $masslist{indices} = \@indices;
-    $masslist{Bions} = \@Bions;
-    $masslist{Yions} = \@Yions;
-    $masslist{rev_indices} = \@rev_indices;
+  $masslist{indices} = \@indices;
+  $masslist{Bions} = \@Bions;
+  $masslist{Yions} = \@Yions;
+  $masslist{rev_indices} = \@rev_indices;
 
-    #### Return reference to a hash of array references
-    return (\%masslist);
+  #### Return reference to a hash of array references
+  return (\%masslist);
 }
 
 
@@ -3451,7 +3413,7 @@ sub make_sort_headings {
     my $title = shift @{$args{headings}};
     my $link = qq~ <DIV TITLE="$title" ONCLICK="ts_resortTable(this,'$cnt');return false;" class=sortheader>$head<span class=sortarrow>&nbsp;$arrow</span></DIV>~;
     push @marked, $link;
-    
+
     last if $cnt++ > 5000; # danger Will Robinson
   }
   return \@marked;
@@ -3463,8 +3425,8 @@ sub listBiosequenceSets {
 
   my $sets = $self->getBiosequenceSets();
   for my $set ( sort {$a <=> $b } keys( %{$sets} ) ) {
-		print "$set\t$sets->{$set}\n";
-	}
+    print "$set\t$sets->{$set}\n";
+  }
 }
 
 sub getBiosequenceSets {
@@ -3483,9 +3445,9 @@ sub getBiosequenceSets {
 
   my %sets;
   while ( my @row = $sth->fetchrow_array() ) {
-		$sets{$row[0]} = $row[1];
+    $sets{$row[0]} = $row[1];
   }
-	return \%sets;
+  return \%sets;
 }
 
 sub fetchBuildResources {
@@ -3516,127 +3478,126 @@ sub calculate_antigenic_index {
 
   my $seq = $args{sequence} || die "Missing required argument sequence";
 
-	$seq=~s/[^ ACDEFGHIKLMNPQRSTVWY]//g;
-	$seq=~s/ //g;
-	my $lenseq=length($seq);
+  $seq=~s/[^ ACDEFGHIKLMNPQRSTVWY]//g;
+  $seq=~s/ //g;
+  my $lenseq=length($seq);
 
   my %AP;
 
-	$AP{'A'}=1.064;
-	$AP{'C'}=1.412;
-	$AP{'D'}=0.866;
-	$AP{'E'}=0.851;
-	$AP{'F'}=1.091;
-	$AP{'G'}=0.874;
-	$AP{'H'}=1.105;
-	$AP{'I'}=1.152;
-	$AP{'K'}=0.930;
-	$AP{'L'}=1.250;
-	$AP{'M'}=0.826;
-	$AP{'N'}=0.776;
-	$AP{'P'}=1.064;
-	$AP{'Q'}=1.015;
-	$AP{'R'}=0.873;
-	$AP{'S'}=1.012;
-	$AP{'T'}=0.909;
-	$AP{'V'}=1.383;
-	$AP{'W'}=0.893;
-	$AP{'Y'}=1.161;
+  $AP{'A'}=1.064;
+  $AP{'C'}=1.412;
+  $AP{'D'}=0.866;
+  $AP{'E'}=0.851;
+  $AP{'F'}=1.091;
+  $AP{'G'}=0.874;
+  $AP{'H'}=1.105;
+  $AP{'I'}=1.152;
+  $AP{'K'}=0.930;
+  $AP{'L'}=1.250;
+  $AP{'M'}=0.826;
+  $AP{'N'}=0.776;
+  $AP{'P'}=1.064;
+  $AP{'Q'}=1.015;
+  $AP{'R'}=0.873;
+  $AP{'S'}=1.012;
+  $AP{'T'}=0.909;
+  $AP{'V'}=1.383;
+  $AP{'W'}=0.893;
+  $AP{'Y'}=1.161;
 
-	#STEP 2
-	my $total=0;
-	for ( my $n=0;$n<$lenseq;$n++) {
-		my $char=substr($seq,$n,1);
-		$total+=$AP{$char};	
-	}
-	my $aap=$total/$lenseq;
+  #STEP 2
+  my $total=0;
+  for ( my $n=0;$n<$lenseq;$n++) {
+    my $char=substr($seq,$n,1);
+    $total+=$AP{$char};	
+  }
+  my $aap=$total/$lenseq;
 
 	
   my @av;
-	#STEP 1
-	my $ymax=0;
-	my $window_width=7;
-	my $firstone=int($window_width/2)+1;
-	my $w=$firstone-1;
+  #STEP 1
+  my $ymax=0;
+  my $window_width=7;
+  my $firstone=int($window_width/2)+1;
+  my $w=$firstone-1;
   my $negw = $w * -1;
-	my $n=$firstone;
-	my $lastone=$lenseq-$firstone;
-	for (my $n=$firstone;$n<=$lastone;$n++) {
-		my $sum=0;
-		for (my $k=$negw;$k<=$w;$k++) {
-			my $thispos=$n+$k;
-			my $char=substr($seq,$thispos,1);
-			$sum+=$AP{$char};
-		}
-		$av[$n]=$sum/$window_width;
-		if($av[$n]>$ymax) { $ymax=$av[$n]; }
-	}
+  my $n=$firstone;
+  my $lastone=$lenseq-$firstone;
+  for (my $n=$firstone;$n<=$lastone;$n++) {
+    my $sum=0;
+    for (my $k=$negw;$k<=$w;$k++) {
+      my $thispos=$n+$k;
+      my $char=substr($seq,$thispos,1);
+      $sum+=$AP{$char};
+    }
+    $av[$n]=$sum/$window_width;
+    if($av[$n]>$ymax) { $ymax=$av[$n]; }
+  }
 
-	#STEP 3  
+  #STEP 3  
   my @par;
-	if ($aap>=1.0) {
-		for (my $n=$firstone;$n<=$lastone;$n++) {
-			if ($av[$n]>1.0) {
-				$par[$n]=1;
-			} else {
-				$par[$n]=0;
-			}
-		}
-	} else {
-		for (my $n=$firstone;$n<=$lastone;$n++) {
-			if ($av[$n]>$aap) {
-				$par[$n]=1;
-			} else {
-				$par[$n]=0;
-			}
-		}			
-	}
+  if ($aap>=1.0) {
+    for (my $n=$firstone;$n<=$lastone;$n++) {
+      if ($av[$n]>1.0) {
+	$par[$n]=1;
+      } else {
+	$par[$n]=0;
+      }
+    }
+  } else {
+    for (my $n=$firstone;$n<=$lastone;$n++) {
+      if ($av[$n]>$aap) {
+	$par[$n]=1;
+      } else {
+	$par[$n]=0;
+      }
+    }			
+  }
 
-	#STEP 4
-	my $numinarow=0;
-	my $nagd=0;
+  #STEP 4
+  my $numinarow=0;
+  my $nagd=0;
   my @agd;
   my @agd_start;
   my @agd_end;
   my $first1;
   my $lastn;
-	for (my $n=$firstone;$n<=$lastone;$n++) {
-		$agd[$n]=0;
-		if ($par[$n]==1) {
-			if($numinarow==0) {	$first1=$n;	}
-			$numinarow++;
-		} else {
-			if ($numinarow>=7) {
-				for(my $j=$first1;$j<$n;$j++) {
-					$agd[$j]=1;
-				}
-				$nagd++;
-				$agd_start[$nagd]=$first1;
-				$agd_end[$nagd]=$n-1;
-			}
-			$numinarow=0;
+  for (my $n=$firstone;$n<=$lastone;$n++) {
+    $agd[$n]=0;
+    if ($par[$n]==1) {
+      if($numinarow==0) {	$first1=$n;	}
+      $numinarow++;
+    } else {
+      if ($numinarow>=7) {
+	for(my $j=$first1;$j<$n;$j++) {
+	  $agd[$j]=1;
+	}
+	$nagd++;
+	$agd_start[$nagd]=$first1;
+	$agd_end[$nagd]=$n-1;
+      }
+      $numinarow=0;
 		}
     $lastn = $n;
-	}
-	if ($numinarow>=7) {
-		for(my $j=$first1;$j<$lastn;$j++) {
-			$agd[$j]=1;
-		}
-		$nagd++;
-		$agd_start[$nagd]=$first1;
-		$agd_end[$nagd]=$lastn;
-	}		
+  }
+  if ($numinarow>=7) {
+    for(my $j=$first1;$j<$lastn;$j++) {
+      $agd[$j]=1;
+    }
+    $nagd++;
+    $agd_start[$nagd]=$first1;
+    $agd_end[$nagd]=$lastn;
+  }		
 	
   my @antigenic_determinants;
 
-	for (my $k=1;$k<=$nagd;$k++) {
+  for (my $k=1;$k<=$nagd;$k++) {
     my $ini = $agd_start[$k] -1;
-		my $ter = $agd_end[$k] - $ini;
-		my $pep = substr($seq, $ini, $ter);
+    my $ter = $agd_end[$k] - $ini;
+    my $pep = substr($seq, $ini, $ter);
     push @antigenic_determinants, [ $agd_start[$k], $pep, $agd_end[$k] ];
-	}
+  }
   return \@antigenic_determinants;
-
 }
 
 sub is_uniprot_accession {
@@ -3648,48 +3609,49 @@ sub is_uniprot_accession {
   }
   return 0;
 }
+
 sub fetchResultHTMLTable{
-	my $self = shift;
-	my %args = @_;
-	my $table_name = $args{'table_name'} || die "parameter table_name missing";
+  my $self = shift;
+  my %args = @_;
+  my $table_name = $args{'table_name'} || die "parameter table_name missing";
   my $key_value = $args{key_value} || die "parameer key_value missing";
   my $sbeams = $self->getSBEAMS();
 
-	$resultset_ref = $args{'resultset_ref'};
+  $resultset_ref = $args{'resultset_ref'};
 	
-	if ( $args{use_caching} ) {
-		my $rs_sql = qq~
+  if ( $args{use_caching} ) {
+    my $rs_sql = qq~
 		SELECT cache_descriptor
 		FROM $TB_CACHED_RESULTSET
 		WHERE table_name = '$table_name'
-    AND key_value = '$key_value'
+                AND key_value = '$key_value'
 		~;
-		my $cache_descriptor;
-		my $stmt_handle = $sbeams->get_statement_handle( $rs_sql );
-		while ( my @row = $stmt_handle->fetchrow_array() ) {
-			$cache_descriptor = $row[0];
-			last;
-		}
-		if ( $cache_descriptor ) {
-			my %params;
-			$log->info( "using cached resultset $cache_descriptor" );
-			my $status = $sbeams->readResultSet( resultset_file=>$cache_descriptor,
-																				 resultset_ref => $resultset_ref,
-																	query_parameters_ref => \%params );
-			if ($status){
+    my $cache_descriptor;
+    my $stmt_handle = $sbeams->get_statement_handle( $rs_sql );
+    while ( my @row = $stmt_handle->fetchrow_array() ) {
+      $cache_descriptor = $row[0];
+      last;
+    }
+    if ( $cache_descriptor ) {
+      my %params;
+      $log->info( "using cached resultset $cache_descriptor" );
+      my $status = $sbeams->readResultSet( resultset_file=>$cache_descriptor,
+					   resultset_ref => $resultset_ref,
+					   query_parameters_ref => \%params );
+      if ($status){
         $resultset_ref->{from_cache}++;
         $resultset_ref->{cache_descriptor} = $cache_descriptor;
         return;	
-			}else{
-				my $clear_cache_sql = qq~
+      } else {
+	my $clear_cache_sql = qq~
 				DELETE FROM $TB_CACHED_RESULTSET WHERE table_name = '$table_name' and key_value = '$key_value' 
 				~;
-				$sbeams->do( $clear_cache_sql );
-				$log->info( "Cleaned up problem cache" );
-				$self->fetchResultHTMLTable( %args, use_caching => 0 );
-				return;
+	$sbeams->do( $clear_cache_sql );
+	$log->info( "Cleaned up problem cache" );
+	$self->fetchResultHTMLTable( %args, use_caching => 0 );
+	return;
       }
-	  }
+    }
   }
 }
 
