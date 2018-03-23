@@ -1019,12 +1019,17 @@ sub ShowHTMLTable {
 	    }
 
             #### Create the up and down arrows for sorting
-	    if ($resort_url && $image_dir) {
+	    if ($resort_url && $image_dir) { ## LM: deprecate the use of image_dir ??
 		$title_line .= "<BR>".
 		  "<A HREF=\"$resort_url&rs_resort_column=$c&rs_resort_type=ASC\">".
 		  "<IMG BORDER=0 SRC=\"$image_dir/greyarrowupdkblue.gif\"></A>".
 		  "<A HREF=\"$resort_url&rs_resort_column=$c&rs_resort_type=DESC\">".
 		  "<IMG BORDER=0 SRC=\"$image_dir/greyarrowdowndkblue.gif\"></A>";
+	    }
+	    elsif ($resort_url) {
+	      $title_line .= "<BR>".
+		  "<A CLASS='dataheader' HREF='$resort_url&rs_resort_column=$c&rs_resort_type=ASC'>&#9651;</A> ".
+		  "<A CLASS='dataheader' HREF='$resort_url&rs_resort_column=$c&rs_resort_type=DESC'>&#9661;</A>";
 	    }
 
 	}
@@ -1119,13 +1124,13 @@ sub ShowHTMLTable {
 
 		# Added Dec. 2011 for chromatogram viewer cells: we don't want
 		# any image or link there if there is no chromatogram.
-    my $leave_it_empty = 0;
-    if ( defined $url_keys->{$cell_option_string}->{content_iff_column_value} ) {
-      if ( !defined
-	  $values[$url_keys->{$cell_option_string}->{content_iff_column_value}] ) {
-        $leave_it_empty++;
-      }
-    }
+		my $leave_it_empty = 0;
+		if ( defined $url_keys->{$cell_option_string}->{content_iff_column_value} ) {
+		    if ( !defined
+			 $values[$url_keys->{$cell_option_string}->{content_iff_column_value}] ) {
+		      $leave_it_empty++;
+		    }
+		}
 
 		#### Insert format for the TD tag if one was supplied
 		if (($x = $#$TDformats) >= 0) {
@@ -1157,13 +1162,13 @@ sub ShowHTMLTable {
 		    last;
 		}
 
-    my $leave_it = 0;
-    if ( defined $url_keys->{$cell_option_string}->{link_iff_column_value} ) {
-      if ( !defined $values[$url_keys->{$cell_option_string}->{link_iff_column_value}] ) {
-        $href = '%V';
-        $leave_it++;
-      }
-    }
+		my $leave_it = 0;
+		if ( defined $url_keys->{$cell_option_string}->{link_iff_column_value} ) {
+		    if ( !defined $values[$url_keys->{$cell_option_string}->{link_iff_column_value}] ) {
+		      $href = '%V';
+		      $leave_it++;
+		    }
+		}
 
       		#### Find out if there are any options set
 		my $semicolon_separated_list_flag = '';
