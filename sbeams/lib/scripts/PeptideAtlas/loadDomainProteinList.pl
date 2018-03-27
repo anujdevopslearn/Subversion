@@ -145,6 +145,11 @@ sub parse_list {
     last if !$row[0];
     for ( my $idx = 0; $idx <= $#keys; $idx++ ) {
       $prot{$keys[$idx]} = $row[$idx];
+      if ( length($row[$idx]) > 255 ) {
+        print STDERR "Got a long one $keys[$idx] - $row[$idx]!\n";
+        $prot{$keys[$idx]} = substr( $row[$idx],1, 255 );
+        print STDERR ">$prot{$keys[$idx]}<";
+      }
     }
     push @list_proteins, \%prot;
   }
@@ -360,8 +365,10 @@ sub fill_table {
                      );
 
   for my $prot ( @{$list_proteins} ) {
-    $prot->{priority} = ( $prot->{'popularity rank'} < 1 ) ? 1 :
-                        ( $prot->{'popularity rank'} > 5 ) ? 5 : $prot->{'popularity rank'};
+    my $priority_key = ( $prot->{priority} ) ? 'priority' : 'popularity rank';
+    $prot->{priority} = ( $prot->{$priority_key} < 1 ) ? 1 :
+                        ( $prot->{$priority_key} > 5 ) ? 5 : $prot->{$priority_key};
+
     $prot->{protein_full_name} = $prot->{protein_name};
     $prot->{protein_symbol} ||= '';
     $prot->{gene_symbol} ||= '';
