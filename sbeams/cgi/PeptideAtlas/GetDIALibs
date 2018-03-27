@@ -503,7 +503,7 @@ sub get_library_table {
       if ( $lib_zero->[10] =~ /^PXD/ ) {
         $px_link = "(<a href='http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=$lib_zero->[10]' target=_px title='View dataset $lib_zero->[10] at Proteome Exchange'>$lib_zero->[10]</a>)";
       } else {
-        $px_link = "(<a href='https://db.systemsbiology.org/sbeams/cgi/PeptideAtlas/PASS_View?identifier=$lib_zero->[10]' target=_px title='View dataset $lib_zero->[10] at Proteome Exchange'>$lib_zero->[10]</a>)";
+        $px_link = "(<a href='https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/PASS_View?identifier=$lib_zero->[10]' target=_px title='View dataset $lib_zero->[10] at Proteome Exchange'>$lib_zero->[10]</a>)";
       }
 
 
@@ -1474,7 +1474,7 @@ sub get_public_libsets {
     } else {
       my $px = ( $row[3] ) ? 
                ( $row[3] =~ /^PXD/ ) ? "<a href='http://groteomecentral.proteomexchange.org/cgi/GetDataset?ID=$row[3]' target=_px>$row[3]</a>" :
-                                       "<a href='https://db.systemsbiology.org/sbeams/cgi/PeptideAtlas/PASS_View?identifier=$row[3]' target=_px>$row[3]</a>" :
+                                       "<a href='https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/PASS_View?identifier=$row[3]' target=_px>$row[3]</a>" :
                $sbeams->makeInactiveText( 'na' );
         
         $sbeams->makeInactiveText( 'na' );
