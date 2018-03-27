@@ -5022,7 +5022,7 @@ sub parse_input_parameters {
 
   #### Resolve all the parameters from the CGI interface if any
   my %CGI_parameters;
-  foreach $element ($q->param()) {
+  foreach $element ($q->multi_param()) {
 
     #### Extract as an array and remove any leading or trailing blank items
     my @tmparray = $q->param($element);
@@ -7381,7 +7381,7 @@ function switchProject(){
   ~;
 
   ## PRINT CGI parameters
-  my @query_parameters = $q->param();
+  my @query_parameters = $q->multi_param();
   my $clean_parameters = $self->sanitize_parameters( \@query_parameters );
 
   foreach my $param ( @query_parameters ) {
