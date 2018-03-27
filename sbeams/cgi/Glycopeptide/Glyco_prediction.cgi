@@ -265,7 +265,7 @@ sub handle_request {
 	$q->reset(),
 	$q->hidden(-name=>'action',
                -default=>['Show_hits_form']),
-	$q->endform();
+	$q->end_form();
 
 ### add an Example table
 	my $cgi_url = "$base_url?action=Show_hits_form&search_type";
