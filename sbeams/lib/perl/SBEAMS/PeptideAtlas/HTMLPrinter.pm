@@ -650,12 +650,15 @@ sub encodeSectionHeader {
 
 #        <TR><TD colspan="2" background="$HTML_BASE_DIR/images/fade_orange_header_2.png" width="600">$link<font color="white">$anchor$text</font></TD></TR>
 #        <TR><TD colspan="2" class=fade_header width="600">$link<font color="white">$anchor$text</font></TD></TR>
+
   my $buffer = qq~
         <TR><TD colspan="$colspan" style="background-repeat: no-repeat; background-image: url('$HTML_BASE_DIR/images/fade_orange_header_2.png')" width="600">$link<font color="white">$anchor$text</font></TD></TR>
 ~;
 
-  return $buffer;
+###        <TR><TD colspan="$colspan" $link style="background:#f3f1e4;color:#555;border-top:1px solid #b00;border-left:15px solid #b00;padding:0.5em">$anchor$text</TD></TR> e2dcc2
 
+
+  return $buffer;
 }
 
 
@@ -681,16 +684,26 @@ sub encodeSectionItem {
   my $tr = $args{tr_info} || ''; 
 
   $url =~ s/ /+/g;
-  my $astart = '';
-  my $aend = '';
+  my $astart = '<b>';
+  my $aend = '</b>';
   if ($url) {
     $astart = qq~<A HREF="$url" target="_blank">~;
     $aend = qq~</A>~;
   }
 
-  my $buffer = qq~
+  my $buffer = '';
+  if ($tr =~ /hoverable/) {  # new L&F?
+# e2dcc2
+    $buffer = qq~
+        <TR $tr><TD class="key" NOWRAP $kwid>$key</TD><TD class="value" $desc_nowrap $vwid>$astart$value$aend</TD></TR>
+~;
+  }
+  else {
+    $buffer = qq~
         <TR $tr><TD NOWRAP bgcolor="cccccc" $kwid>$key</TD><TD $desc_nowrap $vwid>$astart$value$aend</TD></TR>
 ~;
+  }
+
 
   return $buffer;
 
@@ -748,10 +761,11 @@ sub encodeSectionTable {
 
   my @table_attrs = ( 'border' => 0, );
   my $tr_info = $args{tr_info} || 'NOOP=1 ';
-  my $tab = SBEAMS::Connection::DataTable->new( @table_attrs, 
+  my $tab = SBEAMS::Connection::DataTable->new( @table_attrs,
+						__use_thead => 1,
                                                 __tr_info => $tr_info,
-                                                CLASS => $class_def,
-                                                  ID => $id  );
+						CLASS => $class_def,
+                                                ID => $id  );
   my $num_cols = 0;
 
 
@@ -802,7 +816,7 @@ sub encodeSectionTable {
   my $prefix = $sbeams->getRandomString( num_chars => 8, 
                                           char_set => ['A'..'Z', 'a'..'z'] );
   my $first = 1;
-  my $bgcolor = '#C0D0C0';
+  my $bgcolor = '#f3f1e4'; #C0D0C0';
   my $chg_idx;
   my $rcnt = ( $args{header} ) ? 1 : 0;
 #
@@ -815,13 +829,15 @@ sub encodeSectionTable {
       if ( !$chg_idx ) {
         $chg_idx = $row->[$args{chg_bkg_idx}];
       } elsif ( $chg_idx ne $row->[$args{chg_bkg_idx}] ) {
-        $bgcolor = ( $bgcolor eq '#C0D0C0' ) ? '#F5F5F5' : '#C0D0C0';
+#       $bgcolor = ( $bgcolor eq '#C0D0C0' ) ? '#F5F5F5' : '#C0D0C0';
+        $bgcolor = ( $bgcolor eq '#f3f1e4' ) ? '#d3d1c4' : '#f3f1e4';
         $chg_idx = $row->[$args{chg_bkg_idx}];
       }
 
     } elsif ( $args{bkg_interval} ) { # alternate on n_rows
-      unless ( $rcnt % $args{bkg_interval} ) {
-        $bgcolor = ( $bgcolor eq '#C0D0C0' ) ? '#F5F5F5' : '#C0D0C0';
+	unless ( $rcnt % $args{bkg_interval} ) {
+#        $bgcolor = ( $bgcolor eq '#C0D0C0' ) ? '#F5F5F5' : '#C0D0C0';
+	  $bgcolor = ( $bgcolor eq '#f3f1e4' ) ? '#d3d1c4' : '#f3f1e4';
       }
     } elsif ( $args{bg_color} ) { # single solid color
       $bgcolor = $args{bg_color};
@@ -882,9 +898,10 @@ sub encodeSectionTable {
   # Set header attributes
   if ( $args{header} ) {
     if ( $args{sortable} ) {
-      $tab->setRowAttr( ROWS => [1], BGCOLOR => '#0000A0', CLASS => 'sortheader' );
+#      $tab->setRowAttr( ROWS => [1], BGCOLOR => '#0000A0', CLASS => 'sortheader' );
+      $tab->setRowAttr( ROWS => [1], BGCOLOR => '#003F72', CLASS => 'sortheader' );
     } else {
-      $tab->setRowAttr( ROWS => [1], BGCOLOR => '#CCCCCC');
+      $tab->setRowAttr( ROWS => [1], BGCOLOR => '#003F72', CLASS => 'sortheader' );
     }
     $tab->setRowAttr( ROWS => [1], ALIGN => 'CENTER' ) unless $args{nocenter};
   }
@@ -925,7 +942,7 @@ sub encodeSectionTable {
   if ( wantarray ) {
 
     if ( $args{truncate_msg_as_text} ) {
-      $html = "<tr><td>$closelink</td></tr>" . $html;
+      $html = "<tr $tr_info><td>$closelink</td></tr>" . $html;
       return ($html, $rs_name, $msg);
     } else {
       return ($html, $rs_name);
@@ -938,7 +955,7 @@ sub encodeSectionTable {
       $widget .= "</tr>";
       return( $widget . $html ); 
     } else {
-      $html = "<tr><td>$closelink</td></tr>" . $html;
+      $html = "<tr $tr_info><td>$closelink</td></tr>" . $html;
       return $html;
     }
   }
@@ -1034,12 +1051,12 @@ sub getSampleMapDisplay {
   my $header = '';
   if ( $args{link} ) {
     $header .= $self->encodeSectionHeader( text => 'Experiment peptide map:',
-                                          link => $args{link},
-                                          anchor => 'samples'
+					   link => $args{link},
+					   anchor => 'samples'
                                           );
   } else {
     $header .= $self->encodeSectionHeader( text => 'Experiment peptide map:',
-                                          anchor => 'samples'
+					   anchor => 'samples'
                                          );
   }
   $header = '' if $args{no_header};
@@ -1066,65 +1083,65 @@ sub getSampleMapDisplay {
   my @samples = $sbeams->selectSeveralColumns($sql);
 
   my $sample_js;
-	my %samples;
-	my %peptides;
-	my $cntr = 0;
+  my %samples;
+  my %peptides;
+  my $cntr = 0;
   for my $row ( @samples ) { 
-		$cntr++;
-		my $key = $row->[1] . '::::' . $row->[0];
+    $cntr++;
+    my $key = $row->[1] . '::::' . $row->[0];
     $row->[3] .= '*' if $row->[4] < 2;
-		$peptides{$row->[3]}++;
-		$samples{$key} ||= {};
-		$samples{$key}->{$row->[3]} = $row->[2];
-	}
-	my $array_def = qq~
-	<script type="text/javascript">
+    $peptides{$row->[3]}++;
+    $samples{$key} ||= {};
+    $samples{$key}->{$row->[3]} = $row->[2];
+  }
+  my $array_def = qq~
+    <script type="text/javascript">
     google.setOnLoadCallback(drawHeatMap);
     function drawHeatMap() {
     var data = new google.visualization.DataTable();
     data.addColumn('string', 'Sample Name');
-	~;
-	my @peps = ( $args{force_order} ) ? @{$args{force_order}} : sort( keys( %peptides ) );
+    ~;
+  my @peps = ( $args{force_order} ) ? @{$args{force_order}} : sort( keys( %peptides ) );
 #  for my $pa ( sort( keys( %peptides ) ) ) {
   for my $pa ( @peps ) {
     $array_def .= "    data.addColumn('number', '$pa');\n";
-	}
-	$array_def .= "DEFINE_ROWS_HERE\n";
+  }
+  $array_def .= "DEFINE_ROWS_HERE\n";
 
-	my $row = 0;
-	my $max = 0;
-	my $min = 50;
-	$cntr = 0;
-	for my $sa ( sort { "\L$a" cmp "\L$b" } ( keys( %samples ) ) ) {
-	  my $col = 0;
-		my ( $name, $id ) = split "::::", $sa;
+  my $row = 0;
+  my $max = 0;
+  my $min = 50;
+  $cntr = 0;
+  for my $sa ( sort { "\L$a" cmp "\L$b" } ( keys( %samples ) ) ) {
+    my $col = 0;
+    my ( $name, $id ) = split "::::", $sa;
     $array_def .= "    data.setValue( $row, $col, '$name' );\n";
-	  $col++;
+    $col++;
 
     for my $pa ( @peps ) {
-			if ( $samples{$sa}->{$pa} ) {
+      if ( $samples{$sa}->{$pa} ) {
         my $pep_cnt = log(1 + $samples{$sa}->{$pa})/log(10);
-			  $max = ( $pep_cnt > $max ) ? $pep_cnt : $max;
-    		$min = ( $pep_cnt < $min ) ? $pep_cnt : $min;
+	$max = ( $pep_cnt > $max ) ? $pep_cnt : $max;
+	$min = ( $pep_cnt < $min ) ? $pep_cnt : $min;
         $array_def .= "    data.setValue( $row, $col, $pep_cnt );\n";
-		    $cntr++;
-			}
-		  $col++;
-		}
-		$row++;
-	}
-	$array_def =~ s/DEFINE_ROWS_HERE/data.addRows($row);/;
-	my $num_colors = 256;
-	$array_def .= qq~
-	heatmap = new org.systemsbiology.visualization.BioHeatMap(document.getElementById('heatmapContainer'));
-	heatmap.draw(data, {numberOfColors:$num_colors,passThroughBlack:false,startColor:{r:255,g:255,b:255,a:1},endColor:{r:100,g:100,b:100,a:1},emptyDataColor:{r:256,g:256,b:256,a:1}});
+	$cntr++;
+      }
+      $col++;
+    }
+    $row++;
+  }
+  $array_def =~ s/DEFINE_ROWS_HERE/data.addRows($row);/;
+  my $num_colors = 256;
+  $array_def .= qq~
+    heatmap = new org.systemsbiology.visualization.BioHeatMap(document.getElementById('heatmapContainer'));
+    heatmap.draw(data, {numberOfColors:$num_colors,passThroughBlack:false,startColor:{r:255,g:255,b:255,a:1},endColor:{r:100,g:100,b:100,a:1},emptyDataColor:{r:256,g:256,b:256,a:1}});
 		}
   </script>
   ~;
 
-	$args{header_text} = ( $args{header_text} ) ? "<TR $trinfo><TD ALIGN=CENTER CLASS=section_description>$args{header_text}</TD></TR>" : '';
-	$args{second_header} = ( $args{second_header} ) ? "<TR $trinfo><TD ALIGN=CENTER CLASS=info_text>$args{second_header}</TD></TR>" : '';
-	my $content = qq~
+  $args{header_text} = ( $args{header_text} ) ? "<TR $trinfo><TD ALIGN=CENTER CLASS=section_description>$args{header_text}</TD></TR>" : '';
+  $args{second_header} = ( $args{second_header} ) ? "<TR $trinfo><TD ALIGN=CENTER CLASS=info_text>$args{second_header}</TD></TR>" : '';
+  my $content = qq~
   <script type="text/javascript" src="https://www.google.com/jsapi"></script>
   <script type="text/javascript">
     google.load("visualization", "1", {});
@@ -1135,7 +1152,7 @@ sub getSampleMapDisplay {
     systemsbiology.load("visualization", "1.0", {packages:["bioheatmap"]});
   </script>
 
-	$array_def
+  $array_def
 
   $args{header_text}
   $args{second_header}
@@ -1143,7 +1160,6 @@ sub getSampleMapDisplay {
 	~;
 
   return ( wantarray() ) ? ($header, $content) : $header . "\n" . $content;
-
 
 } # end getSampleMapDisplay
 
@@ -1393,7 +1409,7 @@ sub getDetailedSampleDisplay {
   return $table;
 }
 
-sub getPTMTableDisplay{
+sub getPTMTableDisplay {
   my $self = shift;
   my %args = @_;
   my $SUB_NAME = 'getPTMTableDisplay';
@@ -1432,15 +1448,11 @@ sub getPTMTableDisplay{
     push @align, 'center';
   }
   my $table = $self->encodeSectionTable( header => 1,
-                                         width => '600',
-                                         tr_info => $args{tr_info},
                                          align  => [@align],
                                          rows_to_show => $args{rows_to_show},
                                          max_rows => $args{max_rows},
                                          rows => \@rows );
   return $table;
-
-
 }
 
 
@@ -1468,8 +1480,9 @@ sub get_individual_spectra_display {
     return;
   }
   my $resultset_ref = $args{resultset_ref};
-	my @data = ();
+  my @data = ();
   my @headings =();
+
   my $loop =1;
 
   foreach my $row (@{$resultset_ref->{data_ref}}){
@@ -1493,29 +1506,30 @@ sub get_individual_spectra_display {
   my $align = [qw(left center left left center left center center center left left left)];
 
   my $html = $self->encodeSectionTable( header => 1,
-                                                 width => '600',
-                                               tr_info => $args{tr},
-                                       unified_widgets => 1,
-                                          set_download => 1,
-                                               colspan => 3,
-                                                align  => $align,
-                                                  rows => \@data,
-                                          rows_to_show => 10,
-                                              max_rows => 200,
-                                                nowrap => [1],
-                                          bkg_interval => 3,
-                                           rs_headings => \@$column_titles_ref, 
-                                              bg_color => '#EAEAEA',
-                                              sortable => 1,
-                                           close_table => 1,
-                                              table_id => 'individual_spectra',
-                                          truncate_msg => '  <b>Use link in Modified Peptides section to filter results</b>.',
-                                              );
+					width => '600',
+					tr_info => $args{tr},
+					unified_widgets => 1,
+					set_download => 1,
+					colspan => 3,
+					align  => $align,
+					rows => \@data,
+					rows_to_show => 10,
+					max_rows => 200,
+					nowrap => [1],
+					bkg_interval => 3,
+					rs_headings => \@$column_titles_ref, 
+					bg_color => '#EAEAEA',
+					sortable => 1,
+					close_table => 1,
+					table_id => 'individual_spectra',
+					truncate_msg => '  <b>Use link in Modified Peptides section to filter results</b>.',
+      );
 
   return "<TABLE WIDTH=600>$html\n";
 
 
-} # end getSampleDisplay
+} # end 
+
 ###############################################################################
 # displaySamples
 ###############################################################################
@@ -1574,7 +1588,7 @@ sub getSampleDisplay {
       $sample_description =~ s/(.{200}).*/$1/;
     }
     $sample_title = $self->make_pa_tooltip( tip_text => $sample_description, 
-          link_text => "<a href='$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=AT_SAMPLE&sample_id=$sample_id'>$sample_title</a>" );
+					    link_text => "<a href='$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=AT_SAMPLE&sample_id=$sample_id'>$sample_title</a>" );
     push @samples , [$sample_id ,$sample_title, $pub_name];
     $pre_id = $sample_id;
   }
@@ -1585,8 +1599,8 @@ sub getSampleDisplay {
     push @headings, 'Publication','';
     my $headings = $self->make_sort_headings( headings => \@headings, default => 'Experiment ID');
     unshift @samples, ($headings);
-  }else{
-		unshift @samples, [('Experiment ID', 'Experiment Title', 'Publication')];
+  } else {
+    unshift @samples, [('Experiment ID', 'Experiment Title', 'Publication')];
   }
   my $table = $self->encodeSectionTable( header => 1,
                                          width => '600',
