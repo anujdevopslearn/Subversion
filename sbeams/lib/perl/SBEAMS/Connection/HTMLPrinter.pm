@@ -233,10 +233,10 @@ sub printStyleSheet {
     $FONT_SIZE_HG=19;
   }
 #	A.sortheader{background-color: #888888; font-size: ${FONT_SIZE}pt; font-weight: bold; color:white; line-height: 25px;}
-  
-my $module_styles =<<"  END_STYLE";  
+
+my $module_styles =<<"  END_STYLE";
   .sortarrow { font-size: ${FONT_SIZE_LG}pt; font-weight: bold }
-	.sortheader{ font-size: ${FONT_SIZE}pt; font-weight: bold; line-height: 25px; color:white }
+  .sortheader{ font-size: ${FONT_SIZE}pt; font-weight: bold; line-height: 25px; color:white; }
   .info_box { background: #F0F0F0; border: #000 1px solid; padding: 4px; width: 80%; color: #444444 }
   .small_super_text { vertical-align: super; font-size: ${FONT_SIZE_SM}pt }
   .clear_info_box { border: #000 1px solid; padding: 4px; width: 100%; color: #444444 }
@@ -246,7 +246,10 @@ my $module_styles =<<"  END_STYLE";
   .gaggle-data { display: none }
   .bold_text { font-weight: bold; white-space: nowrap }
   .nowrap_text { white-space: nowrap }
-  
+  a.dataheader { font-weight: bold; text-decoration:none; }
+  a.dataheader:hover { color:b00; }
+  .dataheader { font-weight: bold; color:white }
+
   /* Style info below organized by originating module
   /* Peptide Atlas */
   .cellblock_top { border-top:"1px solid"; border-color:black; border-left:"1px solid"; border-right:"1px solid"}
@@ -274,6 +277,7 @@ my $module_styles =<<"  END_STYLE";
 
   .pa_sequence_font{font-family:courier; font-size: ${FONT_SIZE}pt;  letter-spacing:0.5; font-weight: bold; }	
   .pa_observed_sequence{font-family:courier; font-size: ${FONT_SIZE}pt; color: red;  letter-spacing:0.5; font-weight: bold;}	
+  .pa_sequence_counter{font-size:smaller;color:#ccc;}
 
   .pa_snp_font{font-family:courier; font-size: ${FONT_SIZE}pt; letter-spacing:0.5; font-weight: bold; background-color: #66CCFF}	
   .pa_snp_obs_font{font-family:courier; font-size: ${FONT_SIZE}pt; letter-spacing:0.5; font-weight: bold; color: #00CC00}	
@@ -356,6 +360,11 @@ table.freeze_table { table-layout: fixed; width: 1000px; *margin-left: -100px;/*
   table.tbl_visible { display: table; }
   table.tbl_hidden { display: none; }
   tr.tbl_visible { display: table-row; }
+  .hoverabletitle { background:#f3f1e4; color:#555; font-size:large; font-weight:bold; border-top:1px solid #b00; border-left:15px solid #b00; padding:0.5em}
+  .hoverabletitle:hover { box-shadow:0 3px 5px 3px #aaa;}
+  .hoverable:hover { background:#fcc; }
+  td.key   { border-bottom:1px solid #ddd; background:#d3d1c4;}
+  td.value { border-bottom:1px solid #ddd; }
   tr.tbl_hidden { display: none; }
   td.tbl_visible { display: table-cell; }
   td.tbl_hidden { display: none; }
@@ -384,8 +393,8 @@ table.freeze_table { table-layout: fixed; width: 1000px; *margin-left: -100px;/*
 	A.h1:link {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_HG}pt; font-weight: bold; text-decoration: none; color: blue}
 	A.h1:visited {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_HG}pt; font-weight: bold; text-decoration: none; color: darkblue}
 	A.h1:hover {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_HG}pt; font-weight: bold; text-decoration: none; color: red}
-	A:link    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: none; color: blue}
-	A:visited {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: none; color: darkblue}
+	A:link    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: none; }
+	A:visited {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: none; }
 	A:hover   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: red}
 	A:link.nav {  font-family: Helvetica, Arial, sans-serif; color: #000000}
 	A:visited.nav {  font-family: Helvetica, Arial, sans-serif; color: #000000}
@@ -1423,6 +1432,10 @@ sub unstickToggleSection {
 # @narg sticky   - Remember the state of this toggle in session?  Requires name,
 #                  defaults to 0 (false)
 # @narg width    - Minimum width to reserve for hidden items.
+# @narg barlink  - 0/1, should use new-style clickable bar to show/hide (default is 0)
+# @narg opendiv  - 0/1, should the <DIV> tag remain open to allow more content addition
+#                  NOTE: must close </DIV> after caller (default is 0)
+
 #-
 sub make_toggle_section {
   my $self = shift;
@@ -1432,25 +1445,27 @@ sub make_toggle_section {
   my $html = '';      # HTML string to return
   my $hidetext = '';  # Text for 'hide content' link
   my $showtext = '';  # Text for 'show content' link
-  my $neuttext = '';  # Auxilary text for show/hide
+  my $neuttext = '';  # Auxiliary text for show/hide
   my $hideimg = ( $args{hideimg} ) ? $args{hideimg} : 'small_gray_plus.gif';  # image for 'hide content' link
   my $showimg = ( $args{showimg} ) ? $args{showimg} : 'small_gray_minus.gif';  # image for 'show content' link
 
   # No content, bail
   return $html unless $args{content};
 
+  $args{barlink} = 0 unless defined $args{barlink};
+  $args{opendiv} = 0 unless defined $args{opendiv};
   $args{imglink} = 1 unless defined $args{textlink};
   $args{textlink} = 0 unless defined $args{textlink};
   if ( $args{textlink} ) {
     $hidetext = ( $args{textlink} ) ? $args{hidetext} : ' hide ';
-    $showtext = ( $args{textlink} ) ? $args{showtext} : ' show ' ;
+    $showtext = ( $args{textlink} ) ? $args{showtext} : ' show ';
     $neuttext = $args{neutraltext} if $args{neutraltext};
   }
   for my $i ( $hidetext, $showtext ) {
     $i = "<FONT COLOR=blue> $i </FONT>";
   }
 
-      
+
   # Default visiblity is hidden
   $args{visible} = 0 unless defined $args{visible};
 
@@ -1563,14 +1578,16 @@ sub make_toggle_section {
   my $width = ( !$args{width} ) ? '' :
     "<IMG SRC=$HTML_BASE_DIR/images/clear.gif WIDTH=$args{width} HEIGHT=2>";
 
+  my $closediv = $args{opendiv} ? '' : '</DIV>';
+
   $html .=<<"  END";
      $width
-    <DIV ID=$args{name} class="$hideclass"> $args{content} </DIV>
+    <DIV ID=$args{name} class="$hideclass"> $args{content} $closediv
   END
 
   my $tip = ( $args{tooltip} ) ? "TITLE='$args{tooltip}'" : '';
   my $imghtml = '';
-  if ($args{imglink} ) {
+  if ( $args{imglink} ) {
     $imghtml = "<IMG ID='$args{name}_gif' $tip SRC='$HTML_BASE_DIR/images/$initial_gif'>"; 
   }
   my $texthtml = '';
@@ -1579,7 +1596,14 @@ sub make_toggle_section {
     $texthtml .= "<DIV ID=$args{name}showtext class='$showclass'> $showtext </DIV>";
   }
 
-  my $linkhtml = qq~<A ONCLICK="toggle_content('${args{name}}')">$imghtml $texthtml</A> $neuttext~;
+  my $linkhtml = '';
+  if ( $args{barlink} ) {
+    $linkhtml = qq~<DIV CLASS="hoverabletitle" ONCLICK="toggle_content('${args{name}}')">$imghtml $texthtml $neuttext</DIV>~;
+  }
+  else {
+    $linkhtml = qq~<A ONCLICK="toggle_content('${args{name}}')">$imghtml $texthtml</A> $neuttext~;
+  }
+
 
   # Return html as separate content/widget, or as a concatentated thingy
   return wantarray ? ( $html, $linkhtml ) : $linkhtml . $html;
@@ -1629,7 +1653,7 @@ sub make_table_toggle {
   my $hidetext = '';  # Text for 'hide content' link
   my $showtext = '';  # Text for 'show content' link
   my $neuttext = '';  # Auxilary text for show/hide
-  
+
   $args{plaintext} ||= 0;  # Don't have text in a table 
 
   
@@ -1646,7 +1670,7 @@ sub make_table_toggle {
   for my $i ( $hidetext, $showtext ) {
     $i = "<FONT COLOR=blue> $i </FONT>";
   }
-      
+
   # Default visiblity is hidden
   $args{visible} = 0 unless defined $args{visible};
 
@@ -1668,7 +1692,7 @@ sub make_table_toggle {
   $args{name} ||= $self->getRandomString( num_chars => 12,
                                           char_set => [ 'A'..'z' ]
                                         ); 
-  
+
   my $hideclass = ( $args{visible} ) ? 'tbl_visible' : 'tbl_hidden';
   my $showclass = ( $args{visible} ) ? 'tbl_hidden'  : 'tbl_visible';
   my $initial_gif = ( $args{visible} ) ? $hideimg : $showimg;
