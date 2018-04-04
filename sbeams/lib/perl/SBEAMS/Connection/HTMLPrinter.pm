@@ -360,9 +360,9 @@ table.freeze_table { table-layout: fixed; width: 1000px; *margin-left: -100px;/*
   table.tbl_visible { display: table; }
   table.tbl_hidden { display: none; }
   tr.tbl_visible { display: table-row; }
-  .hoverabletitle { background:#f3f1e4; color:#555; font-size:large; font-weight:bold; border-top:1px solid #b00; border-left:15px solid #b00; padding:0.5em}
+  .hoverabletitle { margin-top: 8px; background:#f3f1e4; color:#555; font-size:large; font-weight:bold; border-top:1px solid #b00; border-left:15px solid #b00; padding:0.5em}
   .hoverabletitle:hover { box-shadow:0 3px 5px 3px #aaa;}
-  .hoverable:hover { background:#fcc; }
+  tr.hoverable:hover td { background:#ffad4e; }
   td.key   { border-bottom:1px solid #ddd; background:#d3d1c4;}
   td.value { border-bottom:1px solid #ddd; }
   tr.tbl_hidden { display: none; }
@@ -1445,7 +1445,7 @@ sub make_toggle_section {
   my $html = '';      # HTML string to return
   my $hidetext = '';  # Text for 'hide content' link
   my $showtext = '';  # Text for 'show content' link
-  my $neuttext = '';  # Auxiliary text for show/hide
+  my $neuttext = '';  # Auxiliary text for show/hide -- also: text shown for "bar" link
   my $hideimg = ( $args{hideimg} ) ? $args{hideimg} : 'small_gray_plus.gif';  # image for 'hide content' link
   my $showimg = ( $args{showimg} ) ? $args{showimg} : 'small_gray_minus.gif';  # image for 'show content' link
 
@@ -1459,8 +1459,8 @@ sub make_toggle_section {
   if ( $args{textlink} ) {
     $hidetext = ( $args{textlink} ) ? $args{hidetext} : ' hide ';
     $showtext = ( $args{textlink} ) ? $args{showtext} : ' show ';
-    $neuttext = $args{neutraltext} if $args{neutraltext};
   }
+  $neuttext = $args{neutraltext} if $args{neutraltext};
   for my $i ( $hidetext, $showtext ) {
     $i = "<FONT COLOR=blue> $i </FONT>";
   }
@@ -1596,9 +1596,14 @@ sub make_toggle_section {
     $texthtml .= "<DIV ID=$args{name}showtext class='$showclass'> $showtext </DIV>";
   }
 
+
   my $linkhtml = '';
   if ( $args{barlink} ) {
-    $linkhtml = qq~<DIV CLASS="hoverabletitle" ONCLICK="toggle_content('${args{name}}')">$imghtml $texthtml $neuttext</DIV>~;
+
+    $args{anchor} ||= $args{neutraltext};
+    my $anchor = ( $args{anchor} ) ? "<A NAME='$args{anchor}'></A>" : '';
+
+    $linkhtml = qq~$anchor<DIV CLASS="hoverabletitle" ONCLICK="toggle_content('${args{name}}')">$imghtml $texthtml $neuttext</DIV>~;
   }
   else {
     $linkhtml = qq~<A ONCLICK="toggle_content('${args{name}}')">$imghtml $texthtml</A> $neuttext~;
