@@ -1181,7 +1181,7 @@ sub get_dirty_peptide_display {
   my %args = @_;
   # Check for required opts
   my $err;
-  for my $opt ( qw( link tr_info biosequence_id ) ) {
+  for my $opt ( qw( tr_info biosequence_id ) ) {
     $err = ( $err ) ? $err . ',' . $opt : $opt if !defined $args{$opt};
   }
   die "Missing required parameter(s) $err" if $err;
@@ -1255,7 +1255,7 @@ sub get_dirty_peptide_display {
                                                   rows => \@peptides,
                                           rows_to_show => 20,
                                               max_rows => 500,
-                                          bkg_interval => 3, 
+                                          bkg_interval => 4, 
 #     set_download => 'Download peptides', 
 #                                           file_prefix => 'best_peptides_', 
                                               bg_color => '#EAEAEA',
@@ -1264,7 +1264,7 @@ sub get_dirty_peptide_display {
                                            close_table => 1,
                                         );
   #### Display table
-  return "<TABLE WIDTH=600><BR>$html\n";
+  return "<TABLE>$html\n";
 
 } # End dirty_peptide display
 
@@ -1278,7 +1278,7 @@ sub get_pabst_static_peptide_display {
   my %args = @_;
   # Check for required opts
   my $err;
-  for my $opt ( qw( link tr_info biosequence_name ) ) {
+  for my $opt ( qw( tr_info biosequence_name ) ) {
     $err = ( $err ) ? $err . ',' . $opt : $opt if !defined $args{$opt};
   }
   die "Missing required parameter(s) $err" if $err;
@@ -1517,7 +1517,7 @@ sub get_pabst_static_peptide_display {
                                           rows_to_show => 20,
                                                 nowrap => [1..12],
                                               max_rows => 500,
-                                          bkg_interval => 3, 
+                                          bkg_interval => 4, 
                                           set_download => 'Download peptides', 
                                            rs_headings => \@rs_headings, 
                                            file_prefix => 'best_peptides_', 
@@ -1529,7 +1529,7 @@ sub get_pabst_static_peptide_display {
                                            close_table => 1,
                                               );
   #### Display table
-  return "<TABLE WIDTH=600><BR>$html\n";
+  return "<TABLE>$html\n";
 
 } # End get pabst static display
 
