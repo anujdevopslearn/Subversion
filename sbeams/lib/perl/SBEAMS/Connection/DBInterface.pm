@@ -2876,7 +2876,7 @@ sub displayResultSet {
       $row_color_scheme{color_list} = \@row_color_list;
       $row_color_scheme_ref = \%row_color_scheme;
     }
-    $row_color_scheme_ref->{header_background} = '#0000A0'
+    $row_color_scheme_ref->{header_background} = '#003F72'
       unless ($row_color_scheme_ref->{header_background});
 
 
@@ -3042,29 +3042,29 @@ sub displayResultSet {
       while (@row = returnNextRow()) {
         @output_row = ();
 
-		for (my $column = 0; $column < scalar(@row); $column++){
-		  my $datum = $row[$column];
-		  next if ( defined $no_print_columns[$column] && $no_print_columns[$column] == 1);
-          if ( defined $datum && $datum =~ /[\t,\",\n]/) {
-            $datum =~ s/\t/ /g if ($output_mode  =~ /tsv/);
+	for (my $column = 0; $column < scalar(@row); $column++){
+	    my $datum = $row[$column];
+	    next if ( defined $no_print_columns[$column] && $no_print_columns[$column] == 1);
+	    if ( defined $datum && $datum =~ /[\t,\",\n]/) {
+		$datum =~ s/\t/ /g if ($output_mode  =~ /tsv/);
 
-            # Substitute stray \n characters, Mantis bug 0000046
-            $datum =~ s/\r?\n/\\n/g if ($output_mode =~ /tsv|csv/);
-            $datum =~ s/\"/""/g;
-            $datum = "\"$datum\"";
-          }
-          push(@output_row,$datum);
+		# Substitute stray \n characters, Mantis bug 0000046
+		$datum =~ s/\r?\n/\\n/g if ($output_mode =~ /tsv|csv/);
+		$datum =~ s/\"/""/g;
+		$datum = "\"$datum\"";
+	    }
+	    push(@output_row,$datum);
         }
 
-		if ($output_mode eq 'tsvfull') {
-		  foreach my $tsvfull_url (@tsvfull_urls) {
-			my $temp_url = $tsvfull_url;
-			my $linked_column_number = $tsvfull_url_column_number{$temp_url};
-			$temp_url =~ s/\%(\d+)V/$row[$1]/g;
-			$temp_url =~ s/\%V/$row[$linked_column_number]/g;
-			push (@output_row, $temp_url);
-		  }
-		}
+	if ($output_mode eq 'tsvfull') {
+	    foreach my $tsvfull_url (@tsvfull_urls) {
+		my $temp_url = $tsvfull_url;
+		my $linked_column_number = $tsvfull_url_column_number{$temp_url};
+		$temp_url =~ s/\%(\d+)V/$row[$1]/g;
+		$temp_url =~ s/\%V/$row[$linked_column_number]/g;
+		push (@output_row, $temp_url);
+	    }
+	}
 		
         @output_row = map  { ( defined $_ ) ? $_ : '' } @output_row; 
         print join($delimiter,@output_row),"\n";
@@ -3146,7 +3146,6 @@ sub displayResultSet {
       return;
     }
 
-    
 
 
     #### If the desired output format is Cytoscape, prepare a temp directory
@@ -3320,18 +3319,18 @@ sub displayResultSet {
 
         ShowHTMLTable{
           titles=>$column_titles_ref,
-        	types=>$types_ref,
-        	widths=>\@precisions,
+	  types=>$types_ref,
+	  widths=>\@precisions,
       	  row_sub=>\&returnNextRow,
           table_attrs=>"$table_width $table_class BORDER=0 CELLPADDING=2 CELLSPACING=2",
-          title_formats=>['FONT COLOR=white,BOLD'],
+          title_formats=>['SPAN CLASS=dataheader'],
           url_keys=>$url_cols_ref,
           hidden_cols=>$hidden_cols_ref,
           THformats=>["BGCOLOR=".$row_color_scheme_ref->{header_background} . $nowrap],
           TDformats=>\@TDformats,
           row_color_scheme=>$row_color_scheme_ref,
           base_url=>$base_url,
-          image_dir=>"$HTML_BASE_DIR/images",
+# no         image_dir=>"$HTML_BASE_DIR/images",
           resort_url=>$resort_url,
           no_escape => $no_escape
         };
