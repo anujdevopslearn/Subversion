@@ -1248,12 +1248,10 @@ sub handle_request {
       $htmlcontent .= "</TABLE>\n";
 
 
-      print scalar $sbeams->make_toggle_section( textlink => 1,
-					      neutraltext => $biosequence->{biosequence_name},
+      print scalar $sbeams->make_toggle_section( neutraltext => $biosequence->{biosequence_name},
 						   sticky => 1,
 						     name => 'getprotein_overview_div',
 					  #ToDo?# tooltip => 'Show/Hide Section',
-						  imglink => 1,
 						  barlink => 1,
 						  visible => 1,
 						  content => $htmlcontent );
@@ -1314,12 +1312,10 @@ sub handle_request {
 	);
 
     if ( $htmlmode ) {
-      print scalar $sbeams->make_toggle_section( textlink => 1,
-					      neutraltext => 'Sequence Motifs',
+      print scalar $sbeams->make_toggle_section( neutraltext => 'Sequence Motifs',
 						   sticky => 1,
 						     name => 'getprotein_graphic_div',
 					  #ToDo?# tooltip => 'Show/Hide Section',
-						  imglink => 1,
 						  barlink => 1,
 						  visible => 1,
 						  content => $graphic_section );
@@ -1341,12 +1337,10 @@ sub handle_request {
 						      align  => [qw(left center center right)],
                                                       rows => \@rows );
     if ( 0 ) {
-      print scalar $sbeams->make_toggle_section( textlink => 1,
-						 neutraltext => 'Observation Likelihood',
+      print scalar $sbeams->make_toggle_section( neutraltext => 'Observation Likelihood',
 						 sticky => 1,
 						 name => 'likely_peptides_div',
 						 #ToDo?# tooltip => 'Show/Hide Section',
-						 imglink => 1,
 						 barlink => 1,
 						 visible => 1,
 						 content => $likelyHTML);
@@ -1535,12 +1529,10 @@ sub handle_request {
 
       if ($htmlmode) {
 	my $ptmHTML = "$ptm_summary_chart \n$ptm_table_help<TABLE width='100%'>$PTM_table_Display</TABLE><BR>";
-	print scalar $sbeams->make_toggle_section( textlink => 1,
-						   neutraltext => 'PTM Summary',
+	print scalar $sbeams->make_toggle_section( neutraltext => 'PTM Summary',
 						   sticky => 1,
 						   name => 'getprotein_ptm_summary_div',
 						   #ToDo?# tooltip => 'Show/Hide Section',
-						   imglink => 1,
 						   barlink => 1,
 						   visible => 1,
 						   content => $ptmHTML);
@@ -1556,12 +1548,10 @@ sub handle_request {
     my $obs_help = $sbeamsMOD->make_table_help( entries => $col_defs,
 						description => 'Observed peptides mapping to subject protein' );
 
-    print scalar $sbeams->make_toggle_section( textlink => 1,
-					       neutraltext => "Distinct Observed Peptides ($peptide_counts)",
+    print scalar $sbeams->make_toggle_section( neutraltext => "Distinct Observed Peptides ($peptide_counts)",
 					       sticky => 1,
 					       name => 'getprotein_observedlist_div',
 					       #ToDo?# tooltip => 'Show/Hide Section',
-					       imglink => 1,
 					       barlink => 1,
 					       opendiv => 1,
 					       visible => 1,
@@ -1820,12 +1810,10 @@ sub handle_request {
 
       if ( $htmlmode && $dirty_peptide_display ) {
 
-	print scalar $sbeams->make_toggle_section( textlink => 1,
-						   neutraltext => 'Synthetic peptide info',
+	print scalar $sbeams->make_toggle_section( neutraltext => 'Synthetic peptide info',
 						   sticky => 1,
 						   name => 'getprotein_dirty_peptide_div',
 						   #ToDo?# tooltip => 'Show/Hide Section',
-						   imglink => 1,
 						   barlink => 1,
 						   visible => 1,
 						   content => $dirty_peptide_display);
@@ -1849,12 +1837,10 @@ sub handle_request {
 
     if ( $htmlmode && $pabst_display && $parameters->{motif} ne 'glyco'  ) {
 
-      print scalar $sbeams->make_toggle_section( textlink => 1,
-						 neutraltext => 'PABST Peptide Ranking',
+      print scalar $sbeams->make_toggle_section( neutraltext => 'PABST Peptide Ranking',
 						 sticky => 1,
 						 name => 'getprotein_pabst_static_div',
 						 #ToDo?# tooltip => 'Show/Hide Section',
-						 imglink => 1,
 						 barlink => 1,
 						 visible => 1,
 						 content => $pabst_display);
@@ -1886,12 +1872,10 @@ sub handle_request {
         tr_info => '',
       );
 
-      print scalar $sbeams->make_toggle_section( textlink => 1,
-						 neutraltext => 'Predicted Highly Observable Peptides',
+      print scalar $sbeams->make_toggle_section( neutraltext => 'Predicted Highly Observable Peptides',
 						 sticky => 1,
 						 name => 'getprotein_highlyobservablelist_div',
 						 #ToDo?# tooltip => 'Show/Hide Section',
-						 imglink => 1,
 						 barlink => 1,
 						 visible => 1,
 						 content => $samples);
@@ -1899,37 +1883,14 @@ sub handle_request {
 
 
 
-
-
-
-
     #############################################################################
     #### Display annotated transitions
     #############################################################################
-
-
-    ########## ToDo:: LM
-
-
-    #### Widget to allow show/hide of section
-    my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_transitions',
-      visible => 1,
-      tooltip => 'Show/Hide Section',
-      imglink => 1,
-      sticky => 1,
-     );
-
-    #### Display the section header
-    my $transitionsHTML = $sbeamsMOD->encodeSectionHeader(
-      text => 'Annotated Transitions',
-      link => $link
-    );
-
-
     my $mrm_transitions = $sbeamsMOD->get_mrm_transitions( accessions => \@pa_accessions );
 
     #### If a result is returned
     if ( scalar @$mrm_transitions ) {
+      my $transitionsHTML = '';
 
       my $link_base = "GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&action=QUERY&searchForThis=";
       #### Loops through resultset and do formatting
@@ -1956,64 +1917,81 @@ sub handle_request {
           $pep->[$idx] = $sbeams->makeInactiveText('n/a') if !defined $pep->[$idx];
         }
       }
-      my @labels = ( 'Accession', 'Sequence', 'Charge', 'q1_mz', 'q3_mz',
-                 'Label', 'Intensity', 'CE', 'RT', 'SSRT', 'Instr', 'Annotation Set', 'Quality');
+      my @labels = ( 'Accession', 'Sequence', 'Charge', 'q1_mz', 'q3_mz', 'Label',
+		     'Intensity', 'CE', 'RT', 'SSRT', 'Instr', 'Annotation Set', 'Quality');
       my $col_defs = $sbeamsMOD->get_column_defs( labels => \@labels );
 #      my $trans_help = get_table_help( 'annotated_transitions' );
       my $trans_help = $sbeamsMOD->make_table_help( entries => $col_defs,
-                                                    description => 'Contributed Q1/Q3 transition pairs for SRM experiments' );
+                                                description => 'Contributed Q1/Q3 transition pairs for SRM experiments' );
 
       #### Add table column headings
       unshift @$mrm_transitions, \@labels;
 
       #### Format table
       $transitionsHTML .= $sbeamsMOD->encodeSectionTable( header => 1,
-                                                        tr_info => $tr,
-                                                          width => '100%',
-                                                   set_download => 1,
-                                                   help_text => $trans_help,
-                                                           nowrap => [12,13],
-                                                    chg_bkg_idx => 3,
-                                                         align  => [qw(left center center right right center right right right right left left left)],
-                                                           rows => $mrm_transitions );
+							  colspan => 1,  #ugh...
+							  set_download => 1,
+							  help_text => $trans_help,
+							  nowrap => [12,13],
+							  chg_bkg_idx => 3,
+							  align  => [qw(left center center right right center right right right right left left left)],
+							  rows => $mrm_transitions );
       #### Display table
-#      print "$trans_help<TABLE WIDTH=100%><BR>$transitionsHTML</TABLE>\n" if $#{$mrm_transitions} && $htmlmode;
-      print "<TABLE WIDTH=100%>$transitionsHTML</TABLE>\n" if $#{$mrm_transitions} && $htmlmode;
+      ## $trans_help ??
+      if ($#{$mrm_transitions} && $htmlmode) {
+	print scalar $sbeams->make_toggle_section( neutraltext => 'Annotated Transitions',
+						   sticky => 1,
+						   name => 'getprotein_transitions_div',
+						   #ToDo?# tooltip => 'Show/Hide Section',
+						   barlink => 1,
+						   visible => 1,
+						   content => "<TABLE>$transitionsHTML</TABLE>" );
+      }
+
     }
 
 
+
+    #############################################################################
+    #### Display marker/reference peptides  (if/when data exist in reference tables...)
+    #############################################################################
     my $marker_peptides = get_synthesized_peptides( \@pa_accessions );
-    my $markerHTML = $sbeamsMOD->encodeSectionHeader(
-        text => "Reference Peptides",
-      'link' => $link,
-        bold => 1 );
 
     #### If a result is returned
     if ( scalar @$marker_peptides ) {
-#    $transitionHTML .= $sbeams->getPopupDHTML();
+      my $markerHTML = '';
 
-     my $link_base = "GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&action=QUERY&searchForThis=";
-    #### Loops through resultset and do formatting
-     for my $pep ( @$marker_peptides ) {
-#      $pep->[2] = sprintf("%0.2f", $pep->[2]);
-       $pep->[3] = $sbeams->makeInactiveText('n/a') if !$pep->[3];
+      my $link_base = "GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&action=QUERY&searchForThis=";
+      #### Loop through resultset and do formatting
+      for my $pep ( @$marker_peptides ) {
+#       $pep->[2] = sprintf("%0.2f", $pep->[2]);
+	$pep->[3] = $sbeams->makeInactiveText('n/a') if !$pep->[3];
 
-       $pep->[0] = "<A HREF=$link_base" . $pep->[0] . ">$pep->[0]</A";
-     }
-     my @labels = ( 'Accession', 'Peptide Sequence', 'Type', 'Publication', 'Annotator', 'Modified Sequence'  );
+	$pep->[0] = "<A HREF=$link_base" . $pep->[0] . ">$pep->[0]</A";
+      }
+      my @labels = ( 'Accession', 'Peptide Sequence', 'Type', 'Publication', 'Annotator', 'Modified Sequence'  );
 
-    #### Add table column headings
-    unshift @$marker_peptides, \@labels;
+      #### Add table column headings
+      unshift @$marker_peptides, \@labels;
 
-    #### Format table
-    $markerHTML .= $sbeamsMOD->encodeSectionTable( header => 1,
-                                                      tr_info => $tr,
-                                                        width => '100%',
-                                                       align  => [qw(left center left left left center)],
-                                                         rows => $marker_peptides );
-    #### Display table
-    print "<TABLE WIDTH=100%><BR>$markerHTML</TABLE>\n";
-  }
+      #### Format table
+      $markerHTML .= $sbeamsMOD->encodeSectionTable( header => 1,
+						     colspan => 1,  #ugh...
+						     chg_bkg_idx => 3,
+						     align  => [qw(left center left left left center)],
+						     rows => $marker_peptides );
+
+      if ($#{$marker_peptides} && $htmlmode) {
+	print scalar $sbeams->make_toggle_section( neutraltext => 'Reference Peptides',
+						   sticky => 1,
+						   name => 'getprotein_transitions_div',
+						   #ToDo?# tooltip => 'Show/Hide Section',
+						   barlink => 1,
+						   visible => 1,
+						   content => "<TABLE>$markerHTML</TABLE>" );
+      }
+
+    }
 
 
 
@@ -2040,22 +2018,18 @@ sub handle_request {
 
 
     if ($htmlmode) {
-      print scalar $sbeams->make_toggle_section( textlink => 1,
-						 neutraltext => 'Experiment Peptide Map',
+      print scalar $sbeams->make_toggle_section( neutraltext => 'Experiment Peptide Map',
 						 sticky => 1,
 						 name => 'getprotein_samplemap_div',
 						 #ToDo?# tooltip => 'Show/Hide Section',
-						 imglink => 1,
 						 barlink => 1,
 						 visible => 1,
 						 content => "<A NAME='samplemap'></A><TABLE>$sampleMap</TABLE>" );
 
-      print scalar $sbeams->make_toggle_section( textlink => 1,
-						 neutraltext => 'Sample List',
+      print scalar $sbeams->make_toggle_section( neutraltext => 'Sample List',
 						 sticky => 1,
 						 name => 'getprotein_samplelist_div',
 						 #ToDo?# tooltip => 'Show/Hide Section',
-						 imglink => 1,
 						 barlink => 1,
 						 visible => 1,
 						 content => "<TABLE>$sampleDisplay</TABLE>" );
@@ -3665,12 +3639,10 @@ sub displayAnnotatedSequence {
 
 
   if ($htmlmode) {
-    print scalar $sbeams->make_toggle_section( textlink => 1,
-					    neutraltext => 'Sequence',
+    print scalar $sbeams->make_toggle_section( neutraltext => 'Sequence',
 					         sticky => 1,
 					           name => 'getprotein_sequence_div',
 					     #ToDo?# tooltip => 'Show/Hide Section',
-					        imglink => 1,
 					        barlink => 1,
 					        visible => 1,
 					        content => $seqHTML);
@@ -4615,12 +4587,10 @@ sub displayExternalLinksSection {
   if ($sbeams->output_mode() eq 'html' && $external_links ) {
     $external_links = "<TABLE style='margin-left:15px;'>$external_links</TABLE>";
 
-    print scalar $sbeams->make_toggle_section( textlink => 1,
-					    neutraltext => 'External Links',
+    print scalar $sbeams->make_toggle_section( neutraltext => 'External Links',
 					         sticky => 1,
 					           name => 'getprotein_ExternalLinks_div',
 				        #ToDo?# tooltip => 'Show/Hide Section',
-				 	        imglink => 1,
 					        barlink => 1,
 					        visible => 1,
 					        content => $external_links );

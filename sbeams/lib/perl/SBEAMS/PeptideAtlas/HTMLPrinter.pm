@@ -934,7 +934,7 @@ sub encodeSectionTable {
       $html .= "<TD NOWRAP ALIGN=right>$rs_link</TD></TR>\n";
     }
   }
- 
+
   my $colspan = $args{colspan} || 2;
   $html .= "<TR><TD NOWRAP COLSPAN=$colspan>$tab</TD></TR>";
   $html .= '</TABLE>' if $args{close_table};
