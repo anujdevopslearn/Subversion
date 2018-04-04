@@ -265,7 +265,6 @@ sub formatHeader {
   $text = "<U>$text</U>" if $format{UNDERLINE};
   $text = "<FONT COLOR=WHITE>$text</FONT>" if $format{WHITE_TEXT};
   return $text;
-
 }
 
 #+
@@ -292,6 +291,8 @@ sub asHTML {
     }
     $html .= "  </TR>\n";
     if ( $rnum == 1 && $this->{__use_thead} ) {
+      $html =~ s|<TD|<TH|g;
+      $html =~ s|</TD>|</TH>|g;
       $html .= "</THEAD><TBODY>\n";
     }
     $rnum++;
