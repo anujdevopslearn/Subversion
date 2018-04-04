@@ -327,7 +327,7 @@ sub handle_request {
     allow_protein_list_login => 1,
     protein_list_sql => $protein_list_sql,
     parameters_ref => \%parameters,
-  );
+      );
   if (defined($atlas_build_id) && $atlas_build_id < 0) {
     return;
   }
@@ -357,8 +357,8 @@ sub handle_request {
     }
   }
   $swiss = $sbeamsMOD->get_uniprot_annotation( show_all_snps => 1,
-                                                   accession => $protein_name,
-                                                use_nextprot => $parameters{use_nextprot} );
+					           accession => $protein_name,
+					        use_nextprot => $parameters{use_nextprot} );
 
 
   #### do the same for tube name
@@ -525,13 +525,14 @@ sub handle_request {
 
       print "<BR>";
       print "Protein Name: ";
-      print $q->textfield( "protein_name", $protein_name);
+      print $q->textfield( "protein_name", size=>50, $protein_name);
 
       my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'extra_fields',
-                                                visible => 0,
-                                                tooltip => 'Show/Hide Section',
-                                                imglink => 1,
-                                                sticky => 1 );
+						      visible => 0,
+						      fulllink => 1,
+						      tooltip => 'Show/Hide Section',
+						      imglink => 1,
+						      sticky => 1 );
       print "<br>Show/hide extra fields $link";
       print "<table>\n";
 
@@ -543,12 +544,6 @@ sub handle_request {
         print "</td></tr>\n";
       }
       print "</table>\n";
-
-
-
-
-
-
 
 
       $current_page->{organism} = $sbeamsMOD->getCurrentAtlasOrganism( parameters_ref => { atlas_build_id => $atlas_build_id } );
@@ -709,7 +704,7 @@ sub handle_request {
   if ($n_biosequences > 1) {
     if ($sbeams->output_mode() eq 'html') {
       print qq~
-        SeveraL ($n_biosequences) entries were returned from your request
+        Several ($n_biosequences) entries were returned from your request
         for '$protein_name' in the
         atlas build '$atlas_build_names{$atlas_build_id}'. Please select
         the appropriate one:<BR><BR>
@@ -858,29 +853,19 @@ sub handle_request {
 
 
   #############################################################################
-  # Widget to allow show/hide of overview section
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_overview',
-                                                visible => 1,
-                                                tooltip => 'Show/Hide Section',
-                                                imglink => 1,
-                                                sticky => 1 );
-
-
   #### Print out a summary of the protein
-  if ($sbeams->output_mode() eq 'html') {
-    my $section_header = $sbeamsMOD->encodeSectionHeader(
-      text => $biosequence->{biosequence_name},
-      link => $link
-    );
+  #############################################################################
+  my $htmlcontent = '';
+  my $tr = 'class="hoverable"';
 
-    print qq~
-      <TABLE width="600">
-        $section_header
+  if ($sbeams->output_mode() eq 'html') {
+    $htmlcontent = qq~
+      <TABLE style="margin-left:15px;">
     ~;
     # Display a link to Steven Lewis's 3D visualization tool if available.
     # Eventually, will move 3D resources to PeptideAtlas server area
     # and URL will change.
-    my $acc=$biosequence->{biosequence_name};
+    my $acc = $biosequence->{biosequence_name};
     my $acc_is_present = 0;
 #--------------------------------------------------
 #  Disable because not maintained. TMF 11/05/13
@@ -890,7 +875,7 @@ sub handle_request {
 #--------------------------------------------------
     my $url = $acc_is_present ?  "http://ec2-204-236-255-114.compute-1.amazonaws.com/peptides/protein/pages/${acc}.html": '';
     my $key = $acc_is_present ? "Protein Name and Visualization" : "Protein Name";
-    print $sbeamsMOD->encodeSectionItem(
+    $htmlcontent .= $sbeamsMOD->encodeSectionItem(
       key=>$key,
       tr_info => $tr,
       value=>$acc,
@@ -898,20 +883,20 @@ sub handle_request {
       #url=>"$biosequence->{accessor}$biosequence->{biosequence_accession}$biosequence->{accessor_suffix}",
     );
 
-    print $sbeamsMOD->encodeSectionItem(
+    $htmlcontent .= $sbeamsMOD->encodeSectionItem(
       key=>'Gene Name',
       tr_info => $tr,
       value=>$biosequence->{biosequence_gene_name},
     );
 
-    print $sbeamsMOD->encodeSectionItem(
+    $htmlcontent .= $sbeamsMOD->encodeSectionItem(
       key=>'Description',
       tr_info => $tr,
       value=>$biosequence->{biosequence_desc},
     );
 
     if($origene_accession){
-      print $sbeamsMOD->encodeSectionItem(
+      $htmlcontent .= $sbeamsMOD->encodeSectionItem(
         key=>'Origene SKU',
         tr_info => $tr,
         value=>$origene_accession,
@@ -920,7 +905,7 @@ sub handle_request {
     }
 
     my $presence_level_string = "";
-    print $sbeamsMOD->encodeSectionItem(
+    $htmlcontent .= $sbeamsMOD->encodeSectionItem(
       key=>'Identification Status',
       tr_info => $tr,
       value=>$identification_status,
@@ -940,21 +925,21 @@ sub handle_request {
     my $group_string=qq~
 <a href="$CGI_BASE_DIR/PeptideAtlas/GetProteins?protein_group_representative_constraint=$group_rep&apply_action=QUERY">$group_rep</a>
     ~;
-    print $sbeamsMOD->encodeSectionItem(
+    $htmlcontent .= $sbeamsMOD->encodeSectionItem(
       key=>'Protein Group',
       tr_info => $tr,
       value=>$group_string,
     );
 
     my $prob_string = sprintf("%0.5f", $biosequence->{probability});
-    print $sbeamsMOD->encodeSectionItem(
+    $htmlcontent .= $sbeamsMOD->encodeSectionItem(
       key=>'ProteinProphet Probability',
       tr_info => $tr,
       value=>$prob_string,
     );
 
     $prob_string = sprintf("%0.5f", $biosequence->{confidence});
-    print $sbeamsMOD->encodeSectionItem(
+    $htmlcontent .= $sbeamsMOD->encodeSectionItem(
       key=>'Mult Hyp Testing  Probability',
       tr_info => $tr,
       value=>$prob_string,
@@ -962,7 +947,7 @@ sub handle_request {
 
     # TMF: remove this conditional if/when want to release this feature to production.
     if ($parameters{'ann'}) {
-      print $sbeamsMOD->encodeSectionItem(
+      $htmlcontent .= $sbeamsMOD->encodeSectionItem(
 	key   => 'User Assessment for inclusion in Swiss/neXtProt',
 	tr_info => $tr,
 	value => '<div ID="annotations_summary">-- please wait for page load --</div>',
@@ -974,7 +959,7 @@ sub handle_request {
 	sprintf("%0.1f ng/ml (%s uncertainty)",
 		 $biosequence->{estimated_ng_per_ml},
 		 $biosequence->{abundance_uncertainty});
-      print $sbeamsMOD->encodeSectionItem(
+      $htmlcontent .= $sbeamsMOD->encodeSectionItem(
 	key=>'Estimated concentration',
 	tr_info => $tr,
 	value=>$conc_string,
@@ -986,7 +971,7 @@ sub handle_request {
 	sprintf("%0.1f ng/ml (%s)",
 		 $biosequence->{published_ng_per_ml},
 		 $biosequence->{pub_ng_ml_source});
-      print $sbeamsMOD->encodeSectionItem(
+      $htmlcontent .= $sbeamsMOD->encodeSectionItem(
 	key=>'Published concentration',
 	tr_info => $tr,
 	value=>$conc_string,
@@ -1043,7 +1028,7 @@ sub handle_request {
 #      if ( $max > $cnt ) {
 #        $syn_string .= "</DIV>";
 #      }
-      print $sbeamsMOD->encodeSectionItem( key => $key,
+      $htmlcontent .= $sbeamsMOD->encodeSectionItem( key => $key,
                                          value => $syn_string,
                                        tr_info => $tr );
     }
@@ -1063,7 +1048,7 @@ sub handle_request {
     #      my $display = $sbeams->truncateStringWithMouseover( len => 80,
     #                                             string => $annot->{$key});
     #
-    #      print $sbeamsMOD->encodeSectionItem( key   => $fx{$type},
+    #      $htmlcontent .= $sbeamsMOD->encodeSectionItem( key   => $fx{$type},
     #                                         tr_info => $tr,
     #                                           value => $display );
     #    }
@@ -1073,13 +1058,13 @@ sub handle_request {
     # Check to see if there is ortholog information
     my $orthologs = get_ortholog_information( $biosequence );
     if ( $orthologs ) {
-      print $sbeamsMOD->encodeSectionItem( key   => 'Ortholog Group',
+      $htmlcontent .= $sbeamsMOD->encodeSectionItem( key   => 'Ortholog Group',
                                          tr_info => $tr,
                                            value => $orthologs );
     }
 
 
-  }
+  } ## //htmlmode
 
 
   #############################################################################
@@ -1098,32 +1083,32 @@ sub handle_request {
 
   my @column_array = (
     ["peptide_accession","P.peptide_accession","Accession"],
-    ["preceding_residue","PI.preceding_residue","<DIV TITLE='Preceding (towards the N terminus) amino acid'>Pre AA</DIV>"],
-    ["peptide_sequence","P.peptide_sequence","<DIV TITLE='Amino Acid sequence of this peptide'>Sequence</DIV>"],
-    ["following_residue","PI.following_residue","<DIV TITLE='Following (towards the C terminus) amino acid'>Fol AA</DIV>"],
-    ["suitability_score","0.0001","<DIV TITLE='Score derived from peptide probability, EOS, and sequence characteristics such as missed cleavage(MC) or semi-tryptic(ST); these are annotated in red.'>ESS</DIV>"],
-    ["highest_n_enzymatic_termini","''","<DIV TITLE='Highest # of enzymatic termini'>NET</DIV>"],
-    ["lowest_n_missed_cleavages","''","<DIV TITLE='Lowest # of missed cleavage'>NMC</DIV>"],
-    ["best_probability","STR(PI.best_probability,7,3)","<DIV TITLE='Highest PeptideProphet probability for this observed sequence'>Best Prob</DIV>"],
-    ["best_adjusted_probability","STR(PI.best_adjusted_probability,7,3)","<DIV TITLE=''>Best Adj Prob</DIV>"],
+    ["preceding_residue","PI.preceding_residue","<SPAN TITLE='Preceding (towards the N terminus) amino acid'>Pre AA</SPAN>"],
+    ["peptide_sequence","P.peptide_sequence","<SPAN TITLE='Amino Acid sequence of this peptide'>Sequence</SPAN>"],
+    ["following_residue","PI.following_residue","<SPAN TITLE='Following (towards the C terminus) amino acid'>Fol AA</SPAN>"],
+    ["suitability_score","0.0001","<SPAN TITLE='Score derived from peptide probability, EOS, and sequence characteristics such as missed cleavage(MC) or semi-tryptic(ST); these are annotated in red.'>ESS</SPAN>"],
+    ["highest_n_enzymatic_termini","''","<SPAN TITLE='Highest # of enzymatic termini'>NET</SPAN>"],
+    ["lowest_n_missed_cleavages","''","<SPAN TITLE='Lowest # of missed cleavage'>NMC</SPAN>"],
+    ["best_probability","STR(PI.best_probability,7,3)","<SPAN TITLE='Highest PeptideProphet probability for this observed sequence'>Best Prob</SPAN>"],
+    ["best_adjusted_probability","STR(PI.best_adjusted_probability,7,3)","<SPAN TITLE='Highest iProphet-adjusted probablity for this observed sequence'>Best Adj Prob</SPAN>"],
   );
   my $group_by_clause .= "GROUP BY P.peptide_accession,PI.preceding_residue,P.peptide_sequence,PI.following_residue,PI.best_probability,PI.best_adjusted_probability,"
      if $parameters{'ann'};;
   if($tube_pattern){
-    push @column_array, (["n_observations","PI2.n_observations","<DIV TITLE='Total number of observations in all modified forms and charge states'>N Obs</DIV>"]);
+    push @column_array, (["n_observations","PI2.n_observations","<SPAN TITLE='Total number of observations in all modified forms and charge states'>N Obs</SPAN>"]);
     $group_by_clause .= "PI2.n_observations," if $parameters{'ann'};
   }else{
-    push @column_array, (["n_observations","PI.n_observations","<DIV TITLE='Total number of observations in all modified forms and charge states'>N Obs</DIV>"]);
+    push @column_array, (["n_observations","PI.n_observations","<SPAN TITLE='Total number of observations in all modified forms and charge states'>N Obs</SPAN>"]);
     $group_by_clause .= "PI.n_observations," if $parameters{'ann'};
   }
   push @column_array, (
-    ["empirical_proteotypic_score","STR(PI.empirical_proteotypic_score,7,2)","<DIV TITLE='Empirical Observability Score'>EOS</DIV>"],
-    ["SSRCalc_relative_hydrophobicity","STR(P.SSRCalc_relative_hydrophobicity,7,2)","<DIV TITLE='SSRCalc Relative Hydrophobicity score'>SSRT</DIV>"],
-    ["n_protein_mappings","PI.n_protein_mappings","<DIV TITLE='Number of proteins in the reference database to which this peptide maps'>N Prot Map</DIV>"],
-    ["n_genome_locations","PI.n_genome_locations","<DIV TITLE='Number of discrete genome locations which encode this amino acid sequence'>N Gen Loc</DIV>"],
+    ["empirical_proteotypic_score","STR(PI.empirical_proteotypic_score,7,2)","<SPAN TITLE='Empirical Observability Score'>EOS</SPAN>"],
+    ["SSRCalc_relative_hydrophobicity","STR(P.SSRCalc_relative_hydrophobicity,7,2)","<SPAN TITLE='SSRCalc Relative Hydrophobicity score'>SSRT</SPAN>"],
+    ["n_protein_mappings","PI.n_protein_mappings","<SPAN TITLE='Number of proteins in the reference database to which this peptide maps'>N Prot Map</SPAN>"],
+    ["n_genome_locations","PI.n_genome_locations","<SPAN TITLE='Number of discrete genome locations which encode this amino acid sequence'>N Gen Loc</SPAN>"],
     ["sample_ids","PI.sample_ids","N Experiments"],
-    #["sample_ids","PI.sample_ids","<DIV TITLE='Samples in which this sequence was seen'>Sample IDs</DIV>"],
-    #["is_subpeptide_of","PI.is_subpeptide_of","<DIV TITLE='Observed peptides of which this peptide is a subsequence'>Parent Peptides</DIV>"],
+    #["sample_ids","PI.sample_ids","<SPAN TITLE='Samples in which this sequence was seen'>Sample IDs</SPAN>"],
+    #["is_subpeptide_of","PI.is_subpeptide_of","<SPAN TITLE='Observed peptides of which this peptide is a subsequence'>Parent Peptides</SPAN>"],
     ["is_subpeptide_of","PI.is_subpeptide_of",'Subpep of'],
     ["peptide_instance_id","PI.peptide_instance_id","peptide_instance_id"],
   );
@@ -1239,68 +1224,74 @@ sub handle_request {
       biosequence_id => $biosequence_id,
     );
     my ( $obs, $peptides, $pep_nobs, $seq2instance, $pep_info ) = getPeptideCount( biosequence => $biosequence,
-                                                                                      resultset_ref => $resultset_ref );
+										 resultset_ref => $resultset_ref );
     my $peptide_counts = scalar( @$peptides );
 
     # Stragglers for protein section, doh!
     if ( $htmlmode ) {
-      print $sbeamsMOD->encodeSectionItem( tr_info => $tr,
-                                               key => 'Distinct Peptides',
-                                             value => "$peptide_counts\n" );
-      print $sbeamsMOD->encodeSectionItem( tr_info => $tr,
-                                               key => 'Total Observations',
-                                             value => $obs );
-      print $sbeamsMOD->encodeSectionItem( tr_info => $tr,
-                              key => 'ProteinProphet-adjusted N Obs',
-                              value => $biosequence->{n_observations} )
-            if (defined $biosequence->{n_observations} and ! $tube);
-      print $sbeamsMOD->encodeSectionItem( tr_info => $tr,
-                              key => 'Normalized PSMs per 100K',
-                              value => sprintf("%0.3f", $biosequence->{norm_PSMs_per_100K}) )
-            if defined $biosequence->{norm_PSMs_per_100K};
-      print "</TABLE>\n";
+      $htmlcontent .= $sbeamsMOD->encodeSectionItem( tr_info => $tr,
+						         key => 'Distinct Peptides',
+						       value => "$peptide_counts\n" );
+      $htmlcontent .= $sbeamsMOD->encodeSectionItem( tr_info => $tr,
+						         key => 'Total Observations',
+						       value => $obs );
+      $htmlcontent .= $sbeamsMOD->encodeSectionItem( tr_info => $tr,
+						         key => 'ProteinProphet-adjusted N Obs',
+						       value => $biosequence->{n_observations} )
+	  if (defined $biosequence->{n_observations} and ! $tube);
+
+      $htmlcontent .= $sbeamsMOD->encodeSectionItem( tr_info => $tr,
+						         key => 'Normalized PSMs per 100K',
+						       value => sprintf("%0.3f", $biosequence->{norm_PSMs_per_100K}) )
+	  if defined $biosequence->{norm_PSMs_per_100K};
+
+      $htmlcontent .= "</TABLE>\n";
+
+
+      print scalar $sbeams->make_toggle_section( textlink => 1,
+					      neutraltext => $biosequence->{biosequence_name},
+						   sticky => 1,
+						     name => 'getprotein_overview_div',
+					  #ToDo?# tooltip => 'Show/Hide Section',
+						  imglink => 1,
+						  barlink => 1,
+						  visible => 1,
+						  content => $htmlcontent );
     }
 
 
-  #############################################################################
-  #### Display the External Links section
-  displayExternalLinksSection( biosequence =>$biosequence,
-                            atlas_build_id => $current_page->{atlas_build_id},
-                                  organism => $current_page->{organism} );
+    #############################################################################
+    #### Display the External Links section
+    #############################################################################
+    displayExternalLinksSection( biosequence => $biosequence,
+			      atlas_build_id => $current_page->{atlas_build_id},
+				    organism => $current_page->{organism} );
 
 
-  #############################################################
-  ## Display the sequence graphic ##
 
+    #############################################################################
+    #### Display the sequence graphic
+    #############################################################################
+    my %motif_params;
+    my $motif = $parameters->{motif};
 
-  # Widget to allow show/hide of graphic section
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_graphic',
-                                                visible => 1,
-                                                tooltip => 'Show/Hide Section',
-                                                imglink => 1,
-                                                sticky => 1 );
-
-  my %motif_params;
-  my $motif = $parameters->{motif};
-
-  if ( $motif eq 'glyco' ) {
-    my $pred = $sbeamsMOD->getGlycoPeptides( seq => $biosequence->{biosequence_seq},
+    if ( $motif eq 'glyco' ) {
+      my $pred = $sbeamsMOD->getGlycoPeptides( seq => $biosequence->{biosequence_seq},
                                              annot => 1,
-                                             'index' => 1,
-                                             symbol => '*' );
-    $motif_params{$motif} = $pred;
+					   'index' => 1,
+					    symbol => '*' );
+      $motif_params{$motif} = $pred;
 #    my $pred = $sbeamsMOD->getGlycoPeptides( seq => 'MSGASVKVAVRVRPFNSRETSKESKCIIQMQGNSTSIINPKNPKEAPKSFSFDYSYWSHTSPEDPCFASQNRVYNDIGKEMLLHAFEGYNVCIFAYGQTGAGKSYTMMGKQEESQAGIIPQLCEELFETNHDNCNEEMSYSVEVSYMEIYCERVRDLLNPKNKGNLRVRDHPLRGPYVEDLSKLAVTSYTDIADLMDAGNKARTVAATNMNETSSRSHVVYTIVFTQKKHDNETILATVKVSKTSLVDLAGSDRAASTGAKGTRLKEGAIINKSLTTLGK' );
 #    for my $k ( keys( %$pred ) ) { $log->debug( "PREDICTED $k => $pred->{$k}" ); }
-  }
+    }
 
-  # Fetch theoretical peptides (tryptic)
+    # Fetch theoretical peptides (tryptic)
 #  my $likely =  $sbeamsMOD->assess_protein_peptides( build_id => $atlas_build_id, accession => 'P50750' );
-  my $likely =  $sbeamsMOD->assess_protein_peptides( %parameters,
-                                                     build_id => $atlas_build_id,
-                                                        swiss => $swiss,
-                                                    accession => $biosequence->{biosequence_name},
-                                                    
-                                                   );
+    my $likely =  $sbeamsMOD->assess_protein_peptides( %parameters,
+						       build_id => $atlas_build_id,
+						       swiss => $swiss,
+						       accession => $biosequence->{biosequence_name},
+	);
 
 #  https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetProtein_new?atlas_build_id=442&protein_name=P32297&apply_action=&action=GO;min_ssr=38;max_ssr=40;use_ssr=0;use_len=0;use_sig=0;use_tm=0
 #  print Dumper( $likely->{likely_str} );
@@ -1308,66 +1299,75 @@ sub handle_request {
 #  print Dumper( length( $seq[0] ) );
 #  die Dumper( length( $biosequence->{biosequence_seq} ) );
 
-  my %graphic_params = ( build_id => $atlas_build_id,
-                    protein_data  => $biosequence,
-                          tr_info => $tr,
-                        obs_color => $parameters{obs_color} );
+    my %graphic_params = ( build_id => $atlas_build_id,
+			   protein_data  => $biosequence,
+			   obs_color => $parameters{obs_color} );
 
-  my $peptide_mappings = get_peptide_mappings ( peptides => $pep_nobs, biosequence => $biosequence->{biosequence_seq} );
+    my $peptide_mappings = get_peptide_mappings ( peptides => $pep_nobs, biosequence => $biosequence->{biosequence_seq} );
 
-  my $graphic_section = get_sequence_graphic( %graphic_params,
-                                              %motif_params,
-                                              peptide_instance_constraint => $peptide_instance_clause,
-                                              likely_peptides => $likely,
-                                              mappings => $peptide_mappings,
-                                              pep_info => $pep_info
-                                            );
+    my $graphic_section = get_sequence_graphic( %graphic_params,
+						%motif_params,
+						peptide_instance_constraint => $peptide_instance_clause,
+						likely_peptides => $likely,
+						mappings => $peptide_mappings,
+						pep_info => $pep_info
+	);
 
-  my $graphic_head = $sbeamsMOD->encodeSectionHeader( text => "Sequence Motifs", link => $link );
-  print "<TABLE width=600>$graphic_head </TABLE> $graphic_section" if $htmlmode;
+    if ( $htmlmode ) {
+      print scalar $sbeams->make_toggle_section( textlink => 1,
+					      neutraltext => 'Sequence Motifs',
+						   sticky => 1,
+						     name => 'getprotein_graphic_div',
+					  #ToDo?# tooltip => 'Show/Hide Section',
+						  imglink => 1,
+						  barlink => 1,
+						  visible => 1,
+						  content => $graphic_section );
+    }
+    
 
-  ## Chuck in provisional peptide likelihood table
-  # Widget to allow show/hide of likely peptides section
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'likely_peptides',
-                                                visible => 1,
-                                                tooltip => 'Show/Hide Section',
-                                                imglink => 1,
-                                                sticky => 1 );
 
-  my $likely_header = $sbeamsMOD->encodeSectionHeader(
-                           text => "Observation Likelihood ",
-                           link => $link );
-
-  my @rows = ( [qw( Sequence Status Start End )] );;
-  for my $pep ( @{$likely->{peptides}} ) {
-    push @rows, [ $pep->{seq}, $pep->{status}, $pep->{start}, $pep->{end} ];
-  }
-  my $likelyHTML .= $sbeamsMOD->encodeSectionTable( header => 1,
-                                                   tr_info => $tr,
-                                                     width => '600',
-                                               chg_bkg_idx => 2,
-                                                    align  => [qw(left center center right right center right right right right left left left)],
+    #############################################################################
+    ## Chuck in provisional peptide likelihood table
+    #############################################################################
+    my @rows = ( [qw( Sequence Status Start End )] );;
+    for my $pep ( @{$likely->{peptides}} ) {
+      push @rows, [ $pep->{seq}, $pep->{status}, $pep->{start}, $pep->{end} ];
+    }
+    my $likelyHTML .= $sbeamsMOD->encodeSectionTable( header => 1,
+						      table_only => 1,
+						      width => '100%',
+						      chg_bkg_idx => 2,
+						      align  => [qw(left center center right)],
                                                       rows => \@rows );
-  if ( 0 ) {
-    print "<TABLE WIDTH=600>$likely_header$likelyHTML</TABLE>\n";
-  }
+    if ( 0 ) {
+      print scalar $sbeams->make_toggle_section( textlink => 1,
+						 neutraltext => 'Observation Likelihood',
+						 sticky => 1,
+						 name => 'likely_peptides_div',
+						 #ToDo?# tooltip => 'Show/Hide Section',
+						 imglink => 1,
+						 barlink => 1,
+						 visible => 1,
+						 content => $likelyHTML);
+    }
 
-  #############################################################
-  ## Display annotated sequence - this routine makes its own section header ##
+  
 
-    #### Display the annotated sequence
-
+    #############################################################################
+    #### Display annotated sequence - this routine makes its own section header
+    #############################################################################
     # TMF: added for special need
-#    print STDERR "$protein_name\t";
+    # print STDERR "$protein_name\t";
 
-  if ( defined $parameters{show_clustal} ) {
-    $sbeams->setSessionAttribute( key => 'GetProtein_ShowVars',
-                                value => $parameters{show_clustal} );
-  } else {
-    $parameters{show_clustal} = $sbeams->getSessionAttribute( key => 'GetProtein_ShowVars' );
-  }
+    if ( defined $parameters{show_clustal} ) {
+      $sbeams->setSessionAttribute( key => 'GetProtein_ShowVars',
+				  value => $parameters{show_clustal} );
+    } else {
+      $parameters{show_clustal} = $sbeams->getSessionAttribute( key => 'GetProtein_ShowVars' );
+    }
 
-  displayAnnotatedSequence( %parameters,
+    displayAnnotatedSequence( %parameters,
                             peptides => $peptides,
                         peptide_nobs => $pep_nobs,
                         seq2instance => $seq2instance,
@@ -1378,92 +1378,93 @@ sub handle_request {
                                glyco => $motif_params{glyco},
                            );
 
-  ### show sequence coverage for difference method
-  if ($htmlmode and $atlas_build_names{$atlas_build_id} =~ /Origene/i){
 
-    my $file = "/net/db/projects/PeptideAtlas/species/Human/Origene/ExpectedProtein.txt";
-		open(IN, "<$file") or die "cannot open $file\n";
-    my %PPfile = ();
-    my %peptides_m;
+    ### show sequence coverage for difference method
+    if ($htmlmode and $atlas_build_names{$atlas_build_id} =~ /Origene/i){
+      my $file = "/net/db/projects/PeptideAtlas/species/Human/Origene/ExpectedProtein.txt";
+      open(IN, "<$file") or die "cannot open $file\n";
+      my %PPfile = ();
+      my %peptides_m;
 
-		foreach my $line (<IN>){
-			chomp $line ;
-			my (@spids,$plate,$tube);
-			if( $line =~ /TP\d+,([^,]+),(\w),(\d+),.*VE.+_ISBHOT(0[0123]\d).*/ || $line =~ /TP\d+,([^,]+),(\w),(\d+).*,ISBHOT(0[0123]\d).*/){
-				$plate = "ISBHOT$4";
-				@spids = split(/\./,$1);
-        if(length($3) == 1){
-          $tube = "{$2".'0'."$3,$2$3}";
-        }else{
-          $tube = "$2$3";
-        }
-			}
-			foreach my $a (@spids){
-        my $p = "/proteomics/peptideatlas/archive/rmoritz/HumanMRMAtlas/Origene/Velos/$plate*/".
-                 "method/XTK/VE*_$tube\_*-ipro.prot.xml";
+      foreach my $line (<IN>){
+	chomp $line ;
+	my (@spids,$plate,$tube);
+	if( $line =~ /TP\d+,([^,]+),(\w),(\d+),.*VE.+_ISBHOT(0[0123]\d).*/ || $line =~ /TP\d+,([^,]+),(\w),(\d+).*,ISBHOT(0[0123]\d).*/){
+	  $plate = "ISBHOT$4";
+	  @spids = split(/\./,$1);
+	  if(length($3) == 1){
+	    $tube = "{$2".'0'."$3,$2$3}";
+	  } else {
+	    $tube = "$2$3";
+	  }
+	}
+	foreach my $a (@spids){
+	  my $p = "/proteomics/peptideatlas/archive/rmoritz/HumanMRMAtlas/Origene/Velos/$plate*/".
+	      "method/XTK/VE*_$tube\_*-ipro.prot.xml";
 
-				$PPfile{$a}{path} = $p;
-        if($tube =~ /\{(\w+),.*/){
-          $tube = $1;
-        }
-        $PPfile{$a}{tube} = $plate.'-'.$tube;
-				if($a =~ /(\S+)\-\d+/){
-           $a = $1;
-				   $PPfile{$a}{path} = $p;
-           $PPfile{$a}{tube} = $plate.'-'.$tube;
+	  $PPfile{$a}{path} = $p;
+	  if($tube =~ /\{(\w+),.*/){
+	    $tube = $1;
+	  }
+	  $PPfile{$a}{tube} = $plate.'-'.$tube;
+	  if($a =~ /(\S+)\-\d+/){
+	    $a = $1;
+	    $PPfile{$a}{path} = $p;
+	    $PPfile{$a}{tube} = $plate.'-'.$tube;
 
-				}
-			}
-		}
-    if(defined $PPfile{$protein_name}){
-      foreach my $m (@methods){
-        my $file = $PPfile{$protein_name}{path};
-        my $str;
-        if($parameters{ori_tube} ne ''){
-          $parameters{ori_tube} =~ /(ISBHOT\d{3})-(\w)(\d+)/;
-          if(length($3) == 1){
-            $str = "$1*/method/XTK/VE*_{$2".'0'."$3,$2$3}_*-ipro.prot.xml";
-          }else{
-            $str = "$1*/method/{XTK,XTK*allmod}/VE*_$2$3\_*-ipro.prot.xml";
-          }
-          $file = "/proteomics/peptideatlas/archive/rmoritz/HumanMRMAtlas/Origene/Velos/$str";
-        }
-        $file =~ s/method/$m/;
-        my @files = `ls $file`;
-        if(@files > 1 or @files == 0 ){
-          print join("<BR>", @files);
-          goto LABEL;
-        #}#elsif(! @files ){
-         #  print "$PPfile <BR>";
-        }else{
-         %{$peptides_m{$m}} = $origenecov -> getPeptides(
+	  }
+	}
+      }
+      if(defined $PPfile{$protein_name}){
+	foreach my $m (@methods){
+	  my $file = $PPfile{$protein_name}{path};
+	  my $str;
+	  if($parameters{ori_tube} ne ''){
+	    $parameters{ori_tube} =~ /(ISBHOT\d{3})-(\w)(\d+)/;
+	    if(length($3) == 1){
+	      $str = "$1*/method/XTK/VE*_{$2".'0'."$3,$2$3}_*-ipro.prot.xml";
+	    } else {
+	      $str = "$1*/method/{XTK,XTK*allmod}/VE*_$2$3\_*-ipro.prot.xml";
+	    }
+	    $file = "/proteomics/peptideatlas/archive/rmoritz/HumanMRMAtlas/Origene/Velos/$str";
+	  }
+	  $file =~ s/method/$m/;
+	  my @files = `ls $file`;
+	  if(@files > 1 or @files == 0 ){
+	    print join("<BR>", @files);
+	    goto LABEL;
+	    #}#elsif(! @files ){
+	    #  print "$PPfile <BR>";
+	  } else {
+	    %{$peptides_m{$m}} = $origenecov -> getPeptides(
                                  ref_parameters     => \%parameters,
                                  ProteinProphetfile => $files[0],
                                  protein_name       => $protein_name);
-      }
+	  }
 
-    }
+	}
 
-  ($tr, $link ) = $sbeams->make_table_toggle( name => 'ori_getprotein_sequence',
-                                                visible => 0,
-                                                tooltip => 'Show/Hide Section',
-                                                imglink => 1,
-                                                sticky => 1 );
+	## LM: did not update this...yet!
+	my ($tr, $link ) = $sbeams->make_table_toggle( name => 'ori_getprotein_sequence',
+						       visible => 0,
+						       tooltip => 'Show/Hide Section',
+						       imglink => 1,
+						       sticky => 1 );
 
 
-    my $ori_help = $origenecov ->get_plot_help(name => 'ori_getprotein_sequence_desc' );
-    my $graphic_head = $sbeamsMOD->encodeSectionHeader( text => "Sequence Coverage of Each Fragmentation Method (TPP PeptideProb >= 0.9 and ProteinProb >= 0.9)", link => $link );
-    my %graphic_params = (     peptide => \%peptides_m,
-                         protein_data  => $biosequence,
-                               tr_info => $tr,
-                             obs_color => $parameters{obs_color} );
+	my $ori_help = $origenecov ->get_plot_help(name => 'ori_getprotein_sequence_desc' );
+	my $graphic_head = $sbeamsMOD->encodeSectionHeader( text => "Sequence Coverage of Each Fragmentation Method (TPP PeptideProb >= 0.9 and ProteinProb >= 0.9)", link => $link );
+	my %graphic_params = (     peptide => \%peptides_m,
+				   protein_data  => $biosequence,
+				   tr_info => $tr,
+				   obs_color => $parameters{obs_color} );
 
-    $graphic_section = $origenecov -> get_sequence_graphic( %graphic_params, %motif_params );
-    my $primary = qq~ &nbsp;&nbsp;<b>Below show $protein_name in</b>:&nbsp;$PPfile{$protein_name}{tube}<BR> ~;
-    if($parameters{ori_tube}){
-       $primary =  qq~ &nbsp;&nbsp;<b>Below show $protein_name in</b>:&nbsp;$parameters{ori_tube}<BR> ~;
-    }
-    print qq~ <TABLE width="600" >
+	$graphic_section = $origenecov -> get_sequence_graphic( %graphic_params, %motif_params );
+	my $primary = qq~ &nbsp;&nbsp;<b>Below show $protein_name in</b>:&nbsp;$PPfile{$protein_name}{tube}<BR> ~;
+	if($parameters{ori_tube}){
+	  $primary =  qq~ &nbsp;&nbsp;<b>Below show $protein_name in</b>:&nbsp;$parameters{ori_tube}<BR> ~;
+	}
+	print qq~ <TABLE width="100%" >
                <TR $tr><TD ALIGN=left>$graphic_head</TD></TR>
                <TR $tr><TD ALIGN=left>$ori_help</TD></TR>
                <TR $tr><TD ALIGN=left>
@@ -1473,114 +1474,112 @@ sub handle_request {
                <TR $tr><TD> $graphic_section</TD></TR>
           ~;
 
-     for my $method( @methods){
-				my ( $sequence, $tags ,$coverage) = $origenecov -> displayAnnotatedSequence(
-								 peptides => \%{$peptides_m{$method}},
-							biosequence => $biosequence,
-									 method => $method,
-				);
-				print "\n <TR $tr><TD > " . $origenecov -> get_html_seq( sequence => $sequence,
-                                                                tags => $tags,
-                                                                method => $method,
-                                                                coverage => $coverage ) . "</TD></TR>\n";
-     }
-    print "</TABLE></DIV>\n";
-    }
+	for my $method( @methods){
+	  my ( $sequence, $tags ,$coverage) = $origenecov -> displayAnnotatedSequence(
+	    peptides => \%{$peptides_m{$method}},
+	    biosequence => $biosequence,
+	    method => $method,
+	      );
+	  print "\n <TR $tr><TD > " . $origenecov -> get_html_seq( sequence => $sequence,
+								   tags => $tags,
+								   method => $method,
+								   coverage => $coverage ) . "</TD></TR>\n";
+	}
+	print "</TABLE></DIV>\n";
+      }
     LABEL:
-  }
+    }
 
-  #############################################################
-  # PTM
 
-  my $ptm_sql = qq~
+    #############################################################################
+    #### PTM
+    #############################################################################
+    my $ptm_sql = qq~
     SELECT biosequence_name,offset,residue,nObs,one_site,two_sites,over_two_sites,
            nP01,nP05,nP19,nP81,nP95,nP99,nP100,isInNextProt,isInUniprot,most_observed_ptm_peptide
     FROM $TBAT_PTM_SUMMARY PS
     JOIN $TBAT_BIOSEQUENCE BS ON (PS.BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID)
     WHERE BS.BIOSEQUENCE_NAME = '$protein_name'
     AND PS.ATLAS_BUILD_ID = $atlas_build_id
-  ~;
+    ~;
 
-  my @ptm_results = $sbeams->selectSeveralColumns ($ptm_sql);
-  if(@ptm_results){
-		my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_ptm_summary',
-																									visible => 1,
-																									tooltip => 'Show/Hide Section',
-																									imglink => 1,
-																									sticky => 1 );
-		my $ptm_header = $sbeamsMOD->encodeSectionHeader(
-														 text => "PTM Summary",
-														 link => $link );
-
-		print qq~ <TABLE width="600">$ptm_header</TABLE><TABLE><TR $tr><TD ALIGN=left></TD><TR $tr><TD COLSPAN=2>~ if $htmlmode;
-		my $GV = SBEAMS::Connection::GoogleVisualization->new();
-		my %data = ();
-    my @columns = ('Protein', 'Offset', 'Residue','nObs', 'One_site', 'Two_sites', 'Over_two_sites',
-                 'nP01', 'nP05', 'nP19', 'nP81', 'nP95', 'nP99', 'nP100', 'InNextProt','InUniprot','peptide');
-		foreach my $row  (@ptm_results){
-			my @vals = @$row;
-			$vals[1] = $vals[1] -1;
-			for my $i (2..$#vals){
-				$data{$vals[0]}{$vals[1]}{$columns[$i]} = $vals[$i];
-			}
-		}
-		my $ptm_summary_chart = $GV->drawPTMHisChart_Protein(data=> \%data,
-                                                       protein=>$protein_name,
-                                                  atlas_build_id => $atlas_build_id,
-                                                       seq=>$biosequence->{biosequence_seq});
-    my $PTM_table_Display = $sbeamsMOD->getPTMTableDisplay( cols => \@columns,
-                                                           data => \%data,
-                                                  atlas_build_id => $atlas_build_id,
-                                                  biosequence_name => $protein_name,
-                                                          'link' => $link,
-                                                     rows_to_show => 10,
-                                                         max_rows => 500,
-                                                         tr_info => $tr );
-    shift @columns;
-    pop @columns;
-    my $col_defs = $sbeamsMOD->get_column_defs( labels => \@columns );
-    my $ptm_table_help = $sbeamsMOD->make_table_help( entries => $col_defs,
-                                                    description => '');
-    print "$ptm_summary_chart \n$ptm_table_help<TABLE width='600'>$PTM_table_Display</TABLE><BR>" if $htmlmode;
+    my @ptm_results = $sbeams->selectSeveralColumns ($ptm_sql);
+    if(@ptm_results){
+      my $GV = SBEAMS::Connection::GoogleVisualization->new();
+      my %data = ();
+      my @columns = ('Protein', 'Offset', 'Residue','nObs', 'One_site', 'Two_sites', 'Over_two_sites',
+		     'nP01', 'nP05', 'nP19', 'nP81', 'nP95', 'nP99', 'nP100', 'InNextProt','InUniprot','peptide');
+      foreach my $row  (@ptm_results){
+	my @vals = @$row;
+	$vals[1] = $vals[1] -1;
+	for my $i (2..$#vals){
+	  $data{$vals[0]}{$vals[1]}{$columns[$i]} = $vals[$i];
+	}
+      }
+      my $ptm_summary_chart = $GV->drawPTMHisChart_Protein(data=> \%data,
+							   protein=>$protein_name,
+							   atlas_build_id => $atlas_build_id,
+							   seq=>$biosequence->{biosequence_seq});
+      my $PTM_table_Display = $sbeamsMOD->getPTMTableDisplay( cols => \@columns,
+							      data => \%data,
+							      atlas_build_id => $atlas_build_id,
+							      biosequence_name => $protein_name,
+							      rows_to_show => 10,
+							      max_rows => 500);
+      shift @columns;
+      pop @columns;
+      my $col_defs = $sbeamsMOD->get_column_defs( labels => \@columns );
+      my $ptm_table_help = $sbeamsMOD->make_table_help( entries => $col_defs,
+							description => '');
 
 
-  }
-
-  #############################################################
-  # Widget to allow show/hide of observed peptides section
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_observedlist',
-                                                visible => 1,
-                                                tooltip => 'Show/Hide Section',
-                                                imglink => 1,
-                                                sticky => 1 );
+      if ($htmlmode) {
+	my $ptmHTML = "$ptm_summary_chart \n$ptm_table_help<TABLE width='100%'>$PTM_table_Display</TABLE><BR>";
+	print scalar $sbeams->make_toggle_section( textlink => 1,
+						   neutraltext => 'PTM Summary',
+						   sticky => 1,
+						   name => 'getprotein_ptm_summary_div',
+						   #ToDo?# tooltip => 'Show/Hide Section',
+						   imglink => 1,
+						   barlink => 1,
+						   visible => 1,
+						   content => $ptmHTML);
+      }
+    }
 
 
 
+    #############################################################################
+    #### Observed peptides
+    #############################################################################
+    my $col_defs = $sbeamsMOD->get_column_defs( labels => \@labels );
+    my $obs_help = $sbeamsMOD->make_table_help( entries => $col_defs,
+						description => 'Observed peptides mapping to subject protein' );
 
-  my $col_defs = $sbeamsMOD->get_column_defs( labels => \@labels );
-  my $obs_help = $sbeamsMOD->make_table_help( entries => $col_defs,
-                                            description => 'Observed peptides mapping to subject protein' );
+    print scalar $sbeams->make_toggle_section( textlink => 1,
+					       neutraltext => "Distinct Observed Peptides ($peptide_counts)",
+					       sticky => 1,
+					       name => 'getprotein_observedlist_div',
+					       #ToDo?# tooltip => 'Show/Hide Section',
+					       imglink => 1,
+					       barlink => 1,
+					       opendiv => 1,
+					       visible => 1,
+					       content => $obs_help
+	) if $htmlmode;
 
-
-    my $observed_header = $sbeamsMOD->encodeSectionHeader(
-                           text => "Distinct Observed Peptides ($peptide_counts)",
-                           link => $link );
-
-#    print qq~ $obs_help<TABLE width="600">$observed_header</TABLE><TABLE><TR $tr><TD COLSPAN=2>~ if $htmlmode;
-    print qq~ <TABLE width="600">$observed_header</TABLE><TABLE><TR $tr><TD ALIGN=left>$obs_help</TD><TR $tr><TD COLSPAN=2>~ if $htmlmode;
 
     #### Create Cytoscape format files if selected
     my $java_web_start = { template => 'GetProtein' };
     if ($sbeams->output_mode() eq 'cytoscape') {
-      prepareJavaWebStartFiles(
-        rs_params_ref=>\%rs_params,
-        resultset_ref=>$resultset_ref,
-        query_parameters_ref=>\%parameters,
-        url_cols_ref=>\%url_cols,
-        column_titles_ref=>\@column_titles,
-        hidden_cols_ref=>\%hidden_cols,
-        java_web_start=>$java_web_start,
-      );
+      prepareJavaWebStartFiles( rs_params_ref=>\%rs_params,
+				resultset_ref=>$resultset_ref,
+				query_parameters_ref=>\%parameters,
+				url_cols_ref=>\%url_cols,
+				column_titles_ref=>\@column_titles,
+				hidden_cols_ref=>\%hidden_cols,
+				java_web_start=>$java_web_start,
+	  );
     }
 
     #### Since we don't display the controls, make the default page size
@@ -1643,7 +1642,7 @@ sub handle_request {
     for my $row ( sort { $b->[9] <=> $a->[9] } @{$resultset_ref->{data_ref}} ) {
       $pep_cnt++;
       last if $pep_cnt >= $max_peptides;
-			$instance_ids{$row->[16]}++;
+      $instance_ids{$row->[16]}++;
     }
 
     my @pa_accessions;
@@ -1658,65 +1657,65 @@ sub handle_request {
 
     for my $row ( @{$resultset_ref->{data_ref}} ) {
       push @pa_accessions, $row->[0];
-			my $ntt = 0;
+      my $ntt = 0;
       if ( defined $row->[$ntt_idx] && $row->[$ntt_idx] ne '') {
-        $ntt = $row->[$ntt_idx];
+	$ntt = $row->[$ntt_idx];
       } else {
-  			if ( $row->[$pre_idx] =~ /[-RK]/ ) {
-	  			$ntt++;
-		  	}
-			  if ( $row->[$fol_idx] =~ /[RK]$/ || $row->[3] eq '-' ) {
-				  $ntt++;
-			  }
+	if ( $row->[$pre_idx] =~ /[-RK]/ ) {
+	  $ntt++;
+	}
+	if ( $row->[$fol_idx] =~ /[RK]$/ || $row->[3] eq '-' ) {
+	  $ntt++;
+	}
       }
       $row->[$ntt_idx] = $ntt if !defined $row->[$ntt_idx];
 
-			my $mc = 0;
+      my $mc = 0;
       if ( defined $row->[$mc_idx] && $row->[$mc_idx] ne '') {
-        $mc = $row->[$mc_idx];
+	$mc = $row->[$mc_idx];
       } elsif ( $row->[$seq_idx] =~ /[RK][^P]/ ) {
-				$mc++;
-			}
+	$mc++;
+      }
       $row->[$mc_idx] = $mc if !defined $row->[$mc_idx];
 
-			my $mgl = 0;
-			if ( $row->[$ngl_idx] > 1 ) {
-				$mgl++;
-			}
+      my $mgl = 0;
+      if ( $row->[$ngl_idx] > 1 ) {
+	$mgl++;
+      }
 
       push @sample_list, [ $row->[0], $row->[$resultset_ref->{column_hash_ref}{'sample_ids'}] ];
 
       for my $idx ($resultset_ref->{column_hash_ref}{'sample_ids'},
-                   $resultset_ref->{column_hash_ref}{'is_subpeptide_of'} ) {
-        $row->[$idx] =~ s/\s//g;
-        my @samples = split( /,/, $row->[$idx] );
-        if ( $idx == $resultset_ref->{column_hash_ref}{'sample_ids'} ) {
-          my $cnt = scalar( @samples );
-          $row->[$idx] = ( $htmlmode ) ? "<A HREF='$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$row->[0]&action=QUERY#samples' TITLE='$row->[$idx]'> $cnt </A>" : $cnt;
-        } else {
-          $row->[$idx] = scalar( @samples );
-        }
+		   $resultset_ref->{column_hash_ref}{'is_subpeptide_of'} ) {
+	$row->[$idx] =~ s/\s//g;
+	my @samples = split( /,/, $row->[$idx] );
+	if ( $idx == $resultset_ref->{column_hash_ref}{'sample_ids'} ) {
+	  my $cnt = scalar( @samples );
+	  $row->[$idx] = ( $htmlmode ) ? "<A HREF='$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$row->[0]&action=QUERY#samples' TITLE='$row->[$idx]'> $cnt </A>" : $cnt;
+	} else {
+	  $row->[$idx] = scalar( @samples );
+	}
       }
 
       my %sample_list = @sample_list;
-			my @errs;
+      my @errs;
 #      if($is_trypsin_build eq 'Y'){
-			  push @errs, 'mc' if $mc;
-			  push @errs, 'ntt' if $ntt < 2;
+      push @errs, 'mc' if $mc;
+      push @errs, 'ntt' if $ntt < 2;
 #      }
-			push @errs, 'mgl' if $mgl;
-			my $annot = '';
-			if ( @errs) {
-				$annot = '[' . join( ',', @errs ) . ']';
+      push @errs, 'mgl' if $mgl;
+      my $annot = '';
+      if ( @errs) {
+	$annot = '[' . join( ',', @errs ) . ']';
 #			} else {
 #        $instance_ids{$row->[14]}++;
-			}
+      }
 
       if ($sbeams->output_mode() eq 'html') {
-        $annot = "<FONT COLOR=RED><SUP>$annot</SUP></FONT>";
+	$annot = "<FONT COLOR=RED><SUP>$annot</SUP></FONT>";
       }
       $row->[4] = sprintf( "%0.2f", $row->[4] ) . " $annot";
-    my $cnt = 0;
+      my $cnt = 0;
 #    for my $p ( @{$resultset_ref->{precisions_list_ref}} ) {
 #			$log->debug( "$cnt) precisely $p for $row->[$cnt], $resultset_ref->{types_list_ref}->[$cnt] " );
 #			$cnt++;
@@ -1729,8 +1728,14 @@ sub handle_request {
     $resultset_ref->{types_list_ref}->[4] = 'varchar';
 #    $resultset_ref->{precision_list_ref}->[4] = 36;
 
+    my @row_color_list = ("#f3f1e4","#d3d1c4");
+
     #### Display the resultset
     $sbeams->displayResultSet(
+      row_color_scheme_ref=>{
+	change_n_rows => 4,
+	color_list => \@row_color_list,
+      },
       resultset_ref=>$resultset_ref,
       query_parameters_ref=>\%parameters,
       rs_params_ref=>\%rs_params,
@@ -1747,7 +1752,8 @@ sub handle_request {
     #### Display a hyperlink for viewing this information in Cytoscape
     if ($sbeams->output_mode() eq 'html') {
       my $GetProtein_hlink = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_build_id&protein_name=$protein_name&output_mode=cytoscape&action=GO";
-      print qq~<TABLE><TR><TD><A HREF="$GetProtein_hlink"><IMG BORDER="0" SRC="$HTML_BASE_DIR/images/PAcyto_icon.png"></A></TD><TD valign="center"><A HREF="$GetProtein_hlink">[View peptides and related proteins as a network with Cytoscape]</A>   </TD></TR></TABLE><BR>~;
+
+      print qq~<TABLE><TR><TD><A HREF="$GetProtein_hlink"><IMG BORDER="0" SRC="$HTML_BASE_DIR/images/PAcyto_icon.png"></A></TD><TD valign="center"><A HREF="$GetProtein_hlink">[ View peptides and related proteins as a network with Cytoscape ]</A></TD></TR></TABLE><BR>~;
     }
 
 
@@ -1759,11 +1765,14 @@ sub handle_request {
 #      base_url=>$base_url,
 #    );
 
-    print "</TD></TR></TABLE>" if $htmlmode;
+
+    print "</DIV>" if $htmlmode;  ## close section!
 
 
-    #############################################################
+
+    #############################################################################
     #### Display selected peptides - Experimental
+    #############################################################################
 
     #### Widget to allow show/hide of section
 #    my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_bestpeptideslist',
@@ -1779,7 +1788,7 @@ sub handle_request {
 #      link => $link
 #    );
 
-#    print qq~ <TABLE width="600">$bestPeptidesHeader</TABLE><TABLE><TR $tr><TD COLSPAN=2>~ if $htmlmode;
+#    print qq~ <TABLE width="100%">$bestPeptidesHeader</TABLE><TABLE><TR $tr><TD COLSPAN=2>~ if $htmlmode;
     #### Display the best peptide information
 #    my $samples = $bestPeptideSelector->getBestPeptidesDisplay(
 #      atlas_build_id => $atlas_build_id,
@@ -1790,111 +1799,72 @@ sub handle_request {
 #      base_url=>$base_url,
 #      tr_info => $tr,
 #    );
-    #print "<TABLE width='600'>$samples</TABLE>" if $htmlmode;
+    #print "<TABLE width='100%'>$samples</TABLE>" if $htmlmode;
 #    print "</TD></TR></TABLE>" if $htmlmode;
 
 
-    #############################################################
+
+
+    #############################################################################
     #### Display synthetic peptide info
-
+    #############################################################################
     unless ( $sbeams->isGuestUser() ) {
-
-      # Widget to allow show/hide of section
-      my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_dirty_peptide',
-        visible => 1,
-        tooltip => 'Show/Hide Section',
-        imglink => 1,
-        sticky => 1,
-       );
-
-      # Display the section header
-      my $PabstHeader = $sbeamsMOD->encodeSectionHeader(
-        text => 'Synthetic peptide info ',
-        link => $link
-      );
 
       #### Display the best peptide information
       my $dirty_peptide_display = $bestPeptideSelector->get_dirty_peptide_display(
-         atlas_build_id => $current_page->{atlas_build_id},
-         'link' => $link,
-         base_url=>$base_url,
-         biosequence_id => $biosequence_id,
-         tr_info => $tr,
-       );
+	atlas_build_id => $current_page->{atlas_build_id},
+	base_url=>$base_url,
+	biosequence_id => $biosequence_id,
+	tr_info => '',
+      );
 
       if ( $htmlmode && $dirty_peptide_display ) {
-        print qq~
-        <TABLE width="600">
-        $PabstHeader
-        </TABLE>
-        <TABLE>
-         <TR $tr>
-          <TD COLSPAN=2> $dirty_peptide_display
-          </TD>
-         </TR>
-        </TABLE>
-        ~;
+
+	print scalar $sbeams->make_toggle_section( textlink => 1,
+						   neutraltext => 'Synthetic peptide info',
+						   sticky => 1,
+						   name => 'getprotein_dirty_peptide_div',
+						   #ToDo?# tooltip => 'Show/Hide Section',
+						   imglink => 1,
+						   barlink => 1,
+						   visible => 1,
+						   content => $dirty_peptide_display);
       }
     }
 
-    #############################################################
-    # Display precomputed PABST peptides
 
-    #### Widget to allow show/hide of section
-    my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_pabst_static',
-      visible => 1,
-      tooltip => 'Show/Hide Section',
-      imglink => 1,
-      sticky => 1,
-     );
 
-    #### Display the section header
-    my $PabstHeader = $sbeamsMOD->encodeSectionHeader(
-      text => 'PABST Peptide Ranking ',
-      link => $link
-    );
+    #############################################################################
+    #### Display precomputed PABST peptides
+    #############################################################################
 
     #### Display the best peptide information
     my $pabst_display = $bestPeptideSelector->get_pabst_static_peptide_display(
-       'link' => $link,
-       base_url=>$base_url,
-       atlas_build_id => $atlas_build_id,
-       biosequence_name => $biosequence->{biosequence_name},
-       biosequence_id => $biosequence_id,
-       tr_info => $tr,
-     );
+      base_url=>$base_url,
+      atlas_build_id => $atlas_build_id,
+      biosequence_name => $biosequence->{biosequence_name},
+      biosequence_id => $biosequence_id,
+      tr_info => '',
+    );
 
     if ( $htmlmode && $pabst_display && $parameters->{motif} ne 'glyco'  ) {
-      print qq~
- <TABLE width="600">
-  $PabstHeader
- </TABLE>
- <TABLE>
-   <TR $tr>
-     <TD COLSPAN=2> $pabst_display
-     </TD>
-   </TR>
- </TABLE>
-    ~;
 
+      print scalar $sbeams->make_toggle_section( textlink => 1,
+						 neutraltext => 'PABST Peptide Ranking',
+						 sticky => 1,
+						 name => 'getprotein_pabst_static_div',
+						 #ToDo?# tooltip => 'Show/Hide Section',
+						 imglink => 1,
+						 barlink => 1,
+						 visible => 1,
+						 content => $pabst_display);
     }
 
-    #############################################################
+
+
+    #############################################################################
     #### Display theoretical highest observability peptides
-
-    #### Widget to allow show/hide of section
-    my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_highlyobservablelist',
-      visible => 1,
-      tooltip => 'Show/Hide Section',
-      imglink => 1,
-      sticky => 1,
-     );
-
-    #### Display the section header
-    my $highlyObservablePeptidesHeader = $sbeamsMOD->encodeSectionHeader(
-      text => 'Predicted Highly Observable Peptides',
-      link => $link
-    );
+    #############################################################################
 
     #### Calculate the best peptides to use
     my $best_peptide_information = $bestPeptideSelector->getHighlyObservablePeptides(
@@ -1912,28 +1882,34 @@ sub handle_request {
         best_peptide_information  => $best_peptide_information,
         query_parameters_ref=>\%parameters,
         column_titles_ref=>\@column_titles,
-        link => $link,
         base_url=>$base_url,
-        tr_info => $tr,
+        tr_info => '',
       );
 
-      print qq~
- <TABLE width="600">
-  $highlyObservablePeptidesHeader
- </TABLE>
- <TABLE>
-   <TR $tr>
-     <TD COLSPAN=2> $samples
-     </TD>
-   </TR>
- </TABLE>
-    ~;
-
+      print scalar $sbeams->make_toggle_section( textlink => 1,
+						 neutraltext => 'Predicted Highly Observable Peptides',
+						 sticky => 1,
+						 name => 'getprotein_highlyobservablelist_div',
+						 #ToDo?# tooltip => 'Show/Hide Section',
+						 imglink => 1,
+						 barlink => 1,
+						 visible => 1,
+						 content => $samples);
     }
 
 
-    #############################################################
+
+
+
+
+
+    #############################################################################
     #### Display annotated transitions
+    #############################################################################
+
+
+    ########## ToDo:: LM
+
 
     #### Widget to allow show/hide of section
     my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_transitions',
@@ -1993,7 +1969,7 @@ sub handle_request {
       #### Format table
       $transitionsHTML .= $sbeamsMOD->encodeSectionTable( header => 1,
                                                         tr_info => $tr,
-                                                          width => '600',
+                                                          width => '100%',
                                                    set_download => 1,
                                                    help_text => $trans_help,
                                                            nowrap => [12,13],
@@ -2001,8 +1977,8 @@ sub handle_request {
                                                          align  => [qw(left center center right right center right right right right left left left)],
                                                            rows => $mrm_transitions );
       #### Display table
-#      print "$trans_help<TABLE WIDTH=600><BR>$transitionsHTML</TABLE>\n" if $#{$mrm_transitions} && $htmlmode;
-      print "<TABLE WIDTH=600>$transitionsHTML</TABLE>\n" if $#{$mrm_transitions} && $htmlmode;
+#      print "$trans_help<TABLE WIDTH=100%><BR>$transitionsHTML</TABLE>\n" if $#{$mrm_transitions} && $htmlmode;
+      print "<TABLE WIDTH=100%>$transitionsHTML</TABLE>\n" if $#{$mrm_transitions} && $htmlmode;
     }
 
 
@@ -2032,70 +2008,77 @@ sub handle_request {
     #### Format table
     $markerHTML .= $sbeamsMOD->encodeSectionTable( header => 1,
                                                       tr_info => $tr,
-                                                        width => '600',
+                                                        width => '100%',
                                                        align  => [qw(left center left left left center)],
                                                          rows => $marker_peptides );
     #### Display table
-    print "<TABLE WIDTH=600><BR>$markerHTML</TABLE>\n";
+    print "<TABLE WIDTH=100%><BR>$markerHTML</TABLE>\n";
   }
 
 
 
-    #############################################################
-    ## Display the samples list ##
-
-    # Widget to allow show/hide of sample map section
-    my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_samplemap',
-                                                  visible => 1,
-                                                tooltip => 'Show/Hide Section',
-                                                 imglink => 1,
-                                                  sticky => 1 );
-
+    #############################################################################
+    #### Display the peptide map and samples list
+    #############################################################################
     my $sample_ids = getSampleList( sample_list => \@sample_list );
 
     $log->debug( "UA is $ENV{HTTP_USER_AGENT}" );
 
     my $sampleMap = $sbeamsMOD->getSampleMapDisplay( sample_ids => $sample_ids,
-                                                   instance_ids => \%instance_ids,
-                                                 atlas_build_id => $atlas_build_id,
-                                                           link => $link,
-                                                        tr_info => $tr,
-                                                    header_text => "Per-experiment expression for $max_peptides most highly observed peptides",
-                                                  second_header => "(Peptides listed by accession, * denotes single genome mapping)"
-																										);
-    print "<A NAME='samplemap'></A><TABLE width='600'>$sampleMap</TABLE>" if $htmlmode;
-
-    # Widget to allow show/hide of sample section
-    ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_samplelist',
-                                                  visible => 1,
-                                                tooltip => 'Show/Hide Section',
-                                                 imglink => 1,
-                                                  sticky => 1 );
+						     instance_ids => \%instance_ids,
+						     atlas_build_id => $atlas_build_id,
+						     no_header => 1,
+						     header_text => "Per-experiment expression for $max_peptides most highly observed peptides",
+						     second_header => "(Peptides listed by accession, * denotes single genome mapping)"
+						   );
 
     my $sampleDisplay = $sbeamsMOD->getSampleDisplay( sample_ids => $sample_ids,
-				                                                  'link' => $link,
-                                                     rows_to_show => 25,
-                                                         max_rows => 500,
-																												 tr_info => $tr );
-    print "<TABLE width='600'>$sampleDisplay</TABLE>" if $htmlmode;
+						      no_header => 1,
+						      rows_to_show => 25,
+						      max_rows => 500,
+						    );
 
-  #############################################################################
-  #### User Annotations Section
 
-  # TMF: remove this conditional if/when want to release this feature to production.
-  if ($parameters{'ann'}) {
-    my $hidden_form_fields = qq~
+    if ($htmlmode) {
+      print scalar $sbeams->make_toggle_section( textlink => 1,
+						 neutraltext => 'Experiment Peptide Map',
+						 sticky => 1,
+						 name => 'getprotein_samplemap_div',
+						 #ToDo?# tooltip => 'Show/Hide Section',
+						 imglink => 1,
+						 barlink => 1,
+						 visible => 1,
+						 content => "<A NAME='samplemap'></A><TABLE>$sampleMap</TABLE>" );
+
+      print scalar $sbeams->make_toggle_section( textlink => 1,
+						 neutraltext => 'Sample List',
+						 sticky => 1,
+						 name => 'getprotein_samplelist_div',
+						 #ToDo?# tooltip => 'Show/Hide Section',
+						 imglink => 1,
+						 barlink => 1,
+						 visible => 1,
+						 content => "<TABLE>$sampleDisplay</TABLE>" );
+    }
+
+
+    #############################################################################
+    #### User Annotations Section
+    #############################################################################
+    # TMF: remove this conditional if/when want to release this feature to production.
+    if ($parameters{'ann'}) {
+      my $hidden_form_fields = qq~
         <INPUT TYPE="hidden" NAME="ann" VALUE="1">
 	~;
-    print &printUserAnnotations(
-      protein_name => $protein_name,
-      parameters_href => \%parameters,
-      form_fields => $hidden_form_fields
-    );
-  }
+      print &printUserAnnotations( protein_name => $protein_name,
+				   parameters_href => \%parameters,
+				   form_fields => $hidden_form_fields
+				 );
+    }
 
 
-  #### If QUERY was not selected, then tell the user to enter some parameters
+
+    #### If QUERY was not selected, then tell the user to enter some parameters
   } else {
     if ($sbeams->invocation_mode() eq 'http') {
       print "<H4>Select parameters above and press QUERY</H4>\n";
@@ -2103,7 +2086,6 @@ sub handle_request {
       print "You need to supply some parameters to contrain the query\n";
     }
   }
-
 
 } # end handle_request
 
@@ -2318,7 +2300,7 @@ sub get_sequence_graphic {
                                          -pad_right => 50 );
 
 #  open( FIL, ">/tmp/colors.html" );
-#  print FIL "<HTML><HEAD></HEAD><BODY><TABLE WIDTH=600>\n";
+#  print FIL "<HTML><HEAD></HEAD><BODY><TABLE WIDTH=100%>\n";
 #  my @c = $panel->color_names();
 #  for my $c ( @c ) { print FIL "<TR><TD BGCOLOR=$c WIDTH=5%>$sp</TD><TD>$c$sp$sp</TD></TR>\n"; }
 #  print FIL "</TABLE></BODY></HTML>\n";
@@ -2409,7 +2391,7 @@ sub get_sequence_graphic {
                                -end => $stop,
                            -primary => $acc,
                       -display_name => $ugly_key,
-  -score => $score
+                             -score => $score
                              );
 
     if ( !scalar( @{$args{mappings}->{$seq}}) ) {
@@ -3069,10 +3051,6 @@ sub get_sequence_graphic {
               );
 
 
-
-
-
-
   push @legend, "<TR> <TD CLASS=lgnd_obs_sing>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{obs_sing}'>Observed peptide with single genome mapping</SPAN></TD> </TR>\n" if $single;
   push @legend, "<TR> <TD CLASS=lgnd_obs_multi>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{obs_multi}'>Observed peptide with ambiguous genome mapping</SPAN></TD> </TR>\n" if $multi;
   push @legend, "<TR> <TD CLASS=lgnd_sig_seq>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{sig_seq}'>$sp_rationale</SPAN></TD> </TR>\n" if $signal;
@@ -3139,27 +3117,27 @@ sub get_sequence_graphic {
 
   # TMF: this is breaking for me in csv mode
   # D'oh!
-	if ( $htmlmode ) {
-   	open( OUT, ">$img_file" ) || die "$!: $img_file";
-  	binmode(OUT);
-	  print OUT $panel->png;
+  if ( $htmlmode ) {
+    open( OUT, ">$img_file" ) || die "$!: $img_file";
+    binmode(OUT);
+    print OUT $panel->png;
     close OUT;
-	}
+  }
 
   my $tr = $args{tr_info} || '';
 #  my $tr_link =  "<TR><TD>$link</TD></TR>";
   # Generate and return HTML for graphic
   my $graphic =<<"  EOG";
-  <TABLE width='600'>
+  <TABLE>
     <TR $tr>
       <TD>
- 	      <img src='$HTML_BASE_DIR/$tmp_img_path/$file_name' ISMAP USEMAP='#$pid' alt='Sorry No Img' BORDER=0>
-  $map
+        <img src='$HTML_BASE_DIR/$tmp_img_path/$file_name' ISMAP USEMAP='#$pid' alt='Sorry No Img' BORDER=0>
+        $map
       </TD>
     </TR>
     <TR $tr>
-      <TD COLSPAN=2 ALIGN=RIGHT>
-        <TABLE BORDER=0 class=lgnd_outline>
+      <TD ALIGN='RIGHT'>
+        <TABLE BORDER='0' class='lgnd_outline'>
         $legend
         </TABLE>
       </TD>
@@ -3264,20 +3242,7 @@ sub displayAnnotatedSequence {
   my $data_ref = $resultset_ref->{data_ref};
   my @peptides = @{$args{peptides}};
 
-  # Widget to allow show/hide of sequence display section
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_sequence',
-                                                visible => 1,
-                                                tooltip => 'Show/Hide Section',
-                                                imglink => 1,
-                                                sticky => 1 );
-
-
-  my $section_header = $sbeamsMOD->encodeSectionHeader(
-    text=>'Sequence',
-    link =>$link,
-  );
-  print qq~ <TABLE width="600" BORDER=0> $section_header <TR $tr><TD> ~ if $htmlmode;
-
+  my $seqHTML = '';
 
   my $sequence = $biosequence->{biosequence_seq};
   my %start_positions;
@@ -3328,21 +3293,16 @@ sub displayAnnotatedSequence {
     $tmr_color{0} = 'blue';
     $tmr_end_positions{$protein_structure->{signal_peptide_length}} = '';
     $tmr_end_positions{$protein_structure->{signal_peptide_length}} = '/'
-      if ($protein_structure->{signal_peptide_is_cleaved} eq 'Y');
+	if ($protein_structure->{signal_peptide_is_cleaved} eq 'Y');
     $tmr_color{$protein_structure->{signal_peptide_length}} = 'orange';
     $notes_buffer = "(signal peptide: Y, length: $protein_structure->{signal_peptide_length}, cleaved: $protein_structure->{signal_peptide_is_cleaved}, probability: $protein_structure->{has_signal_peptide_probability})\n".$notes_buffer;
   }
-
-
-
-# print "<PRE>\n";
-
 
   my $biosequence_name = $args{biosequence}->{biosequence_name} || '';
   my $seq_length = length($sequence);
   if ( $biosequence_name =~ /[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}/ ) {
     my @concat = split( /\*/, $sequence );
-  	$sequence = $concat[0];
+    $sequence = $concat[0];
     $seq_length = length($concat[0]);
   }
 
@@ -3352,7 +3312,6 @@ sub displayAnnotatedSequence {
 
   my @annotation_lines;
 
-
   while ($i < $seq_length) {
 
     if ($end_positions{$i}) {
@@ -3361,7 +3320,6 @@ sub displayAnnotatedSequence {
       }
       $color_level -= $end_positions{$i} unless ($color_level == 0);
     }
-
 
     if ($start_positions{$i}) {
       if ($color_level == 0) {
@@ -3387,7 +3345,6 @@ sub displayAnnotatedSequence {
     }
   }
 
-
   if ($color_level) {
 #    print "</B></font>";
   }
@@ -3404,10 +3361,10 @@ sub displayAnnotatedSequence {
 #  $log->debug( "OBS: $observed_residues, SEQLEN: $seq_length, CNT $cnt" );
 #  print ' (' . int(($observed_residues)/($seq_length-$cnt)*1000)/10,"% of likely observable sequence)";
 
-  my %observed = (    start => [],
-                        end => [],
-                      class => 'pa_observed_sequence',
-                     number => 0 );
+  my %observed = ( start => [],
+		     end => [],
+		   class => 'pa_observed_sequence',
+		  number => 0 );
 
   for my $f ( @coverage ) {
 #    $log->debug( "coverage starts at " . $f->start() . " and ends at " . $f->end() );
@@ -3420,7 +3377,7 @@ sub displayAnnotatedSequence {
   if ( $args{glyco} ) {
     my %gsite = ( start => [], end => [], class => 'pa_glycosite', number => 0 );
     my $sites = $sbeamsMOD->get_site_positions( seq => $sequence,
-                                          pattern => 'N[^P][S|T]' );
+						pattern => 'N[^P][S|T]' );
     for my $site ( @$sites ) {
       push @{$gsite{start}}, $site;
       push @{$gsite{end}}, $site + 2;
@@ -3461,7 +3418,6 @@ sub displayAnnotatedSequence {
     }
   }
 
-#  print "</PRE></TD></TR>\n";
 
   my $ub_id = $parameters->{uniprot_db_id} || 0;
   my $use_nextprot = ( $parameters->{use_nextprot} ) ? 1 : 0;
@@ -3483,10 +3439,9 @@ sub displayAnnotatedSequence {
                                    is_trypsin_build => $args{is_trypsin_build},
                                        show_clustal => $args{show_clustal} );
 
-  print "<TR $tr><TD> $html_seq->{seq_display} </TD></TR>\n";
-  if ( $html_seq->{clustal_display} ) { # If we have any annotations
+  $seqHTML .= "$html_seq->{seq_display} <BR>\n";
 
-    print "<TR $tr><TD>&nbsp;</TD></TR>\n";
+  if ( $html_seq->{clustal_display} ) { # If we have any annotations
     my $variant_list = '';
     my $cnt;
 
@@ -3494,23 +3449,23 @@ sub displayAnnotatedSequence {
     $q->delete( 'use_nextprot' );
     my $self_url = $q->self_url();
     if ( $use_nextprot ) {
-      $source .= "(see <a href='$self_url'>Swiss Prot </a> annotations)"
+      $source .= "(see <a href='$self_url'>Swiss Prot </a> annotations)";
     } else {
       if ( $self_url =~ /\?/ ) {
-        $source .= "(see <a href='$self_url;use_nextprot=1'>neXtProt </a> annotations)"
+        $source .= "(see <a href='$self_url;use_nextprot=1'>neXtProt </a> annotations)";
       } else {
-        $source .= "(see <a href='$self_url?use_nextprot=1'>neXtProt </a> annotations)"
+        $source .= "(see <a href='$self_url?use_nextprot=1'>neXtProt </a> annotations)";
       }
     }
 
     if ( $html_seq->{has_variants} ) {
-      print "<TR $tr><TD><b>Annotated Variants from $source </b></TD></TR>\n";
+      $seqHTML .= "<b>Annotated Variants from $source </b><BR>\n";
       my $class = 'visible';
 #      <script src="https://code.jquery.com/jquery-3.1.0.js"></script>
-       
+
       # update (or remove conditional) when MuPit connection goes live.
       my $show_mupit = 1;
-      print q~
+      $seqHTML .= q~
       <script src="https://code.jquery.com/jquery-3.1.1.min.js" integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" crossorigin="anonymous"></script>
 
       <script type="text/javascript">
@@ -3593,7 +3548,7 @@ sub displayAnnotatedSequence {
             }
           }
         my $prot = $biosequence->{biosequence_name};
-        print "<script type='text/javascript'>check_mupit( '$prot', $var->[3], $var->[1] )</script>" unless $var->[1] eq 'Num'; #  if $class eq 'visible';
+        $seqHTML .= "<script type='text/javascript'>check_mupit( '$prot', $var->[3], $var->[1] )</script>" unless $var->[1] eq 'Num'; #  if $class eq 'visible';
         $class = ( $class eq 'hidden' ) ? 'hidden' : 'hidden';
         $prot =~ s/NX_//g;
         my $mupit_link = "&nbsp;&nbsp;|<a target=_mupit href=http://cravat.us/MuPIT_Interactive/?gm=${prot}:$var->[3]&protquery=y title='View this residue highlighted in green in the $prot structure at MuPit Interactive'><img src=$HTML_BASE_DIR/images/3D_smallest.png border=0></a>|";
@@ -3606,7 +3561,7 @@ sub displayAnnotatedSequence {
       if ( $cnt > 16 ) {
         $variant_list .= "</SPAN>";
         $var_toggle_link =  qq~ <A NAME=vars HREF="javascript:void(0)" onClick=showVariants() ID=vars_toggle>Show More</A>\n ~;
-        print qq~
+        $seqHTML .= qq~
         <SCRIPT TYPE="text/javascript">
         function showVariants() {
           var showVar = document.getElementById( "var_list" );
@@ -3621,11 +3576,11 @@ sub displayAnnotatedSequence {
        </SCRIPT>
         ~;
       }
-      print qq~ <TR $tr><TD> <PRE>$variant_list</PRE> $var_toggle_link </TD></TR> ~;
+      $seqHTML .= qq~ <PRE>$variant_list</PRE> $var_toggle_link <BR> ~;
     }
-    print "<TR $tr><TD>&nbsp;</TD></TR>\n";
-    print "<TR $tr><TD><B>Annotations in Sequence Context:</B> </TD></TR>\n";
-    print "<TR $tr><TD> $html_seq->{clustal_display} </TD></TR>\n";
+    $seqHTML .= "<BR>\n";
+    $seqHTML .= "<B>Annotations in Sequence Context:</B> <BR>\n";
+    $seqHTML .= "$html_seq->{clustal_display} <BR>\n";
   }
 
   if ( !$html_seq->{has_variants} ) {
@@ -3642,14 +3597,13 @@ sub displayAnnotatedSequence {
     } else {
       $look_src .= "(Look for <a href='$self_url?use_nextprot=$chg_src'>$alt_source </a> annotations)"
     }
-    print "<TR $tr><TD><b>No $atype found in $curr_source </b> $look_src</TD></TR>\n";
+    $seqHTML .= "<BR><b>No $atype found in $curr_source </b> $look_src<BR>\n";
   } # End if !variants
 
-  print "</TABLE>\n\n";
-  print "<TABLE><TR $tr><TD>Protein Coverage = ",int($observed_residues/$seq_length*1000)/10,"% ";
+  $seqHTML .= "Protein Coverage = ",int($observed_residues/$seq_length*1000)/10,"% ";
   my $likely = ( $seq_length-$cnt ) ? int(($observed_residues)/($seq_length-$cnt)*1000)/10 : 0;
-  print " ($likely% of likely observable sequence)</TD></TR></TABLE>";
-  #print "<BR><BR>Notes:<BR>\n$notes_buffer" if ($notes_buffer);
+  $seqHTML .= " ($likely% of likely observable sequence)<BR>";
+  #$seqHTML .= "<BR><BR>Notes:<BR>\n$notes_buffer" if ($notes_buffer);
 
 
   if ( $args{show_aa_content} ) {
@@ -3678,9 +3632,9 @@ sub displayAnnotatedSequence {
                     1 => '#eeeeff',
                     0 => '#ffffff' );
 
-    my $name = '<TR><TD Align=right><B>AA:</B></TD>';
-    my $count = '<TR><TD Align=right><B>Cnt:</B></TD>';
-    my $perc = '<TR><TD Align=right><B>Perc:</B></TD>';
+    my $name = '<TR><TD style="border-bottom:2px solid black; border-right:1px solid black; text-align:left;"><B>AA </B></TD>';
+    my $count = '<TR><TD style="border-right:1px solid black; text-align:left;"><B>Cnt </B></TD>';
+    my $perc  = '<TR><TD style="border-right:1px solid black; text-align:left;"><B> % </B></TD>';
     for my $aa ( sort( keys( %aa ) ) ) {
       my $pct = sprintf( "%0.1f", 100*($aa{$aa}/$tot) );
       my $color_key = int( $pct );
@@ -3688,25 +3642,38 @@ sub displayAnnotatedSequence {
       $color_key = 10 if $color_key > 10;
 
 #      $name .= "<TD Align=Center BGCOLOR='$colors{$color_key}'><FONT COLOR=$font_color>$aa</FONT></TD>";
-      $name .= "<TD Align=Center>$aa</TD>";
-      $count .= "<TD Align=right>$aa{$aa}</TD>";
-      $perc .= "<TD Align=Right BGCOLOR='$colors{$color_key}'><FONT COLOR=$font_color>$pct</FONT></TD>";
+      $name .= "<TD style='border-bottom:2px solid black; border-right:1px solid black; text-align:center;'>$aa</TD>";
+      $count .= "<TD style='border-right:1px solid black; text-align:right;'>$aa{$aa}</TD>";
+      $perc  .= "<TD style='border-right:1px solid black; text-align:right;' BGCOLOR='$colors{$color_key}'><FONT COLOR=$font_color>$pct</FONT></TD>";
     }
-    $name .= '</TR>';
+    $name  .= '</TR>';
     $count .= '</TR>';
-    $perc .= '</TR>';
+    $perc  .= '</TR>';
 
     my $slith = 'slith';
     $slith =<<"    END";
     <BR>
-      <TABLE BORDER=1>
+	<TABLE cellspacing="0" cellpadding="2">
         $name
         $count
         $perc
-       </TABLE>
+	</TABLE>
     <BR>
     END
-    print $slith;
+    $seqHTML .= $slith;
+  }
+
+
+  if ($htmlmode) {
+    print scalar $sbeams->make_toggle_section( textlink => 1,
+					    neutraltext => 'Sequence',
+					         sticky => 1,
+					           name => 'getprotein_sequence_div',
+					     #ToDo?# tooltip => 'Show/Hide Section',
+					        imglink => 1,
+					        barlink => 1,
+					        visible => 1,
+					        content => $seqHTML);
   }
 
 } # end displayAnnotatedSequence
@@ -4538,18 +4505,8 @@ sub displayExternalLinksSection {
   #### Process the arguments list
   my $biosequence = $args{biosequence} || die("ERROR: No biosequence passed");
 
-  #### Create widget to allow show/hide of overview section
-  my ($tr,$link) = $sbeams->make_table_toggle( name => 'getprotein_ExternalLinks',
-					       visible => 1,
-					       tooltip => 'Show/Hide Section',
-					       imglink => 1,
-					       sticky => 1 );
-
+  my $tr = 'class="hoverable"';
   my $external_links = '';
-  my $section_header = $sbeamsMOD->encodeSectionHeader(
-      text => 'External Links',
-      link => $link,
-  );
 
   $biosequence->{synonyms}->{'Entrez Gene Symbol'} ||= $biosequence->{synonyms}->{'Gene Symbol'};
   if ( !$biosequence->{synonyms}->{'UniProt'} ) {
@@ -4575,12 +4532,12 @@ sub displayExternalLinksSection {
   #### Display the link to PPDB
   if ($currentOrganism =~ /Arabidopsis/ && $biosequence->{biosequence_name} =~ /^A/ ){
      
-     $external_links .= $sbeamsMOD->encodeSectionItem(
-        key => 'Plant Proteome Database',
-        tr_info => $tr,
-        value => qq~<div style="display:none"><form name="hpa" method="POST" action="http://ppdb.tc.cornell.edu/dbsearch/gene.aspx?acc=$biosequence->{biosequence_name}" target="_info"><input type="hidden" name="search_str" value="$biosequence->{biosequence_name}"></form></div><a href="javascript:document.hpa.submit()" title="Look up $biosequence->{biosequence_name} in the Plant Proteome Database">$biosequence->{biosequence_name}</a>~,
-        url => "http://ppdb.tc.cornell.edu/dbsearch/gene.aspx?acc=$biosequence->{biosequence_name}",
-      );
+    $external_links .= $sbeamsMOD->encodeSectionItem(
+      key => 'Plant Proteome Database',
+      tr_info => $tr,
+      value => qq~<div style="display:none"><form name="hpa" method="POST" action="http://ppdb.tc.cornell.edu/dbsearch/gene.aspx?acc=$biosequence->{biosequence_name}" target="_info"><input type="hidden" name="search_str" value="$biosequence->{biosequence_name}"></form></div><a href="javascript:document.hpa.submit()" title="Look up $biosequence->{biosequence_name} in the Plant Proteome Database">$biosequence->{biosequence_name}</a>~,
+      url => "http://ppdb.tc.cornell.edu/dbsearch/gene.aspx?acc=$biosequence->{biosequence_name}",
+    );
   }
 
 
@@ -4609,7 +4566,6 @@ sub displayExternalLinksSection {
         value => $ensemblProtein,
         value => "<img src=$HTML_BASE_DIR/images/gpm_tiny.ico border=0 />" . '&nbsp;' . $ensemblProtein,
         url => "http://gpmdb.thegpm.org/protein/accession/$ensemblProtein",
-
       );
     }
   }
@@ -4655,20 +4611,19 @@ sub displayExternalLinksSection {
   }
 
 
-
-
-#####################
-
-
-
   #### Close section
   if ($sbeams->output_mode() eq 'html' && $external_links ) {
-    print qq~
-      <TABLE width="600">
-        $section_header
-				$external_links
-      </TABLE>
-    ~;
+    $external_links = "<TABLE style='margin-left:15px;'>$external_links</TABLE>";
+
+    print scalar $sbeams->make_toggle_section( textlink => 1,
+					    neutraltext => 'External Links',
+					         sticky => 1,
+					           name => 'getprotein_ExternalLinks_div',
+				        #ToDo?# tooltip => 'Show/Hide Section',
+				 	        imglink => 1,
+					        barlink => 1,
+					        visible => 1,
+					        content => $external_links );
   }
 
   return 1;
