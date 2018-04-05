@@ -971,26 +971,29 @@ sub getSamplePlotDisplay {
   my $SUB_NAME = 'getSamplePlotDisplay';
 
   for my $arg ( qw( n_obs obs_per_million ) ) {
-		unless ( defined ($args{$arg} ) ) {
+    unless ( defined ($args{$arg} ) ) {
       $log->error( "Missing required argument $arg" );
       return undef;
-		}
+    }
   }
 
+  $args{no_header} ||= 0;
+
   my $header = '';
-  if ( $args{link} ) {
-    $header .= $self->encodeSectionHeader( text => 'Observed in Experiments:',
-                                          anchor => 'samples',
-                                          link => $args{link},
-                                         );
-  } else {
-    $header .= $self->encodeSectionHeader( text => 'Observed in Experiments:',
-                                          anchor => 'samples'
-                                         );
+  unless ( $args{no_header} ) {
+
+    if ( $args{link} ) {
+      $header = $self->encodeSectionHeader( text => 'Observed in Experiments:',
+					  anchor => 'samples',
+					    link => $args{link} );
+    } else {
+      $header = $self->encodeSectionHeader( text => 'Observed in Experiments:',
+					  anchor => 'samples' );
+    }
   }
 
   my $trinfo = $args{tr_info} || '';
-	my $height = 50  + scalar( @{$args{n_obs}} ) * 12;
+  my $height = 50  + scalar( @{$args{n_obs}} ) * 12;
 
   # unable to hide legend as desired. Works on google viz playground, but not here (Alas!).
   my $GV = SBEAMS::Connection::GoogleVisualization->new();
@@ -999,16 +1002,16 @@ sub getSamplePlotDisplay {
                                   data_types => [ 'string', 'number' ],
                                     headings => [ 'Sample Name', 'Number of Observations' ],
                                   );
-  my $chart_2 = $GV->setDrawBarChart(  samples => $args{obs_per_million},
+  my $chart_2 = $GV->setDrawBarChart(samples => $args{obs_per_million},
                                      options => '', # qq~ legend: { position: 'none'}, title: "Obs per million spectra" ~,
                                   data_types => [ 'string', 'number' ],
                                     headings => [ 'Sample Name', 'Obs per million spectra' ],
-                                    chart_div => 'chart1_div',
-                                    no_div => 1,
+                                   chart_div => 'chart1_div',
+                                      no_div => 1,
 
-	);
+      );
   my $h_info = $GV->getHeaderInfo();
-	$chart = qq~
+  $chart = qq~
     <script type='text/javascript'>
     function toggle_plot() { 
       if ( window['next_plot'] == undefined ) {
@@ -1034,6 +1037,7 @@ sub getSamplePlotDisplay {
       </TD>
     </TR>
   ~;
+
   return ( wantarray() ) ? ($header, $chart) : $header . "\n" . $chart;
 }
 
@@ -1399,7 +1403,6 @@ sub getDetailedSampleDisplay {
   }
   unshift @samples,['Experiment ID','Experiment Name','NObs','Instrument','Enzyme','Publication'];
   my $table = $self->encodeSectionTable( header => 1, 
-                                         width => '600',
                                          tr_info => $args{tr_info},
                                          align  => [qw(center left right left left left)],
                                          nowrap => [qw(4 6)],
@@ -1408,6 +1411,7 @@ sub getDetailedSampleDisplay {
                                          rows => \@samples );
   return $table;
 }
+
 
 sub getPTMTableDisplay {
   my $self = shift;
@@ -1506,8 +1510,6 @@ sub get_individual_spectra_display {
   my $align = [qw(left center left left center left center center center left left left)];
 
   my $html = $self->encodeSectionTable( header => 1,
-					width => '600',
-					tr_info => $args{tr},
 					unified_widgets => 1,
 					set_download => 1,
 					colspan => 3,
@@ -1525,7 +1527,7 @@ sub get_individual_spectra_display {
 					truncate_msg => '  <b>Use link in Modified Peptides section to filter results</b>.',
       );
 
-  return "<TABLE WIDTH=600>$html\n";
+  return "<TABLE>$html\n";
 
 
 } # end 
