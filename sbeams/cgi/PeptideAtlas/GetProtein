@@ -1333,7 +1333,7 @@ sub handle_request {
     my $likelyHTML .= $sbeamsMOD->encodeSectionTable( header => 1,
 						      table_only => 1,
 						      width => '100%',
-						      chg_bkg_idx => 2,
+						      bkg_interval => 3,
 						      align  => [qw(left center center right)],
                                                       rows => \@rows );
     if ( 0 ) {
@@ -1933,7 +1933,7 @@ sub handle_request {
 							  set_download => 1,
 							  help_text => $trans_help,
 							  nowrap => [12,13],
-							  chg_bkg_idx => 3,
+							  bkg_interval => 3,
 							  align  => [qw(left center center right right center right right right right left left left)],
 							  rows => $mrm_transitions );
       #### Display table
@@ -1977,7 +1977,7 @@ sub handle_request {
       #### Format table
       $markerHTML .= $sbeamsMOD->encodeSectionTable( header => 1,
 						     colspan => 1,  #ugh...
-						     chg_bkg_idx => 3,
+						     bkg_interval => 3,
 						     align  => [qw(left center left left left center)],
 						     rows => $marker_peptides );
 
