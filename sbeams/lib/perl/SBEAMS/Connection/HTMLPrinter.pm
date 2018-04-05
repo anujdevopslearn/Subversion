@@ -236,7 +236,8 @@ sub printStyleSheet {
 
 my $module_styles =<<"  END_STYLE";
   .sortarrow { font-size: ${FONT_SIZE_LG}pt; font-weight: bold }
-  .sortheader{ font-size: ${FONT_SIZE}pt; font-weight: bold; line-height: 25px; color:white; }
+  .sortheader{ font-size: ${FONT_SIZE}pt; font-weight: bold; color:white; }
+  .sortheader th   { font-weight: bold; padding: 5px 12px; }
   .info_box { background: #F0F0F0; border: #000 1px solid; padding: 4px; width: 80%; color: #444444 }
   .small_super_text { vertical-align: super; font-size: ${FONT_SIZE_SM}pt }
   .clear_info_box { border: #000 1px solid; padding: 4px; width: 100%; color: #444444 }
@@ -322,7 +323,7 @@ my $module_styles =<<"  END_STYLE";
   .sec_obs_seq_bg_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5; background-color: springgreen }	
 
 table.freeze_table { table-layout: fixed; width: 1000px; *margin-left: -100px;/*ie7*/}
-     .freeze_table td, th { vertical-align: top; width:100px;  }
+     .freeze_table td { vertical-align: top; width:100px;  }
      .freeze_table th {  position:absolute; *position: relative; /*ie7*/ left:0; width:100px;  }
 
   /* Phosphopep */
