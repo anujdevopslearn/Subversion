@@ -281,6 +281,12 @@ sub handle_request {
     constraint_value=>$parameters{biosequence_name_constraint} );
   return if ($biosequence_name_clause eq '-1');
 
+  $parameters{biosequence_name_constraint} =~ s/^\s+//;
+  $parameters{biosequence_name_constraint} =~ s/\s+$//;
+  if ($parameters{biosequence_name_constraint} =~/null/i){
+    $biosequence_name_clause = 'AND BS.biosequence_name is null';
+  }
+
   #### Build BIOSEQUENCE_GENE_NAME constraint
   my $biosequence_gene_name_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"BS.biosequence_gene_name",
@@ -642,10 +648,10 @@ sub handle_request {
       ["peptide_accession","P.peptide_accession","Peptide Accession"],
       ["peptide_sequence","P.peptide_sequence","Peptide Sequence"],
 
-      ["best_probability","round(PI.best_probability,3)","Best Prob"],
+      ["best_probability","LTRIM(STR(PI.best_probability,7,3))","Best Prob"],
       ["n_observations","PI.n_observations","N Obs"],
-      ["empirical_proteotypic_score","round(PI.empirical_proteotypic_score,2)","Empirical Proteotypic Score"],
-      ["SSRCalc_relative_hydrophobicity","round(P.SSRCalc_relative_hydrophobicity,2)","SSRCalc Relative Hydrophob"],
+      ["empirical_proteotypic_score","LTRIM(STR(PI.empirical_proteotypic_score,7,2))","Empirical Proteotypic Score"],
+      ["SSRCalc_relative_hydrophobicity","LTRIM(STR(P.SSRCalc_relative_hydrophobicity,7,2))","SSRCalc Relative Hydrophob"],
       ["n_samples","PI.n_samples","N Experiments"],
 
       ["n_protein_mappings","PI.n_protein_mappings","N Protein Mappings"],
@@ -914,6 +920,7 @@ sub handle_request {
 
     #### Construct table help
     my $obs_help = get_table_help( 'peptides' );
+    $resultset_ref->{types_list_ref}->[$colnameidx{best_probability}] = 'varchar';
 
     #### Display the resultset
     $sbeams->displayResultSet(
