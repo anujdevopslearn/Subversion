@@ -440,7 +440,6 @@ sub processRequest {
 
 
       #### Get the observed fragments for this spectrum from the spectrast file.
-
       #### Get the data_location of the spectrum and raw speclib file
       use SBEAMS::PeptideAtlas::Spectrum;
       my $spectrum = new SBEAMS::PeptideAtlas::Spectrum;
@@ -1373,13 +1372,33 @@ sub interpretUSI {
 
   #print "datasetIdentifier=$datasetIdentifier\n";
   my $sql = qq~ 
-    SELECT sample_id,sample_accession,S.search_batch_id,is_public,repository_identifiers,data_location
+    SELECT SAMPLE_ID,
+           SAMPLE_ACCESSION,
+           S.SEARCH_BATCH_ID,
+           IS_PUBLIC,
+           REPOSITORY_IDENTIFIERS,
+           DATA_LOCATION
       FROM $TBAT_SAMPLE S
       JOIN $TBPR_SEARCH_BATCH SB ON ( SB.search_batch_id = S.search_batch_id )
      WHERE repository_identifiers LIKE '\%$usi->{datasetIdentifier}\%'
     ~;
   my @rows = $sbeams->selectSeveralColumns($sql);
   my $nRows = scalar(@rows);
+  if ($nRows == 0){
+    my $sql = qq~
+      SELECT DATASET_ID,
+             NULL,
+             NULL,
+             'Y', 
+             DATASET_IDENTIFIER,
+             LOCAL_DATA_LOCATION
+      FROM $TBAT_PUBLIC_DATA_REPOSITORY
+      WHERE DATASET_IDENTIFIER LIKE '\%$usi->{datasetIdentifier}\%'
+      AND LOCAL_DATA_LOCATION like '%sbeams%'
+    ~;
+    @rows = $sbeams->selectSeveralColumns($sql);
+    $nRows = scalar(@rows);
+  }
 
   my $foundFile = '';
   my $nFoundFiles = 0;
