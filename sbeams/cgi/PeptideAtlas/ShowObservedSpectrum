@@ -1414,18 +1414,18 @@ sub interpretUSI {
       my ($sample_id,$sample_accession,$search_batch_id,$is_public,$repository_identifiers,$data_location) = @{$row};
       unless ( -d $data_location ) {
         #### Also try the data/ directory as sometimes one can find it there
-	if ( $data_location =~ /^(.+\/)/ ) {
-          my $data_location2 = $1;
-          $data_location2 .= "data";
-          if ( -d $data_location2 ) {
-            $data_location = $data_location2;
-            $response->logEvent( level=>'WARNING', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
-              message=>"Looked for dataset '$datasetIdentifier' in '$data_location' and did not find it. But then looked in '$data_location2' and found it there. This is not ideal, but we can try to continue.");
-  	  } else {
-            $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'InvalidDataLocation', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
-              message=>"Although the dataset '$datasetIdentifier' was found, the internal data location appears to be invalid. This needs to be fixed. Please report this error. Looking for data location '$data_location'");
-	  }
-        }
+				if ( $data_location =~ /^(.+\/)/ ) {
+								my $data_location2 = $1;
+								$data_location2 .= "data";
+								if ( -d $data_location2 ) {
+									$data_location = $data_location2;
+									$response->logEvent( level=>'WARNING', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
+										message=>"Looked for dataset '$datasetIdentifier' in '$data_location' and did not find it. But then looked in '$data_location2' and found it there. This is not ideal, but we can try to continue.");
+								} else {
+											$response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'InvalidDataLocation', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
+												message=>"Although the dataset '$datasetIdentifier' was found, the internal data location appears to be invalid. This needs to be fixed. Please report this error. Looking for data location '$data_location'");
+								}
+							}
       }
 
       my @files = glob("$data_location/$msRunName.*");
@@ -1436,8 +1436,18 @@ sub interpretUSI {
             $foundFile = $file;
           }
         }
-      }
-    } 
+      }else{
+         @files = glob("$data_location/../$msRunName.*");
+				if ( scalar(@files) > 0 ) {
+					foreach my $file ( @files ) {
+						if ( $file =~ /mzML/ ) {
+							$nFoundFiles++;
+							$foundFile = $file;
+						}
+					}
+				}
+			} 
+    }
   }
 
   if ( $nFoundFiles == 0 ) {
