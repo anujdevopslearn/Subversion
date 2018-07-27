@@ -145,6 +145,7 @@ sub generateSpectrum {
 		my $ms1scanLabel  =$args{ms1scanLabel} || '';
 		my $ms1peaks_ref  =$args{ms1peaks};
     my $jsArrayName = $args{'jsArrayName'} || 'ms2peaks';
+    my $jsSpectrumDataString = $args{jsSpectrumDataString};
     my $jsArrayName_ms1 = $args{'jsArrayName_ms1'} || 'ms1peaks';
 
     my ($sequence,$mods, $nmod, $cmod) = &convertMods(modified_sequence => $modified_sequence);
@@ -168,6 +169,9 @@ sub generateSpectrum {
 	\$(document).ready(function () {
 
     %;
+
+    my $extraPeakSeries = '';
+    $extraPeakSeries = '"extraPeakSeries":extraPeakSeries,' if ( $jsSpectrumDataString );
 
     if ( $sequence ) {
       $lorikeet_html .= qq%
@@ -194,6 +198,7 @@ sub generateSpectrum {
 				      "ntermMod":$nmod,
 				      "ctermMod":$cmod,
               "selWinLow":$selWinLow,
+	      $extraPeakSeries
               "selWinHigh":$selWinHigh,
               "ms1scanLabel":"$ms1scanLabel",
               "ms1peaks":$jsArrayName_ms1,
@@ -216,13 +221,21 @@ sub generateSpectrum {
     %;
 
     }
-    $lorikeet_html .= "var $jsArrayName = [\n";
-    for my $ar_ref (@{$spectrum_aref}) {
+
+    #### If the Javascript data was already passed as a string from a custom annotater, print that
+    if ( $jsSpectrumDataString ) {
+      $lorikeet_html .= $jsSpectrumDataString;
+
+    #### Otherwise, build it myself
+    } else {
+      $lorikeet_html .= "var $jsArrayName = [\n";
+      for my $ar_ref (@{$spectrum_aref}) {
 				my $mz = $ar_ref->[0];	
 				my $in = $ar_ref->[1];
 				$lorikeet_html .= "[$mz,$in],\n";
+      }
+      $lorikeet_html .= "];\n";
     }
-    $lorikeet_html .= "];\n";
     if ($ms1peaks_ref){
 			$lorikeet_html .= "var $jsArrayName_ms1 = [\n";
 			for my $ar_ref (@{$ms1peaks_ref}) {
@@ -234,6 +247,7 @@ sub generateSpectrum {
     }else{
        $lorikeet_html .= "var $jsArrayName_ms1 = [[0.0,0.0]];\n";
     }
+    #### Close the Javascript and return the HTML
     $lorikeet_html .= "</script>\n";
     return $lorikeet_html;
 }
