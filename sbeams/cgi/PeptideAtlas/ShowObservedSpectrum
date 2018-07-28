@@ -440,6 +440,7 @@ sub processRequest {
 
 
       #### Get the observed fragments for this spectrum from the spectrast file.
+
       #### Get the data_location of the spectrum and raw speclib file
       use SBEAMS::PeptideAtlas::Spectrum;
       my $spectrum = new SBEAMS::PeptideAtlas::Spectrum;
@@ -469,6 +470,18 @@ sub processRequest {
       }
     }
 
+    #### Serialize the spectrum so that it can be parsed by the spectrum library parser
+    #### This is wasteful. FIXME
+    my @spectrumBuffer;
+    push(@spectrumBuffer,"Name: $peptidoform/$charge");
+    push(@spectrumBuffer,"PrecursorMZ: $parameters{'precursor_mass'}");
+    push(@spectrumBuffer,"NumPeaks: ".scalar(@spectrum_array));
+    foreach my $peak ( @spectrum_array ) {
+      push(@spectrumBuffer,"$peak->[0]\t$peak->[1]\t?");
+    }
+
+
+    #### Print some debugging information
     if ( 0 == 1 ) {
       print "<PRE>\n";
       print "charge=$charge,\n";
@@ -482,9 +495,11 @@ sub processRequest {
 
     #### Since the Lorikeet spectrum viewer apparently can't display a raw spectrum, fake an identification
     unless ( $peptidoform ) {
-      print "<BR><font color=\"red\">The Lorikeet spectrum viewer is currently unable to display a spectrum without any peptide ion interpretation. A temporary hack while we fix this is to set the sequence to 'MYSTERYPEPTIDE/2'</font><BR><BR>\n";      $peptidoform = "MYSTERYPEPTIDE";
+      print "<BR><font color=\"red\">The Lorikeet spectrum viewer is currently unable to display a spectrum without any peptide ion interpretation. A temporary hack while we fix this is to set the sequence to 'MYSTERYPEPTIDE/2'</font><BR><BR>\n";
+      $peptidoform = "MYSTERYPEPTIDE";
       $charge = 1;
     }
+
 
     #### Set up the default ion series settings to display
     my $series;
@@ -496,8 +511,21 @@ sub processRequest {
       $series = '1,1,1';
     }
 
+    #### Process the spectrum with my own annotater
+    my $spectrum = Proteomics::Spectra::Spectrum->new(peptideIon=>"$peptidoform/$charge");
+    #### Read the spectrum in from the text buffer
+    $spectrum->parseLibrarySpectrumEntry(buffer=>\@spectrumBuffer);
+    $spectrum->reannotate( ppm => 1 );
+
+    #### If requested, create a Javascript data buffer for the spectrum with my annotations
+    my $jsSpectrumDataString;
+    if ( $parameters{SAWB_annotation} && $parameters{SAWB_annotation} eq "Reannotated" ) {
+      $jsSpectrumDataString  = $spectrum->display(format=>'Lorikeet');
+      $series = '0,0,0';
+    }
+
     #### For CID
-    $parameters{'ShowA'} ||= '[1,0,0]';
+    $parameters{'ShowA'} ||= "[$series]";
     $parameters{'ShowB'} ||= "[$series]";
     $parameters{'ShowC'} ||= '[0,0,0]';
     $parameters{'ShowX'} ||= '[0,0,0]';
@@ -517,7 +545,7 @@ sub processRequest {
     #### Create a SpecViewer object and generate a Lorikeet display
     if ( $peptidoform ) {
       my $lorikeet = new SBEAMS::Proteomics::SpecViewer;
-        print $lorikeet->generateSpectrum(
+      print $lorikeet->generateSpectrum(
           charge            => $charge,
           modified_sequence => $peptidoform,
           precursor_mass    => $observedPrecursorMz || 100,
@@ -534,6 +562,7 @@ sub processRequest {
           selWinHigh        => $parameters{selWinHigh},
           ms1scanLabel      => $parameters{ms1scanLabel},
           ms1peaks          => $parameters{ms1peaks},
+	      jsSpectrumDataString => $jsSpectrumDataString
         );
     } else {
       print "<BR><BR>The Lorikeet spectrum viewer is currently unable to display spectrum without any peptide ion interpretation. A temporary hack while we fix this is to set the sequence to 'PEPTIDE'<BR><BR>\n";
@@ -582,6 +611,7 @@ sub processRequest {
     spectrumAnalysisWorkbench(
       parameters => \%parameters,
       spectrum_array => \@spectrum_array,
+      bufferedSpectrum => \@spectrumBuffer,
       peptideIon => "$peptidoform/$charge",
       hidden_form_fields => $hidden_form_fields,
     );
@@ -597,17 +627,8 @@ sub spectrumAnalysisWorkbench {
   my $parameters = $args{parameters};
   my $peptideIon = $args{peptideIon};
   my $spectrum_array = $args{spectrum_array};
+  my $bufferedSpectrum = $args{bufferedSpectrum};
   my $hidden_form_fields = $args{hidden_form_fields};
-
-  #### Serialize the spectrum so that it can be parsed by the spectrum library
-  my @spectrumBuffer;
-  push(@spectrumBuffer,"Name: $peptideIon");
-  push(@spectrumBuffer,"PrecursorMZ: $parameters->{'precursor_mass'}");
-  push(@spectrumBuffer,"NumPeaks: ".scalar(@{$spectrum_array}));
-  foreach my $peak ( @{$spectrum_array} ) {
-    push(@spectrumBuffer,"$peak->[0]\t$peak->[1]\t?");
-  }
-
 
   #### Display the workbench controls
   displayWorkbenchControls(
@@ -618,7 +639,7 @@ sub spectrumAnalysisWorkbench {
   #### Display the spectrum as a text peak list
   showSpectrumText(
     parameters => $parameters,
-    spectrumBuffer => \@spectrumBuffer,
+    spectrumBuffer => $bufferedSpectrum,
     peptideIon => $peptideIon,
   );
 
@@ -655,6 +676,17 @@ sub displayWorkbenchControls {
     optionList => [
       'none' => 'None',
       'peakTo100' => 'Normalize peak to 100%',
+    ],
+  );
+
+  my $annotationControl = buildSelectListControl(
+    name => 'SAWB_annotation',
+    value => $parameters->{SAWB_annotation},
+    default => 'Lorikeet',
+    parameters => $parameters,
+    optionList => [
+      'Lorikeet' => 'Lorikeet default annotations',
+      'Reannotated' => 'Reannotated interpretations',
     ],
   );
 
@@ -735,6 +767,7 @@ sub displayWorkbenchControls {
       $hidden_form_fields
       Alternate sequence: <INPUT TYPE="text" NAME="alt_sequence" SIZE="40" VALUE="$alt_sequence"></INPUT>
       $alternateChargeControl<BR>
+      Visual Display: $annotationControl<BR>
       Text Display: $displayModeControl<BR>
       Normalization: $normalizationControl
       Minimum Intensity: $minimumIntensityFilterControl<BR>
@@ -1414,20 +1447,21 @@ sub interpretUSI {
       my ($sample_id,$sample_accession,$search_batch_id,$is_public,$repository_identifiers,$data_location) = @{$row};
       unless ( -d $data_location ) {
         #### Also try the data/ directory as sometimes one can find it there
-				if ( $data_location =~ /^(.+\/)/ ) {
-								my $data_location2 = $1;
-								$data_location2 .= "data";
-								if ( -d $data_location2 ) {
-									$data_location = $data_location2;
-									$response->logEvent( level=>'WARNING', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
-										message=>"Looked for dataset '$datasetIdentifier' in '$data_location' and did not find it. But then looked in '$data_location2' and found it there. This is not ideal, but we can try to continue.");
-								} else {
-											$response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'InvalidDataLocation', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
-												message=>"Although the dataset '$datasetIdentifier' was found, the internal data location appears to be invalid. This needs to be fixed. Please report this error. Looking for data location '$data_location'");
-								}
-							}
+        if ( $data_location =~ /^(.+\/)/ ) {
+          my $data_location2 = $1;
+          $data_location2 .= "data";
+          if ( -d $data_location2 ) {
+            $data_location = $data_location2;
+            $response->logEvent( level=>'WARNING', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
+              message=>"Looked for dataset '$datasetIdentifier' in '$data_location' and did not find it. But then looked in '$data_location2' and found it there. This is not ideal, but we can try to continue.");
+          } else {
+            $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'InvalidDataLocation', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
+              message=>"Although the dataset '$datasetIdentifier' was found, the internal data location appears to be invalid. This needs to be fixed. Please report this error. Looking for data location '$data_location'");
+          }
+        }
       }
 
+      #### Try to find the mzML file corresponding to this run
       my @files = glob("$data_location/$msRunName.*");
       if ( scalar(@files) > 0 ) {
         foreach my $file ( @files ) {
@@ -1436,17 +1470,20 @@ sub interpretUSI {
             $foundFile = $file;
           }
         }
-      }else{
-         @files = glob("$data_location/../$msRunName.*");
-				if ( scalar(@files) > 0 ) {
-					foreach my $file ( @files ) {
-						if ( $file =~ /mzML/ ) {
-							$nFoundFiles++;
-							$foundFile = $file;
-						}
-					}
-				}
-			} 
+
+      #### If the mzML is not found, try going up a level and looking again
+      } else {
+        @files = glob("$data_location/../$msRunName.*");
+        if ( scalar(@files) > 0 ) {
+          foreach my $file ( @files ) {
+            if ( $file =~ /mzML/ ) {
+              $nFoundFiles++;
+              $foundFile = $file;
+            }
+          }
+        }
+      } # end else
+
     }
   }
 
