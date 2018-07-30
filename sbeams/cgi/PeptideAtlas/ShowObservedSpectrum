@@ -39,6 +39,7 @@ use File::Basename;
 use Data::Dumper;
 
 use lib "/net/db/projects/Proteomics/lib";
+#use lib "/net/db/projects/Proteomics/devED/lib";
 use Proteomics::Spectra::UniversalSpectrumIdentifier;
 use Proteomics::Response qw(processParameters);
 use Proteomics::Config;
@@ -1327,11 +1328,11 @@ sub getUSIInputForm {
        function fillInUSI(input_field) {
          exampleNumber = Math.floor((Math.random()*3))
          if ( exampleNumber == 0 ) {
-           document.USIForm.USI.value = "mzspec:PXD000561::Adult_Urinarybladder_bRP_Elite_71_f14:scan:1872:FSGSSSGADR/2";
+           document.USIForm.USI.value = "mzspec:PXD000561:Adult_Urinarybladder_bRP_Elite_71_f14:scan:1872:FSGSSSGADR/2";
          } else if ( exampleNumber == 0 ) {
-           document.USIForm.USI.value = "mzspec:PXD000865::00603_F01_P004608_B00F_A00_R1:scan:14453:SSLLDVLAAR/2";
+           document.USIForm.USI.value = "mzspec:PXD000865:00603_F01_P004608_B00F_A00_R1:scan:14453:SSLLDVLAAR/2";
          } else {
-           document.USIForm.USI.value = "mzspec:PXD002255::ES_XP_Ubi_97H_HCD_349:scan:9617:LAEIYVNSSFYK/2";
+           document.USIForm.USI.value = "mzspec:PXD002255:ES_XP_Ubi_97H_HCD_349:scan:9617:LAEIYVNSSFYK/2";
          }
          return;
        }
