@@ -485,7 +485,7 @@ sub handle_request {
 
 
      if ($authentication->{result} eq 'Success') {
-       print "<B><font color=\"red\">Welcome $firstName $lastName</B></font>\n";
+       print "<B><font color=\"red\">Welcome $firstName $lastName ($emailAddress)</B></font>\n";
        print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
        print $q->submit(-name => "action",
 			-value => 'LOGOUT',
