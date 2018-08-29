@@ -62,7 +62,12 @@ $current_work_group_name = $sbeams->getCurrent_work_group_name;
 $PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
 Usage: $PROG_NAME --expt_id 73 --PX_acc PXD000296
-     : $PROG_NAME --npr 1 --PX_accession PXD000111 --verbose 3 --PA_accession PAe003970,PAe003971 --RPX_accession RPXD000111
+     \$SBEAMS/lib/scripts/PeptideAtlas/PA2ProteomeXchange.pl --npr 1 \
+     --PX_accession PXD000111 --verbose 3 --PA_accession PAe003970,PAe003971 \
+     --RPX_accession RPXD000650 
+
+     \$SBEAMS/lib/scripts/PeptideAtlas/PA2ProteomeXchange.pl --expt_id 47 \
+       --PX_accession PXD0000622 --changeLog "Update XML version"
 
 Options:
   --verbose n                 Set verbosity level.  default is 0
@@ -299,7 +304,7 @@ sub get_PXD_info {
 			while(my $entry = readdir DIR) {
 				next if($entry !~ /.xml$/ || $entry =~ /prot/ || ! -e "$dir/$entry");
 				print "Checking $entry for mods\n" if $VERBOSE >2;
-				@mods  = `egrep '<aminoacid_modification|search_engine' $dir/$entry`;
+				@mods  = `egrep '<aminoacid_modification|search_engine|<terminal_modification' $dir/$entry`;
 				last;
 			}
 			my $nmods = scalar @mods;
@@ -308,9 +313,9 @@ sub get_PXD_info {
 				my $residue;
 				my $mass;
 				print "$mod\n" if $VERBOSE > 2;
-				if($mod =~ /aminoacid="(\w)" massdiff="([\d\.]+)" mass="([\d\.]+)"\s+variable="."/){
-					$residue = $1;
-					$mass = sprintf "%d", int($2 + 0.5);
+				if($mod =~ /(aminoacid|terminus)="(\w)" massdiff="([\d\.]+)" mass="([\d\.]+)".*variable="."/){
+					$residue = $2;
+					$mass = sprintf "%d", int($3 + 0.5);
 					print "Parsed a mod! $residue $mass\n" if $VERBOSE > 1;
 					@mod_hash = ( @mod_hash, get_modification_hash(residue=>$residue,mass=>$mass,) ) ;
 				}
@@ -326,7 +331,7 @@ sub get_PASSEL_info {
   my %args = @_;
   my $expt_id = $args{expt_id};
   my $px_info_href = $args{px_info_href};
-
+  
   # Check that this experiment exists; get title and sample_accession
   my $query = qq~
   SELECT sele.experiment_title, s.sample_accession
@@ -341,6 +346,7 @@ sub get_PASSEL_info {
     exit();
   }
   my ($expt_title, $sample_accession) = @{$rows[0]};
+
   $px_info_href->{expt_title} = $expt_title;
 
   # Get sample infos
@@ -435,7 +441,7 @@ sub get_PeptideAtlas_info {
     while(my $entry = readdir DIR) {
       next if($entry !~ /.xml$/ || $entry =~ /prot/ || ! -e "$dir/$entry");
       print "Checking $entry for mods\n" if $VERBOSE >2;
-      @mods  = `egrep '<aminoacid_modification|search_engine' $dir/$entry`;
+      @mods  = `egrep '<aminoacid_modification|search_engine|<terminal_modification' $dir/$entry`;
       last;
     }
     my $nmods = scalar @mods;
@@ -445,11 +451,11 @@ sub get_PeptideAtlas_info {
       my $residue;
       my $mass;
       print "$mod\n" if $VERBOSE > 2;
-      if($mod =~ /aminoacid="(\w)" massdiff="([\d\.]+)" mass="([\d\.]+)"\s+variable="."/){
-	$residue = $1;
-	$mass = sprintf "%d", int($2 + 0.5);
-	print "Parsed a mod! $residue $mass\n" if $VERBOSE > 1;
-	@mod_hash = ( @mod_hash, get_modification_hash(residue=>$residue,mass=>$mass,) ) ;
+      if($mod =~ /(aminoacid|terminus)="(\w)" massdiff="([\d\.]+)" mass="([\d\.]+)".*variable="."/){
+				$residue = $2;
+				$mass = sprintf "%d", int($3 + 0.5);
+				print "Parsed a mod! $residue $mass\n" if $VERBOSE > 1;
+				@mod_hash = ( @mod_hash, get_modification_hash(residue=>$residue,mass=>$mass,) ) ;
       }
     }
     my %mod_hash = @mod_hash;
@@ -483,9 +489,27 @@ sub get_modification_hash {
   my $residue = $args{residue};
   my $massdiff = $args{mass};
   my @mods = ();
-
+  if($residue =~ /(K|Y)/ && $massdiff == 144){
+    push (@mods, 'iTRAQ4plex-114 reporter+balance reagent acylated residue', '01485');
+  }
+  #if($residue eq 'Y' && $massdiff = 144){
+  #  push (@mod, 'iTRAQ4plex-114 reporter+balance reagent O4\'-acylated tyrosine', '1488');
+  #}
+  #if($residue eq 'n' && $massdiff = 144){
+  #  push (@mod , 
+  #}
+  if($residue eq 'n' && $massdiff == 42){
+    push (@mods, 'acetylated residue' , '00394');
+  }
   if ($residue eq 'C' && $massdiff == 57) {
     push ( @mods, 'S-carboxamidomethyl-L-cysteine' , '01060' );
+  }
+  if($residue eq 'C' && $massdiff == 58){
+    push (@mods, 'iodoacetic acid derivatized amino-terminal residue', '01084');
+  }
+  if ($residue eq 'C' && $massdiff == 105) {
+    push ( @mods, 'L-selenocysteine (Cys)', '00686' );
+    push ( @mods, 'iodoacetamide derivatized residue', '00397' );
   }
   if ($residue eq 'M' && $massdiff == 16) {
     push ( @mods, 'L-methionine sulfoxide', '00719' );
@@ -497,8 +521,12 @@ sub get_modification_hash {
     push ( @mods, '6x(13)C,2x(15)N labeled L-lysine', '00582' );
   }
   if ($residue eq 'K' && $massdiff == 42){
-    push ( @mods, 'acetylation reaction', '0192'); 
+    push ( @mods, 'N2-acetyl-L-lysine', '00057'); 
   }
+  if ($residue eq 'K' && $massdiff == 68){
+    push ( @mods, 'N6-crotonyl-L-lysine', '01892');
+  }
+
   if ($residue eq 'R' && $massdiff == 6) {
     push ( @mods, '6x(13)C labeled L-arginine', '01331' );
   }
@@ -506,17 +534,13 @@ sub get_modification_hash {
     push ( @mods, '6x(13)C,4x(15)N labeled L-arginine', '00587' );
   }
   if ($residue eq 'S' && ($massdiff == 80 || $massdiff == 79)) {
-    push ( @mods, 'O-phosphorylated L-serine', '00046' );
+    push ( @mods, 'O-phospho-L-serine', '00046' );
   }
   if ($residue eq 'L' && $massdiff == 6) {
     push ( @mods, '6x(13)C labeled L-leucine', '01332' );
   }
   if (($massdiff >= 1) && ($massdiff <= 4)) {
-    push ( @mods, 'isotope labeled residue ', '00702' );
-  }
-  if ($residue eq 'C' && $massdiff == 105) {
-    push ( @mods, 'L-selenocysteine (Cys)', '00686' );
-    push ( @mods, 'iodoacetamide derivitized residue', '00397' );
+    push ( @mods, 'isotope labeled residue', '00702' );
   }
 
   return @mods;
@@ -747,7 +771,7 @@ sub get_PASS_info {
     $px_info_href->{lab_head_country} = $info_aref->[9] || '';
 
     ### Parse out some infos from the PASS description file
-    my $passdir = "/regis/passdata/home/$datasetIdentifier";
+    my $passdir = "/proteomics/peptideatlas2/home/$datasetIdentifier";
     my $pass_descr = "$passdir/${datasetIdentifier}_DESCRIPTION.txt";
     print "PASS description file is $pass_descr\n" if $VERBOSE;
     my $publication_name;
@@ -838,9 +862,9 @@ sub write_PX_XML {
 
   $writer->startTag("ProteomeXchangeDataset",
     "xmlns:xsi"=>"http://www.w3.org/2001/XMLSchema-instance",
-    "xsi:noNamespaceSchemaLocation"=>"proteomeXchange-1.1.0.xsd",
+    "xsi:noNamespaceSchemaLocation"=>"proteomeXchange-1.2.0.xsd",
     "id"=>"${PX_accession}.${PX_version}",
-    "formatVersion"=>"1.1.0",
+    "formatVersion"=>"1.2.0",
   );
 
      
@@ -862,9 +886,9 @@ sub write_PX_XML {
   $writer->startTag("CvList");
   $writer->emptyTag("Cv",
             id => 'MS' ,
-            fullName => 'Proteomics Standards Initiative Mass Spectrometry Ontology',
-            version => "3.57.0",
-            uri => 'http://psidev.cvs.sourceforge.net/*checkout*/psidev/psi/psi-ms/mzML/controlledVocabulary/psi-ms.obo',
+            fullName => 'PSI-MS',
+            version => "4.1.12",
+            uri => "https://raw.githubusercontent.com/HUPO-PSI/psi-ms-Cv/master/psi-ms.obo",
             );
   $writer->emptyTag("Cv",
             id => 'PRIDE' ,
@@ -874,10 +898,17 @@ sub write_PX_XML {
             );
   $writer->emptyTag("Cv",
             id => 'MOD' ,
-            fullName=>"Proteomics Standards Initiative Mass Modifications Ontology", 
-            version=>"1.012.0",
-            uri=>"http://psidev.cvs.sourceforge.net/*checkout*/psidev/psi/mod/data/PSI-MOD.obo",
+            fullName=>"PSI-MOD", 
+            version=>"1.2",
+            uri=>"https://raw.githubusercontent.com/HUPO-PSI/psi-mod-CV/master/PSI-MOD.obo",
             );
+  $writer->emptyTag("Cv",
+            id => 'UNIMOD' ,
+            fullName=>"UNIMOD",
+            version=>"1.2",
+            uri=>"http://www.unimod.org/obo/unimod.obo",
+            );
+
   $writer->endTag("CvList");
 
 
@@ -903,8 +934,8 @@ sub write_PX_XML {
   $writer->endTag("Description");
 
   $writer->startTag("ReviewLevel");
-  $cv_ref = 'PRIDE';
-  $cv_acc = $OPTIONS{'npr'} ? '0000415': '0000414';
+  $cv_ref = 'MS';
+  $cv_acc = $OPTIONS{'npr'} ? '1002855': '1002854';
   my $cv_name = $OPTIONS{'npr'} ? "Non peer-reviewed dataset" :
   "Peer-reviewed dataset";
   $writer->emptyTag("cvParam",
@@ -916,8 +947,8 @@ sub write_PX_XML {
 
   ### OR 0000417 for Unsupported dataset by repository
   $writer->startTag("RepositorySupport");
-  $cv_ref = 'PRIDE';
-  $cv_acc = '0000416';
+  $cv_ref = 'MS';
+  $cv_acc = '1002856';
   $writer->emptyTag("cvParam",
     "cvRef"=>"$cv_ref",
     "accession"=>"${cv_ref}:$cv_acc",
@@ -951,9 +982,9 @@ sub write_PX_XML {
   # Another option is 0000397 Data derived from previous dataset
   $writer->startTag("DatasetOriginList");
   $writer->startTag("DatasetOrigin");
-  $cv_ref = 'PRIDE';
+  $cv_ref = 'MS';
   if($PX_accession =~ /^RPX[DT]/){
-    $cv_acc = '0000397';
+    $cv_acc = '1002863';
     $writer->emptyTag("cvParam",
       "cvRef"=>"$cv_ref",
       "accession"=>"${cv_ref}:$cv_acc",
@@ -1023,7 +1054,7 @@ sub write_PX_XML {
     $instrument_id = "Q-Trap";
   } elsif ($instrument_name =~ /triple.*quad/i) {
     $instrument_id = "QQQ";
-  } elsif ($instrument_name =~ /tsq/i) {
+  } elsif ($instrument_name =~ /tsq/i or $instrument_name =~ /vantage/i) {
     $instrument_id = "TSQ";
   } else {
     $instrument_id = "other";
@@ -1035,10 +1066,13 @@ sub write_PX_XML {
   #$cv_acc = 1000870;
   my %instrument_cv_acc = (
     '4000 QTRAP' => 1000139,
+    '4000 Q-Trap' => 1000139,
+    '6500 QTRAP' => 1002581,
     'Q TRAP' => 1000187,
     'Q-Tof micro' => 1000189,
     'QSTAR' => 1000190,
     'TSQ Quantum' => 1000199,
+    'TSQ Vantage' => 1001510,
     'LTQ' => 1000447,
     'LTQ FT' => 1000448,
     'LTQ Orbitrap' => 1000449,
@@ -1048,10 +1082,17 @@ sub write_PX_XML {
     'QSTAR XL' => 1000657,
     'QTRAP 5500' => 1000931,
     'TripleTOF 5600' => 1000932,
+    '6420 Triple Quadrupole LC/MS' => 1002444,
+    '6410 Triple Quadrupole LC/MS' => 1000477,
+    '6460 Triple Quadrupole LC/MS' => 1002445,
+    '6490 Triple Quadrupole LC/MS' => 1002446, 
+    'LTQ Orbitrap Velos' => 1001742,
+    'Xevo TQ-S' => 1001792,
   );
   if($instrument_name =~ /AB SCIEX 5500 QTrap/){
     $instrument_name = 'QTRAP 5500';
   }
+  
   if(defined $instrument_cv_acc{$instrument_name}){
     $cv_acc = $instrument_cv_acc{$instrument_name};
 		$writer->emptyTag("cvParam",
@@ -1074,8 +1115,8 @@ sub write_PX_XML {
   ###
   $writer->startTag("ModificationList");
   if (! scalar keys %{$px_info_href->{modifications_href}}) {
-    $cv_ref = "PRIDE";
-    $cv_acc = '0000398';
+    $cv_ref = "MS";
+    $cv_acc = '1002864';
     $writer->emptyTag("cvParam",
       "cvRef"=>"$cv_ref",
       "accession"=>"${cv_ref}:$cv_acc",
@@ -1230,8 +1271,8 @@ sub write_PX_XML {
       #  because pubmed ID is delayed somewhat after publication)
       } else {
 				$writer->startTag("Publication", "id"=>"submitted01");
-				$cv_ref = "PRIDE";
-				$cv_acc = "0000432";   
+				$cv_ref = "MS";
+				$cv_acc = "1002858";   
 				$writer->emptyTag("cvParam",
 					"cvRef"=>"$cv_ref",
 					"accession"=>"${cv_ref}:$cv_acc",
@@ -1239,8 +1280,8 @@ sub write_PX_XML {
 				); 
         $refline =~ s/\s?\(\d{4}\)/, submitted/;
       }
-      $cv_ref = "PRIDE";
-      $cv_acc = "0000400";
+      $cv_ref = "MS";
+      $cv_acc = "1002866";
       $writer->emptyTag("cvParam",
 				"cvRef"=>"$cv_ref",
 				"accession"=>"${cv_ref}:$cv_acc",
@@ -1254,15 +1295,15 @@ sub write_PX_XML {
            $px_info_href->{publication_name} !~ /unpublished/i &&
 			 $px_info_href->{publication_name} !~ /not published/i) {
 				$writer->startTag("Publication", "id"=>"submitted01");
-				$cv_ref = "PRIDE";
-				$cv_acc = "0000432";    # need to update in future
+				$cv_ref = "MS";
+				$cv_acc = "1002858";    # need to update in future
 				$writer->emptyTag("cvParam",
 				"cvRef"=>"$cv_ref",
 				"accession"=>"${cv_ref}:$cv_acc",
 				"name"=>"Dataset with its publication pending",
 			);
-			$cv_ref = "PRIDE";
-			$cv_acc = "0000400";
+			$cv_ref = "MS";
+			$cv_acc = "1002866";
 			$writer->emptyTag("cvParam",
 				"cvRef"=>"$cv_ref",
 				"accession"=>"${cv_ref}:$cv_acc",
@@ -1273,8 +1314,8 @@ sub write_PX_XML {
 
   } else {
     $writer->startTag("Publication", "id"=>"unpublished01");
-    $cv_ref = "PRIDE";
-    $cv_acc = '0000412';
+    $cv_ref = "MS";
+    $cv_acc = '1002853';
     $writer->emptyTag("cvParam",
       "cvRef"=>"$cv_ref",
       "accession"=>"${cv_ref}:$cv_acc",
