@@ -87,7 +87,7 @@ sub do_simple_digestion {
 
   my $enz = lc( $args{enzyme} );
 
-  if ( !grep /$enz/, qw( gluc trypsin lysc cnbr aspn chymotrypsin ) ) {
+  if ( !grep /$enz/, qw( gluc trypsin lysc lysarg_r lysarg_k cnbr aspn lysarginase chymotrypsin ) ) {
     $log->debug( "Unknown enzyme $enz" );
     return;
   }
@@ -96,17 +96,26 @@ sub do_simple_digestion {
     return $self->do_chymotryptic_digestion( %args );
   } elsif (  $enz =~ /trypsin/ ) {
     return $self->do_tryptic_digestion( %args );
+  } elsif (  $enz =~ /lysarginase/ ) {
+    my $kpos = $self->do_simple_digestion( %args, enzyme => 'lysarg_k' );
+    my $rpos = $self->do_simple_digestion( %args, enzyme => 'lysarg_r' );
+    my @sorted = ( sort { $a <=> $b } @{$kpos}, @{$rpos} );
+    return \@sorted;
   }
 
   # trypsin, GluC, LysC, and CNBr clip Cterminally
   my $term = 'C';
 
-  # AspN is the outlier
-  $term = 'N' if $enz eq 'aspn';
+  # N side cutters 
+  if ( $enz eq 'aspn' || $enz =~ /lysarg/  ) {
+    $term = 'N' 
+  }
 
   my %regex = ( aspn => 'D',
                 gluc => 'E',
                 lysc => 'K',
+                lysarg_r => 'R',
+                lysarg_k => 'K',
                 cnbr => 'M',
               );
   
@@ -1662,11 +1671,14 @@ sub get_html_seq_vars {
     $line_len++;
   }
 
+  push @{$args{alt_enz}}, 'lysarginase';
 
   my $alt_enzyme_info = {};
   if( $is_trypsin_build eq 'N'){
     $alt_enzyme_info = $self->get_alt_enzyme( %args );
   }
+
+
 
   push @{$values{tryp}},   ['</SPAN></PRE>'];
   push @{$values{nosp}},   ['</SPAN></PRE>'];
@@ -1678,6 +1690,16 @@ sub get_html_seq_vars {
       var seqView = document.getElementById( "seqView" );
       var seqViewVal = seqView.value;
 
+      // Store selection in cookie so it is 'sticky'
+      var name = 'sequence_view';
+//      var date = new Date();
+//      date.setTime(date.getTime()+(5*1000));
+//      var expires = "; expires="+date.toGMTString();
+//      var cookie = name+"="+seqViewVal+expires+"; path=/";
+      var cookie = name + "=" + seqViewVal;
+      alert( cookie);
+      document.cookie = cookie;
+
       var newContent = document.getElementById( seqViewVal ).innerHTML;
       document.getElementById( "seq_display" ).innerHTML = newContent;
     }
@@ -1687,7 +1709,7 @@ sub get_html_seq_vars {
                nosp => '<DIV ID=nosp style="display:none">',
                inter => '<DIV ID=inter style="display:none">'  );
 
-  my @alt_enz;
+  my @alt_enz = ();
   for my $enz ( sort( keys( %{$alt_enzyme_info} ) ) ) {
     next if $enz =~ /^trypsin/;
     $divs{$enz} = "<DIV ID=$enz style='display:none'>",
@@ -1725,7 +1747,16 @@ sub get_html_seq_vars {
   my $selected = '';
   my $iselect = '';
   my $tselect = '';
-  if($is_trypsin_build eq 'Y'){
+  if( $args{digest_type} && $div_txt{$args{digest_type}} ){
+    $display_div = $div_txt{$args{digest_type}};
+    $display_div =~ s/display:none/display:block/g;
+    $display_div =~ s/ID=$args{digest_type}/ID=seq_display/;
+    if ( $args{digest_type} eq 'tryp' ) {
+      $tselect = "selected";
+    } elsif ( $args{digest_type} eq 'inter' ) {
+      $iselect = "selected";
+    }
+  } elsif($is_trypsin_build eq 'Y'){
     $display_div = $div_txt{tryp};
     $display_div =~ s/display:none/display:block/g;
     $display_div =~ s/ID=tryp/ID=seq_display/;
@@ -1749,12 +1780,14 @@ sub get_html_seq_vars {
   my %lc2name = ( aspn => 'AspN', 
                   gluc => 'GluC',
                   lysc => 'LysC',
-		  trypsin => 'Trypsin',
-		  chymotrypsin => 'Chymotrypsin' );
+		           trypsin => 'Trypsin',
+          chymotrypsin => 'Chymotrypsin',
+           lysarginase => 'LysArgiNase' );
 
   for my $enz ( @alt_enz ) {
     next if $enz =~ /^trypsin/;
-    $str .= "    <OPTION VALUE=$enz> $lc2name{$enz} \n";
+    my $sel = ( $args{digest_type} && $args{digest_type} eq $enz ) ? 'selected' : '';
+    $str .= "    <OPTION VALUE=$enz $sel> $lc2name{$enz} \n";
   }
 
   $str .= qq~
