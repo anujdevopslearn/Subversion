@@ -40,10 +40,12 @@ use Data::Dumper;
 
 use lib "/net/db/projects/Proteomics/lib";
 #use lib "/net/db/projects/Proteomics/devED/lib";
+
 use Proteomics::Spectra::UniversalSpectrumIdentifier;
 use Proteomics::Response qw(processParameters);
 use Proteomics::Config;
 use Proteomics::Spectra::Spectrum;
+use Proteomics::Sequence::Peptide;
 
 use Carp;
 $SIG{__DIE__} = sub { &Carp::confess };
@@ -350,8 +352,16 @@ sub processRequest {
 	    $datasetIdentifier = $1;
 	    my $msrunName = $spectrumName;
 	    $msrunName =~ s/\.\d+\.\d+\.\d+$//;
-	    $usiStr = "mzspec:$datasetIdentifier\:\:$msrunName:scan:$scanNumber:$peptidoform/$charge";
-	    #print "USI=$usiStr<BR>\n";
+
+	    #### If the peptidoform has a mass mod on it, then feed it through a converter to UniMod form
+	    my $convertedPeptidoformStr = $peptidoform;
+	    if ( $peptidoform =~ /[\[\{]/ ) {
+	      my $pep = Proteomics::Sequence::Peptide->new(sequenceString=>$peptidoform);
+	      $convertedPeptidoformStr = $pep->{modifiedSequenceString};
+	    }
+
+	    #### Manually create the USI string and store it
+	    $usiStr = "mzspec:$datasetIdentifier\:$msrunName:scan:$scanNumber:$convertedPeptidoformStr/$charge";
 	    $parameters{USI} = $usiStr;
 	  }
         }
@@ -1326,11 +1336,13 @@ sub getUSIInputForm {
   my $buffer = qq~<TABLE BORDER=0><TR><TD>
        <SCRIPT LANGUAGE="JavaScript">
        function fillInUSI(input_field) {
-         exampleNumber = Math.floor((Math.random()*3))
+         exampleNumber = Math.floor((Math.random()*4))
          if ( exampleNumber == 0 ) {
            document.USIForm.USI.value = "mzspec:PXD000561:Adult_Urinarybladder_bRP_Elite_71_f14:scan:1872:FSGSSSGADR/2";
-         } else if ( exampleNumber == 0 ) {
+         } else if ( exampleNumber == 1 ) {
            document.USIForm.USI.value = "mzspec:PXD000865:00603_F01_P004608_B00F_A00_R1:scan:14453:SSLLDVLAAR/2";
+         } else if ( exampleNumber == 2 ) {
+           document.USIForm.USI.value = "mzspec:PXD002286:081213-Wittie-Phos-1A:scan:14366:MVC[Carbamidomethyl]S[Phospho]PVTVR/2";
          } else {
            document.USIForm.USI.value = "mzspec:PXD002255:ES_XP_Ubi_97H_HCD_349:scan:9617:LAEIYVNSSFYK/2";
          }
@@ -1403,6 +1415,12 @@ sub interpretUSI {
   my $interpretation = $usi->{interpretation};
   my $peptidoform = $usi->{peptidoform};
   my $charge = $usi->{charge};
+
+  #### If the peptidoform has mass mods in it, then convert it to TPP notation
+  if ( $peptidoform =~ /[\[\{\(]/ ) {
+    my $pep = Proteomics::Sequence::Peptide->new(sequenceString=>$peptidoform);
+    $peptidoform = $pep->{modifiedTPP4SequenceString};
+  }
 
   #print "datasetIdentifier=$datasetIdentifier\n";
   my $sql = qq~ 
