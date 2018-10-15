@@ -783,9 +783,9 @@ sub handle_request {
 				}else{
 					if ($n_exact_results == 0) {
  						if ($sbeams->output_mode() eq 'html') {
-              $sbeamsMOD->display_page_header(project_id => $project_id);
-              print "$buffer<BR>";
-							print "There were no matches in the index to match your search key '$search_key'<BR>";
+						  $sbeamsMOD->display_page_header(project_id => $project_id);
+						  print "$buffer<BR>";
+						  print "There were no matches in the index for your search string<BR>";
 					  }
 					  return(0);
 					}
@@ -828,8 +828,8 @@ sub handle_request {
 				 }
 				}else{
 					 $sbeamsMOD->display_page_header(project_id => $project_id);
-           print "$buffer<BR>";
-					 print "There were no matches in the index to match your search key '$search_key'<BR>";
+					 print "$buffer<BR>";
+					 print "There were no matches in the index for your search string<BR>";
 					 return(0);
         }
 			}
