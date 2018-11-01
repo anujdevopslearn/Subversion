@@ -38,8 +38,8 @@ use SBEAMS::PeptideAtlas::ProtInfo;
 use File::Basename;
 use Data::Dumper;
 
-use lib "/net/db/projects/Proteomics/lib";
-#use lib "/net/db/projects/Proteomics/devED/lib";
+#use lib "/net/db/projects/Proteomics/lib";
+use lib "/net/db/projects/Proteomics/devED/lib";
 
 use Proteomics::Spectra::UniversalSpectrumIdentifier;
 use Proteomics::Response qw(processParameters);
@@ -481,6 +481,15 @@ sub processRequest {
       }
     }
 
+    #### Since the Lorikeet spectrum viewer apparently can't display a raw spectrum, fake an identification
+    my $noPeptide = 0;
+    unless ( $peptidoform ) {
+      print "<BR><font color=\"red\">The Lorikeet spectrum viewer is currently unable to display a spectrum without any peptide ion interpretation. A temporary hack while we fix this is to set the sequence to 'A'</font><BR><BR>\n";
+      $peptidoform = "A";
+      $charge = 1;
+      $noPeptide = 1;
+    }
+
     #### Serialize the spectrum so that it can be parsed by the spectrum library parser
     #### This is wasteful. FIXME
     my @spectrumBuffer;
@@ -504,17 +513,12 @@ sub processRequest {
       print "</PRE>\n";
     }
 
-    #### Since the Lorikeet spectrum viewer apparently can't display a raw spectrum, fake an identification
-    unless ( $peptidoform ) {
-      print "<BR><font color=\"red\">The Lorikeet spectrum viewer is currently unable to display a spectrum without any peptide ion interpretation. A temporary hack while we fix this is to set the sequence to 'MYSTERYPEPTIDE/2'</font><BR><BR>\n";
-      $peptidoform = "MYSTERYPEPTIDE";
-      $charge = 1;
-    }
-
 
     #### Set up the default ion series settings to display
     my $series;
-    if ( $charge == 1 ) {
+    if ( $noPeptide ) {
+      $series = '0,0,0';
+    } elsif ( $charge == 1 ) {
       $series = '1,0,0';
     } elsif ( $charge == 2 ) {
       $series = '1,1,0';
@@ -673,6 +677,7 @@ sub displayWorkbenchControls {
     optionList => [
       'original' => 'Original Spectrum',
       'reannotatedSimple' => 'Reannotated Spectrum - Simple',
+      'reannotatedDifference' => 'Reannotated difference between alt and comp',
       'reannotatedFull' => 'Reannotated Spectrum - Full',
       'Lorikeet' => 'Lorikeet Arrays',
       'denovo' => 'Interpret spectrum de Novo',
@@ -757,6 +762,7 @@ sub displayWorkbenchControls {
   #### Determine defaults for alternate sequence
   my $alt_sequence = $parameters->{alt_sequence} || '';
   my $alt_charge = $parameters->{alt_charge} || $parameters->{assumed_charge} || '2';
+  my $comp_sequence = $parameters->{comp_sequence} || '';
 
   #### Create the alternate charge control
   my $alternateChargeControl = buildSelectListControl(
@@ -777,6 +783,7 @@ sub displayWorkbenchControls {
     <FORM METHOD="post" ACTION="$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROG_NAME">
       $hidden_form_fields
       Alternate sequence: <INPUT TYPE="text" NAME="alt_sequence" SIZE="40" VALUE="$alt_sequence"></INPUT>
+      Comparison sequence: <INPUT TYPE="text" NAME="comp_sequence" SIZE="40" VALUE="$comp_sequence"></INPUT>
       $alternateChargeControl<BR>
       Visual Display: $annotationControl<BR>
       Text Display: $displayModeControl<BR>
@@ -880,6 +887,17 @@ sub showSpectrumText {
   } elsif ( $parameters->{SAWB_DisplayMode} eq 'reannotatedSimple' ) {
     $spectrum->reannotate( ppm => $usePPMTolerance );
     $spectrum->show(format=>'simple');
+
+  } elsif ( $parameters->{SAWB_DisplayMode} eq 'reannotatedDifference' ) {
+    $spectrum->reannotate( ppm => $usePPMTolerance );
+    use Clone 'clone';
+    my $compSpectrum = clone($spectrum);
+    $compSpectrum->setModifiedSequence($parameters->{comp_sequence});
+    $compSpectrum->reannotate( ppm => $usePPMTolerance );
+    #$spectrum->show(format=>'simple',secondary=>$compSpectrum);
+    #$compSpectrum->show(format=>'simple',secondary=>$compSpectrum);
+    $spectrum->show(format=>'difference',secondary=>$compSpectrum);
+
 
   } elsif ( $parameters->{SAWB_DisplayMode} eq 'reannotatedFull' ) {
     $spectrum->reannotate( ppm => $usePPMTolerance );
