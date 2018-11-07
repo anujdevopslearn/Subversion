@@ -88,7 +88,6 @@ my $sql = qq~
 				 datasetTag,
 				 datasetTitle,
          datasetType,
-         datasetPassword, 
 				 UPPER(left(lastname,1))+ 
          LOWER(SUBSTRING(lastname,2,len(lastname)))+','+
          UPPER(left(firstname,1))+
@@ -103,7 +102,7 @@ my @rows = $sbeams->selectSeveralColumns($sql);
 foreach my $row ( @rows ) {
  #$row->[0] = qq~<a href="http://www.peptideatlas.org/PASS/$row->[0]">$row->[0]</a>~;
 }
-my @labels = qw ( id datasettag title type datapassword submitter email release finalize);
+my @labels = qw ( id datasettag title type submitter email release finalize);
 #unshift @rows, \@labels;
 use JSON;
 my $json = new JSON;
@@ -111,7 +110,7 @@ my $hash;
 foreach my $row (@rows){
 	my %data=();
 	foreach my $i (0..$#labels){
-		if ($i == 7 || $i == 8){
+		if ($i == 6 || $i == 7){
 		 my $date = $row->[$i];
 		 $date =~ /(\d{4})-0?(\d+)-0?(\d+)\D+/;
 			$data{dates}{$labels[$i]}{std}{year} = $1;
@@ -126,7 +125,7 @@ foreach my $row (@rows){
 	}
   ## open and read description file
   my $datasetidentifier =  $row->[0] ;
-  my $file = "/regis/passdata/home/$datasetidentifier/$datasetidentifier"."_DESCRIPTION.txt";
+  my $file = "/proteomics/peptideatlas2/home/$datasetidentifier/$datasetidentifier"."_DESCRIPTION.txt";
   if (open(INFILE,"<$file")){
 		my ($key,$value);
 		my $prevKey = '';
@@ -150,7 +149,7 @@ foreach my $row (@rows){
 
 close(INFILE);
 $hash ->{"MS_QueryResponse" }{"counts"}{"samples"} = scalar @rows;
-open(OUT, ">/regis/passdata/PASS.json") or die "cannot open /regis/passdata/PASS.json\n";
+open(OUT, ">/proteomics/peptideatlas2/PASS.json") or die "cannot open /proteomics/peptideatlas2/PASS.json\n";
 
 $json = $json->pretty([1]);
 print  OUT $json->encode($hash);
