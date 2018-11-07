@@ -272,6 +272,9 @@ sub handle_request {
   my $isOwner = 0;
   my $isAccessible = 0;
   my $isAdmin = 0;
+  
+  my ($date) = `date '+%F'`;
+  chomp($date);
   if ($datasetIdentifier) {
     $datasetMetadata = getPASSMetaData(identifier=>$datasetIdentifier);
     if ($datasetMetadata->{result} eq 'Success' && uc($emailAddress) eq uc($datasetMetadata->{emailAddress})) {
@@ -280,12 +283,10 @@ sub handle_request {
     } elsif ($parameters{datasetPassword} && $datasetMetadata->{datasetPassword} eq $parameters{datasetPassword}) {
       $isAccessible = 1;
     } else {
-      my ($date) = `date '+%F'`;
-      chomp($date);
       #print "Is '$date' ge '$datasetMetadata->{publicReleaseDate}'?<BR>\n";
       if ($datasetMetadata->{publicReleaseDate} && substr($date,0,10) ge substr($datasetMetadata->{publicReleaseDate},0,10)) {
-	#print "INFO: Current date '$date' is greater than release date '$datasetMetadata->{publicReleaseDate}'<BR>\n";
-	$isAccessible = 1;
+				#print "INFO: Current date '$date' is greater than release date '$datasetMetadata->{publicReleaseDate}'<BR>\n";
+				$isAccessible = 1;
       }
     }
 
@@ -383,21 +384,25 @@ sub handle_request {
 
     unless (@errors) {
       my $validation = $PASS->validateDatasetAnnotations(formParameters=>\%parameters);
-      if ($validation->{result} eq 'Success') {
-	my $updateResult = updateDataset(
-          authentication=>$authentication,
-          formParameters=>\%parameters,
-          identifier => $parameters{'identifier'},
-        );
-	if ($updateResult->{result} eq 'Success') {
-	  $printForm = 0;
-	} else {
-	  push(@errors,"updateResult returned $updateResult->{result}");
-	  push(@errors,@{$updateResult->{errors}}) if ($updateResult->{errors});
-	}
-
+			if ($validation->{result} eq 'Success') {
+				my $updateResult = updateDataset(
+								authentication=>$authentication,
+								formParameters=>\%parameters,
+								identifier => $parameters{'identifier'},
+							);
+				if ($updateResult->{result} eq 'Success') {
+					$printForm = 0;
+          ## check if the publicReleaseDate change from ge Current date to le Current date
+          if (($datasetMetadata->{publicReleaseDate}&& substr($datasetMetadata->{publicReleaseDate},0,10) ge substr($date,0,10)) && 
+             ($parameters{publicReleaseDate} && substr($parameters{publicReleaseDate},0,10) le substr($date,0,10)) ){
+          }
+ 
+				} else {
+					push(@errors,"updateResult returned $updateResult->{result}");
+					push(@errors,@{$updateResult->{errors}}) if ($updateResult->{errors});
+				}
       } else {
-	push(@errors,@{$validation->{errors}});
+				push(@errors,@{$validation->{errors}});
       }
     }
 
@@ -437,7 +442,7 @@ sub handle_request {
         errors => \@errors,
       );
       if ($result->{errors}) {
-	push(@errors,@{$result->{errors}});
+				push(@errors,@{$result->{errors}});
       }
     } else {
       push(@errors,@{$authentication->{errors}}) if ($authentication->{errors});
@@ -447,7 +452,7 @@ sub handle_request {
       print "<HR>\n";
       print "<TABLE cellpadding=\"5\"><TR><TD bgcolor=\"#ff9999\">";
       foreach my $error ( @errors ) {
-	print "<LI>$error\n";
+				print "<LI>$error\n";
       }
       print "</TD></TR></TABLE>\n";
     }
@@ -465,7 +470,7 @@ sub handle_request {
      print "<HR>\n";
        print "<TABLE cellpadding=\"5\"><TR><TD bgcolor=\"#ff9999\">";
        foreach my $error ( @errors ) {
-	 print "<LI>$error\n";
+				 print "<LI>$error\n";
        }
        print "</TD></TR></TABLE>\n";
      }
@@ -655,7 +660,7 @@ sub handle_request {
 
   }
   if ($action !~ /LOG(OUT|IN)/i && $action !~ /(VIEW|SET)$/i ) {
-    my $str = do '/local/www/html/sbeams/lib/scripts/PeptideAtlas/create_PASS_Json.pl';
+    my $str = do '/net/dblocal/www/html/sbeams/lib/scripts/PeptideAtlas/create_PASS_Json.pl';
   }
   return;
 
