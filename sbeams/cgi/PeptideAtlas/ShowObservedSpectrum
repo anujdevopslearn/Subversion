@@ -559,6 +559,8 @@ sub processRequest {
 
     #### Create a SpecViewer object and generate a Lorikeet display
     if ( $peptidoform ) {
+      #### There is a weird Javascript/Lorikeet bug where if the scan begins with a 0, it is interpreted as an octal number! Strip off leading zeros
+      $scanNumber =~ s/^0+//;
       my $lorikeet = new SBEAMS::Proteomics::SpecViewer;
       print $lorikeet->generateSpectrum(
           charge            => $charge,
