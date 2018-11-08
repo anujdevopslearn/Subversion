@@ -1413,6 +1413,10 @@ sub interpretUSI {
   #### There may be some error messages for info messages coming, so switch to PRE mode
   print "<PRE>\n";
 
+  #### Clean the string a little
+  $usiStr =~ s/^\s+//;
+  $usiStr =~ s/\s+$//;
+
   #### Parse the passed USI
   my $usi = Proteomics::Spectra::UniversalSpectrumIdentifier->new( usi=>$usiStr );
   my $result = $usi->parse( verbose=>$verbose, debug=>$verbose,  outputDestination=>$outputDestination );
