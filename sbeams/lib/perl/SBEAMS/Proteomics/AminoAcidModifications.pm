@@ -43,6 +43,7 @@ sub new {
       'n[44]'  => 43.005814,    # Carbamylation   (Unimod)
       'n[58]'  =>	57.021464,    # N-term Carbamidomethyl,
       'n[141]' => 140.094963,   # mTRAQ light (Unimod 888)
+      'n[146]' => 145.019749,   # Biotin
       'n[145]' => 144.102063,   # mTRAQ medium (Unimod 889), AKA iTRAQ4plex116/7 (unimod 214)
       'n[149]' => 148.109162,   # mTRAQ heavy (Unimod 1302)
       'n[187]' => 186.112628,   # mTRAQ medium + Acetylation 
@@ -111,6 +112,7 @@ sub new {
       'M[163]' =>	31.989829,    #	Dioxidation (UniMod)
       'M[185]' => 42.010565,    # Acetylation  (Unimod 1)
       'N[115]' => 0.984016,     # Glyc-Asn (UniMod)
+      'N[117]' => 2.988261,     # Deamidation in presence of O18
       'R[157]' => 0.984016,     # Deamidation
       'R[166]' => 10.008269,    # Silac (UniMod)
       'R[162]' =>	6.020129,     # 13C(6) Silac label
