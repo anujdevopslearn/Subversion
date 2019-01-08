@@ -214,7 +214,8 @@ sub displayGuestPageHeader {
   if ( $resource eq 'SRMAtlas' ) {
     $skinLink = 'http://www.srmatlas.org/.index.dbbrowse.php';
   } elsif ( $resource eq 'DIAAtlas' ) {
-    $skinLink = 'http://www.swathatlas.org/.index.dbbrowse.php';
+    $skinLink = 'http://www.srmatlas.org/.index.dbbrowse.php';
+#    $skinLink = 'http://www.swathatlas.org/.index.dbbrowse.php';
   }
   my $response = $ua->request( HTTP::Request->new( GET => "$skinLink" ) );
   my @page = split( "\n", $response->content() );
@@ -655,10 +656,26 @@ sub encodeSectionHeader {
         <TR><TD colspan="$colspan" style="background-repeat: no-repeat; background-image: url('$HTML_BASE_DIR/images/fade_orange_header_2.png')" width="600">$link<font color="white">$anchor$text</font></TD></TR>
 ~;
 
+  if ( $args{LMTABS} ) {
+    my $sbeams = $self->getSBEAMS();
+    $args{no_toggle} ||= 0;
+    $args{divname} ||= $sbeams->getRandomString( num_chars => 20 );
+    $buffer = $sbeams->make_toggle_section( neutraltext => $text,
+                                                    sticky => 1,
+	                                                    name => $args{divname},
+	 	                                               tooltip => 'Show/Hide Section',
+	 	                                               barlink => 1,
+                                                 no_toggle => $args{no_toggle},
+	 	                                               visible => 1,
+                                                   content => $text
+	 	                                                );
+  }
+
 ###        <TR><TD colspan="$colspan" $link style="background:#f3f1e4;color:#555;border-top:1px solid #b00;border-left:15px solid #b00;padding:0.5em">$anchor$text</TD></TR> e2dcc2
 
 
   return $buffer;
+  return "<table>$buffer</table>";
 }
 
 
@@ -985,10 +1002,10 @@ sub getSamplePlotDisplay {
     if ( $args{link} ) {
       $header = $self->encodeSectionHeader( text => 'Observed in Experiments:',
 					  anchor => 'samples',
-					    link => $args{link} );
+					    link => $args{link} , LMTABS=>1, no_toggle=>1);
     } else {
       $header = $self->encodeSectionHeader( text => 'Observed in Experiments:',
-					  anchor => 'samples' );
+					  anchor => 'samples', LMTABS=>1, no_toggle=>1 );
     }
   }
 
@@ -2014,7 +2031,8 @@ sub get_proteome_coverage {
 
   $table .= $self->encodeSectionHeader(
       text => 'Proteome Coverage (exhaustive)',
-      mouseover => "This shows an exhaustive mapping of the observed peptides to all proteins in each target proteome",
+      no_toggle => 1,
+      LMTABS => 1,
       width => 600
   );
 
@@ -2121,9 +2139,10 @@ sub get_what_is_new {
 
   my $table = '<table width=600>';
   $table .= $self->encodeSectionHeader(
+      LMTABS => 1,
+      no_toggle => 1,
       text => 'What\'s new',
       mouseover => "This shows the differences between this build and the previous build, and the new sample talbe.",
-      width => 600
   );
 
   $table .= $self->encodeSectionTable( rows => \@return,
