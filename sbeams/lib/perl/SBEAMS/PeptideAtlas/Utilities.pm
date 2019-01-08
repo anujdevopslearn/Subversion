@@ -1697,7 +1697,6 @@ sub get_html_seq_vars {
 //      var expires = "; expires="+date.toGMTString();
 //      var cookie = name+"="+seqViewVal+expires+"; path=/";
       var cookie = name + "=" + seqViewVal;
-      alert( cookie);
       document.cookie = cookie;
 
       var newContent = document.getElementById( seqViewVal ).innerHTML;
@@ -2194,7 +2193,7 @@ sub get_uniprot_variant_seq {
                   substr( $args{fasta_seq}, $args{start} - 1, $args{end} - $args{start} + 1 ) .
                   '-' x ($seqlen - $args{end});
 
-  } elsif ( $args{type} eq 'VARIANT' ) { # SNP showz as stand-alone peptide
+  } elsif ( 0 ) { # Deprecated, SNP shows as stand-alone peptide
 
     my $tryp = $self->do_tryptic_digestion( aa_seq => $args{fasta_seq} );
     my $pos = -1;
@@ -2409,6 +2408,7 @@ sub get_uniprot_annotation {
 
 
           my $var_seq = $self->get_uniprot_variant_seq ( %var, fasta_seq => $fasta_seq ); 
+
 
           $var{seq} = $var_seq->{seq};
           $var{annot} = $var_seq->{annot};
