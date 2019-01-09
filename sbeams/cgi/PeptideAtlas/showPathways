@@ -627,6 +627,7 @@ sub keggOrg2Std {
   my %k2s = ( hsa => 'Human',
               dme => 'Drosophila',
               sce => 'Yeast',
+              bbu => 'BBurgdorferi_B31',
               mmu => 'Mouse',
               ssc => 'Pig',
               eco => 'E Coli',
