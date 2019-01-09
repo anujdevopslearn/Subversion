@@ -149,6 +149,8 @@ sub get_build_details {
   my %parameters = @_;
 
   my $section_header = $atlas->encodeSectionHeader(
+    LMTABS => 1,
+    no_toggle => 1,
     text => "SRMAtlas Build: $builds{$parameters{pabst_build_id}}->{name} ($parameters{pabst_build_id})"
   );
 

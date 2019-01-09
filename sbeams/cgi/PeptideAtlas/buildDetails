@@ -3,7 +3,7 @@
 ###############################################################################
 # $Id: $
 #
-# SBEAMS is Copyright (C) 2000-2007 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2019 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -172,8 +172,9 @@ my $show_image = 0;
 				my $map_display = getSampleMapDisplay ( %{$params}, build_id => $build_id );
 				print $map_display;
 			}
-			$atlas->display_page_footer();
-			
+
+    $atlas->display_page_footer();
+      
 		my $tx = time;
 		my $td = $tx - $t0;
 		$log->debug("No SQL, time is $td for the whole page\n");
@@ -193,7 +194,7 @@ sub fetchResultset {
 		table_name => $rs_table,
 		key_value => $build_id,	
 		resultset_ref=>$resultset_ref,
-		use_caching =>1 
+		use_caching => 0
 	);
 
 	if ( $resultset_ref->{from_cache} ) {
@@ -340,6 +341,9 @@ sub get_mayu_info {
                                                   sticky  => 1 );
 
   $table .= $atlas->encodeSectionHeader(
+      LMTABS => 1,
+      no_toggle => 1,
+      divname => 'mayu_div',
       text => 'Mayu Decoy-Based FDR Analysis',
       link => $link,
       width => 920,
@@ -391,7 +395,11 @@ sub get_build_plots {
   $table .= $atlas->encodeSectionHeader(
       text => 'Experiment Contribution Plot',
       span => 4,
-      link => $link
+      trinfo => "class=hoverable",
+      LMTABS => 1,
+      divname => 'experiment_contribution_div',
+      no_toggle => 1,
+      link => $link,
   );
 
   my $chart = $atlas->displayExperiment_contri_plotly(
@@ -400,92 +408,6 @@ sub get_build_plots {
       column_name_ref => $column_name_ref, 
   );
 
-#  # Eric Deutsch's idl-created GIF experiment contribution plots
-#  my $cp_img_path = "$PHYSICAL_BASE_DIR/images/tmp";
-#  my $img_path = "$HTML_BASE_DIR/images/tmp";
-#  my $build_path = get_build_path( build_id => $build_id );
-#  my ( $gif_filename, $multobs_string, $caption );
-#
-#  # See whether we have a plot describing all peptides
-#  # or a plot describing only multiply observed peptides (pre-Sep09).
-#  if ( -e "$build_path/analysis/ncumpep_vs_nspec.gif" ) {
-#    $gif_filename = "ncumpep_vs_nspec.gif";
-#    $multobs_string = "";
-#  } elsif ( -e "$build_path/analysis/ncumpep_vs_nspec-multobs.gif" ) {
-#    $gif_filename = "ncumpep_vs_nspec-multobs.gif";
-#    $multobs_string = "multiply observed ";
-#  }
-#  $caption = "<b>Plot below shows cumulative number of distinct ${multobs_string}identified peptides contributed by each experiment.</b> Height of blue bar is number of peptides identified in experiment; height of red bar is cumulative number of peptides, width of the bar (x-axis) shows the number of spectra identified (PSMs) above the threshold, for each experiment.";
-#  if ( defined $gif_filename ) {
-#    $table = insert_image_and_caption_into_html_table (
-#      tr_info => $tr,
-#      caption => $caption,
-#      img_path => $img_path,
-#      cp_img_path => $cp_img_path,
-#      build_id => $build_id,
-#      build_path => $build_path,
-#      gif_filename => $gif_filename,
-#      table => $table,
-#    );
-#  }
-#
-#  # See whether we have a plot describing all proteins
-#  if ( -e "$build_path/analysis/ncumprot_vs_nspec.gif" ) {
-#    $gif_filename = "ncumprot_vs_nspec.gif";
-#    $caption = "<b>Plot below shows cumulative number of canonical proteins contributed by each experiment.</b> Height of blue bar is number of proteins identified in experiment; height of red bar is cumulative number of proteins, width of the bar (x-axis) shows the number of spectra identified (PSMs) above the threshold, for each experiment.";
-#    $table = insert_image_and_caption_into_html_table (
-#      tr_info => $tr,
-#      caption => $caption,
-#      img_path => $img_path,
-#      cp_img_path => $cp_img_path,
-#      build_id => $build_id,
-#      build_path => $build_path,
-#      gif_filename => $gif_filename,
-#      table => $table,
-#    );
-#  }
-#
-#  sub insert_image_and_caption_into_html_table {
-#    my %args = @_;
-#    my $tr_info = $args{tr_info};
-#    my $caption = $args{caption};
-#    my $img_path = $args{img_path};
-#    my $cp_img_path = $args{cp_img_path};
-#    my $build_id = $args{build_id};
-#    my $build_path = $args{build_path};
-#    my $gif_filename = $args{gif_filename};
-#    my $table = $args{table};
-#
-#    # Craft a table row for the caption, and one for the image.
-#    my $build_image_rows =<<"    END";
-#    <TR $tr><TD>&nbsp;</TD></TR>
-#    <TR $tr><TD class=plot_caption>$caption</TD></TR>
-#    <TR $tr><TD><IMG WIDTH=800 SRC=$img_path/${build_id}_$gif_filename></IMG></TD></TR> 
-#    END
-#    # Try copying image to $cp_img_path. If successful, add rows to table
-#    system "cp  $build_path/analysis/$gif_filename $cp_img_path/${build_id}_$gif_filename";
-#    if ( -e "$cp_img_path/${build_id}_$gif_filename" ) {
-#      $table .= $build_image_rows;
-#    } 
-#    return $table;
-#  }
-
-#  return $table if ( -e "$cp_img_path/${build_id}_$gif_filename" );
-
-#  dynamically drawn experiment contribution plot
-#		<DIV ALIGN=center><H3>Experiment Contribution Plot</H3></DIV>
-#  <TR $tr><TD><IMG SRC=buildPlot?atlas_build_id=$build_id></IMG></TD></TR>
-#    $chart_div
-#  $table .=<<"  END";
-#  <TR $tr><TD>&nbsp;</TD></TR>
-#  <TR $tr><TD class=plot_caption><b>Plot below shows the number of distinct <i>multiply observed</i> (n_obs > 1) peptides contributed by each sample,</b> and the cumulative number of distinct multiply-observed peptides for the build as of that sample.</TD></TR>
-#  <TR $tr><TD>&nbsp;</TD></TR>
-#  <TR $tr><TD>$chart_div</TD></TR>
-#  <TR $tr><TD>&nbsp;</TD></TR>
-#  END
-#   
-#
-#  $table .= "\n</TABLE>\n";
   $table .= qq~
     $chart
     </TABLE>
@@ -510,7 +432,10 @@ sub getSampleMapDisplay {
                                                   sticky  => 1 );
 
   my $header .= $atlas->encodeSectionHeader( text => 'Experiment Protein Map:',
-                                             'link' => $link );
+      LMTABS => 1,
+      no_toggle => 1,
+      divname => 'experiment_protein_map_div',
+     'link' => $link );
   
   my $html = '';
   
@@ -768,6 +693,9 @@ sub get_build_overview {
                                                   sticky  => 1 );
 
   $table .= $atlas->encodeSectionHeader(
+      LMTABS => 1,
+      no_toggle => 1,
+      divname => 'build_overview_div',
       text => 'Build Overview',
       span => 4,
       link => $link
@@ -947,7 +875,10 @@ sub get_sample_info {
   my $headings_ref = $atlas->make_sort_headings( headings => \@headings, default => '#_Cumulative' );
 
   $table .= $atlas->encodeSectionHeader(
+      LMTABS => 1,
+      no_toggle => 1,
       text => 'Experiment Contribution',
+      divname => 'experiment_contribution_div',
       link => $link,
       width => 920
   );
@@ -1001,3 +932,5 @@ sub get_draw_chart_function {
   return ( $chart, $header );
 }
 
+#    print '<table>' . $atlas->encodeSectionHeader( text => "Peptide Atlas Summary" ) . '</table>';
+#    print '<table>' . $atlas->encodeSectionHeader( text => "Peptide Atlas Summary", LMTABS=>1, no_toggle => 1 ) . '</table>';

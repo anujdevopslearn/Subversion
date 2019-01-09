@@ -346,18 +346,15 @@ sub print_locations {
   $plate_and
   $order_and
   ORDER BY orders.id ASC, plate_barcode_id ASC, row, col
-
-
-SELECT sequence, mw, pp.volume as 'pp_vol', plate_barcode_id, o.name, vendor, amountMg, amountMol, conc, vpd.volume as 'vol'
-FROM peptides p JOIN plate_peptides pp ON p.id = pp.peptide_id
-                JOIN plates pl ON pl.id = pp.plate_id 
-                JOIN orders o ON o.id = pl.order_id 
-                JOIN vendor_plate_detail vpd ON vpd.plate_peptide_id = pp.id 
-limit 10 ;
-
-
-
   ~;
+
+#SELECT sequence, mw, pp.volume as 'pp_vol', plate_barcode_id, o.name, vendor, amountMg, amountMol, conc, vpd.volume as 'vol'
+#FROM peptides p JOIN plate_peptides pp ON p.id = pp.peptide_id
+#                JOIN plates pl ON pl.id = pp.plate_id 
+#                JOIN orders o ON o.id = pl.order_id 
+#                JOIN vendor_plate_detail vpd ON vpd.plate_peptide_id = pp.id 
+#limit 10 ;
+
   $headings[15] = 'mg/ml';
   $headings[16] = 'nmol';
 
@@ -411,7 +408,7 @@ my ( $html, $rs_name ) = $atlas->encodeSectionTable( header => 1,
                                                       rs_headings => \@headings,
                                                       rows => \@peptides,
                                                       rows_to_show => 25,
-                                                      max_rows => 1000,
+                                                      max_rows => 10,
                                                       help_text => $help_text,
                                                       chg_bkg_idx => $change_on,
                                                       set_download => 'Download peptides',
@@ -424,6 +421,7 @@ my ( $html, $rs_name ) = $atlas->encodeSectionTable( header => 1,
 print qq~
   <fieldset>
    <legend>Results</legend>
+    $rs_name
     <div>
 		 $html
     </div>

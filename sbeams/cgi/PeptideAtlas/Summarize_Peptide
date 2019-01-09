@@ -225,7 +225,7 @@ sub handle_request {
   print "<br>" if $is_html; 
 
   if ( $is_html ) {
-    print '<table>' . $atlas->encodeSectionHeader( text => "Peptide Atlas Summary" ) . '</table>';
+    print '<table>' . $atlas->encodeSectionHeader( text => "Peptide Atlas Summary", LMTABS=>1, no_toggle => 1 ) . '</table>';
   }
 
   if ( $parameters{show_all_builds} ) {
@@ -252,7 +252,7 @@ sub handle_request {
   if ( $is_xml ) {
     print "\t<SRMAtlasSummary>\n";
   } else {
-    print '<table>' . $atlas->encodeSectionHeader( text => "SRM Atlas Summary" ) . '</table>';
+    print '<table>' . $atlas->encodeSectionHeader( text => "SRM Atlas Summary", LMTABS=>1, no_toggle=>1 ) . '</table>';
   }
   my $srm_results = get_srm_resultset( \%parameters );
   print $srm_results;
@@ -263,7 +263,7 @@ sub handle_request {
   if ( $is_xml ) {
     print "\t<PasselSummary>\n" if ( $is_xml );
   } else {
-    print '<table>' . $atlas->encodeSectionHeader( text => "PASSEL Summary" ) . '</table>';
+    print '<table>' . $atlas->encodeSectionHeader( text => "PASSEL Summary" , LMTABS=>1, no_toggle=>1) . '</table>';
   }
   my $passel_results = get_passel_resultset( \%parameters );
   print $passel_results;
@@ -332,7 +332,8 @@ sub get_pa_list {
   }
   my $list = $atlas->encodeFullSectionList ( header_text => "$acc ($seq) Physical Data",
                                              header_element => "PhysicalPeptideData",
-                                             list_items => \@items 
+                                             list_items => \@items,
+                                             LMTABS=>1, no_toggle=>1
                                            );
   return $list;
 }
@@ -820,6 +821,7 @@ sub get_abundance_plot {
 
   my @build_plot;
   my @obs_per_million_build_plot;
+
   while ( my $row = $sbeams->selectSeveralColumnsRow( sql => $sql ) ) {
     my $hits_per_M = '1';
     if ( $row->[2] ) {
@@ -844,6 +846,7 @@ sub get_abundance_plot {
      my $chart = $GV->setDrawBarChart(  samples => \@build_plot,
 			                                 data_types => [ 'string', 'number', 'number' ],
 								                         headings => [ 'Build Name', 'Number of Observations', "Obs per Million Spectra" ],
+
 															    truncate_labels => 30 
 																	     );
      $header = $GV->getHeaderInfo();

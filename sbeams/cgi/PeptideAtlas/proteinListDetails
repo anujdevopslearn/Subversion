@@ -117,6 +117,8 @@ sub get_list_entries {
 
   if ( $out_mode eq 'html' ) {
     $content .= $atlas->encodeSectionHeader(
+      LMTABS => 1,
+      no_toggle => 1,
       text => 'Proteins',
       span => 4,
     );
@@ -301,6 +303,8 @@ sub get_list_overview {
                                                   sticky  => 1 );
 
   $table .= $atlas->encodeSectionHeader(
+      LMTABS => 1,
+      no_toggle => 1,
       text => 'List Overview',
       span => 4,
       link => $link

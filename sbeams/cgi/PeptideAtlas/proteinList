@@ -224,6 +224,8 @@ sub get_list_overview {
                                                   sticky  => 1 );
 
   $table .= $atlas->encodeSectionHeader(
+      LMTABS => 1,
+      no_toggle => 1,
       text => ' Protein List Overview',
       span => 4,
       link => $link

@@ -234,6 +234,8 @@ sub display_transitions_lists {
 	"<H2>Download Public SRM Transition Lists from PeptideAtlas</H2>\n";
 
     $transitionsHTML .= $sbeamsMOD->encodeSectionHeader(
+              LMTABS => 1,
+              no_toggle => 1,
 							text => 'Uploaded Transitions Lists',
 							link => $link
 							);
