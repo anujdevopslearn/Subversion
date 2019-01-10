@@ -3392,6 +3392,15 @@ sub displayAnnotatedSequence {
     }
   }
 
+  my @cookie = $q->cookie( 'sequence_view' );
+#  print Dumper( $cookie{sequence_view} );
+
+  my $digest_type = $cookie[0];
+  if ( $digest_type ) {
+    $sbeams->setSessionAttribute( key => 'GetProtein_DigestType', value => $digest_type );
+  } elsif ( my $type = $sbeams->getSessionAttribute( key => 'GetProtein_DigestType' ) ) {
+    $digest_type = $type;
+  }
 
   my $ub_id = $parameters->{uniprot_db_id} || 0;
   my $use_nextprot = ( $parameters->{use_nextprot} ) ? 1 : 0;
@@ -3411,6 +3420,7 @@ sub displayAnnotatedSequence {
                                        peptide_nobs => $peptide_nobs,
                                        seq2instance => $seq2instance,
                                    is_trypsin_build => $args{is_trypsin_build},
+                                        digest_type => $digest_type,
                                        show_clustal => $args{show_clustal} );
 
   $seqHTML .= "$html_seq->{seq_display} <BR>\n";
@@ -3451,7 +3461,8 @@ sub displayAnnotatedSequence {
 //        $.ajax({ url: 'http://karchin-web02.icm.jhu.edu/MuPIT_Interactive/rest/showstructure/check',
 //                data: { pos: prot + ':' + offset, protquery: 'y' },
 //                method: "GET",
-        $.ajax({ url: "https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/getMupitJSON.cgi",
+//        $.ajax({ url: "https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/getMupitJSON.cgi",
+        $.ajax({ url: "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/getMupitJSON.cgi",
                 type: "GET",
                 data: { prot: prot, offset: offset },
                 dataType: "json",
