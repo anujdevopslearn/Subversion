@@ -1599,12 +1599,23 @@ sub make_toggle_section {
 
 
   my $linkhtml = '';
+
+  $args{anchor} ||= $args{neutraltext};
+  my $anchor = ( $args{anchor} ) ? "<A NAME='$args{anchor}'></A>" : '';
+  if ( $args{no_toggle} ) {
+    $linkhtml = qq~$anchor<DIV CLASS="hoverabletitle">$neuttext</DIV>~ ;
+    return $linkhtml;
+    
+  }
+
   if ( $args{barlink} ) {
 
-    $args{anchor} ||= $args{neutraltext};
-    my $anchor = ( $args{anchor} ) ? "<A NAME='$args{anchor}'></A>" : '';
+    my $toggle =  q~ONCLICK="toggle_content('${args{name}}')~;
+#    my $toggle =  qq~ONCLICK="toggle_content('${args{name}}')>$imghtml"~;
+#    $toggle = '>' if $args{no_toggle};
 
     $linkhtml = qq~$anchor<DIV CLASS="hoverabletitle" ONCLICK="toggle_content('${args{name}}')">$imghtml $texthtml $neuttext</DIV>~;
+
   }
   else {
     $linkhtml = qq~<A ONCLICK="toggle_content('${args{name}}')">$imghtml $texthtml</A> $neuttext~;
