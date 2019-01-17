@@ -328,7 +328,12 @@ sub pathway_details {
     my %entry2genes = %{$processed->{entry2genes}};
     for my $en ( @{$processed->{entries}} ) {
       if ( $entry2genes{$en} ) {
-        my @genes = map( /$kegg_organism:(.*)/, @{$entry2genes{$en}} );
+        my @genes;
+        if ($kegg_organism !~ /bbu/){
+           @genes = map( /$kegg_organism:(.*)/, @{$entry2genes{$en}} );
+        }else{
+           @genes = @{$entry2genes{$en}};
+        }
         my $gene = join( '%3B', @genes ); # @{$entry2genes{$en}} );
         push @links, "Search?build_type_name=$organism;search_key=$gene;action=GO";
         push @text, "Gene ID(s) " . join( ", ", @genes );
@@ -381,6 +386,10 @@ sub pathway_details {
   $table->alternateColors( FIRSTROW => 2, PERIOD => 1, BGCOLOR => '#DDDDDD', DEF_BGCOLOR => '#FFFFFF' );
   $table->setColAttr( ALIGN => 'RIGHT', COLS => [3], ROWS => [2..$table->getRowNum()] );
   my $cytolink = 'Open <A ONCLICK="submit_cytoscape();"><DIV CLASS="visilink"> Cytoscape </DIV></A>network with protein list';
+  if ($kegg_organism =~ /bbu/){
+     my @genes = map( /$kegg_organism:(.*)/, @{$gene_list} );
+     $gene_list = \@genes; 
+  }
 
   my $organism = $atlas->getCurrentAtlasOrganism( parameters_ref => {} );
   my $gaggle_info = $sbeams->getGaggleMicroformat( 
@@ -493,7 +502,7 @@ sub getExpressionValues {
   } else {  # Fetch from Peptide Atlas, original
 
     my $search_type = ( $kegg_organism =~ /hsa|mmu|ssc|bta|rno|ecb|ptr/ ) ? 'Entrez GeneID' : 'ORF NAME';
-  
+    $search_type = 'KEGG' if ( $kegg_organism =~ /bbu/);
     my $sk_sql = qq~
       SELECT DISTINCT resource_name, search_key_name
       FROM $TBAT_SEARCH_KEY_ENTITY 
@@ -511,7 +520,6 @@ sub getExpressionValues {
       $other2kegg{$row[0]}->{$row[1]}++;
     }
     my $protstr = "'" . join( "','", keys( %other2kegg ) ) . "'\n";
-  
     my $sql =<<"    END";
       SELECT DISTINCT biosequence_name, SUM(PI.n_observations), SUM(n_protein_mappings)
       FROM $TBAT_PEPTIDE_INSTANCE PI
