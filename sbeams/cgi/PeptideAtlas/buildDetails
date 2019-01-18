@@ -236,11 +236,14 @@ sub get_table_help {
                  { key => 'Reference Database', value => 'Database to which peptides were mapped, generally different than search database.  This mapping is done by running BLAST, and allows the peptides to be mapped the the organism\'s genomic sequence. ' },
                  { key => 'Build Date', value => 'Date upon which build was finished. ' },
                  { key => '# Experiments', value => 'The number of individual experiments which comprise this build.  Each experiment contains one or more LCMS/MS runs, and generally corresponds to a single scientific experiment.' } ,
-                 { key => 'Distinct Peptides', value => 'This shows the number of distinct peptide sequences that were seen in this build.  Observations of the peptide in different charge states or with different modifications are coalesced.' } ,
                  { key => 'Total Observations ', value => 'The total number of spectra that yeilded identifications above the build threshold.  Observations of the same base peptide sequences multiple times or in various charge states/modifications, whould each contribute to the total' },
+                 { key => 'Distinct Peptides', value => 'This shows the number of distinct peptide sequences that were seen in this build.  Observations of the peptide in different charge states or with different modifications are coalesced.' } ,
                  { key => 'Probability threshold', value => 'iProphet probability threshold applied to each experiment in this build' },
-                 { key => 'Canonical Proteins', value => 'Minimally redunant set of proteins required to explain (virtually) all non-decoy peptides observed in build (<a target=_termdefs href="http://www.peptideatlas.org/docs/protein_ident_terms.php">more info</a>)' },
                  { key => 'PSM FDR threshold', value => 'PSM (peptide-spectrum match) level FDR threshold applied to each experiment in this build' },
+                 { key => 'Canonical Proteins', value => 'Minimally redunant set of proteins required to explain (virtually) all non-decoy peptides observed in build (<a target=_termdefs href="http://www.peptideatlas.org/docs/protein_ident_terms.php">more info</a>)' },
+                 { key => 'Indistinguishable Representative Protein', value=>'Indistinguishable representative means that there are peptides that map uniquely to a set of non-canonical proteins, thereby indicating that at least one of the proteins in the set must be present, but it cannot be determined which it is.'},
+                 { key => 'Marginally Distinguished Proteins', value=>'Marginally distinguished means that this protein has peptides that are shared with a canonical peptide, but it also has a small number of peptides that appear to distinguish it from the canonical identification.'},
+                 { key => 'Representative Proteins', value=>'Representative means that there are peptides that map uniquely to a set of non-canonical proteins, thereby indicating that at least one of the proteins in the set must be present, but it cannot be determined which it is.'},
         );
                  
     $showtext = 'show row descriptions';
@@ -668,19 +671,23 @@ sub get_build_overview {
   WHERE atlas_build_id = $build_id
   SMPL
 
-  my $prot_count = $sbeams->selectrow_hashref( <<"  PROT" );
-  SELECT COUNT(BS.biosequence_name) cnt
+  my %prot_count = $sbeams->selectTwoColumnHash( <<"  PROT" );
+  SELECT PPL.level_name, COUNT(BS.biosequence_name) cnt
   FROM $TBAT_PROTEIN_IDENTIFICATION PID
   JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL
   ON PPL.protein_presence_level_id = PID.presence_level_id
   JOIN $TBAT_BIOSEQUENCE BS
   ON BS.biosequence_id = PID.biosequence_id
   WHERE PID.atlas_build_id = $build_id
-  AND PPL.level_name = 'canonical'
+  AND PPL.level_name in 
+      ('canonical', 'indistinguishable representative', 
+       'marginally distinguished', 'representative',
+       'possibly_distinguished')
   AND BS.biosequence_name NOT LIKE 'DECOY%'
   AND BS.biosequence_name NOT LIKE '%UNMAPPED%'
   AND BS.biosequence_name NOT LIKE '%CONTAM%'
   AND BS.biosequence_desc NOT LIKE '%common contaminant%'
+  GROUP BY PPL.level_name 
   PROT
 
 
@@ -743,13 +750,22 @@ sub get_build_overview {
                             value => $build_info->{protpro_PSM_FDR_per_expt}, align => 'right' ) . "\n";
   $table .= $atlas->encodeSectionItem( key   => 'Probability threshold', tr_info => $tr,
                             value => $build_info->{probability_threshold}, align => 'right' ) . "\n";
-  $table .= $atlas->encodeSectionItem( key   => 'Canonical Proteins', tr_info => $tr, value => $prot_count->{cnt}, align => 'right' ) . "\n";
-  $table .= $atlas->encodeSectionItem( key   => 'Distinct Peptides', tr_info => $tr,
-                                          #value => "$multi_pep_count->{cnt} ( $pep_count->{cnt}* )" ) . "\n";
-                                          value => "$pep_count->{cnt}", align => 'right' ) . "\n";
+
   $table .= $atlas->encodeSectionItem( key   => 'Total Observations', tr_info => $tr,
                                           #value => "$multi_pep_count->{obs} ( $pep_count->{obs}* )" ) . "\n";
                                           value => "$pep_count->{obs}", align => 'right' ) . "\n";
+
+  $table .= $atlas->encodeSectionItem( key   => 'Distinct Peptides', tr_info => $tr,
+                                          #value => "$multi_pep_count->{cnt} ( $pep_count->{cnt}* )" ) . "\n";
+                                          value => "$pep_count->{cnt}", align => 'right' ) . "\n";
+
+  $table .= $atlas->encodeSectionItem( key   => 'Protein Presence Levels', tr_info => $tr, value => '', align => 'right' ) . "\n";
+  foreach my $key (sort {$a cmp $b} keys %prot_count){
+     my $level = $key;
+     $level =~ s/\_/ /g;
+     $level =~ s/(\w+)/\u$1/g; 
+     $table .= $atlas->encodeSectionItem( key   => "&#8195;$level", tr_info => $tr, value => $prot_count{$key}, align => 'right' ) . "\n";
+  }
 #  $table .= $atlas->encodeSectionDblItem( key   => ['Build Date', '# Samples'], tr_info => $tr,
 #                            value => [$build_info->{build_date}, $smpl_count->{cnt}] ) . "\n";
 #  $table .= $atlas->encodeSectionDblItem( key   => ['Total Observations', 'Distinct Peptides'], 
