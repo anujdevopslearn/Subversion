@@ -1425,6 +1425,7 @@ sub handle_request {
          S.chimera_level,S.precursor_intensity,S.total_ion_current,S.signal_to_noise
   ORDER BY modified_peptide_sequence,
            MPI.peptide_charge,
+           I.instrument_name,
            S.precursor_intensity DESC,
            S.total_ion_current DESC,
            S.signal_to_noise DESC 
@@ -2163,8 +2164,8 @@ sub get_protein_mapping_widget {
     $row[2] =~ s/Human Proteins//g;
     $row[2] =~ s/EBI IPI/IPI/g;
     $row[2] ||= '';
+    $row[1] = makeProteinLink( name  => $row[1], build => $build_id);
     my $desc = $row[3];
-
     my $seq = $protein_map->{$row[0]}->{seq};
     my $pep = $protein_map->{$row[0]}->{pep_seq};
     my @seq = split( /\*/, $seq );
@@ -2172,25 +2173,23 @@ sub get_protein_mapping_widget {
     my $aseq = join( "*", @seq );
     my $isvar = 'n/a';
     my $annot = '';
-    if ( $row[2] =~ /(Swiss|Uniprot|nextprot)/i ) {
+    if ( $row[2] =~ /(Swiss|Uniprot|nextprot|Ensembl)/i ) {
       if ( $desc =~ /\sPE=(\d)/ ) {
         $annot = "PE level $1";
       }
-
       if ( $cseq =~ /$pep/ ) {
         $isvar = 'no';
-      } elsif ( $aseq =~ /$pep/ ) {
-        $isvar = 'yes';
-      } else {
-        my $lpep = $pep;
-        my $lcseq = $cseq;
-        $lpep =~ s/I/L/g;
-        $lcseq =~ s/I/L/g;
-        if ( $lcseq =~ /$lpep/ ) {
-          $isvar = 'L/I';
-        } else {
-          $isvar = 'n/a';
-        }
+      } else{
+					my $lpep = $pep;
+					my $lcseq = $cseq;
+					$lpep =~ s/I/L/g;
+					$lcseq =~ s/I/L/g;
+					if ( $lcseq =~ /$lpep/ ) {
+						$isvar = 'L/I';
+					} else {
+						#$isvar = 'n/a';
+						$isvar = 'yes';
+					}
       }
     }
     $row[3] = $annot;

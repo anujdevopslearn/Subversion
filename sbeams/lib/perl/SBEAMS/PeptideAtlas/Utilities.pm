@@ -50,7 +50,8 @@ sub map_peptide_to_protein {
 
   if ( $args{multiple_mappings} ) {
     my $posn = $self->get_site_positions( seq => $protein_seq,
-					  pattern => $pep_seq );
+					  pattern => $pep_seq,
+            );
     my @posn;
     for my $pos ( @$posn ) {
       my @p = ( $pos, $pos + length( $pep_seq ) );
@@ -764,10 +765,11 @@ sub get_coverage_hash {
   for my $peptide ( @{$args{peptides}}  )  {
 
     my $posn = $self->get_site_positions( pattern => $peptide,
-					  seq => $seq );
+					  seq => $seq,
+            ); 
+    
 
 #    die Dumper $posn if $peptide eq 'CQSFLDHMK';
-
     for my $p ( @$posn ) {
       for ( my $i = 0; $i < length($peptide); $i++ ){
         my $covered_posn = $p + $i + $args{offset};
@@ -775,6 +777,7 @@ sub get_coverage_hash {
       }
     }
   }
+
   return $coverage;
 }
 
@@ -1833,16 +1836,16 @@ sub get_html_seq_vars {
   my @global_clustal = ( [ '', $ruler_cnt], [ '', $ruler ] );
   my $primary_clustal = [ 'Primary', $seq ];
   $coverage_coords{$primary_clustal->[0]} = $self->get_coverage_hash( seq => $seq, 
-								      peptides => $peps, 
+								      peptides => $peps,
 								      offset => 0,
 								      nostrip => 1 );
   push @global_clustal, $primary_clustal;
 
   my %type2display = ( VARIANT => 'SNP',
-		       CHAIN => 'Chain',
-		       INIT_MET => 'InitMet',
-		       SIGNAL => 'Signal',
-		       PROPEP => 'Propep',
+											 CHAIN => 'Chain',
+											 INIT_MET => 'InitMet',
+											 SIGNAL => 'Signal',
+											 PROPEP => 'Propep',
                        PEPTIDE => 'Chain',
                       );
 
@@ -1850,20 +1853,20 @@ sub get_html_seq_vars {
   my @obs;
   my @unobs;
   my %obs_snps;
+  
+
 
   for my $type ( qw( INIT_MET SIGNAL PROPEP PEPTIDE CHAIN VARIANT ) ) {
     my $pepcnt = 1;
     for my $entry ( @{$swiss->{$type}} ) {
       my $alt = $entry->{seq};
-     
       my $pepname = $type2display{$type} .  '_' . $pepcnt;
- 
-
-      push @global_clustal, [ $pepname, $entry->{seq} ];
+      push @global_clustal, [ $pepname, $entry->{seq}];
       $coverage_coords{$pepname} = $self->get_coverage_hash( seq => $entry->{seq}, 
-							     peptides => $peps, 
-							     offset => 0,
-							     nostrip => 1 );
+																														 peptides => $peps, 
+																														 offset => 0,
+																														 nostrip => 1 );
+
       my $var_string = '';
       $pepcnt++;
       my ( $vtype, $vnum ) = split( /_/, $pepname );
@@ -1872,11 +1875,11 @@ sub get_html_seq_vars {
         for my $key ( keys( %coverage_coords ) ) {
           $sorted{$key} ||= [];
           for my $skey ( sort { $a <=> $b } keys %{$coverage_coords{$key}} ) {
-            push @{$sorted{$key}}, { $skey => $coverage_coords{$key}->{$skey} };
-          }
-        }
-        my $skey = $entry->{start} - 1;
 
+							push @{$sorted{$key}}, { $skey => $coverage_coords{$key}->{$skey} };
+						}
+					}
+        my $skey = $entry->{start} - 1;
         if ( $coverage_coords{$pepname}->{$skey} ) {
           push @obs, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info}, 'seen' ];
           $obs_snps{$pepname} = $entry;
@@ -1946,8 +1949,8 @@ sub get_html_seq_vars {
         JOIN $TBAT_BIOSEQUENCE B
           ON B.biosequence_id = PM.matched_biosequence_id
         WHERE peptide_instance_id IN ( $pi_str )
-        AND dbxref_id = 1
-        AND len( biosequence_name ) = 6
+        --AND dbxref_id = 1
+        --AND len( biosequence_name ) = 6
         GROUP BY peptide_instance_id
       ~;
       my $sbeams = $self->getSBEAMS();
@@ -1955,7 +1958,7 @@ sub get_html_seq_vars {
       while ( my @row = $sth->fetchrow_array() ) {
         next if $row[1] > 1;
         my $seq = $inst2seq{$row[0]};
-	$unique_evidence{$seq} = $row[1];
+				$unique_evidence{$seq} = $row[1];
       }
     }
 
@@ -2225,14 +2228,10 @@ sub get_uniprot_variant_seq {
     $seq->{seq} .= $tryp->[$idx++] if $newtryp;
 
   } elsif ( $args{type} eq 'VARIANT' || $args{type} eq 'CONFLICT' ) { # with snp_context (15)
-
-    my $snp_context = 1;
-
+    my $snp_context = 2;
     $args{info} =~ /^\s*(\w+)\s*\-\>\s*(\w+)/;
     my $original = $1;
     my $altered = $2;
-
-
     if ( $args{type} eq 'CONFLICT' && length( $original ) != length( $altered ) ) {
 #      $log->debug( "Skipping CONFLICT $args{info} because $original and $altered are different!" );
       next;
@@ -2241,7 +2240,6 @@ sub get_uniprot_variant_seq {
 #      $log->debug( "Skipping $args{info} because $original or $altered are > 1" );
       next;
     }
-
     my $tryp = $self->do_tryptic_digestion( aa_seq => $args{fasta_seq} );
     my @pre;
     my @post;
@@ -2255,7 +2253,6 @@ sub get_uniprot_variant_seq {
       $pos += length( $tryptic );
       if ( $pos >= $args{start} ) {
         if ( !$found ) {
-
           $args{altered} = $altered;
           $args{original} = $original;
 
@@ -2293,7 +2290,7 @@ sub get_uniprot_variant_seq {
     my $c_context = '';
     my $n_context = '';
     for my $pep ( reverse( @pre ) ) {
-      if ( $nside < $snp_context ) {
+      if ( $nside < $snp_context || $nside < 30 ) {
         $snp_seq = $pep . $snp_seq;
         $nside += length( $pep );
       } else {
@@ -2301,7 +2298,7 @@ sub get_uniprot_variant_seq {
       }
     }
     for my $pep ( @post ) {
-      if ( $cside < $snp_context ) {
+      if ( $cside < $snp_context || $cside < 30 ) {
         $snp_seq .= $pep;
         $cside += length( $pep );
       } else {
@@ -2489,6 +2486,8 @@ sub get_clustal_display {
   my $table_rows = '';
   my $scroll_class = ( scalar( @{$args{alignments}} ) > 16 ) ? 'clustal_peptide' : 'clustal';
 
+  my $style = '';
+  my $px = 0;
   for my $seq ( @{$args{alignments}} ) {
     my $sequence = $seq->[1];
     if ( $seq->[0] =~ /\&nbsp;/  ) {
@@ -2496,8 +2495,7 @@ sub get_clustal_display {
       $sequence = $self->highlight_sites( seq => $sequence, 
                                           acc => $seq->[0], 
                                           nogaps => 1,
-					  coverage => $args{coverage}->{$seq->[0]}
-	  );
+					                                coverage => $args{coverage}->{$seq->[0]});
     }
 
     if ( $args{snp_cover} ) {
@@ -2507,19 +2505,27 @@ sub get_clustal_display {
     }
 
     if ( $seq->[0] ) {
+      if ($seq->[0] eq 'Primary'){
+         $style = "style ='position: sticky; top: $px"."px; background:#f3f1e4'";
+         $px += 15; 
+      }
       $table_rows .= qq~
-      <TR>
-        <TD ALIGN=right class=pa_sequence_font>$seq->[0]:</TD>
-        <TD NOWRAP=1 class=pa_sequence_font>$sequence</TD>
+      <TR >
+        <TD ALIGN=right class=pa_sequence_font $style>$seq->[0]:</TD>
+        <TD NOWRAP=1 class=pa_sequence_font $style >$sequence</TD>
       </TR>
       ~;
+      $style = '';
     } else {
+      $style = "style ='position: sticky; top: $px". "px;background:#f3f1e4'";
+      $px += 15;
       $table_rows .= qq~
       <TR>
-        <TD ALIGN=right class=pa_sequence_font></TD>
-        <TD NOWRAP=1 class=pa_sequence_font>$sequence</TD>
+        <TD ALIGN=right class=pa_sequence_font $style></TD>
+        <TD NOWRAP=1 class=pa_sequence_font $style>$sequence</TD>
       </TR>
       ~;
+      $style = '';
     }
   }
 
@@ -2572,7 +2578,7 @@ sub get_clustal_display {
 
    <DIV CLASS="$scroll_class" ID="clustal">
      <FORM METHOD=POST NAME="custom_alignment">
-     <TABLE BORDER=0 CELLPADDNG=3>
+     <TABLE BORDER=0 CELLPADDNG=3 style='position: relative'>
         $table_rows
      </TABLE>
    </DIV>

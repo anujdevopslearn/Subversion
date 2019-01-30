@@ -3525,7 +3525,7 @@ sub displayAnnotatedSequence {
               $uniq = "($nobs->{unique}->{$skey} unique)" if $nobs->{unique}->{$skey};
             }
   #          Not yet ready to release
-            $var->[1] = "<a href=ViewPeptideExpression?atlas_build_id=$args{atlas_build_id};spep=$spep;opep=$opep;use_nextprot=$use_nextprot;acc=$biosequence->{biosequence_name} title='View SNP expression profile'>$var->[1]</a>\t";
+            $var->[1] = "<a href=ViewPeptideExpression?atlas_build_id=$args{atlas_build_id};spep=$spep;opep=$opep;use_nextprot=$use_nextprot;acc=$biosequence->{biosequence_name} title='View SNP expression profile'>$var->[1]</a>";
             $title .= "<br>Supporting Peptides:<br>$spep_str";
             $var->[4] = qq~<span class=$class onMouseout="hideTooltip()" onMouseover="showTooltip(event,'$title')">Obs $perc ~ . '% (' . "$post_cnt/$total) $uniq </span> $var->[4] ";
 
@@ -3570,7 +3570,6 @@ sub displayAnnotatedSequence {
 
   if ( !$html_seq->{has_variants} ) {
     my $atype = ( $html_seq->{clustal_display} ) ? ' Variants' : ' Annotations';
-
     my $alt_source = ( !$use_nextprot ) ? 'neXtProt ' : 'Swiss Prot ';
     my $curr_source = ( $use_nextprot ) ? 'neXtProt ' : 'Swiss Prot ';
     my $chg_src = ( $use_nextprot ) ? 0 : 1;
