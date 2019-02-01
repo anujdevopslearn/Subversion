@@ -1875,7 +1875,6 @@ sub get_html_seq_vars {
         for my $key ( keys( %coverage_coords ) ) {
           $sorted{$key} ||= [];
           for my $skey ( sort { $a <=> $b } keys %{$coverage_coords{$key}} ) {
-
 							push @{$sorted{$key}}, { $skey => $coverage_coords{$key}->{$skey} };
 						}
 					}
@@ -1929,7 +1928,7 @@ sub get_html_seq_vars {
       if ( scalar( @{$posn} ) ) {
         $primary{$pep} = $posn->[0];
       } else {
-        $snp_only{$pep}++
+        $snp_only{$pep}++;
       }
     }
 
@@ -1943,8 +1942,9 @@ sub get_html_seq_vars {
         $pi_str .= $sep . $args{seq2instance}->{$pep};
         $sep = ',';
       }
+
       my $nmap_sql = qq~
-        SELECT peptide_instance_id, COUNT(*)
+        SELECT PEPTIDE_INSTANCE_ID, COUNT(DISTINCT MATCHED_BIOSEQUENCE_ID)
         FROM $TBAT_PEPTIDE_MAPPING PM
         JOIN $TBAT_BIOSEQUENCE B
           ON B.biosequence_id = PM.matched_biosequence_id
