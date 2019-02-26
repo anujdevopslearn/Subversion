@@ -690,6 +690,31 @@ sub getGlycoPeptides {
 
 # Returns reference to an array holding the 0-based indices of a pattern 'X'
 # in the peptide sequence
+sub get_peptide_coords {
+  my $self = shift;
+  my %args = @_;
+  my $pep_str = join("','", @{$args{peptides}});
+  my $sbeams = $self->getSBEAMS() || new SBEAMS::Connection;
+  my $sql = qq~
+			SELECT PEPTIDE_SEQUENCE, PM.START_IN_BIOSEQUENCE
+			FROM $TBAT_PEPTIDE_MAPPING PM
+			JOIN $TBAT_PEPTIDE_INSTANCE PI ON (PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID)
+			JOIN $TBAT_PEPTIDE P ON (P.PEPTIDE_ID = PI.PEPTIDE_ID)
+			JOIN $TBAT_BIOSEQUENCE B ON B.BIOSEQUENCE_ID = PM.MATCHED_BIOSEQUENCE_ID
+			WHERE PEPTIDE_SEQUENCE IN ('$pep_str')
+			AND PI.ATLAS_BUILD_ID = $args{atlas_build_id} 
+			AND B.BIOSEQUENCE_NAME = '$args{accession}' 
+   ~;
+  my @rows = $sbeams->selectSeveralColumns($sql);
+  my %peptide_coords=();
+  foreach my $row (@rows){
+    push @{$peptide_coords{$row->[0]}}, $row->[1];
+  }
+  return %peptide_coords;
+
+}
+# Returns reference to an array holding the 0-based indices of a pattern 'X'
+# in the peptide sequence
 sub get_site_positions {
   my $self = shift;
   my %args = @_;
@@ -727,6 +752,61 @@ sub get_current_prophet_cutoff {
   return $cutoff;
 }
 
+
+#+
+# Routine returns ref to hash of seq positions where pattern seq matches 
+# subject sequence
+#
+# @narg peptides   ref to array of sequences to use to map to subject sequence
+# @narg atlas_build_id        
+#
+# @ret $coverage   ref to hash of seq_posn -> is_covered
+#-
+
+sub get_coverage_hash_db {
+  my $self = shift;
+  my %args = @_;
+  my $error = '';
+  my $coverage = {};
+  my $alt_aa = $args{alt};
+  # check for required args
+  for my $arg( qw( peptide_coords peptides pos) ) {
+    next if defined $args{$arg};
+    my $err_arg = ( $error ) ? ", $arg" : $arg;
+    $error ||= 'Missing required param(s): ';
+    $error .= $err_arg
+  }
+  if ( $error ) {
+    $log->error( $error );
+    return;
+  }
+  unless ( ref $args{peptides} eq 'ARRAY' ) {
+    $log->error( $error );
+    return;
+  }
+  my $peptide_coords = $args{peptide_coords};
+  for my $peptide ( @{$args{peptides}}  )  {
+    my @posn;
+    my @aas = split(//, $peptide);
+    if (defined $peptide_coords->{$peptide}){
+      foreach my $start(@{$peptide_coords->{$peptide}}){
+        if ($start <= $args{pos} && $start + length($peptide)>= $args{pos}){
+          my $idx = $args{pos} - $start;
+          push @posn, $start if ($aas[$idx] eq $alt_aa);
+        }
+      }
+			for my $p ( @posn ) {
+				for ( my $i = 0; $i < length($peptide); $i++ ){
+					my $covered_posn = $p + $i;
+					$coverage->{$covered_posn}++;
+          $coverage->{pep}{$peptide} = 1
+				}
+			}
+    } 
+  }
+
+  return $coverage;
+}
 #+
 # Routine returns ref to hash of seq positions where pattern seq matches 
 # subject sequence
@@ -771,6 +851,7 @@ sub get_coverage_hash {
 
 #    die Dumper $posn if $peptide eq 'CQSFLDHMK';
     for my $p ( @$posn ) {
+      $coverage->{pep}{$peptide} =1;
       for ( my $i = 0; $i < length($peptide); $i++ ){
         my $covered_posn = $p + $i + $args{offset};
         $coverage->{$covered_posn}++;
@@ -780,6 +861,7 @@ sub get_coverage_hash {
 
   return $coverage;
 }
+
 
 #+
 # coverage          ref to coverage hash for primary annotation
@@ -1853,8 +1935,9 @@ sub get_html_seq_vars {
   my @obs;
   my @unobs;
   my %obs_snps;
-  
-
+  my %peptide_coordinate_db = $self->get_peptide_coords(atlas_build_id => $args{build_id},
+                               peptides => $peps,
+                               accession => $args{accession});
 
   for my $type ( qw( INIT_MET SIGNAL PROPEP PEPTIDE CHAIN VARIANT ) ) {
     my $pepcnt = 1;
@@ -1862,29 +1945,45 @@ sub get_html_seq_vars {
       my $alt = $entry->{seq};
       my $pepname = $type2display{$type} .  '_' . $pepcnt;
       push @global_clustal, [ $pepname, $entry->{seq}];
-      $coverage_coords{$pepname} = $self->get_coverage_hash( seq => $entry->{seq}, 
+      ## if sequence in dat file same as the one in the db. use coor in db
+      if ( $type eq 'VARIANT' && $seq eq  $swiss->{fasta_seq}){
+        $entry->{info} =~ /\w\s+\-\>\s+(\w)/; 
+        my $alt_aa = $1;
+        if ($alt_aa){
+          $coverage_coords{$pepname} = $self->get_coverage_hash_db(peptide_coords => \%peptide_coordinate_db,
+                                                                 peptides => $peps,
+                                                                 pos => $entry->{start},
+                                                                 alt => $alt_aa);
+        }else{
+          $coverage_coords{$pepname} = $self->get_coverage_hash( seq => $entry->{seq},
+                                                             peptides => $peps,
+                                                             offset => 0,
+                                                           nostrip => 1 );
+        }
+      }else{
+        $coverage_coords{$pepname} = $self->get_coverage_hash( seq => $entry->{seq}, 
 																														 peptides => $peps, 
 																														 offset => 0,
-																														 nostrip => 1 );
-
+																													 nostrip => 1 );
+      }
       my $var_string = '';
       $pepcnt++;
       my ( $vtype, $vnum ) = split( /_/, $pepname );
       if ( $type eq 'VARIANT' ) {
         my %sorted;
-        for my $key ( keys( %coverage_coords ) ) {
-          $sorted{$key} ||= [];
-          for my $skey ( sort { $a <=> $b } keys %{$coverage_coords{$key}} ) {
-							push @{$sorted{$key}}, { $skey => $coverage_coords{$key}->{$skey} };
-						}
-					}
-        my $skey = $entry->{start} - 1;
-        if ( $coverage_coords{$pepname}->{$skey} ) {
-          push @obs, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info}, 'seen' ];
-          $obs_snps{$pepname} = $entry;
-        } else {
-          push @unobs, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info}, 'notseen' ];
-        }
+#        for my $key ( keys( %coverage_coords ) ) {
+#          $sorted{$key} ||= [];
+#          for my $skey ( sort { $a <=> $b } keys %{$coverage_coords{$key}} ) {
+#						push @{$sorted{$key}}, { $skey => $coverage_coords{$key}->{$skey} };
+#					}
+#				}
+				my $skey = $entry->{start} - 1;
+				if ( $coverage_coords{$pepname}->{$skey} ) {
+					push @obs, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info}, 'seen' ];
+					$obs_snps{$pepname} = $entry;
+				} else {
+					push @unobs, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info}, 'notseen' ];
+				}
       } else {
         push @{$return{variant_list}}, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info} ];
       }
@@ -2004,11 +2103,14 @@ sub get_html_seq_vars {
 
       for my $spep ( keys( %snp_only ) ) {
 
-        my $snp_posn = $self->get_site_positions( seq => $snpped_seq,
-						  pattern => $spep,
-						  l_agnostic => 1 );
-
-        if ( scalar( @{$snp_posn} ) ) {
+        ## won't work on multiple snp containing peptide;
+        #my $snp_posn = $self->get_site_positions( seq => $snpped_seq,
+				#		  pattern => $spep,
+			  #			  l_agnostic => 1 );
+			  my $snp_posn =0;
+        $snp_posn = 1 if (defined $coverage_coords{$snp}->{pep}{$spep});
+        #if ( scalar( @{$snp_posn} ) ) {
+        if ($snp_posn){
 #          print "$spep seems to map to to snpped sequence for $site<br>\n";
           $snp_evidence_used{$spep}++;
           $site_specific_nobs{$snp}->{$post_aa} += $args{peptide_nobs}->{$spep};
