@@ -1086,7 +1086,7 @@ sub handle_request {
     ["preceding_residue","PI.preceding_residue","<SPAN TITLE='Preceding (towards the N terminus) amino acid'>Pre AA</SPAN>"],
     ["peptide_sequence","P.peptide_sequence","<SPAN TITLE='Amino Acid sequence of this peptide'>Sequence</SPAN>"],
     ["following_residue","PI.following_residue","<SPAN TITLE='Following (towards the C terminus) amino acid'>Fol AA</SPAN>"],
-    ["suitability_score","0.0001","<SPAN TITLE='Score derived from peptide probability, EOS, and sequence characteristics such as missed cleavage(MC) or semi-tryptic(ST); these are annotated in red.'>ESS</SPAN>"],
+    ["suitability_score","0.0001","<SPAN TITLE='Score derived from peptide probability, EOS, and sequence characteristics such as missed cleavage(MC) or semi-tryptic(NTT); these are annotated in red.'>ESS</SPAN>"],
     ["highest_n_enzymatic_termini","''","<SPAN TITLE='Highest # of enzymatic termini'>NET</SPAN>"],
     ["lowest_n_missed_cleavages","''","<SPAN TITLE='Lowest # of missed cleavage'>NMC</SPAN>"],
     ["best_probability","STR(PI.best_probability,7,3)","<SPAN TITLE='Highest PeptideProphet probability for this observed sequence'>Best Prob</SPAN>"],
@@ -1649,14 +1649,14 @@ sub handle_request {
       push @pa_accessions, $row->[0];
       my $ntt = 0;
       if ( defined $row->[$ntt_idx] && $row->[$ntt_idx] ne '') {
-	$ntt = $row->[$ntt_idx];
+				$ntt = $row->[$ntt_idx];
       } else {
-	if ( $row->[$pre_idx] =~ /[-RK]/ ) {
-	  $ntt++;
-	}
-	if ( $row->[$fol_idx] =~ /[RK]$/ || $row->[3] eq '-' ) {
-	  $ntt++;
-	}
+				if ( $row->[$pre_idx] =~ /[-RK]/ ) {
+					$ntt++;
+				}
+				if ( $row->[$fol_idx] =~ /[RK]$/ || $row->[3] eq '-' ) {
+					$ntt++;
+				}
       }
       $row->[$ntt_idx] = $ntt if !defined $row->[$ntt_idx];
 
@@ -1691,7 +1691,7 @@ sub handle_request {
       my @errs;
 #      if($is_trypsin_build eq 'Y'){
       push @errs, 'mc' if $mc;
-      push @errs, 'ntt' if $ntt < 2;
+      push @errs, 'et'.$ntt if $ntt < 2;
 #      }
       push @errs, 'mgl' if $mgl;
       my $annot = '';
@@ -3406,9 +3406,9 @@ sub displayAnnotatedSequence {
   my $use_nextprot = ( $parameters->{use_nextprot} ) ? 1 : 0;
   $alt_enz = [ qw( aspn gluc chymotrypsin ) ];
   $args{is_trypsin_build} = 'N';
-
   my $html_seq = $sbeamsMOD->get_html_seq_vars( seq => $sequence,
                                           accession => $biosequence->{biosequence_name},
+                                           build_id => $args{atlas_build_id}, 
                                       show_all_snps => 1,
                                                tags => $tags,
                                               mupit => 1,
