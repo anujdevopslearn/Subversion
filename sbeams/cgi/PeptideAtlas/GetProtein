@@ -7,7 +7,7 @@
 # Description : Prints summary of a given protein given selection
 #               atlas build and protein name.
 #
-# SBEAMS is Copyright (C) 2000-2017 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2019 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -889,11 +889,25 @@ sub handle_request {
       value=>$biosequence->{biosequence_gene_name},
     );
 
+
+    # PEFF
+    my $had_peff = 0;
+    while ($biosequence->{biosequence_desc} =~ m/\\([^=]+)=(\S+)/g) {
+      $had_peff++;
+      $htmlcontent .= $sbeamsMOD->encodeSectionItem(
+	key=>"&nbsp;&nbsp;&nbsp;<span class='pa_snp_warn_font'>PEFF</span> $1",
+	tr_info => $tr,
+	value=>$2
+	  );
+    }
+    # otherwise...
     $htmlcontent .= $sbeamsMOD->encodeSectionItem(
       key=>'Description',
       tr_info => $tr,
-      value=>$biosequence->{biosequence_desc},
-    );
+      value=>$biosequence->{biosequence_desc}
+	)
+	unless $had_peff;
+
 
     if($origene_accession){
       $htmlcontent .= $sbeamsMOD->encodeSectionItem(
