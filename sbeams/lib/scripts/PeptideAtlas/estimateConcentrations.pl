@@ -188,7 +188,7 @@ if ($atlas_data_dir) {
   $calibr_file=$atlas_data_dir."/sc_calibration.tsv";
   # calibr_file is optional; if it doesn't exist, set filename to empty str.
   $calibr_file = "" if (! -e $calibr_file);
-  $protlist_file=$atlas_data_dir."/PeptideAtlasInput.PAprotlist";
+  $protlist_file=$atlas_data_dir."/PeptideAtlasInput.PAprotIdentlist";
   $PAidentlist_file=$atlas_data_dir."/PeptideAtlasInput_concat.PAidentlist";
 }
 
@@ -314,8 +314,7 @@ sub main {
     print "Fitting line to calibration values ...\n" unless $QUIET;
     my $stat = Statistics::Descriptive::Full->new();
     $stat->add_data(@sorted_y_values);
-    my ($y_int, $slope, $corr_coeff, $rms) =
-	   $stat->least_squares_fit(@sorted_x_values);
+    my ($y_int, $slope, $corr_coeff, $rms) = $stat->least_squares_fit(@sorted_x_values);
     printf "   n=%d, y_int=%-6.2f slope=%-6.2f corr_coeff=%-6.2f rms=%-6.2f\n",
        $n_calibr, $y_int, $slope, $corr_coeff, $rms unless $QUIET;
     unless ($QUIET) {
@@ -350,11 +349,11 @@ sub main {
     my $build_name = $atlas_build_name;
     $build_name = `dirname $atlas_data_dir` if (!$build_name);
     draw_blank_plot_with_legend($img, $origin, $plotwidth, $build_name,
-	 $min_xy,$max_xy,$min_n_obs, $stdev_win_width, $glyco_atlas);
+					 $min_xy,$max_xy,$min_n_obs, $stdev_win_width, $glyco_atlas);
 
     # Draw original trend line
     draw_trend_line ( $min_xy, $max_xy, $slope, $y_int, $origin,
-       $winwidth, $factor, $img, 'gray' );
+														 $winwidth, $factor, $img, 'gray' );
 
     # Draw the calibration points
     for (my $i=0; $i<$n_calibr; $i++) {
@@ -378,11 +377,11 @@ sub main {
     # Draw points for calibration proteins with n_obs below threshold
     if ($glyco_atlas) {
       for my $protid (@no_glycosite) {
-	my $x = log10($calibr_href->{$protid}->{norm_PSM_count});
-	my $y = log10($calibr_href->{$protid}->{fmol_per_ml});
-	($x, $y) = transform_x_y($x, $y, $origin, $winwidth, $factor, $min_xy);
-	$img->bgcolor('white'); $img->fgcolor('green');
-	$img->rectangle($x-2,$y-2,$x+2,$y+2);
+				my $x = log10($calibr_href->{$protid}->{norm_PSM_count});
+				my $y = log10($calibr_href->{$protid}->{fmol_per_ml});
+				($x, $y) = transform_x_y($x, $y, $origin, $winwidth, $factor, $min_xy);
+				$img->bgcolor('white'); $img->fgcolor('green');
+				$img->rectangle($x-2,$y-2,$x+2,$y+2);
       }
     }
 
@@ -437,10 +436,9 @@ sub main {
     my $x_incr = 0.1;
 
     # Get the deviations from the trend line within a sliding window
-    ($aref1, $aref2) =
-       calculate_deviations_from_trend_line_using_sliding_window
-	( $x_min, $x_max, $x_incr, $x_window, \@culled_sorted_calibr_protids,
-	  $calibr_href, $slope, $y_int,);
+    ($aref1, $aref2) = calculate_deviations_from_trend_line_using_sliding_window
+						( $x_min, $x_max, $x_incr, $x_window, \@culled_sorted_calibr_protids,
+							$calibr_href, $slope, $y_int,);
     my @x_values=@{$aref1};         # x values for which there is a stdev
     my @stdev_values=@{$aref2};     # the corresponding stdev values
 
@@ -452,10 +450,8 @@ sub main {
 	   $stat->least_squares_fit(@x_values);
     unless ($QUIET) {
       printf "   y_int=%-6.2f slope=%-6.2f corr_coeff=%-6.2f rms=%-6.2f\n",
-	 $y_int_err, $slope_err, $corr_coeff_err, $rms_err;
-      print
-       "\nWARNING: uncertainty factors increase toward higher concentrations!\n"
-	    if ($slope_err > 0);
+						 $y_int_err, $slope_err, $corr_coeff_err, $rms_err;
+      print "\nWARNING: uncertainty factors increase toward higher concentrations!\n" if ($slope_err > 0);
       #print "\nWARNING: negative correlation coefficient; ".
 	    #"try increasing --stdev_win_width?\n" if ($corr_coeff_err < 0);
       print "\n";
@@ -472,10 +468,10 @@ sub main {
       my $uncertainty_factor = round(10 ** $stdev);
       $uncertainties{$low_x} = $uncertainty_factor;
       unless ($QUIET) {
-	printf "       %2d-%-2d             %2dx",
-	     $low_x, $high_x, $uncertainty_factor;
-	print " (out of calibr range)" if (($i <= $x_min-1) || ($i >= $x_max+1));
-	print "\n";
+				printf "       %2d-%-2d             %2dx",
+				 $low_x, $high_x, $uncertainty_factor;
+				print " (out of calibr range)" if (($i <= $x_min-1) || ($i >= $x_max+1));
+				print "\n";
       }
     }
 
@@ -585,11 +581,11 @@ sub get_Atlas_info_for_calibration_proteins {
     ## calculate number of observable peptides
     my $n_observable_peps =
       SBEAMS::PeptideAtlas::SpectralCounting::countPepsInProt (
-	seq=>$protseq,
+				seq=>$protseq,
       );
     my $n_observable_glycopeps =
       SBEAMS::PeptideAtlas::SpectralCounting::countPepsInProt (
-	seq=>$protseq,
+				seq=>$protseq,
         glyco_only=>1,
       );
     my $fmol_per_ml = $calibr_href->{$protid}->{fmol_per_ml};
@@ -602,12 +598,12 @@ sub get_Atlas_info_for_calibration_proteins {
     if ( defined $protlist_href->{$protid} ) {
       $n_observations = $protlist_href->{$protid}->{n_observations};
       $norm_PSM_count = 
-	SBEAMS::PeptideAtlas::SpectralCounting::adjust_PSM_count (
-	 PSM_count => $n_observations,
-	 n_observable_peps => $n_observable_peps,
-	 n_observable_glycopeps => $n_observable_glycopeps,
-	 glyco_atlas => $glyco_atlas,
-	);
+			SBEAMS::PeptideAtlas::SpectralCounting::adjust_PSM_count (
+			 PSM_count => $n_observations,
+			 n_observable_peps => $n_observable_peps,
+			 n_observable_glycopeps => $n_observable_glycopeps,
+			 glyco_atlas => $glyco_atlas,
+			);
       $log_norm_PSM_count = log10($norm_PSM_count);
       $calibr_href->{$protid}->{norm_PSM_count} = $norm_PSM_count;
     } else {
@@ -854,31 +850,32 @@ sub estimate_concentrations {
         $confidence,$n_observations,$n_distinct_peptides,
         $level_name,$represented_by_biosequence_name,
         $subsumed_by_biosequence_names,$estimated_ng_per_ml,
-        $abundance_uncertainty,$covering,$norm_PSMs_per_100K) =
+        $abundance_uncertainty,$covering,$group_size,$norm_PSMs_per_100K) =
               split (",", $line);
     $norm_PSMs_per_100K = "" if (!$norm_PSMs_per_100K);
     my @protids = split(" ",$biosequence_names);
+    
     my $primary_protid = $protids[0];
     my $protseq = $biosequence_attributes{$primary_protid}->[5];
    
     my ($formatted_estimated_ng_per_ml, $formatted_abundance_uncertainty,
-	  $formatted_norm_PSMs_per_100K);
+	  $formatted_norm_PSMs_per_100K) = '';
     # Calculate estimated concentration and normalized PSMs per 100K
     if ( ! (($primary_protid =~ /DECOY/) ||
             ($primary_protid =~ /UNMAPPED/))) {
       ($formatted_estimated_ng_per_ml,
        $formatted_abundance_uncertainty,
        $formatted_norm_PSMs_per_100K) =
-	SBEAMS::PeptideAtlas::SpectralCounting::get_estimated_abundance (
-	  prot_name=>$primary_protid,
-	  PSM_count=>$n_observations,
-	  total_PSMs=>$total_PSMs,
-	  sequence=>$biosequence_attributes_href->{$primary_protid}->[5],
-	  abundance_conversion_slope=>$calibr_slope,
-	  abundance_conversion_yint=>$calibr_y_int,
-	  uncertainties_href=>$uncertainties_href,
-	  glyco_atlas=>$glyco_atlas,
-	);
+				SBEAMS::PeptideAtlas::SpectralCounting::get_estimated_abundance (
+					prot_name=>$primary_protid,
+					PSM_count=>$n_observations,
+					total_PSMs=>$total_PSMs,
+					sequence=>$biosequence_attributes_href->{$primary_protid}->[5],
+					abundance_conversion_slope=>$calibr_slope,
+					abundance_conversion_yint=>$calibr_y_int,
+					uncertainties_href=>$uncertainties_href,
+					glyco_atlas=>$glyco_atlas,
+				);
       $norm_PSMs_per_100K = $formatted_norm_PSMs_per_100K;
     }
 
@@ -888,15 +885,16 @@ sub estimate_concentrations {
     # observations ... and, if this is a glyco atlas, the protseq
     # has NXS/T motif ... record the newly estimated concentration.
     if ($calibr_file &&
-        ($primary_protid eq $represented_by_biosequence_name) &&
+        #($primary_protid eq $represented_by_biosequence_name) &&
+        ($primary_protid && $level_name !~ /insufficient|weak|subsumed/) && 
         (! (($primary_protid =~ /DECOY/) ||
             ($primary_protid =~ /UNMAPPED/))) &&
         ($n_observations >= $min_n_obs) &&
         (!$glyco_atlas || 
-	  SBEAMS::PeptideAtlas::SpectralCounting::hasGlycoSite(
-		  seq=>$protseq,
-		  next_aa=>'A')
-	  )) {
+				SBEAMS::PeptideAtlas::SpectralCounting::hasGlycoSite(
+					seq=>$protseq,
+					next_aa=>'A')
+				)) {
       $estimated_ng_per_ml = $formatted_estimated_ng_per_ml;
       $abundance_uncertainty = $formatted_abundance_uncertainty;
     } 
@@ -909,7 +907,7 @@ sub estimate_concentrations {
       $confidence,$n_observations,$n_distinct_peptides,
       $level_name,$represented_by_biosequence_name,
       $subsumed_by_biosequence_names,$estimated_ng_per_ml,
-      $abundance_uncertainty,$covering, $norm_PSMs_per_100K);
+      $abundance_uncertainty,$covering,$group_size,$norm_PSMs_per_100K);
     print OUT "$line\n";
   }
   close (OUT);
