@@ -797,7 +797,7 @@ sub get_coverage_hash_db {
       }
 			for my $p ( @posn ) {
 				for ( my $i = 0; $i < length($peptide); $i++ ){
-					my $covered_posn = $p + $i;
+					my $covered_posn = $p + $i -1;
 					$coverage->{$covered_posn}++;
           $coverage->{pep}{$peptide} = 1
 				}
@@ -2134,8 +2134,6 @@ sub get_html_seq_vars {
   my $t1 = time;
   my $td = $t1 - $t0;
   $return{site_nobs} = \%site_specific_nobs;
-
-
   # Add modified residues track
   my $cover = $self->get_modres_coverage( $swiss );
   if ( $swiss->{has_modres} ) {
