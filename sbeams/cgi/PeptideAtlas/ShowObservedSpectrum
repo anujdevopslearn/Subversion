@@ -486,7 +486,16 @@ sub processRequest {
     unless ( $peptidoform ) {
       print "<BR><font color=\"red\">The Lorikeet spectrum viewer is currently unable to display a spectrum without any peptide ion interpretation. A temporary hack while we fix this is to set the sequence to 'A'</font><BR><BR>\n";
       $peptidoform = "A";
-      $charge = 1;
+
+      #### Set the charge to some input or a default of 1
+      if ( $parameters{alt_charge} ) {
+	$charge = $parameters{alt_charge};
+      } elsif ( $parameters{'assumed_charge'} ) {
+	$charge = $parameters{'assumed_charge'};
+      } else {
+	$charge = 1;
+      }
+
       $noPeptide = 1;
     }
 
@@ -494,7 +503,8 @@ sub processRequest {
     #### This is wasteful. FIXME
     my @spectrumBuffer;
     push(@spectrumBuffer,"Name: $peptidoform/$charge");
-    push(@spectrumBuffer,"PrecursorMZ: $parameters{'precursor_mass'}");
+    #push(@spectrumBuffer,"PrecursorMZ: $parameters{'precursor_mass'}");
+    push(@spectrumBuffer,"PrecursorMZ: $observedPrecursorMz");
     push(@spectrumBuffer,"NumPeaks: ".scalar(@spectrum_array));
     foreach my $peak ( @spectrum_array ) {
       push(@spectrumBuffer,"$peak->[0]\t$peak->[1]\t?");
@@ -878,7 +888,6 @@ sub showSpectrumText {
 
   print "<PRE>\n";
 
-
   #### Set the reannotation resolution
   my $usePPMTolerance = 1;
   $usePPMTolerance = 0 if ( $parameters->{SAWB_resolutionHighLow} eq 'low' );
@@ -910,21 +919,21 @@ sub showSpectrumText {
     $spectrum->show(format=>'Lorikeet');
 
   } elsif ( $parameters->{SAWB_DisplayMode} eq 'denovo' ) {
-    my %deNovoModifications = ( 'C[160]'=>1 );
+    my %deNovoModifications = ( 'C[160]'=>1, 'M[147]'=>1 );
     if ( $peptideIon =~ /n\[145\]/ ) {
-      %deNovoModifications = ( 'n[145]'=> 1,'K[272]'=>1,'C[160]'=>1 );
+      %deNovoModifications = ( 'n[145]'=> 1,'K[272]'=>1,'C[160]'=>1, 'M[147]'=>1 );
     }
     if ( $peptideIon =~ /n\[230\]/ ) {
-      %deNovoModifications = ( 'n[230]'=> 1,'K[357]'=>1,'C[160]'=>1 );
+      %deNovoModifications = ( 'n[230]'=> 1,'K[357]'=>1,'C[160]'=>1, 'M[147]'=>1 );
     }
     if ( $peptideIon =~ /n\[43\]/ ) {
-      %deNovoModifications = ( 'n[43]'=> 1,'C[160]'=>1 );
+      %deNovoModifications = ( 'n[43]'=> 1,'C[160]'=>1, 'M[147]'=>1 );
     }
     $spectrum->readSequenceDeNovo(
       modifications => \%deNovoModifications,
       ppm => $usePPMTolerance,
-      #bestTolerance => 7,
-      #stdTolerance => 7,
+      #bestTolerance => 15,
+      #stdTolerance => 15,
     );
     $spectrum->show(format=>'simple');
 
