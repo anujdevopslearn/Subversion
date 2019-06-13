@@ -516,7 +516,8 @@ sub processRequest {
       print "<PRE>\n";
       print "charge=$charge,\n";
       print "peptidoform = $peptidoform,\n";
-      print "precursor_mass    = $parameters{'precursor_mass'},\n";
+      print "precursor_mass    = $parameters{'precursor_mass'}\n";
+      print "PrecursorMZ = $observedPrecursorMz\n";
       print "scanNumber = $scanNumber\n";
       print "spectrumName = $spectrumName\n";
       #print Data::Dumper->Dump([\@spectrum_array]);
@@ -1579,6 +1580,7 @@ sub getSpectrumFromMzmlFile {
   my $quiet = processParameters( name=>'quiet', required=>0, allowUndef=>0, default=>0, parameters=>\%parameters, caller=>$METHOD, response=>$response );
   my $outputDestination = processParameters( name=>'outputDestination', required=>0, allowUndef=>0, default=>'STDERR', parameters=>\%parameters, caller=>$METHOD, response=>$response );
   print "DEBUG: Entering $CLASS.$METHOD\n" if ( $debug && !$DEBUG );
+  #$verbose = 1;
 
   #### Process specific parameters
   my $filePath = processParameters( name=>'filePath', required=>1, allowUndef=>0, response=>$response, parameters=>\%parameters, caller=>$METHOD );
@@ -1593,10 +1595,54 @@ sub getSpectrumFromMzmlFile {
   return $response if ( $response->{errorCode} =~ /MissingParameter/i );
  
   #### Check to make sure the file exists
+  my $eol = "<BR>\n";
   unless ( -e $filePath ) {
-    $response->logEvent( level=>'ERROR', errorCode=>'MsRunFileNotFound', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
-      message=>"Specified filePath '$filePath' is not a file");
-    return $response;
+    print "Did not find the expected file '$filePath'$eol" if ($verbose);
+    my $found = 0;
+    use File::Basename;
+    my ($file,$path) = fileparse($filePath);
+    print "file=$file$eol" if ($verbose);
+    print "path=$path$eol" if ($verbose);
+
+    #### If not, try it with a .gz at the end
+    if ( ! $found ) {
+      my $altFilePath = "$filePath.gz";
+      print "Trying alternate file '$altFilePath'$eol" if ($verbose);
+      if ( -e "$altFilePath" ) {
+	$filePath = $altFilePath;
+	print "Found '$altFilePath'$eol" if ($verbose);
+	$found = 1;
+      }
+    }
+
+    #### If still not, try in a parallel data/ directory
+    if ( ! $found ) {
+      my $altFilePath = "$path/../data/$file";
+      print "Trying alternate file '$altFilePath'$eol" if ($verbose);
+      if ( -e "$altFilePath" ) {
+	$filePath = $altFilePath;
+	print "Found '$altFilePath'$eol" if ($verbose);
+	$found = 1;
+      }
+    }
+
+    #### If still not, try in a parallel data/ directory and with a .gz at the end
+    if ( ! $found ) {
+      my $altFilePath = "$path/../data/$file.gz";
+      print "Trying alternate file '$altFilePath'$eol" if ($verbose);
+      if ( -e "$altFilePath" ) {
+	$filePath = $altFilePath;
+	print "Found '$altFilePath'$eol" if ($verbose);
+	$found = 1;
+      }
+    }
+
+    #### If still not, admit defeat
+    if ( ! $found ) {
+      $response->logEvent( level=>'ERROR', errorCode=>'MsRunFileNotFound', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
+        message=>"Specified filePath '$filePath' is not a file");
+      return $response;
+    }
   }
 
   #### Create a virtual filename to fetch the spectrum
