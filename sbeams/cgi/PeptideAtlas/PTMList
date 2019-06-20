@@ -47,11 +47,13 @@ my $params = process_params();
 
 my $show_image = 0;
 
+# Authenticate or exit
+my $username = $sbeams->Authenticate( allow_anonymous_access => 1) || exit;
+
+my @project_ids = $sbeams->getAccessibleProjects();
+my $project_ids = join( ",", @project_ids ) || '0';
 
 { # Main 
-
-    # Authenticate or exit
-    my $username = $sbeams->Authenticate( allow_anonymous_access => 1) || exit;
 
 
 
@@ -205,8 +207,6 @@ sub get_list_overview {
   my $build_id = shift;
   
   # Get a list of accessible project_ids
-  my @project_ids = $sbeams->getAccessibleProjects();
-  my $project_ids = join( ",", @project_ids ) || '0';
 
   my $info = $sbeams->selectrow_hashref( <<"  BUILD" );
   SELECT title, description, original_file, ptm_list_id,
@@ -215,7 +215,7 @@ sub get_list_overview {
   FROM $TBAT_PTM_LIST 
   WHERE ptm_list_id = $params->{ptm_list_id}
   AND record_status <> 'D'
-  AND project_id IN ( $project_ids );
+  AND project_id IN ( $project_ids )
   BUILD
 
 
@@ -309,9 +309,12 @@ sub get_list_table {
 
   my $sql =<<"  END";
   SELECT ptm_id, uniprot_accession, protein_name, ptm_name, unimod_id, 
-         sequence_pos, pubmed_id, confidence, keywords
-  FROM $TBAT_PTM_LIST_ENTRY
-  WHERE ptm_list_id = $params->{ptm_list_id}
+         sequence_pos, PLE.pubmed_id, confidence, keywords
+  FROM $TBAT_PTM_LIST_ENTRY PLE
+  JOIN $TBAT_PTM_LIST PL
+  ON PLE.ptm_list_id = PL.ptm_list_id
+  WHERE PL.ptm_list_id = $params->{ptm_list_id}
+  AND project_id IN ( $project_ids )
   ORDER BY uniprot_accession ASC
   END
 
@@ -738,6 +741,7 @@ sub get_list_selector {
   SELECT title, first_name, last_name, ptm_list_id
   FROM $TBAT_PTM_LIST DPL
   JOIN $TB_CONTACT C ON DPL.owner_contact_id = C.contact_id
+  WHERE project_id IN ( $project_ids )
   ORDER BY title
   END
 
