@@ -1443,19 +1443,19 @@ sub handle_request {
 
       my (@ptm_peps,%ptm_score_summary);
       postProcessResultset(
-	rs_params_ref=>\%rs_params,
-	resultset_ref=>$resultset_ref,
-	query_parameters_ref=>\%parameters,
-	column_titles_ref=>\@column_titles,
-	hidden_cols => \%hidden_cols,
-	ptm_score_summary_ref =>\%ptm_score_summary,
-	ptm_peps_ref => \@ptm_peps);
+														rs_params_ref=>\%rs_params,
+														resultset_ref=>$resultset_ref,
+														query_parameters_ref=>\%parameters,
+														column_titles_ref=>\@column_titles,
+														hidden_cols => \%hidden_cols,
+														ptm_score_summary_ref =>\%ptm_score_summary,
+														ptm_peps_ref => \@ptm_peps);
 
       my $spectra_display = $sbeamsMOD->get_individual_spectra_display( 
-	column_titles_ref=>\@column_titles,
-	colnameidx_ref => \%colnameidx,
-	resultset_ref=> $resultset_ref,
-	hidden_cols_ref=>\%hidden_cols );
+																									column_titles_ref=>\@column_titles,
+																									colnameidx_ref => \%colnameidx,
+																									resultset_ref=> $resultset_ref,
+																									hidden_cols_ref=>\%hidden_cols );
 
       my $help_me = get_table_help( 'individual_spectra' );
 
@@ -1532,7 +1532,7 @@ sub handle_request {
 	print( <<"		END" );
 	<script LANGUAGE="JavaScript" TYPE="text/javascript">
 	  var indiv_spec = document.getElementsByName("ptm_spectra");
-	  var rows = indiv_spec[1].getElementsByTagName('TR');	
+	  var rows = indiv_spec[0].getElementsByTagName('TR');	
           var j=3;
 	  while (j<=rows.length) {
 	    var aas = rows[j].cells[0].innerHTML.split('\\)'); 
@@ -1988,8 +1988,8 @@ sub postProcessResultset {
       $pep->[$chimera_idx] = '' if (!$pep->[$chimera_idx]);
 			my $modified_pepseq = $pep->[$mseq_idx];
 
+      my @ptm_pep =();
 			if ($pep->[$ptm_idx]){
-        my @ptm_pep =();
         foreach my $i (0..10){
           push @ptm_pep, $pep->[$i];
         }
@@ -2080,7 +2080,6 @@ sub postProcessResultset {
           $ptm_pep[$mseq_idx] = $modified_pepseq;
         }
         $ptm_pep[$frag_idx] = $pep->[$frag_idx];
-        push @$ptm_peps_ref, \@ptm_pep;
         $pep->[$mseq_idx] =~ s/(\([\d\.]+\))//g;
       }
     
@@ -2088,6 +2087,12 @@ sub postProcessResultset {
       $pep->[$tic_idx] = ( $pep->[$tic_idx] ) ?  sprintf("%.2f", $pep->[$tic_idx]/1000000): $sbeams->makeInactiveText('n/a');
       $pep->[$sn_idx] = ( $pep->[$sn_idx] ) ? sprintf("%.0f", $pep->[$sn_idx]) : $sbeams->makeInactiveText('n/a');
 
+      if ($pep->[$ptm_idx]){
+        $ptm_pep[$it_idx] = $pep->[$it_idx];
+        $ptm_pep[$tic_idx] = $pep->[$tic_idx];
+        $ptm_pep[$sn_idx] = $pep->[$sn_idx];
+        push @$ptm_peps_ref, \@ptm_pep;
+      }
 
       if ( $has_header_info ) {
         $pep->[$rt_idx] = ( $pep->[$rt_idx] ) ? sprintf( "%0.1f", $pep->[$rt_idx]/60 ) : $sbeams->makeInactiveText('n/a'); 
