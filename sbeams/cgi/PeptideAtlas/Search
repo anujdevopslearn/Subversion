@@ -641,6 +641,8 @@ sub handle_request {
        ORDER BY search_key_name
    ~;
    $sql = $select_sql.$where_clause; 
+   $sbeams->display_sql(sql=>$sql) if ($show_sql);
+ 
 
   #### Define the hypertext links for columns that need them
   %url_cols = (
@@ -685,7 +687,6 @@ sub handle_request {
 			my $start = [ Time::HiRes::gettimeofday( ) ];
 	    # script code goes here
 			$sbeams->display_sql(sql=>$sql) if ($show_sql);
-			# print "$sql\n";
 			#### If the action contained QUERY, then fetch the results from
 			#### the database
 			my $n_fuzzy_results;
@@ -753,28 +754,71 @@ sub handle_request {
       # TMF Feb 2 2011: removed ORDER BY build_type, since this was
       # causing SearchProteins to break. However, it also causes the
       # Search cgi results to be sorted differently. Hope this is OK.
+      
+      my $print_warning_msg = 0;
 			if ($apply_action =~ /(QUERY|GO)/i){
 				if(! $parameters{exact_match}) {
-					my $search_key_clause = '%'.$exact_search_key.'%';
-					$search_key_clause =~ s/\s+/%/g;
-					pop @column_array;
-					push @column_array, ["match_string","'fuzzy_match'", "fuzzy_match"];
-					$columns_clause = $sbeams->build_SQL_columns_list(
-					 column_array_ref=>\@column_array,
-					 colnameidx_ref=>\%colnameidx,
-					 column_titles_ref=>\@column_titles
-					);
-
-					$sql = qq~
-              $select_sql
-							WHERE 1 = 1
-								$search_types_clause
-								AND SKE.search_key_name like '$search_key_clause'
-								AND SKE.search_key_name != '$parameters{search_key}'
-								AND SKL.atlas_build_id IN ( $atlas_build_ids )
-							ORDER BY search_key_name
-					 ~;
-
+						pop @column_array;
+						push @column_array, ["match_string","'fuzzy_match'", "fuzzy_match"];
+						$columns_clause = $sbeams->build_SQL_columns_list(
+						 column_array_ref=>\@column_array,
+						 colnameidx_ref=>\%colnameidx,
+						 column_titles_ref=>\@column_titles
+						);
+           my $dir = "/regis/sbeams5/nobackup/builds_output/cache/";
+           if (opendir (DIR , $dir)){
+            my %build_ids = map {$_ => 1} split(",", $atlas_build_ids);
+            my $search_key_id_str= '';
+            my $counter  = 0; 
+            my $search_key_clause = $exact_search_key;
+            $search_key_clause =~ s/\s+/.*/g; 
+            
+						while( (my $filename = readdir(DIR))) {
+              my %search_key_ids =();
+              my %resource_names =();
+							$filename =~ /(\d+).tsv/;
+							next if (not defined $build_ids{$1});
+							open (F, "<$dir/$filename");
+              foreach my $line (grep(/$search_key_clause/i, <F>)){
+                chomp $line; 
+						  	my ($key_id,$resource_name,$key) = split(/,/, $line,3);
+                next if (defined $resource_names{$resource_name});
+                $resource_names{$resource_name} =1;
+							  if (lc($key) ne lc($exact_search_key)){ 
+								  $search_key_ids{$key_id}=1;
+                  $counter++;
+							  }
+                if ($counter >= 500 ){$print_warning_msg = 1; last;}
+              }
+              next if (! scalar keys %search_key_ids); 
+              if (! $search_key_id_str){
+                $search_key_id_str .= "SKE.search_key_id in (". join(",", keys %search_key_ids) .")";
+              }else{
+                $search_key_id_str .= " or SKE.search_key_id in (". join(",", keys %search_key_ids) .")";
+              }
+						}
+            closedir(DIR);
+            close (F);
+            $sql = qq~
+                $select_sql
+                WHERE 1 = 1
+                  $search_types_clause
+                  AND ($search_key_id_str)
+                  AND SKL.atlas_build_id IN ( $atlas_build_ids )
+                  ORDER BY search_key_name
+             ~;
+          }else{
+						my $search_key_clause = '%'.$exact_search_key.'%';
+						$search_key_clause =~ s/\s+/%/g;
+            $sql = qq~
+                $select_sql
+                WHERE 1 = 1
+                  $search_types_clause
+                  AND SKE.search_key_name like '$search_key_clause'
+                  AND SKL.atlas_build_id IN ( $atlas_build_ids )
+                ORDER BY search_key_name
+             ~;
+          }
 					$sbeams->fetchResultSet(
 							 sql_query=>$sql,
 							 resultset_ref=>$tmp_resultset_ref,
@@ -833,7 +877,6 @@ sub handle_request {
 					 return(0);
         }
 			}
-
       if ($apply_action =~ /(QUERY|GO)/i) {
         $rs_params{set_name} = "SETME";
         #### Store the resultset and parameters to disk resultset cache
@@ -858,7 +901,7 @@ sub handle_request {
 							column_titles_ref=>\@column_titles,
 							base_url=>$base_url,
 					);
-          if(scalar(@{$resultset_ref->{data_ref}}) >= 5000){
+          if(scalar(@{$resultset_ref->{data_ref}}) >= 5000|| $print_warning_msg){
            print "<BR><font color=\"red\"><b>There were too many matching results, please refine the search keys.</b></font><BR><BR>\n";
          }
 
@@ -887,7 +930,7 @@ sub handle_request {
 								base_url  => $base_url
 						);
 					}
-         if(($n_fuzzy_results+ $n_exact_results) >= 5000){
+         if(($n_fuzzy_results+ $n_exact_results) >= 5000 || $print_warning_msg){
            print "<BR><font color=\"red\"><b>There were too many matching results, please refine the search keys.</b></font><BR><BR>\n";
          }
           $sbeams-> displayResultSetControls(
