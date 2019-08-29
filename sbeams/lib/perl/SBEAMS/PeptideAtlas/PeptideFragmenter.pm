@@ -121,7 +121,7 @@ sub getExpectedFragments {
 
     for (my $i=0; $i<$length; $i++) {
 			foreach my $residue (split(/(?=[A-Za-z])/, $residues[$i])){
-			  print "residues[$i]=$residue\t";
+			  #print "residues[$i]=$residue\t";
 				my $mass = $AAmasses{$residue};
 				unless ($mass) {
 					if ($residue =~ /(\w)\[(\d+)\]/) {
@@ -134,7 +134,7 @@ sub getExpectedFragments {
 						} else {
 								die("ERROR: Unable to find mass for '$residue'");
 						}
-            print "$mass\n";
+            #print "$mass\n";
 					}
 					unless ($mass) {
 						die("ERROR: Unable to find mass for '$residue'");
@@ -143,7 +143,7 @@ sub getExpectedFragments {
 				
 			  $masses[$i] += $mass;
 			  $totalMass += $mass;
-			  print "residues[$i] = $residues[$i] = $masses[$i] $totalMass\n";
+			  #print "residues[$i] = $residues[$i] = $masses[$i] $totalMass\n";
 			}
     }
 
