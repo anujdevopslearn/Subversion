@@ -2284,6 +2284,9 @@ sub displayExperiment_contri_plotly{
 				y: [$cumpepy_str],
 				fill: 'tonexty',
         fillcolor:'red',
+        marker: {
+                  color: 'rgba(255,0,255,0)',
+                }, 
 				name:'cumulative_n_peptides',
 				hovertext:l,
 				haveron:"fills",
@@ -2294,6 +2297,9 @@ sub displayExperiment_contri_plotly{
 				y: [$idvpepy_str],
 				fill: 'tonexty',
         fillcolor:'blue',
+				marker: {
+					color: 'rgba(255,0,255,0)',
+				},
 				name:'n_distinct_multiobs_peptides',
 				hovertext:l,
         hoverinfo:"x+y+text",
@@ -2317,6 +2323,9 @@ sub displayExperiment_contri_plotly{
         y: [$cumproty_str],
         fill: 'tonexty',
         fillcolor:'red',
+        marker: {
+                  color: 'rgba(255,0,255,0)',
+                },
         name:'cumulative_n_proteins',
         hovertext:l,
         hoverinfo:"x+y+text",
@@ -2327,6 +2336,9 @@ sub displayExperiment_contri_plotly{
         y: [$idvproty_str],
         fill: 'tonexty',
         fillcolor:'blue',
+        marker: {
+                  color: 'rgba(255,0,255,0)',
+                },
         name:'n_canonical_proteins',
         hovertext:l,
         hoverinfo:"x+y+text",
