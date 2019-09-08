@@ -265,20 +265,41 @@ sub processRequest {
     my $usiStr = $q->param('USI') || $q->param('usi');
     if ( $usiStr ) {
       my $result = interpretUSI( usiStr=>$usiStr, outputDestination=>'STDOUT' );
+
+      #### If a successful interpretation
       if ( $result->{status} eq 'OK' ) {
         $peptidoform = $result->{peptidoform} if ( $result->{peptidoform} );
         $charge = $result->{charge} if ( $result->{charge} );
-	$spectrumName = $usiStr;
-	my $filePath = $result->{mzMLFilePath};
 	$scanNumber = $result->{index};
-	my $getSpectrumResult = getSpectrumFromMzmlFile( filePath=> $filePath, scanNumber=>$scanNumber, verbose=>0, debug=>0, quiet=>0, outputDestination=>'STDOUT' );
-	if ( $getSpectrumResult->{status} eq 'OK' ) {
-	  @spectrum_array = @{$getSpectrumResult->{mz}};
-	  $observedPrecursorMz = $getSpectrumResult->{observedPrecursorMz};
+	$spectrumName = $usiStr;
+
+	#### If it is a PXL identifier
+	if ( $result->{datasetIdentifier} =~ /PXL/ ) {
+	  my $getSpectrumResult = getSpectrumFromProteomeCentral( usiStr=>$usiStr , verbose=>0, debug=>0, quiet=>0, outputDestination=>'STDOUT' );
+	  if ( $getSpectrumResult->{status} eq 'OK' ) {
+	    @spectrum_array = @{$getSpectrumResult->{mz}};
+	    $observedPrecursorMz = $getSpectrumResult->{observedPrecursorMz};
+	    $peptidoform = $getSpectrumResult->{peptideStr} unless ( $peptidoform );
+	    $charge = $getSpectrumResult->{charge} unless ( $charge );
+          } else {
+	    print "ERROR: Unable to read peaks.\n";
+            return;
+          }
+
+	#### Else it must be a PXD identifier
         } else {
-	  print "ERROR: Unable to read peaks.\n";
-          return;
+	  my $filePath = $result->{mzMLFilePath};
+	  my $getSpectrumResult = getSpectrumFromMzmlFile( filePath=> $filePath, scanNumber=>$scanNumber, verbose=>0, debug=>0, quiet=>0, outputDestination=>'STDOUT' );
+	  if ( $getSpectrumResult->{status} eq 'OK' ) {
+	    @spectrum_array = @{$getSpectrumResult->{mz}};
+	    $observedPrecursorMz = $getSpectrumResult->{observedPrecursorMz};
+          } else {
+	    print "ERROR: Unable to read peaks.\n";
+	    return;
+          }
         }
+
+      #### Otherwise this USI not available
       } else {
         print "ERROR: Unable to provide USI $usiStr\n";
         return;
@@ -1456,6 +1477,21 @@ sub interpretUSI {
     $peptidoform = $pep->{modifiedTPP4SequenceString};
   }
 
+
+  #### If this is a PXL, just return the interpreted USI
+  if ( $datasetIdentifier =~ /PXL/ ) {
+    $response->{datasetIdentifier} = $datasetIdentifier;
+    $response->{msRunName} = $msRunName;
+    $response->{index} = $index;
+    $response->{indexFlag} = $indexFlag;
+    $response->{interpretation} = $interpretation;
+    $response->{peptidoform} = $peptidoform;
+    $response->{charge} = $charge;
+    return($response);
+  }
+
+
+  #### Otherwise it must be a PXD, try to find it
   #print "datasetIdentifier=$datasetIdentifier\n";
   my $sql = qq~ 
     SELECT SAMPLE_ID,
@@ -1646,7 +1682,7 @@ sub getSpectrumFromMzmlFile {
   }
 
   #### Create a virtual filename to fetch the spectrum
-  my $filename = "/proteomics/sw/tpp/bin/readmzXML $filePath $scanNumber |";
+  my $filename = "/proteomics/sw/tpp-dev/bin/readmzXML $filePath $scanNumber |";
   print "Fetch command: $filename\n" if ($verbose);
 
   #### Try to open the spectrum for reading
@@ -1694,3 +1730,115 @@ sub getSpectrumFromMzmlFile {
   return $response;
 
 } # end getSpectrumFromMzmlFile
+
+
+###############################################################################
+# getSpectrumFromProteomeCentral
+###############################################################################
+sub getSpectrumFromProteomeCentral {
+  my $METHOD = 'getSpectrumFromProteomeCentral';
+  print "DEBUG: Entering $CLASS.$METHOD\n" if ( $DEBUG );
+  my %parameters = @_;
+
+  #### Set up a response object
+  my $response = Proteomics::Response->new();
+
+  #### Process standard parameters
+  my $debug = processParameters( name=>'debug', required=>0, allowUndef=>0, default=>0, overrideIfFalse=>$DEBUG, parameters=>\%parameters, caller=>$METHOD, response=>$response );
+  my $verbose = processParameters( name=>'verbose', required=>0, allowUndef=>0, default=>0, overrideIfFalse=>$VERBOSE, parameters=>\%parameters, caller=>$METHOD, response=>$response );
+  my $quiet = processParameters( name=>'quiet', required=>0, allowUndef=>0, default=>0, parameters=>\%parameters, caller=>$METHOD, response=>$response );
+  my $outputDestination = processParameters( name=>'outputDestination', required=>0, allowUndef=>0, default=>'STDERR', parameters=>\%parameters, caller=>$METHOD, response=>$response );
+  print "DEBUG: Entering $CLASS.$METHOD\n" if ( $debug && !$DEBUG );
+  #$verbose = 1;
+
+  #### Process specific parameters
+  my $usiStr = processParameters( name=>'usiStr', required=>1, allowUndef=>0, response=>$response, parameters=>\%parameters, caller=>$METHOD );
+
+  #### Die if any unexpected parameters are passed
+  my $unexpectedParameters = '';
+  foreach my $parameter ( keys(%parameters) ) { $unexpectedParameters .= "ERROR: unexpected parameter '$parameter'\n"; }
+  die("CALLING ERROR [$METHOD]: $unexpectedParameters") if ($unexpectedParameters);
+
+  #### Return if there was a problem with the required parameters
+  return $response if ( $response->{errorCode} =~ /MissingParameter/i );
+ 
+  #### Try to fetch from ProteomeCentral
+  use HTTP::Request;
+  use LWP::UserAgent;
+  use JSON::Parse;
+
+  #### Read the spectrum data
+  my @mz_intensities;
+  my $observedPrecursorMz = 0;
+  my $peptideStr = "";
+  my $charge = 0;
+
+  my $url = "http://proteomecentral.proteomexchange.org/cgi/spectra?output_format=json&usi=$usiStr";
+  my $request = HTTP::Request->new( 'GET', $url );
+  $request->header( 'Content-Type' => 'application/json' );
+  my $lwp = LWP::UserAgent->new;
+  my $lwp_response = $lwp->request( $request );
+  if ( $lwp_response->is_success() ) {
+    my $response = JSON::Parse::parse_json($lwp_response->content());
+
+    #### Extract the precursor mz
+    if ( $response->{'attributes'} ) {
+      my @attributes = @{$response->{'attributes'}};
+      foreach my $attribute (@attributes) {
+        if ( $attribute->[0] eq "MS:1000744|selected ion m/z" ) {
+	  $observedPrecursorMz = $attribute->[1];
+        }
+        if ( $attribute->[0] eq "MS:1000041|charge state" ) {
+	  $charge = $attribute->[1];
+        }
+        if ( $attribute->[0] eq "MS:1000888|unmodified peptide sequence" ) {
+	  $peptideStr = $attribute->[1];
+        }
+      }
+    }
+
+    #### Extract the spectra data
+    if ( $response->{'mzs'} ) {
+      my @peaks = @{$response->{'mzs'}};
+      my $counter = 0;
+      foreach my $peak (@peaks) {
+        $mz_intensities[$counter] = [ $peak ];
+	$counter++;
+      }
+    }
+
+    #### Extract the spectra data
+    if ( $response->{'intensities'} ) {
+      my @peaks = @{$response->{'intensities'}};
+      my $counter = 0;
+      foreach my $peak (@peaks) {
+        $mz_intensities[$counter][1] = $peak;
+	$counter++;
+      }
+    }
+
+  } else {
+    print("ERROR: " . $lwp_response->status_line());
+  }
+
+  #### If there were no values, print diagnostics and return
+  unless (@mz_intensities) {
+    $response->logEvent( level=>'ERROR', errorCode=>'NoPeaksRead', verbose=>$verbose, debug=>$debug, quiet=>$quiet,
+      message=>"No peaks returned from USI $usiStr'");
+    return $response;
+ }
+
+  #### Return result
+  $response->logEvent( level=>'INFO', minimumVerbosity=>1, verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
+    message=>scalar(@mz_intensities)." mass-inten pairs read");
+
+  $response->{mz} = \@mz_intensities;
+  $response->{observedPrecursorMz} = $observedPrecursorMz;
+  $response->{peptideStr} = $peptideStr;
+  $response->{charge} = $charge;
+  return $response;
+
+} # end getSpectrumFromProteomeCentral
+
+
+
