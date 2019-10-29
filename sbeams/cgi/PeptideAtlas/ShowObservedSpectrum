@@ -260,6 +260,7 @@ sub processRequest {
     my $scanNumber = 0;
     my $observedPrecursorMz = 0.0;
     my $spectrumName = '';
+    #print("Content-type: text/plain\n\n");
 
     #### If a Universal Spectral Identifier is supplied, interpret it
     my $usiStr = $q->param('USI') || $q->param('usi');
@@ -293,6 +294,10 @@ sub processRequest {
 	  if ( $getSpectrumResult->{status} eq 'OK' ) {
 	    @spectrum_array = @{$getSpectrumResult->{mz}};
 	    $observedPrecursorMz = $getSpectrumResult->{observedPrecursorMz};
+	    if ( $q->param('output_mode') && uc($q->param('output_mode')) ne 'HTML' ) {
+	      writeSpectrum(proxiSpectrum=>$getSpectrumResult->{proxiSpectrum}, output_mode=>$q->param('output_mode'));
+	      return;
+	    }
           } else {
 	    print "ERROR: Unable to read peaks.\n";
 	    return;
@@ -301,7 +306,7 @@ sub processRequest {
 
       #### Otherwise this USI not available
       } else {
-        print "ERROR: Unable to provide USI $usiStr\n";
+	writeResponse(response=>$result, output_mode=>$q->param('output_mode'));
         return;
       }
 
@@ -908,6 +913,7 @@ sub showSpectrumText {
     $spectrum->filter( minimumIntensity => $1 );
   }
 
+  print "Content-type: text/plain\n\n";
   print "<PRE>\n";
 
   #### Set the reannotation resolution
@@ -1444,7 +1450,8 @@ sub interpretUSI {
   return $response if ( $response->{errorCode} =~ /MissingParameter/i );
  
   #### There may be some error messages for info messages coming, so switch to PRE mode
-  print "<PRE>\n";
+  #print "Content-type: text/plain\n\n";
+  #print "<PRE>\n";
 
   #### Clean the string a little
   $usiStr =~ s/^\s+//;
@@ -1453,10 +1460,13 @@ sub interpretUSI {
   #### Parse the passed USI
   my $usi = Proteomics::Spectra::UniversalSpectrumIdentifier->new( usi=>$usiStr );
   my $result = $usi->parse( verbose=>$verbose, debug=>$verbose,  outputDestination=>$outputDestination );
+  #print(Data::Dumper->Dump([$result]))."\n";
 
   #### If the USI string was not successfully parsed, then just return
   if ( $result->{status} ne 'OK' ) {
-    #print "Provided identifier=$usiStr\n";
+    print "Content-type: text/plain\n\n";
+    print "<PRE>\n";
+    print "Provided identifier=$usiStr\n";
     $result->show();
     $response->mergeResponse( sourceResponse=>$result, verbose=>0, debug=>0, outputDestination=>$outputDestination );
     print "</PRE>\n";
@@ -1525,11 +1535,16 @@ sub interpretUSI {
   my $foundFile = '';
   my $nFoundFiles = 0;
 
+  #### Turn quiet mode on, so that problems are not immediately spit out to STDOUT
+  $quiet = 1;
+
+  #### If no rows returned, then we don't have this dataset
   if ( $nRows == 0 ) {
     $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'DatasetNotHere', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
        message=>"Dataset '$datasetIdentifier' is not stored here at PeptideAtlas.");
-    print "</PRE>\n";
     return $response;
+
+  #### Otherwise we seem to have it, so try to determine its location
   } else {
     #print "INFO: found $nRows sample(s) matching dataset '$usi->{datasetIdentifier}'<BR>\n";
     foreach my $row ( @rows ) {
@@ -1594,7 +1609,7 @@ sub interpretUSI {
     $response->{charge} = $charge;
   }
 
-  print "</PRE>\n";
+  #print "</PRE>\n";
   return $response;
 }
 
@@ -1719,7 +1734,7 @@ sub getSpectrumFromMzmlFile {
     $response->logEvent( level=>'ERROR', errorCode=>'NoPeaksRead', verbose=>$verbose, debug=>$debug, quiet=>$quiet,
       message=>"No peaks returned from extraction attempt of scan $scanNumber from file '$filePath'");
     return $response;
- }
+   }
 
   #### Return result
   $response->logEvent( level=>'INFO', minimumVerbosity=>1, verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
@@ -1727,6 +1742,22 @@ sub getSpectrumFromMzmlFile {
 
   $response->{mz} = \@mz_intensities;
   $response->{observedPrecursorMz} = $observedPrecursorMz;
+
+  #### Build a prototype PROXI spectrum
+  my $proxiSpectrum = {};
+  $proxiSpectrum->{attributes} = [];
+  push(@{$proxiSpectrum->{attributes}}, { accession=>"MS:1008025", name=>"scan number", value=>$scanNumber } );
+  push(@{$proxiSpectrum->{attributes}}, { accession=>"MS:1000827", name=>"isolation window target m/z", value=>$observedPrecursorMz } );
+  my @mzs;
+  my @intensities;
+  foreach my $peak ( @mz_intensities ) {
+    push(@mzs,$peak->[0]);
+    push(@intensities,$peak->[1]);
+  }
+  $proxiSpectrum->{mzs} = \@mzs;
+  $proxiSpectrum->{intensities} = \@intensities;
+  $response->{proxiSpectrum} = $proxiSpectrum;
+
   return $response;
 
 } # end getSpectrumFromMzmlFile
@@ -1785,14 +1816,14 @@ sub getSpectrumFromProteomeCentral {
     if ( $response->{'attributes'} ) {
       my @attributes = @{$response->{'attributes'}};
       foreach my $attribute (@attributes) {
-        if ( $attribute->[0] eq "MS:1000744|selected ion m/z" ) {
-	  $observedPrecursorMz = $attribute->[1];
+        if ( $attribute->{accession} eq "MS:1000744" ) {  # selected ion m/z
+	  $observedPrecursorMz = $attribute->{value};
         }
-        if ( $attribute->[0] eq "MS:1000041|charge state" ) {
-	  $charge = $attribute->[1];
+        if ( $attribute->{accession} eq "MS:1000041" ) {  # charge state
+	  $charge = $attribute->{value};
         }
-        if ( $attribute->[0] eq "MS:1000888|unmodified peptide sequence" ) {
-	  $peptideStr = $attribute->[1];
+        if ( $attribute->{accession} eq "MS:1000888" ) {  # unmodified peptide sequence
+	  $peptideStr = $attribute->{value};
         }
       }
     }
@@ -1841,4 +1872,112 @@ sub getSpectrumFromProteomeCentral {
 } # end getSpectrumFromProteomeCentral
 
 
+###############################################################################
+# writeSpectrum
+###############################################################################
+sub writeSpectrum {
+  my $METHOD = 'writeSpectrum';
+  print "DEBUG: Entering $CLASS.$METHOD\n" if ( $DEBUG );
+  my %parameters = @_;
 
+  #### Set up a response object
+  my $response = Proteomics::Response->new();
+
+  #### Process standard parameters
+  my $debug = processParameters( name=>'debug', required=>0, allowUndef=>0, default=>0, overrideIfFalse=>$DEBUG, parameters=>\%parameters, caller=>$METHOD, response=>$response );
+  my $verbose = processParameters( name=>'verbose', required=>0, allowUndef=>0, default=>0, overrideIfFalse=>$VERBOSE, parameters=>\%parameters, caller=>$METHOD, response=>$response );
+  my $quiet = processParameters( name=>'quiet', required=>0, allowUndef=>0, default=>0, parameters=>\%parameters, caller=>$METHOD, response=>$response );
+  my $outputDestination = processParameters( name=>'outputDestination', required=>0, allowUndef=>0, default=>'STDERR', parameters=>\%parameters, caller=>$METHOD, response=>$response );
+  print "DEBUG: Entering $CLASS.$METHOD\n" if ( $debug && !$DEBUG );
+
+  #### Process specific parameters
+  my $proxiSpectrum = processParameters( name=>'proxiSpectrum', required=>1, allowUndef=>0, response=>$response, parameters=>\%parameters, caller=>$METHOD );
+  my $output_mode = processParameters( name=>'output_mode', required=>1, allowUndef=>0, response=>$response, parameters=>\%parameters, caller=>$METHOD );
+
+  #### Die if any unexpected parameters are passed
+  my $unexpectedParameters = '';
+  foreach my $parameter ( keys(%parameters) ) { $unexpectedParameters .= "ERROR: unexpected parameter '$parameter'\n"; }
+  die("CALLING ERROR [$METHOD]: $unexpectedParameters") if ($unexpectedParameters);
+
+  #### Return if there was a problem with the required parameters
+  return $response if ( $response->{errorCode} =~ /MissingParameter/i );
+ 
+  if ( uc($output_mode) eq 'JSON' ) {
+    use JSON;
+    print("Content-type: application/json\n\n");
+    print(encode_json($proxiSpectrum));
+
+  } elsif ( uc($output_mode) eq 'TEXT' || uc($output_mode) eq 'TXT' ) {
+    print("Content-type: text/plain\n\n");
+    print(encode_json($proxiSpectrum));
+
+  } elsif ( uc($output_mode) eq 'TSV' || uc($output_mode) eq 'CSV' ) {
+    print("Content-type: text/plain\n\n");
+    print("Output mode $output_mode not yet supported\n");
+
+  } else {
+    print("Content-type: text/plain\n\n");
+    print("Output mode $output_mode not yet supported\n");
+  }
+
+  return;
+
+} # end writeSpectrum
+
+
+###############################################################################
+# writeResponse
+###############################################################################
+sub writeResponse {
+  my $METHOD = 'writeResponse';
+  print "DEBUG: Entering $CLASS.$METHOD\n" if ( $DEBUG );
+  my %parameters = @_;
+
+  #### Set up a response object
+  my $response = Proteomics::Response->new();
+
+  #### Process standard parameters
+  my $debug = processParameters( name=>'debug', required=>0, allowUndef=>0, default=>0, overrideIfFalse=>$DEBUG, parameters=>\%parameters, caller=>$METHOD, response=>$response );
+  my $verbose = processParameters( name=>'verbose', required=>0, allowUndef=>0, default=>0, overrideIfFalse=>$VERBOSE, parameters=>\%parameters, caller=>$METHOD, response=>$response );
+  my $quiet = processParameters( name=>'quiet', required=>0, allowUndef=>0, default=>0, parameters=>\%parameters, caller=>$METHOD, response=>$response );
+  my $outputDestination = processParameters( name=>'outputDestination', required=>0, allowUndef=>0, default=>'STDERR', parameters=>\%parameters, caller=>$METHOD, response=>$response );
+  print "DEBUG: Entering $CLASS.$METHOD\n" if ( $debug && !$DEBUG );
+
+  #### Process specific parameters
+  my $error_response = processParameters( name=>'response', required=>1, allowUndef=>0, response=>$response, parameters=>\%parameters, caller=>$METHOD );
+  my $output_mode = processParameters( name=>'output_mode', required=>1, allowUndef=>0, response=>$response, parameters=>\%parameters, caller=>$METHOD );
+
+  #### Die if any unexpected parameters are passed
+  my $unexpectedParameters = '';
+  foreach my $parameter ( keys(%parameters) ) { $unexpectedParameters .= "ERROR: unexpected parameter '$parameter'\n"; }
+  die("CALLING ERROR [$METHOD]: $unexpectedParameters") if ($unexpectedParameters);
+
+  #### Return if there was a problem with the required parameters
+  return $response if ( $response->{errorCode} =~ /MissingParameter/i );
+
+  #print("Content-type: text/plain\n\n");
+  #print Data::Dumper->Dump([$error_response]);
+  #return;
+
+  if ( uc($output_mode) eq 'JSON' ) {
+    use JSON;
+    print("Content-type: application/json\n\n");
+    my $http_response = { "status"=> 484, "title"=> $error_response->{errorCode}, "detail"=> $error_response->{fullMessage}, "type"=> "about:blank" };
+    print(encode_json($http_response));
+
+  } elsif ( uc($output_mode) eq 'TEXT' || uc($output_mode) eq 'TXT' ) {
+    print("Content-type: text/plain\n\n");
+    print(encode_json($error_response));
+
+  } elsif ( uc($output_mode) eq 'TSV' || uc($output_mode) eq 'CSV' ) {
+    print("Content-type: text/plain\n\n");
+    print("Output mode $output_mode not yet supported\n");
+
+  } else {
+    print("Content-type: text/plain\n\n");
+    print("Output mode $output_mode not yet supported\n");
+  }
+
+  return;
+
+} # end writeSpectrum
