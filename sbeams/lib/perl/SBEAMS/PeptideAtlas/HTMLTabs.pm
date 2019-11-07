@@ -222,7 +222,7 @@ sub getTabMenu
     } elsif ($PROG_NAME =~ /DIA_search/) {
        $current_tab=8;
        $current_subtab=3;
-    } elsif ($PROG_NAME =~ /DIA_processing/) {
+    } elsif ($PROG_NAME =~ /AssessDIALib/) {
        $current_tab=8;
        $current_subtab=4;
 
@@ -455,9 +455,9 @@ if ($activate_PASSEL) {
          url => "$CGI_BASE_DIR/PeptideAtlas/DIA_search"
          );
     $tabmenu->addMenuItem( tablabel => 'SWATH/DIA',
-         label => 'Virtual MS',
-         helptext => 'Conduct online database search',
-         url => "$CGI_BASE_DIR/PeptideAtlas/DIA_processing"
+         label => 'Assess Library',
+         helptext => 'Assess physical properties of DIA Library',
+         url => "$CGI_BASE_DIR/PeptideAtlas/AssessDIALibrary"
          );
     }
 
