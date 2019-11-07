@@ -1452,6 +1452,7 @@ sub interpretUSI {
   #### There may be some error messages for info messages coming, so switch to PRE mode
   #print "Content-type: text/plain\n\n";
   #print "<PRE>\n";
+  #$debug = 1;
 
   #### Clean the string a little
   $usiStr =~ s/^\s+//;
@@ -1534,6 +1535,7 @@ sub interpretUSI {
 
   my $foundFile = '';
   my $nFoundFiles = 0;
+  my $foundFiles = [];
 
   #### Turn quiet mode on, so that problems are not immediately spit out to STDOUT
   $quiet = 1;
@@ -1546,59 +1548,96 @@ sub interpretUSI {
 
   #### Otherwise we seem to have it, so try to determine its location
   } else {
-    #print "INFO: found $nRows sample(s) matching dataset '$usi->{datasetIdentifier}'<BR>\n";
+    print "INFO: found $nRows sample(s) matching dataset '$usi->{datasetIdentifier}'<BR>\n" if ( $debug );
     foreach my $row ( @rows ) {
       my ($sample_id,$sample_accession,$search_batch_id,$is_public,$repository_identifiers,$data_location) = @{$row};
+      print("INFO: data_location is $data_location<BR>\n") if ( $debug );
+
+      #### Is this a directory?
       unless ( -d $data_location ) {
-        #### Also try the data/ directory as sometimes one can find it there
-        if ( $data_location =~ /^(.+\/)/ ) {
-          my $data_location2 = $1;
-          $data_location2 .= "data";
-          if ( -d $data_location2 ) {
-            $data_location = $data_location2;
-            $response->logEvent( level=>'WARNING', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
-              message=>"Looked for dataset '$datasetIdentifier' in '$data_location' and did not find it. But then looked in '$data_location2' and found it there. This is not ideal, but we can try to continue.");
-          } else {
-            $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'InvalidDataLocation', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
-              message=>"Although the dataset '$datasetIdentifier' was found, the internal data location appears to be invalid. This needs to be fixed. Please report this error. Looking for data location '$data_location'");
-          }
-        }
+        $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'InvalidDataLocation', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
+          message=>"Although the dataset '$datasetIdentifier' was found, the internal data location appears to be invalid. This needs to be fixed. Please report this error. Looking for data location '$data_location'");
+	return($response)
       }
 
-      #### Try to find the mzML file corresponding to this run
-      my @files = glob("$data_location/$msRunName.*");
-      if ( scalar(@files) > 0 ) {
-        foreach my $file ( @files ) {
-          if ( $file =~ /mzML/ ) {
-            $nFoundFiles++;
-            $foundFile = $file;
-          }
-        }
+      #### Set some other places to look
+      my @locations = ( "$data_location/data", "$data_location/../data", "$data_location", "$data_location/.." );
 
-      #### If the mzML is not found, try going up a level and looking again
-      } else {
-        @files = glob("$data_location/../$msRunName.*");
-        if ( scalar(@files) > 0 ) {
-          foreach my $file ( @files ) {
-            if ( $file =~ /mzML/ ) {
-              $nFoundFiles++;
-              $foundFile = $file;
+      #### Loop over the various places to find it
+      my $iLocation = 0;
+      my $foundHere = 0;
+      foreach my $location ( @locations ) {
+
+	#### If we already found this one, then 
+	last if ( $foundHere );
+
+        #### Try to find the mzML files here
+        print("INFO: Looking for $location/$msRunName.*mzML*<BR>") if ( $debug );
+        my @files = glob("$location/$msRunName.*mzML*");
+	if ( scalar(@files) > 0 ) {
+	  print("INFO: Found here<BR>") if ( $debug );
+	  foreach my $file ( @files ) {
+	    if ( $file =~ /mzML/ ) {
+	      print(" - Adding $file<BR>") if ( $debug );
+	      $nFoundFiles++;
+	      $foundFile = $file;
+              $foundHere = 1;
+	      push(@{$foundFiles},[$iLocation,$foundFile]);
             }
           }
         }
-      } # end else
+        $iLocation++;
+      }
 
     }
   }
 
+  #### If no files were found, this must be a bad MS Run name
   if ( $nFoundFiles == 0 ) {
     $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'MsRunNotFound', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
       message=>"Although the dataset '$datasetIdentifier' was found, no mzML file root '$msRunName' was found");
+    return $response;
+
+  #### If there are multiple files found, this is a challenge
   } elsif ( $nFoundFiles > 1 ) {
-    $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'FoundMultipleMatchingMsRuns', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
-      message=>"Under dataset '$datasetIdentifier', multiple mzML files with file root '$msRunName' were found. This cannot be properly handled yet");
-  } else {
-    #print "INFO: Found data file for this MS run: $foundFile\n";
+    print("INFO: We found multiple files here. How will be decide which one to use?<BR>\n") if ( $debug );
+    $nFoundFiles = 0;
+    my $nNoFragFiles = 0;
+    my $foundNoFragFile = '';
+    for my $level ( (0,1,2,3) ) {
+      foreach my $file ( @{$foundFiles} ) {
+        print("  - $file->[0] - $file->[1]<BR>\n") if ( $debug );
+        if ( $file->[0] == $level ) {
+	  $nFoundFiles++;
+          $foundFile = $file->[1];
+	  if ( $foundFile !~ /ITCID/ && $foundFile !~ /HCD/ ) {
+	    $nNoFragFiles++;
+	    $foundNoFragFile = $foundFile;
+	  }
+        }
+      }
+      #### If we only found 1 file at this level, go with that
+      if ( $nFoundFiles == 1 ) {
+        print("INFO: We found only one file a level $level so go with that<BR>\n") if ( $debug );
+        last;
+      } elsif ( $nFoundFiles > 1 ) {
+	if ( $nNoFragFiles == 1 ) {
+          print("INFO: We several files at level $level but only one without ITCID or HCD in the path, so hope for that one.<BR>\n") if ( $debug );
+	  $nFoundFiles = 1;
+	  $foundFile = $foundNoFragFile;
+          last;
+        } else {
+          $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'FoundMultipleMatchingMsRuns', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
+            message=>"Under dataset '$datasetIdentifier', multiple mzML files with file root '$msRunName' were found. This cannot be properly handled yet");
+          return $response;
+        }
+      }
+    }
+  }
+
+  #### If we found just one file, let's go with that
+  if ( $nFoundFiles == 1 ) {
+    print "INFO: Found data file for this MS run: $foundFile\n" if ( $debug );
     $response->{datasetIdentifier} = $datasetIdentifier;
     $response->{mzMLFilePath} = $foundFile;
     $response->{msRunName} = $msRunName;
@@ -1945,7 +1984,7 @@ sub writeResponse {
 
   #### Process specific parameters
   my $error_response = processParameters( name=>'response', required=>1, allowUndef=>0, response=>$response, parameters=>\%parameters, caller=>$METHOD );
-  my $output_mode = processParameters( name=>'output_mode', required=>1, allowUndef=>0, response=>$response, parameters=>\%parameters, caller=>$METHOD );
+  my $output_mode = processParameters( name=>'output_mode', required=>1, allowUndef=>1, response=>$response, parameters=>\%parameters, caller=>$METHOD );
 
   #### Die if any unexpected parameters are passed
   my $unexpectedParameters = '';
@@ -1954,6 +1993,8 @@ sub writeResponse {
 
   #### Return if there was a problem with the required parameters
   return $response if ( $response->{errorCode} =~ /MissingParameter/i );
+
+  $output_mode = 'HTML' if ( !defined($output_mode) );
 
   #print("Content-type: text/plain\n\n");
   #print Data::Dumper->Dump([$error_response]);
@@ -1967,7 +2008,10 @@ sub writeResponse {
 
   } elsif ( uc($output_mode) eq 'TEXT' || uc($output_mode) eq 'TXT' ) {
     print("Content-type: text/plain\n\n");
-    print(encode_json($error_response));
+    print($error_response->serialize());
+
+  } elsif ( uc($output_mode) eq 'HTML' ) {
+    print($error_response->serialize());
 
   } elsif ( uc($output_mode) eq 'TSV' || uc($output_mode) eq 'CSV' ) {
     print("Content-type: text/plain\n\n");
