@@ -163,12 +163,12 @@ while ( my $line = <INFILE>) {
 
   if ( $q1 < $options{prec_min_mz} || $q1 > $options{prec_max_mz} ) {
 
-#    print STDERR "$q1 is out of range!\n" if $options{verbose};
+    print STDERR "$q1 is out of range!\n" if $options{verbose};
     next;
   }
 
   if ( $q3 < $options{frag_min_mz} || $q3 > $options{frag_max_mz} ) {
-#    print STDERR "Frag mz $q3 out of range ( $options{frag_min_mz} to $options{frag_max_mz} )\n" if $options{verbose};
+    print STDERR "Frag mz $q3 out of range ( $options{frag_min_mz} to $options{frag_max_mz} )\n" if $options{verbose};
     next;
   }
 
@@ -197,8 +197,8 @@ while ( my $line = <INFILE>) {
 
     # Strip q3 that fall into the bin
     if ( $q3 >= $ion2bin{$q1bin}->[0] && $q3 <= $ion2bin{$q1bin}->[1] ) { 
-#      print STDERR "q3 $q3 is in target bin for $q1 !\n";
-#      print STDERR "Bin issue!\n" if $options{verbose};
+      print STDERR "q3 $q3 is in target bin for $q1 !\n" if $options{verbose};
+      print STDERR "Bin issue!\n" if $options{verbose};
       next 
     }
   }
@@ -298,7 +298,22 @@ while ( my $line = <INFILE>) {
    $stats{rt_max_minutes} = $line[$rt_idx] if $line[$rt_idx] > $stats{rt_max_minutes};
  }
 
-  if ( $options{excl_shared} && $line[3] =~ /[,\/]/ ) {
+ my $shared = 0;
+ if ( $options{excl_shared} ) {
+   if ( $options{format} eq 'peakview' ) {
+     die Dumper( %colmap ) unless defined $colmap{shared};
+     if ( $line[$colmap{shared}] =~ /TRUE/i ) {
+       $shared++;
+     }
+   } elsif ( $options{format} eq 'openswath' ) {
+     my $pn = $line[$colmap{ProteinName}];
+     if ( $pn =~ /,/ || ( $pn =~ /\// && $pn !~ /1\// ) ) {
+       $shared++;
+     }
+   }
+ }
+
+  if ( $options{excl_shared} && $shared ) {
     next;
   }
   if ( $options{check_mass} ) {
@@ -375,7 +390,7 @@ while ( my $line = <INFILE>) {
 
   # Time to process...
   if ( $ion_key ne $curr_key ) {
-    print_extrema_list( $ion_cache{$curr_key} );
+    print_extrema_list( $ion_cache{$curr_key} ) if $options{verbose};
     undef $ion_cache{$curr_key};
     $curr_key = $ion_key;
   }
@@ -384,6 +399,7 @@ while ( my $line = <INFILE>) {
   $curr_q1 = $q1;
   $curr_q3 = $q3;
 }
+print_extrema_list( $ion_cache{$curr_key} ) if $options{verbose};
 close INFILE;
 
 
@@ -409,7 +425,7 @@ print $stats{message};
 # Print min and/or max constrained list
 sub print_extrema_list {
 
-  my $ion_cache = shift || die;
+  my $ion_cache = shift || return;
 
   # If we have over the minimum...
   if ( scalar @{$ion_cache} >= $options{min_num_frags} ) { # Above min
@@ -534,6 +550,9 @@ sub process_options {
   open INFILE, $options{input_file} || die "ERROR: Unable to read '$options{input_file}'";
   while ( my $line = <INFILE> ) {
     chomp $line;
+    $line =~ s/\r//g;
+    chomp $line;
+
     if ( $line =~ /Tr_recalibrated/ ) {
       $options{format} ||= 'openswath'; 
     }
