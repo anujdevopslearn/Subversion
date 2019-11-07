@@ -4994,6 +4994,7 @@ sub parse_input_parameters {
   my $ref_input_types = $args{'input_types_ref'} || {};
   my $add_standard_params = $args{'add_standard_params'} || 'YES';
 
+  $q = $args{q} if $args{q};
 
   #### Define some generic varibles
   my ($i,$element,$key,$value,$line,$result,$sql);
