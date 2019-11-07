@@ -214,8 +214,8 @@ sub displayGuestPageHeader {
   if ( $resource eq 'SRMAtlas' ) {
     $skinLink = 'http://www.srmatlas.org/.index.dbbrowse.php';
   } elsif ( $resource eq 'DIAAtlas' ) {
-    $skinLink = 'http://www.srmatlas.org/.index.dbbrowse.php';
-#    $skinLink = 'http://www.swathatlas.org/.index.dbbrowse.php';
+#    $skinLink = 'http://www.srmatlas.org/.index.dbbrowse.php';
+    $skinLink = 'http://www.swathatlas.org/.index.dbbrowse.php';
   }
   my $response = $ua->request( HTTP::Request->new( GET => "$skinLink" ) );
   my @page = split( "\n", $response->content() );
