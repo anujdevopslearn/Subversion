@@ -46,8 +46,8 @@ use Exporter;
 
 our @ISA = qw( Exporter );
 
-# Set size of permissible uploads to 30 MB.
-$CGI::POST_MAX = 1024 * 30000;
+# Set size of permissible uploads to 200 MB.
+$CGI::POST_MAX = 1024 * 200000;
 $q = new CGI;
 
 @EXPORT_OK = qw( $q );
