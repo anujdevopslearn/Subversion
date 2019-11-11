@@ -634,7 +634,7 @@ sub analyze_library {
   my @data = ( [ qw( Attribute Value Definition ) ] );
   for ( my $i = 0; $i <= $#headings; $i++ ) {
     $values[$i] = $params->{ion_library} unless $i;
-    my $def = '&nbsp;&nbsp;' . $sbeams->truncateStringWithMouseover( string => $defs[$i], len => 80, nowrap => 1 );
+    my $def = $defs[$i];
     $return .= "<tr><td><b>$headings[$i]</b></td><td align=right>$values[$i]</td><td>$def</td></tr>\n";
     push @data, [ $headings[$i], $values[$i], $def ];
   }
