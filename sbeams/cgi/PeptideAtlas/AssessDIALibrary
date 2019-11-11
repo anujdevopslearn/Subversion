@@ -172,23 +172,16 @@ sub get_status_box {
 sub get_help_links {
 
 
-  my %title2text = ( 'Library' => "Source library file to customize. <br><br> <sup>&dagger;</sup> Note that libraries that have already had SWATHS applied can only be filtered by protein list",
-                     'min_num_frags' => "Minimum number of fragment ions to include an assay. <br><br>Must be less than or equal to Max num fragments ",
-                     'max_num_frags' => "Maximum number of fragment ions to use in an assay for a specific precursor. <br><br> Must be greater than or equal to Min num fragments ",
-                     'basename' => "Base name for exported library files (optional). Default is library name. ",
-                     'prec_min_mz' => "Minimum precursor ion m/z value for library entries ",
-                     'prec_max_mz' => "Maximum precursor ion m/z value for library entries ",
-                     'frag_min_mz' => "Minimum fragment ion m/z value for library entries ",
-                     'frag_max_mz' => "Maximum fragment ion m/z value for library entries ",
-                       'cmod_mass' => 'Generate transision with heavy-labeled versions of selected amino acids, Use ctrl-shift for multiple options.',
-                       'cmod_opts' => $q->escape( 'Generate heavy transitions, light and heavy (L & H), or light only (default).  Relevant only if one or more heavy label options are selected.' ),
-                     'swaths_file' => "File of SWATH bins, format is lower mz bound 'tab' upper bound mz 'newline' ",
-                     'pep_file' => "Mapping file of reference proteome, protein/peptide TSV, one peptide per line. ",
-                     'no_swaths_file' => "SWATH file not needed, ion library filtered at analysis time (Peakview) ",
-                     'swath_size' => "Size of each SWATH bin, default is 25 Th ",
-                     'swath_overlap' => "Overlap between adjacent SWATH bins, on each side - so 1 Th will result in 2 Th overlap ",
-                     'IonLibrary' => "File of protein accessions, one per line, with which to filter library. One accession space per organism allowed: Human - Uniprot, Mtb - Tuberculist (Rv)",
-                     'domain_protein_list_id' => "Set of protein accessions from one of the Human Proteome Project Biology/Disease lists <br> Note that this will only work with Human libraries" );
+  my %title2text = ( 
+                     'ion_library' => "Ion library to be analyzed (required) ",
+                     'pep_file'    => "Mapping file of reference proteome, protein/peptide TSV, one peptide per line. ",
+                     'swaths_file' => "File of SWATH bins, format is lower mz bound, upper bound mz, one per line TAB delimited",
+                     'col_defs' => "Print out definitions for all tests",
+                     'skip_decoys' => "Skip DECOY assess in compiling library statistics",
+                     'alt_decoy' => "Alternate prefix to denote DECOY assays, default is DECOY",
+                     'assess_massdiff' => "Compute difference between assay m/z and theoretical values, report on outliers",
+      );
+
   my %title2link;
   for my $title ( keys( %title2text ) ) {
     my $text = $title2text{$title};
@@ -696,6 +689,12 @@ sub get_subset_form {
     }
     return true;
   }
+  function popitup(url) {
+    newwindow=window.open( url ,'helpwin','height=400,width=300,dependent=yes,screenX=5000,screenY=50,scrollbars=yes,resizable=yes');
+    if (window.focus) {newwindow.focus()}
+    return false;
+  }
+
   </script>
   <br><br>
   <style type="text/css">
@@ -716,7 +715,7 @@ sub get_subset_form {
   </tr>
   <tr class=cellblock>
     <td align=right><b><i> Ion Library:</i></b></td>
-    $title2help->{IonLibrary}
+    $title2help->{ion_library}
     <td><input type=file name=ion_library id=ion_library onchange="sizeme()"></input></td>
   </tr>
   <tr class=cellblock>
@@ -731,22 +730,22 @@ sub get_subset_form {
   </tr>
   <tr class=cellblock>
     <td align=right><b><i>Assess mass diffs(optional):</i></b></td>
-    $title2help->{swaths_file}
+    $title2help->{assess_massdiff}
     <td>Yes<input type=radio name=massdiff checked=yes>&nbsp;No<input type=radio name=massdiff></td>
   </tr>
   <tr class=cellblock>
-    <td align=right><b><i>Print column definitions(optional):</i></b></td>
-    $title2help->{swaths_file}
+    <td align=right><b><i>Print definitions for each test(optional):</i></b></td>
+    $title2help->{col_defs}
     <td>Yes<input type=radio name=coldefs checked=yes>&nbsp;No<input type=radio name=coldefs></td>
   </tr>
   <tr class=cellblock>
     <td align=right><b><i>Skip DECOYs(optional):</i></b></td>
-    $title2help->{swaths_file}
+    $title2help->{skip_decoys}
     <td>Yes<input type=radio name=skip_decoy checked=no>&nbsp;No<input checked=yes type=radio name=skip_decoy></td>
   </tr>
   <tr class=cellblock>
     <td align=right><b><i>Alternate DECOY string (optional):</i></b></td>
-    $title2help->{swaths_file}
+    $title2help->{alt_decoy}
     <td>Yes<input type=text length=25></td>
   </tr>
   <tr class=cellblock>
