@@ -1542,12 +1542,31 @@ sub interpretUSI {
 
   #### If no rows returned, then we don't have this dataset
   if ( $nRows == 0 ) {
-    $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'DatasetNotHere', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
-       message=>"Dataset '$datasetIdentifier' is not stored here at PeptideAtlas.");
-    return $response;
+
+    #### Make one more effort to find the dataset in a manual override file
+    print "INFO: found $nRows sample(s) matching dataset '$usi->{datasetIdentifier}', but trying the supplemental mapping lookup<BR>\n" if ( $debug );
+    if ( open(INFILE,"/regis/sbeams/archive/supplemental_PXD_mapping.tsv") ) {
+      while ( my $line = <INFILE> ) {
+	chomp($line);
+	my @columns = split("\t",$line);
+	if ( $columns[0] eq $datasetIdentifier ) {
+	  @rows = ( [ 0,0,0,0,0,$columns[1] ] );
+	  $nRows = 1;
+	  print "INFO: Found in supplemental at $columns[1]<BR>\n" if ( $debug );
+
+        }
+      }
+      close(INFILE);
+
+    } else {
+      $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'DatasetNotHere', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
+         message=>"Dataset '$datasetIdentifier' is not stored here at PeptideAtlas.");
+      return $response;
+    }
+  }
 
   #### Otherwise we seem to have it, so try to determine its location
-  } else {
+  if ( $nRows > 0 ) {
     print "INFO: found $nRows sample(s) matching dataset '$usi->{datasetIdentifier}'<BR>\n" if ( $debug );
     foreach my $row ( @rows ) {
       my ($sample_id,$sample_accession,$search_batch_id,$is_public,$repository_identifiers,$data_location) = @{$row};
