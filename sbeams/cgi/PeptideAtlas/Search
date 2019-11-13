@@ -671,7 +671,7 @@ sub handle_request {
   #### If QUERY or VIEWRESULTSET was selected, display the data
   if ($apply_action =~ /(QUERY|GO|VIEWRESULTSET|DOWNLOAD)/) {
 
-    if($apply_action =~ /DOWNLOAD/){
+    if ($apply_action =~ /DOWNLOAD/){
       $sbeams->displayResultSet(
         resultset_ref=>$resultset_ref,
         query_parameters_ref=>\%parameters,
@@ -682,48 +682,50 @@ sub handle_request {
         column_titles_ref=>\@column_titles,
         base_url=>$base_url,
       )
-    }else{
-			#### Show the SQL that will be or was executed
-			my $start = [ Time::HiRes::gettimeofday( ) ];
-	    # script code goes here
-			$sbeams->display_sql(sql=>$sql) if ($show_sql);
-			#### If the action contained QUERY, then fetch the results from
-			#### the database
-			my $n_fuzzy_results;
-			my $n_exact_results;
-			my %tmp_resultset = ();
-			my $tmp_resultset_ref = \%tmp_resultset;
+    } else {
+      #### Show the SQL that will be or was executed
+      my $start = [ Time::HiRes::gettimeofday( ) ];
+      # script code goes here
+      $sbeams->display_sql(sql=>$sql) if ($show_sql);
+      #### If the action contained QUERY, then fetch the results from
+      #### the database
+      my $n_fuzzy_results;
+      my $n_exact_results;
+      my %tmp_resultset = ();
+      my $tmp_resultset_ref = \%tmp_resultset;
 
-			if ($apply_action =~ /(QUERY|GO)/i) {
-				#### Fetch the results from the database server
-				$sbeams->fetchResultSet(
-					sql_query=>$sql,
-					resultset_ref=>$tmp_resultset_ref,
-				);
-				%exact_resultset = %$tmp_resultset_ref;
-				%resultset = %$tmp_resultset_ref;
-			}
+      if ($apply_action =~ /(QUERY|GO)/i) {
+	#### Fetch the results from the database server
+	$sbeams->fetchResultSet(
+	  sql_query=>$sql,
+	  resultset_ref=>$tmp_resultset_ref,
+	);
+	%exact_resultset = %$tmp_resultset_ref;
+	%resultset = %$tmp_resultset_ref;
+      }
 
-			if(defined $exact_resultset{data_ref}){
-				$n_exact_results = scalar(@{$exact_resultset{data_ref}});
-			}else{
-				$n_exact_results = 0;
-			}
+      if(defined $exact_resultset{data_ref}){
+	$n_exact_results = scalar(@{$exact_resultset{data_ref}});
+      } else {
+	$n_exact_results = 0;
+      }
 
-			#### If exactly one result came back, then redirect to the one hit
+      #### If exactly one result came back, then redirect to the one hit
       if  ($sbeams->output_mode() eq 'html') {
         $buffer ="$buffer";
         $buffer.= $pass_query_result if ($pass_query_result =~ /PASS\d+/);
         $buffer .= $repository_query_result if ($repository_query_result =~ /PAe\d+/);
-		  	if ($n_exact_results == 1){
-					#print "Status: 302 Resource Temporarily Moved\n";
-					#print "Location: $CGI_BASE_DIR/PeptideAtlas/".
+	if ($n_exact_results == 1) {
+	  #print "Status: 302 Resource Temporarily Moved\n";
+	  #print "Location: $CGI_BASE_DIR/PeptideAtlas/".
           #print "$exact_resultset{data_ref}->[0]->[$colnameidx{resource_url}]";
-					#$q->redirect("$CGI_BASE_DIR/PeptideAtlas/$exact_resultset{data_ref}->[0]->[$colnameidx{resource_url}]");
+	  #$q->redirect("$CGI_BASE_DIR/PeptideAtlas/$exact_resultset{data_ref}->[0]->[$colnameidx{resource_url}]");
           print $q -> redirect("$url_base/PeptideAtlas/$exact_resultset{data_ref}->[0]->[$colnameidx{resource_url}]");
-					exit;
-		  	}elsif($n_exact_results > 1) {
-          if( ! $search_type_param{single_table} ){
+	  exit;
+
+        } elsif ($n_exact_results > 1) {
+
+          if ( ! $search_type_param{single_table} ) {
             $sbeamsMOD->display_page_header(project_id =>$project_id,init_tooltip =>0,onload=>'sortables_init()');
             print $buffer;
             print "<BR>";
@@ -741,14 +743,14 @@ sub handle_request {
               max_width_ref=>\%max_widths,
               search_key => $exact_search_key,
               base_url  => $base_url
-          );
+            );
 
-         }else{
+	  } else {
             $sbeamsMOD->display_page_header(project_id => $project_id);
             print $buffer;
             print "<BR>";
-         }
-       } 
+          }
+        } 
       }
 
       # TMF Feb 2 2011: removed ORDER BY build_type, since this was
@@ -756,60 +758,70 @@ sub handle_request {
       # Search cgi results to be sorted differently. Hope this is OK.
       
       my $print_warning_msg = 0;
-			if ($apply_action =~ /(QUERY|GO)/i){
-				if(! $parameters{exact_match}) {
-						pop @column_array;
-						push @column_array, ["match_string","'fuzzy_match'", "fuzzy_match"];
-						$columns_clause = $sbeams->build_SQL_columns_list(
-						 column_array_ref=>\@column_array,
-						 colnameidx_ref=>\%colnameidx,
-						 column_titles_ref=>\@column_titles
-						);
-           my $dir = "/regis/sbeams5/nobackup/builds_output/cache/";
-           if (opendir (DIR , $dir)){
+      if ($apply_action =~ /(QUERY|GO)/i){
+	if(! $parameters{exact_match}) {
+	  pop @column_array;
+	  push @column_array, ["match_string","'fuzzy_match'", "fuzzy_match"];
+	  $columns_clause = $sbeams->build_SQL_columns_list(
+	    column_array_ref=>\@column_array,
+	    colnameidx_ref=>\%colnameidx,
+	    column_titles_ref=>\@column_titles
+	  );
+          my $dir = "/regis/sbeams5/nobackup/builds_output/cache/";
+	  if (opendir (DIR , $dir)) {
             my %build_ids = map {$_ => 1} split(",", $atlas_build_ids);
             my $search_key_id_str= '';
             my $counter  = 0; 
             my $search_key_clause = $exact_search_key;
             $search_key_clause =~ s/\s+/.*/g; 
             
-						while( (my $filename = readdir(DIR))) {
+	    while( (my $filename = readdir(DIR))) {
               my %search_key_ids =();
               my %resource_names =();
-							$filename =~ /(\d+).tsv/;
-							next if (not defined $build_ids{$1});
-							open (F, "<$dir/$filename");
+	      $filename =~ /(\d+).tsv/;
+	      next if (not defined $build_ids{$1});
+	      open (F, "<$dir/$filename");
+
               foreach my $line (grep(/$search_key_clause/i, <F>)){
                 chomp $line; 
-						  	my ($key_id,$resource_name,$key) = split(/,/, $line,3);
+		my ($key_id,$resource_name,$key) = split(/,/, $line,3);
                 next if (defined $resource_names{$resource_name});
                 $resource_names{$resource_name} =1;
-							  if (lc($key) ne lc($exact_search_key)){ 
-								  $search_key_ids{$key_id}=1;
+		if (lc($key) ne lc($exact_search_key)) { 
+		  $search_key_ids{$key_id}=1;
                   $counter++;
-							  }
-                if ($counter >= 500 ){$print_warning_msg = 1; last;}
+	        }
+                if ($counter >= 500 ) {$print_warning_msg = 1; last;}
               }
+
               next if (! scalar keys %search_key_ids); 
-              if (! $search_key_id_str){
+
+              if (! $search_key_id_str) {
                 $search_key_id_str .= "SKE.search_key_id in (". join(",", keys %search_key_ids) .")";
-              }else{
+	      } else {
                 $search_key_id_str .= " or SKE.search_key_id in (". join(",", keys %search_key_ids) .")";
-              }
-						}
+	      }
+	    }
+
             closedir(DIR);
             close (F);
+
+	    if ( $search_key_id_str ) {
+	      $search_key_id_str = "AND ( $search_key_id_str )";
+	    }
+
             $sql = qq~
                 $select_sql
                 WHERE 1 = 1
                   $search_types_clause
-                  AND ($search_key_id_str)
+                  $search_key_id_str
                   AND SKL.atlas_build_id IN ( $atlas_build_ids )
                   ORDER BY search_key_name
              ~;
-          }else{
-						my $search_key_clause = '%'.$exact_search_key.'%';
-						$search_key_clause =~ s/\s+/%/g;
+
+          } else {
+	    my $search_key_clause = '%'.$exact_search_key.'%';
+	    $search_key_clause =~ s/\s+/%/g;
             $sql = qq~
                 $select_sql
                 WHERE 1 = 1
@@ -817,39 +829,40 @@ sub handle_request {
                   AND SKE.search_key_name like '$search_key_clause'
                   AND SKL.atlas_build_id IN ( $atlas_build_ids )
                 ORDER BY search_key_name
-             ~;
+            ~;
           }
-					$sbeams->fetchResultSet(
-							 sql_query=>$sql,
-							 resultset_ref=>$tmp_resultset_ref,
-					);
-					%fuzzy_resultset = %$tmp_resultset_ref;
-				}else{
-					if ($n_exact_results == 0) {
- 						if ($sbeams->output_mode() eq 'html') {
-						  $sbeamsMOD->display_page_header(project_id => $project_id);
-						  print "$buffer<BR>";
-						  print "There were no matches in the index for your search string<BR>";
-					  }
-					  return(0);
-					}
-				}
-			}
+
+	  $sbeams->fetchResultSet(
+	    sql_query=>$sql,
+	    resultset_ref=>$tmp_resultset_ref,
+	  );
+	  %fuzzy_resultset = %$tmp_resultset_ref;
+        } else {
+	  if ($n_exact_results == 0) {
+	    if ($sbeams->output_mode() eq 'html') {
+	      $sbeamsMOD->display_page_header(project_id => $project_id);
+	      print "$buffer<BR>";
+	      print "There were no matches in the index for your search string<BR>";
+	    }
+	    return(0);
+	  }
+        }
+      }
 			
-			if(defined $fuzzy_resultset{data_ref}){
-				$n_fuzzy_results = scalar(@{$fuzzy_resultset{data_ref}});
-			}else{
-				$n_fuzzy_results = 0;
-			}
+      if(defined $fuzzy_resultset{data_ref}){
+	$n_fuzzy_results = scalar(@{$fuzzy_resultset{data_ref}});
+      } else {
+	$n_fuzzy_results = 0;
+      }
 
-			if ($apply_action =~ /(QUERY|GO)/i){
-				foreach my $row(@{$fuzzy_resultset{data_ref}}){
-					push @{$resultset{data_ref}}, $row;
-				}
-				undef %tmp_resultset;
-			}
+      if ($apply_action =~ /(QUERY|GO)/i){
+	foreach my $row(@{$fuzzy_resultset{data_ref}}){
+	  push @{$resultset{data_ref}}, $row;
+        }
+	undef %tmp_resultset;
+      }
 
-			#### If exactly one result came back, then redirect to the one hit
+      #### If exactly one result came back, then redirect to the one hit
       if ($sbeams->output_mode() eq 'html' and $n_exact_results == 0){
 				if ($n_fuzzy_results == 1){
 					#print "Status: 302 Resource Temporarily Moved\r\n";
@@ -1487,7 +1500,7 @@ sub getSearchTypeClause {
     $clause .= " $conj search_key_type LIKE '%symbol'\n";
     $conj = ' OR ';
   }
-  if ( $clause ) {
+  if ( $clause && $clause =~/\S/ ) {
     $search_type_param{all_fields} = '';
     $clause = " AND ( $clause ) ";
   }
