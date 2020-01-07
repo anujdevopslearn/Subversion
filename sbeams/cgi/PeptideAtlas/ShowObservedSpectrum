@@ -307,6 +307,7 @@ sub processRequest {
       #### Otherwise this USI not available
       } else {
 	writeResponse(response=>$result, output_mode=>$q->param('output_mode'));
+	print("<BR><BR><BR><H1><font color=\"red\">One of the main PeptideAtlas storage disk arrays has failed. The disk array is being rebuilt and all data must be restored from backup tape. This process is expected to be complete by January 20, 2020. Until then, the spectrum you have requested is unavailable. We apologize for the problem.</font></H1><BR><BR>\n");
         return;
       }
 
