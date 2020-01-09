@@ -258,6 +258,7 @@ sub processRequest {
     my $charge = $parameters{assumed_charge};
     my $peptidoform = $parameters{peptide};
     my $scanNumber = 0;
+    my $nativeId = '';
     my $observedPrecursorMz = 0.0;
     my $spectrumName = '';
     #print("Content-type: text/plain\n\n");
@@ -294,6 +295,7 @@ sub processRequest {
 	  if ( $getSpectrumResult->{status} eq 'OK' ) {
 	    @spectrum_array = @{$getSpectrumResult->{mz}};
 	    $observedPrecursorMz = $getSpectrumResult->{observedPrecursorMz};
+	    $nativeId = $getSpectrumResult->{nativeId} if ($getSpectrumResult->{nativeId});
 	    if ( $q->param('output_mode') && uc($q->param('output_mode')) ne 'HTML' ) {
 	      writeSpectrum(proxiSpectrum=>$getSpectrumResult->{proxiSpectrum}, output_mode=>$q->param('output_mode'));
 	      return;
@@ -388,7 +390,26 @@ sub processRequest {
 	    }
 
 	    #### Manually create the USI string and store it
-	    $usiStr = "mzspec:$datasetIdentifier\:$msrunName:scan:$scanNumber:$convertedPeptidoformStr/$charge";
+
+	    #### Some testing values for debugging
+	    #$nativeId = "controllerType=0 controllerNumber=1 scan=1872";
+	    #$nativeId = "sample=1 period=1 cycle=1872 experiment=1";
+
+	    #### If there is a nativeId and this is not a Thermo spectrum, try to form a more complex USI
+	    if ( $nativeId && $nativeId !~ /controllerType/ ) {
+	      my $compactNativeId = getCompactNativeId(nativeId=>$nativeId);
+	      if ( $compactNativeId ) {
+		$usiStr = "mzspec:$datasetIdentifier\:$msrunName:nativeId:$compactNativeId:$convertedPeptidoformStr/$charge";
+	      } else {
+		$usiStr = "mzspec:$datasetIdentifier\:$msrunName:ERROR:ERROR:$convertedPeptidoformStr/$charge";
+	      }
+
+	    #### Otherwise if no nativeId or Thermo, just call back to scan numbers
+	    } else {
+	      $usiStr = "mzspec:$datasetIdentifier\:$msrunName:scan:$scanNumber:$convertedPeptidoformStr/$charge";
+	    }
+
+	    #### Artificially store it in the parameters as if it had been passed
 	    $parameters{USI} = $usiStr;
 	  }
         }
@@ -545,6 +566,7 @@ sub processRequest {
       print "peptidoform = $peptidoform,\n";
       print "precursor_mass    = $parameters{'precursor_mass'}\n";
       print "PrecursorMZ = $observedPrecursorMz\n";
+      print "nativeId = $nativeId\n";
       print "scanNumber = $scanNumber\n";
       print "spectrumName = $spectrumName\n";
       #print Data::Dumper->Dump([\@spectrum_array]);
@@ -1609,8 +1631,23 @@ sub interpretUSI {
         $iLocation++;
       }
 
+      #### If that all fails (as sometimes happens with a supplemental mapping) try a `find`
+      if ( $nFoundFiles == 0 ) {
+        print("INFO: Did not find what we are looking for. Try a find in $data_location<BR>") if ( $debug );
+	my @files = `find $data_location -name '$msRunName.*mzML*'`;
+	foreach my $file ( @files ) {
+	  chomp($file);
+	  print(" - Adding $file<BR>\n") if ( $debug );
+	  $nFoundFiles++;
+	  $foundFile = $file;
+	  $foundHere = 1;
+	  push(@{$foundFiles},[$iLocation,$foundFile]);
+        }
+      }
+
     }
   }
+
 
   #### If no files were found, this must be a bad MS Run name
   if ( $nFoundFiles == 0 ) {
@@ -1657,7 +1694,7 @@ sub interpretUSI {
 
   #### If we found just one file, let's go with that
   if ( $nFoundFiles == 1 ) {
-    print "INFO: Found data file for this MS run: $foundFile\n" if ( $debug );
+    print "INFO: Found data file for this MS run: $foundFile<BR>\n" if ( $debug );
     $response->{datasetIdentifier} = $datasetIdentifier;
     $response->{mzMLFilePath} = $foundFile;
     $response->{msRunName} = $msRunName;
@@ -1690,7 +1727,9 @@ sub getSpectrumFromMzmlFile {
   my $quiet = processParameters( name=>'quiet', required=>0, allowUndef=>0, default=>0, parameters=>\%parameters, caller=>$METHOD, response=>$response );
   my $outputDestination = processParameters( name=>'outputDestination', required=>0, allowUndef=>0, default=>'STDERR', parameters=>\%parameters, caller=>$METHOD, response=>$response );
   print "DEBUG: Entering $CLASS.$METHOD\n" if ( $debug && !$DEBUG );
+
   #$verbose = 1;
+  #print("Forcing verbose=1<BR>\n");
 
   #### Process specific parameters
   my $filePath = processParameters( name=>'filePath', required=>1, allowUndef=>0, response=>$response, parameters=>\%parameters, caller=>$METHOD );
@@ -1769,6 +1808,7 @@ sub getSpectrumFromMzmlFile {
   #### Read the spectrum data
   my @mz_intensities;
   my $observedPrecursorMz = 0;
+  my $nativeId = '';
   while (my $line = <DTAFILE>) {
     $line =~ s/[\r\n]//g;
     print "$line<BR>\n" if ($verbose);
@@ -1776,6 +1816,11 @@ sub getSpectrumFromMzmlFile {
     #### Extract the precursor mz information from that line
     if ( $line =~ /precursorMZ: ([\d\.]+)/ ) {
       $observedPrecursorMz = $1;
+      next;
+    }
+
+    if ( $line =~ /nativeId:\s*(.+)/ ) {
+      $nativeId = $1;
       next;
     }
 
@@ -1801,6 +1846,7 @@ sub getSpectrumFromMzmlFile {
 
   $response->{mz} = \@mz_intensities;
   $response->{observedPrecursorMz} = $observedPrecursorMz;
+  $response->{nativeId} = $nativeId;
 
   #### Build a prototype PROXI spectrum
   my $proxiSpectrum = {};
@@ -2045,3 +2091,59 @@ sub writeResponse {
   return;
 
 } # end writeSpectrum
+
+
+###############################################################################
+# getCompactNativeId
+###############################################################################
+sub getCompactNativeId {
+  my $METHOD = 'getCompactNativeId';
+  print "DEBUG: Entering $CLASS.$METHOD\n" if ( $DEBUG );
+  my %parameters = @_;
+
+  #### Set up a response object
+  my $response = Proteomics::Response->new();
+
+  #### Process standard parameters
+  my $debug = processParameters( name=>'debug', required=>0, allowUndef=>0, default=>0, overrideIfFalse=>$DEBUG, parameters=>\%parameters, caller=>$METHOD, response=>$response );
+  my $verbose = processParameters( name=>'verbose', required=>0, allowUndef=>0, default=>0, overrideIfFalse=>$VERBOSE, parameters=>\%parameters, caller=>$METHOD, response=>$response );
+  my $quiet = processParameters( name=>'quiet', required=>0, allowUndef=>0, default=>0, parameters=>\%parameters, caller=>$METHOD, response=>$response );
+  my $outputDestination = processParameters( name=>'outputDestination', required=>0, allowUndef=>0, default=>'STDERR', parameters=>\%parameters, caller=>$METHOD, response=>$response );
+  print "DEBUG: Entering $CLASS.$METHOD\n" if ( $debug && !$DEBUG );
+
+  #### Process specific parameters
+  my $nativeId = processParameters( name=>'nativeId', required=>1, allowUndef=>0, response=>$response, parameters=>\%parameters, caller=>$METHOD );
+
+  #### Die if any unexpected parameters are passed
+  my $unexpectedParameters = '';
+  foreach my $parameter ( keys(%parameters) ) { $unexpectedParameters .= "ERROR: unexpected parameter '$parameter'\n"; }
+  die("CALLING ERROR [$METHOD]: $unexpectedParameters") if ($unexpectedParameters);
+
+  #### If there's no useful nativeId, just return empty string
+  return '' unless ( $nativeId );
+
+  my $compactNativeId = '';
+
+  #### Try to parse the different nativeId types
+
+  #### For Thermo
+  if ( $nativeId =~ /controllerType=(\d+) controllerNumber=(\d+) scan=(\d+)/ ) {
+    $compactNativeId = "$1,$2,$3";
+
+  #### For SCIEX
+  } elsif ( $nativeId =~ /sample=(\d+) period=(\d+) cycle=(\d+) experiment=(\d+)/ ) {
+    $compactNativeId = "$1,$2,$3,$4";
+
+  #### Not yet coded or invalid
+  } else {
+    print("ERROR: unrecognized nativeId '$nativeId'\n");
+  }
+
+  return($compactNativeId);
+
+} # end getCompactNativeId
+
+
+
+
+
