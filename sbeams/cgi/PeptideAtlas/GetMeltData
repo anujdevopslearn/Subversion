@@ -1,0 +1,651 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : GetPeptides
+# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
+# $Id: GetPeptides 7930 2016-07-13 16:53:03Z zsun $
+#
+# Description : This program that allows users to
+#               get peptides from the PeptideAtlas based on various criteria.
+#
+# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+  use Data::Dumper;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    #permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin'],
+    # connect_read_only=>1,
+    allow_anonymous_access=>1,
+  ));
+
+
+  #### Read in the default input parameters
+  my %parameters;
+
+  $parameters{uploaded_file_not_saved} = 1;
+
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+     #$sbeams->printDebuggingInfo($q);
+
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+  #### Decide what action to take based on information so far
+  if ($parameters{action} eq "???") {
+
+    # Some action
+
+  } else {
+
+    my $project_id = $sbeamsMOD->getProjectID(
+        atlas_build_id => $parameters{atlas_build_id}
+        );
+ 
+    $sbeamsMOD->display_page_header( project_id => $project_id, 
+                                     use_tabbed_panes => 1
+                                   );
+
+    handle_request(ref_parameters=>\%parameters);
+
+    $sbeamsMOD->display_page_footer( use_tabbed_panes => 1 );
+
+  }
+
+
+} # end main
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+
+
+  #### Show current user context information
+  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
+  #$sbeams->printUserContext();
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $sbeamsMOD->getTabMenu(
+    parameters_ref => \%parameters,
+    program_name => $PROG_NAME,
+  );
+  print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+
+
+  #### Get the current atlas_build_id based on parameters or session
+  my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
+    parameters_ref => \%parameters,
+  );
+  if (defined($atlas_build_id) && $atlas_build_id < 0) {
+    return;
+  }
+  $parameters{atlas_build_id} = $atlas_build_id;
+
+  #### Define some generic variables
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+  #### Read in the standard form values
+  my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+  my $TABLE_NAME = $parameters{'QUERY_NAME'} || 'AT_GetMeltData';
+
+
+  #### Set some specific settings for this program
+  my $CATEGORY="Melt Analysis";
+  $TABLE_NAME="AT_GetMeltData" unless ($TABLE_NAME);
+  ($PROGRAM_FILE_NAME) =
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+#  $PROGRAM_FILE_NAME ||= 'GetMeltData';
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+
+  #### Get the columns and input types for this table/query
+  my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
+
+  my %input_types = 
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
+
+
+  #### Read the input parameters for each column
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters,
+    columns_ref=>\@columns,input_types_ref=>\%input_types);
+   #$sbeams->printDebuggingInfo($q);
+
+
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+  if ($apply_action =~ /VIEWRESULTSET|VIEWPLOT/ ) {
+    $sbeams->readResultSet(
+        resultset_file=>$rs_params{set_name},
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters
+    );
+    $n_params_found = 99;
+  }
+
+
+  #### Set some reasonable defaults if no parameters supplied
+  unless ($n_params_found) {
+    $parameters{input_form_format} = "minimum_detail";
+  }
+
+
+  #### Apply any parameter adjustment logic
+  # None
+
+
+  #### Display the user-interaction input form
+  $sbeams->display_input_form(
+    TABLE_NAME=>$TABLE_NAME,
+    CATEGORY=>$CATEGORY,
+    apply_action=>$apply_action,
+    PROGRAM_FILE_NAME=>$PROG_NAME,
+    parameters_ref=>\%parameters,
+    input_types_ref=>\%input_types,
+    use_tabbed_panes => 1,
+    mask_user_context=> '1',
+  );
+
+  #### Display the form action buttons
+  $sbeams->display_form_buttons( TABLE_NAME=>$TABLE_NAME,
+                                 use_tabbed_panes => 1,
+                               );
+
+
+  #### Finish the upper part of the page and go begin the full-width
+  #### data portion of the page
+  $sbeams->display_page_footer( close_tables=>'NO',
+                                use_tabbed_panes => 1,
+                                separator_bar=>'NO',
+                                display_footer=>'NO');
+
+
+  # Build constraint SQL
+
+  ####  constraint
+  my $analysis_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"MA.analysis_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Analysis",
+    constraint_value=>$parameters{analysis_id} );
+  return if ($analysis_clause eq '-1');
+
+  #### Build protein_name constraint
+  my $protein_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"protein_name",
+    constraint_type=>"plain_text",
+    constraint_name=>"Protein Name",
+    constraint_value=>$parameters{protein_name} );
+  return if ($protein_clause eq '-1');
+
+  ## handle file upload and clause for sql for $parameters{upload_file}
+  my $biosequence_names_clause;
+  my %protein_hash;
+  if ( $parameters{upload_file} )
+  {
+     ## upload the file to a file handler
+     my $fh = $q->upload('upload_file');
+
+     if (!$fh && $q->cgi_error)
+     {
+       print $q->header(-status=>$q->cgi_error);
+     }
+     if ( (-T $fh) && (-s $fh < 1000000)) ##size constraint of 10 MB, restrict $count < 30000
+     {
+       my $count = 0;
+       my $read_file=0;
+       my $prt;
+       ## protein list
+       while ($prt=<$fh>)
+       {
+         chomp($prt);
+         $prt =~ s/\s+$//;
+         if ($prt)
+         {
+             $protein_hash{$prt} = $prt;
+             $count = $count + 1;
+         }
+         last if ($count > 30000);
+      }
+    }
+    ## join with a commas:
+    my $protein_list = "";
+    foreach my $pr (keys %protein_hash)
+    {
+       $protein_list = "'$protein_hash{$pr}',$protein_list"; 
+    }
+    ## trim off last comma:
+    $protein_list =~ s/(.*)(,)$/$1/;
+
+    unless ($protein_list =~ m/%/) {
+      $biosequence_names_clause = "   AND BS.biosequence_name IN ( $protein_list )";
+     }
+
+    if ($protein_list =~ m/%/) {
+
+	my @tmp = split("," , $protein_list);
+	$biosequence_names_clause = "   AND ( BS.biosequence_name LIKE  $tmp[0] ";
+
+	for (my $i = 1; $i < scalar(@tmp); $i++ ){
+
+	    if (  $tmp[$i] ){
+
+		$biosequence_names_clause = $biosequence_names_clause . "   OR BS.biosequence_name LIKE $tmp[$i]  ";
+
+	    } 
+	}
+	$biosequence_names_clause = $biosequence_names_clause . " ) --end";
+
+    }
+  } # if upload file
+
+
+  #### Build ROWCOUNT constraint
+  $parameters{row_limit} = 1500000
+    unless ($parameters{row_limit} > 0 );
+  #$parameters{row_limit} = 100000 if ($parameters{row_limit} eq '');
+  #my $limit_clause = "TOP $parameters{row_limit}";
+  #### Disable row limits
+  my $MAX_ROW_NUMBER = $parameters{row_limit};
+  my $limit_clause = '';
+
+  #### Define some variables needed to build the query
+  my @column_array;
+
+  # Set up base column defs
+  @column_array = (
+    ["analysis_name","MA.analysis_name","Analysis Name"],
+    ["protein_name","MA.protein_name","Protein Name"],
+    ["control_state","MA.control_state ","Sample Type"],
+    ["drug_name","MD.drug_name","Drug"],
+    ["melt_temp","MR.melt_temp","Melt Temperature"],
+    ["r_squared","MR.r_squared","Rsquared"],
+    ["plot_path","MRG.plot_path","plot_path"],
+    ["analysis_id","MA.analysis_id","analysis_id"],
+    );
+
+  #### Build the columns part of the SQL statement
+  my %colnameidx = ();
+  my @column_titles = ();
+  ## Sends @column_array_ref to build_SQL_columns_list, which
+  ## (1) appends the 2nd element in array to $columns_clause
+  ## (2) fills %colnameidx_ref as a hash with key = 1st element
+  ## and value = 3rd element, and (3) fills @column_titles_ref
+  ## array with the 3rd element
+  my $columns_clause = $sbeams->build_SQL_columns_list(
+    column_array_ref=>\@column_array,
+    colnameidx_ref=>\%colnameidx,
+    column_titles_ref=>\@column_titles
+  );
+
+  #### Define the SQL statement
+  $sql = qq~
+  SELECT DISTINCT analysis_name, protein_name,
+  CASE WHEN is_control = 'T' and sample_number = 1 THEN 'control_1'
+       WHEN is_control = 'T' and sample_number = 2 THEN 'control_2'
+       WHEN is_control = 'F' and sample_number = 1 THEN 'treatment_1'
+       WHEN is_control = 'F' and sample_number = 2 THEN 'treatment_2'
+       ELSE 'ASDF' 
+  END AS control_state, 
+         drug_name, melt_temp, r_squared, plot_path, MA.analysis_id
+  FROM $TBAT_MELT_RESPONSE_GROUP MRG
+  JOIN $TBAT_MELT_RESPONSE MR 
+    ON MRG.response_group_id = MR.response_group_id
+  JOIN $TBAT_MELT_ANALYSIS MA
+    ON MRG.analysis_id = MA.analysis_id
+  JOIN $TBAT_MELT_PROTEIN MP 
+    ON MP.protein_id = MRG.entity_id 
+  JOIN $TBAT_MELT_DRUG MD
+    ON MA.drug_id = MD.drug_id
+  WHERE 1 = 1
+  $analysis_clause
+	$protein_clause
+  ORDER BY analysis_name, protein_name, 
+  CASE WHEN is_control = 'T' and sample_number = 1 THEN 'control_1'
+       WHEN is_control = 'T' and sample_number = 2 THEN 'control_2'
+       WHEN is_control = 'F' and sample_number = 1 THEN 'treatment_1'
+       WHEN is_control = 'F' and sample_number = 2 THEN 'treatment_2'
+       ELSE 'ASDF'
+   END
+   ~;
+  
+  #### Certain types of actions should be passed to links
+  my $pass_action = "QUERY";
+  $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
+
+
+  #### Define the hypertext links for columns that need them
+  %url_cols = (
+          'Protein Name' => "$HTML_BASE_DIR/images/MeltAtlas/\%$colnameidx{analysis_id}V/\%$colnameidx{plot_path}V ",
+      );
+
+  %hidden_cols = (
+      plot_path => 1, 
+      analysis_id => 1
+#		  'biosequence_accession' => 1,
+  );
+
+  #########################################################################
+  #### If QUERY or VIEWRESULTSET was selected, display the data
+  if ($apply_action =~ /QUERY|VIEWRESULTSET|VIEWPLOT/i ) {
+
+    #### If the action contained QUERY, then fetch the results from
+    #### the database
+    if ($apply_action =~ /QUERY/i) {
+
+      my $use_caching = 0;
+      #### Fetch the results from the database server
+      $sbeams->fetchResultSet(
+        sql_query=>$sql,
+        resultset_ref=>$resultset_ref,
+        hidden_cols_ref => \%hidden_cols,
+        use_caching => $use_caching
+      );
+      if (scalar @{$resultset_ref->{data_ref}} < $MAX_ROW_NUMBER){
+        $parameters{row_limit} = '';
+      }
+
+      #### Post process the resultset
+      if ( $resultset_ref->{from_cache} ) {
+        $log->info( "Skipping post-processing with cached RS" );
+      } else { 
+        postProcessResultset(
+          rs_params_ref=>\%rs_params,
+          resultset_ref=>$resultset_ref,
+          query_parameters_ref=>\%parameters,
+          column_titles_ref=>\@column_titles,
+        ) if ($parameters{display_options} =~ /DASFormat/i);
+      }
+
+      #### Store the resultset and parameters to disk resultset cache
+      $rs_params{set_name} = "SETME";
+      my %write_params = ( rs_table => $TBAT_ATLAS_BUILD,
+                           key_field => 'atlas_build_id',
+                           key_value => $parameters{atlas_build_id} );
+      $sbeams->writeResultSet(
+        resultset_file_ref=>\$rs_params{set_name},
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters,
+        resultset_params_ref=>\%rs_params,
+        query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+        column_titles_ref=>\@column_titles,
+        %write_params
+      );
+    }
+
+    #### Construct table help
+    my $obs_help = get_table_help( 'peptides' );
+
+    #### Display the resultset
+    $sbeams->displayResultSet(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      url_cols_ref=>\%url_cols,
+      hidden_cols_ref=>\%hidden_cols,
+      max_widths=>\%max_widths,
+      use_tabbed_panes => 1,
+      column_titles_ref=>\@column_titles,
+      column_help=>$obs_help,
+      base_url=>$base_url,
+    );
+
+    #### Display the resultset controls
+    $sbeams->displayResultSetControls(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      use_tabbed_panes => 1,
+      base_url=>$base_url,
+    );
+
+
+    #### Display a plot of data from the resultset
+    $sbeams->displayResultSetPlot(
+      rs_params_ref=>\%rs_params,
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      column_titles_ref=>\@column_titles,
+      use_tabbed_panes => 1,
+      base_url=>$base_url,
+    );
+
+
+  #### If QUERY was not selected, then tell the user to enter some parameters
+  } else {
+    if ($sbeams->invocation_mode() eq 'http') {
+      print "<H4>Select parameters above and press QUERY</H4>\n";
+    } else {
+      print "You need to supply some parameters to contrain the query\n";
+    }
+  }
+
+
+} # end handle_request
+
+
+
+###############################################################################
+# evalSQL
+#
+# Callback for translating Perl variables into their values,
+# especially the global table variables to table names
+###############################################################################
+sub evalSQL {
+  my $sql = shift;
+
+  return eval "\"$sql\"";
+
+} # end evalSQL
+
+
+###############################################################################
+# postProcessResultset
+#
+# Perform some additional processing on the resultset that would otherwise
+# be very awkward to do in SQL.
+###############################################################################
+sub postProcessResultset {
+  my %args = @_;
+
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+  #### Process the arguments list
+  my $resultset_ref = $args{'resultset_ref'};
+  my $rs_params_ref = $args{'rs_params_ref'};
+  my $query_parameters_ref = $args{'query_parameters_ref'};
+  my $column_titles_ref = $args{'column_titles_ref'};
+
+  my %rs_params = %{$rs_params_ref};
+  my %parameters = %{$query_parameters_ref};
+
+  my $n_rows = scalar(@{$resultset_ref->{data_ref}});
+
+  my $cols = $resultset_ref->{column_hash_ref};
+
+  my $peptide_accession;
+  my $nprot;
+  my $nloc;
+
+  for (my $i=0; $i<$n_rows; $i++) {
+    $peptide_accession = $resultset_ref->{data_ref}->[$i]->[$cols->{peptide_accession}];
+    $nprot = $resultset_ref->{data_ref}->[$i]->[$cols->{n_protein_mappings}];
+    $nloc = $resultset_ref->{data_ref}->[$i]->[$cols->{n_genome_locations}];
+
+    if ($nprot > 1) {
+      if ($nloc > 1) {
+	$peptide_accession .= "(degen_NLoc=$nloc)";
+      } else {
+	$peptide_accession .= "(degen)";
+      }
+
+      $resultset_ref->{data_ref}->[$i]->[$cols->{peptide_accession}] = $peptide_accession;
+
+    } elsif ($nloc > 1) {
+      die("ERROR: nprot <=2 but $nloc > 1. This is wrong. Please report this error.");
+    }
+
+  }
+
+  return 1;
+
+} # end postProcessResult
+
+#######################################################################
+sub getOrganismFullName 
+{
+    my %args = @_;
+    
+    my $organism_id = $args{organism_id};
+
+    my $sql = qq~
+        SELECT full_name
+        FROM $TB_ORGANISM
+        WHERE organism_id = '$organism_id'
+        AND record_status != 'D'
+    ~;
+
+    my ($full_name) = $sbeams->selectOneColumn($sql);
+
+    ## replace spaces with _
+    $full_name =~ s/ /\_/g;
+
+    return $full_name;
+}
+
+#######################################################################
+sub get_table_help {
+  my $name = shift;
+  return '' unless $name;
+  my @entries;
+  my $hidetext;
+  my $showtext;
+  my $heading;
+  my $description;
+  if ( $name eq 'peptides' ) {
+    @entries = (
+      { key => 'Peptide Accession', value => 'Accession within PeptideAtlas. Click for details on peptide.' },
+      { key => 'Peptide Sequence', value => 'Sequence excluding modifications. Click for details on peptide' },
+      { key => 'Best Prob', value => 'PeptideAtlas probability for best observation of this peptide in this atlas build' },
+      { key => 'N Obs', value => 'Number of spectra identified to this peptide in this atlas build' },
+      { key => 'Empirical Proteotypic Score', value => 'In PeptideAtlas, the fraction of observations of this protein that are supported by at least one observation of this peptide. Values range from 0 to 1; close to 1 means that this peptide is likely to be observed whenever this protein is observed.' },
+      { key => 'SSRCalc Relative Hydrophob', value => 'A measure of the hydrophobicity of this peptide' },
+
+      { key => 'N Samples', value => 'Number of samples this peptide was observed in for this atlas build' },
+      { key => 'N Protein Mappings', value => 'Number of protein identifiers that this peptide maps to for the biosequence set associated with this atlas build' },
+      { key => 'N Unique Locations on Genome', value => 'Number of genome locations that this peptide maps to' },
+      { key => 'Spans exons?', value => 'Does the peptide span multiple exons?' },
+      { key => 'Peptides that include this sequence', value => 'Click for peptides that have this peptide as a subsequence' },
+    );
+    
+    $showtext = 'show column descriptions';
+    $hidetext = 'hide column descriptions';
+    $heading = 'Identified Peptides';
+    $description= 'Peptides identifications supported by the data';
+    
+  }
+
+  return unless @entries;
+  my $help = $sbeamsMOD->get_table_help_section( name => $name,
+  description => $description,
+  heading => $heading,
+  entries => \@entries,
+  showtext => $showtext,
+  hidetext => $hidetext  );
+  return $help;
+    
+} # end get_table_help
