@@ -178,7 +178,6 @@ sub handle_request {
     AND precursor_mz BETWEEN $pre_min AND $pre_max
     ORDER BY precursor_mz DESC, product_mz ASC, conc DESC
     ~;
-    die $sql;
 	  my @all_rows = $sbeams->selectSeveralColumns($sql);
     my $global_vals = shift @all_rows;
 
