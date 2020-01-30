@@ -100,13 +100,10 @@ my $show_image = 0;
        exit;
     }
 
-
     # Add general section 
-#  print STDERR 'build overV ' . time() . "\n";
     if (! $section  || $section =~ /overview/i){
       $page .= get_build_overview ( $build_id );
     }
-#  print STDERR 'sample info ' . time() . "\n";
     if (! $section || $section =~ /what.*new/i){
 				my $what_is_new = fetchResultset(atlas_build_id => $build_id,
                                          rs_table => 'buildDetail-new',
@@ -115,8 +112,6 @@ my $show_image = 0;
                                          module_ref => sub{ $atlas->get_what_is_new(@_)});
 				$page .= "<BR>\n$what_is_new<BR>\n" if($what_is_new);
     }
-       
-
     if (! $section || $section =~ /ProteomeCoverage/i){
       my $proteome_cover = fetchResultset(atlas_build_id => $build_id,
                                          rs_table => 'buildDetail-ProteomeCoverage',
@@ -128,7 +123,6 @@ my $show_image = 0;
 				$page .= "<BR>\n$proteome_cover<BR>\n";
 			}
     }
-
     my ( $chart_div, $header );
 		my ( $sample_table, $sample_arrayref ,$column_name_ref ) = get_sample_info( $build_id );
     if (! $section || $section =~ /SampleContribution/i){
@@ -143,7 +137,6 @@ my $show_image = 0;
 			  $page .= "<BR>\n";
       }
     }
-
     # Print what we already have, speed up apparent page loading time.
     if (! $section){
       $atlas->display_page_header( header_info => $header, project_id => $project_id, onload => 'sortables_init()', sortable => 1 );
@@ -194,7 +187,7 @@ sub fetchResultset {
 		table_name => $rs_table,
 		key_value => $build_id,	
 		resultset_ref=>$resultset_ref,
-		use_caching => 0
+		use_caching => 1
 	);
 
 	if ( $resultset_ref->{from_cache} ) {
