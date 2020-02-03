@@ -1580,8 +1580,9 @@ sub interpretUSI {
         }
       }
       close(INFILE);
+    }
 
-    } else {
+    if ( $nRows == 0 ) {
       $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'DatasetNotHere', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
          message=>"Dataset '$datasetIdentifier' is not stored here at PeptideAtlas.");
       return $response;
