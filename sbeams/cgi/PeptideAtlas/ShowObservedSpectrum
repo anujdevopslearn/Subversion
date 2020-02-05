@@ -251,22 +251,28 @@ sub processRequest {
     $sbeams->processStandardParameters(parameters_ref=>\%parameters);
     my $apply_action  = $q->param('apply_action');
 
+    my $verbose = 0;
+
+    #print("Content-type: text/plain\n\n");
     #$sbeams->printDebuggingInfo($q);
 
     #### Define the spectrum array. Need something fancier than this
     my @spectrum_array;
     my $charge = $parameters{assumed_charge};
     my $peptidoform = $parameters{peptide};
+    my $convertedPeptidoformStr = $parameters{peptide};
     my $scanNumber = 0;
     my $nativeId = '';
     my $observedPrecursorMz = 0.0;
     my $spectrumName = '';
-    #print("Content-type: text/plain\n\n");
+
 
     #### If a Universal Spectral Identifier is supplied, interpret it
     my $usiStr = $q->param('USI') || $q->param('usi');
     if ( $usiStr ) {
+      print("INFO: Received USI string '$usiStr' for processing<BR>\n") if ($verbose);
       my $result = interpretUSI( usiStr=>$usiStr, outputDestination=>'STDOUT' );
+      print("INFO: peptidoform is $result->{peptidoform}<BR>\n") if ($verbose);
 
       #### If a successful interpretation
       if ( $result->{status} eq 'OK' ) {
@@ -291,11 +297,12 @@ sub processRequest {
 	#### Else it must be a PXD identifier
         } else {
 	  my $filePath = $result->{mzMLFilePath};
-	  my $getSpectrumResult = getSpectrumFromMzmlFile( filePath=> $filePath, scanNumber=>$scanNumber, verbose=>0, debug=>0, quiet=>0, outputDestination=>'STDOUT' );
+	  my $getSpectrumResult = getSpectrumFromMzmlFile( filePath=> $filePath, scanNumber=>$scanNumber, verbose=>$verbose, debug=>0, quiet=>0, outputDestination=>'STDOUT' );
 	  if ( $getSpectrumResult->{status} eq 'OK' ) {
 	    @spectrum_array = @{$getSpectrumResult->{mz}};
 	    $observedPrecursorMz = $getSpectrumResult->{observedPrecursorMz};
 	    $nativeId = $getSpectrumResult->{nativeId} if ($getSpectrumResult->{nativeId});
+	    $scanNumber = $getSpectrumResult->{scanNumber} if ($getSpectrumResult->{scanNumber});
 	    if ( $q->param('output_mode') && uc($q->param('output_mode')) ne 'HTML' ) {
 	      writeSpectrum(proxiSpectrum=>$getSpectrumResult->{proxiSpectrum}, output_mode=>$q->param('output_mode'));
 	      return;
@@ -309,19 +316,51 @@ sub processRequest {
       #### Otherwise this USI not available
       } else {
 	writeResponse(response=>$result, output_mode=>$q->param('output_mode'));
-	print("<BR><BR><BR><H1><font color=\"red\">One of the main PeptideAtlas storage disk arrays has failed. The disk array is being rebuilt and all data must be restored from backup tape. This process is expected to be complete by January 24, 2020. Until then, the spectrum you have requested is unavailable. We apologize for the problem.</font></H1><BR><BR>\n");
+	#print("<BR><BR><BR><H1><font color=\"red\">One of the main PeptideAtlas storage disk arrays has failed. The disk array is being rebuilt and all data must be restored from backup tape. This process is expected to be complete by January 24, 2020. Until then, the spectrum you have requested is unavailable. We apologize for the problem.</font></H1><BR><BR>\n");
+	print("<BR><BR><BR><H1><font color=\"red\">The spectrum you have requested is not found in the expected location. Please report this problem.</font></H1><BR><BR>\n");
         return;
       }
 
     } 
 
 
-    #### If we have a spectrum_id, find the mass modifications
-    if ($parameters{'spectrum_identification_id'}) {
+    #### If a spectrum_identification_id was provided (via inside the PeptideAtlas drill-down interface, not via a USI), then try to load it
+    my $proteomics_search_batch_id = -1;
+    if ( $parameters{spectrum_identification_id} ) {
+
+      #### Ensure we have a build_id, too
       unless ($parameters{'atlas_build_id'}) {
         print "ERROR: need atlas_build_id parameter.\n";
         return;
       }
+
+      #### Get the peak list for this spectrum
+      print("INFO: Attempting to load the spectrum via spectrum_identification_id=$parameters{spectrum_identification_id}<BR>\n") if ($verbose);
+      my %spectrum;
+      ($proteomics_search_batch_id, %spectrum) = get_spectrum(
+        spectrum_identification_id => $parameters{spectrum_identification_id},
+        atlas_build_id => $parameters{atlas_build_id},
+        parameters => \%parameters, verbose=>$verbose,
+      );
+      $nativeId = $spectrum{nativeId};
+
+      #### If a spectrum came back, transform it
+      if (%spectrum) {
+	my ($i,$mass,$intensity,$massmin);
+	my ($massmax,$intenmax)=(0,0);
+
+	#### Build a Lorikeet-ready mass,intensity pair array for Lorikeet
+	for ($i=0; $i<$spectrum{n_peaks}; $i++) {
+	  $mass = $spectrum{mz}->[$i];
+	  $intensity = $spectrum{intensities}->[$i];
+	  push(@spectrum_array,[$mass,$intensity]);
+	  $massmin = $mass if ($i == 0);
+	  $massmax = $mass if ($mass > $massmax);
+	  $intenmax = $intensity if ($intensity > $intenmax);
+        }
+      }
+
+      #### Then also find the mass modifications
       my $sql = qq~
             SELECT peptide_sequence,peptide_charge,monoisotopic_parent_mz,
                    MPI.modified_peptide_sequence,
@@ -383,7 +422,7 @@ sub processRequest {
 	    $msrunName =~ s/\.\d+\.\d+\.\d+$//;
 
 	    #### If the peptidoform has a mass mod on it, then feed it through a converter to UniMod form
-	    my $convertedPeptidoformStr = $peptidoform;
+	    $convertedPeptidoformStr = $peptidoform;
 	    if ( $peptidoform =~ /[\[\{]/ ) {
 	      my $pep = Proteomics::Sequence::Peptide->new(sequenceString=>$peptidoform);
 	      $convertedPeptidoformStr = $pep->{modifiedSequenceString};
@@ -394,6 +433,8 @@ sub processRequest {
 	    #### Some testing values for debugging
 	    #$nativeId = "controllerType=0 controllerNumber=1 scan=1872";
 	    #$nativeId = "sample=1 period=1 cycle=1872 experiment=1";
+
+	    #print("<BR><BR><BR>nativeId=$nativeId<BR><BR><BR><BR>\n");
 
 	    #### If there is a nativeId and this is not a Thermo spectrum, try to form a more complex USI
 	    if ( $nativeId && $nativeId !~ /controllerType/ ) {
@@ -417,8 +458,11 @@ sub processRequest {
     }
 
 
+
+
+
     #### Show the universal spectrum identifier input box
-    my $htmlBuffer = getUSIInputForm( parameters => \%parameters );
+    my $htmlBuffer = getUSIInputForm( usi => $usiStr, parameters => \%parameters );
     if ($sbeams->output_mode() eq 'html') {
       print $htmlBuffer;
     } else {
@@ -440,46 +484,15 @@ sub processRequest {
 
     #### Display the header
     if ( $peptidoform ) {
-      print "<H2 CLASS=section_description ALIGN=CENTER>Spectrum for $peptidoform <SUP>+$charge</SUP></H2>\n";
+      my $peptideformString = $convertedPeptidoformStr || $peptidoform;
+      print "<H2 CLASS=section_description ALIGN=CENTER>Spectrum for $peptideformString <SUP>+$charge</SUP></H2>\n";
       print '<h3 ID="annotations_head" style="display:none"><div ID="annotations_summary" COLSPAN="2">-- No annotations here --</div></h3>';
     }
 
-    # still some lint here...
-    #my $precursor_mass = $parameters{'precursor_mass'};
 
 
-    #### If we don't already have the spectrum
-    my $proteomics_search_batch_id = -1;
-    unless ( @spectrum_array ) {
 
-      #### Get the peak list for this spectrum
-      my %spectrum;
-      ($proteomics_search_batch_id, %spectrum) = get_spectrum(
-        spectrum_identification_id => $parameters{spectrum_identification_id},
-        atlas_build_id => $parameters{atlas_build_id},
-        parameters => \%parameters,
-      );
 
-      #### If the spectrum did not come back, then we error out
-      unless (%spectrum) {
-        print "ERROR: Unable to load spectrum\n";
-        return;
-      }
-
-      my ($i,$mass,$intensity,$massmin);
-      my ($massmax,$intenmax)=(0,0);
-
-      #### Build a Lorikeet-ready mass,intensity pair array for Lorikeet
-      for ($i=0; $i<$spectrum{n_peaks}; $i++) {
-        $mass = $spectrum{mz}->[$i];
-        $intensity = $spectrum{intensities}->[$i];
-        push(@spectrum_array,[$mass,$intensity]);
-        $massmin = $mass if ($i == 0);
-        $massmax = $mass if ($mass > $massmax);
-        $intenmax = $intensity if ($intensity > $intenmax);
-      }
-
-    }
 
     ### Run the heuristic PSM evaluator if requested
     if ($parameters{'eval'}) {
@@ -1010,6 +1023,9 @@ sub get_spectrum
   my $spectrum_identification_id = $args{'spectrum_identification_id'};
   my $atlas_build_id = $args{'atlas_build_id'};
   my $parameters = $args{parameters};
+  my $verbose = $args{verbose} || 0;
+
+  #### Ensure required parameters are provided
   unless ($spectrum_identification_id) {
     print "\nERROR: get_spectrum needs spectrum_identification_id. ".
           "Got atlas_build_id $atlas_build_id.\n\n";
@@ -1050,9 +1066,9 @@ sub get_spectrum
     die("ERROR: Unable to parse fraction name from '$spectrum_name'");
   }
 
-  #print "search_batch_id = $search_batch_id\n";
-  #print "spectrum_name = $spectrum_name\n";
-  #print "fraction_tag = $fraction_tag\n";
+  print "INFO: search_batch_id = $search_batch_id<BR>\n" if ( $verbose );
+  print "INFO: spectrum_name = $spectrum_name<BR>\n" if ( $verbose );
+  print "INFO: fraction_tag = $fraction_tag<BR>\n" if ( $verbose );
 
 
   use SBEAMS::PeptideAtlas::Spectrum;
@@ -1080,27 +1096,56 @@ sub get_spectrum
     $comp_idx_file ="$build_path/$1_all_raw.compspecidx";
   }
 
-  #### 2014-05-07 Eric disables RAW library reading because spectra are seriously altered!
-  #if ( 0 && ( -e $library_idx_file || -e $comp_idx_file ) ){
   my %spectrum;
-  @mass_intensities = $spectra->getSpectrumPeaks_plotmsms(
-    proteomics_search_batch_id => $search_batch_id,
-    spectrum_name => $spectrum_name,
-    fraction_tag => $fraction_tag,
-    parameters => $parameters,
-  );
+  my $buffer;
 
-  @mass_intensities = $spectra->getSpectrumPeaks(
-    proteomics_search_batch_id => $search_batch_id,
-    spectrum_name => $spectrum_name,
-    fraction_tag => $fraction_tag,
-  ) if ( ! @mass_intensities);
+  #### EWD added short circuit to try to use new local methods of finding spectrum
+  ($data_location, $buffer) = $spectra->groom_data_location( data_location => $data_location, history_buffer => '' );
+  print("Trying getSpectrumFromMzmlFile<BR>\n") if ( $verbose);
+  print("data_location=$data_location, fraction_tag=$fraction_tag, spectrum_name=$spectrum_name<BR>\n") if ( $verbose);
+  my $scan_number = 0;
+  if ( $spectrum_name =~ /.+\.(\d+)\.(\d+)\.(\d+)$/ ) {
+    $scan_number = $1;
+  }
+  my $result = getSpectrumFromMzmlFile( filePath => "$data_location/$fraction_tag.mzML", scanNumber => $scan_number );
+  if ( $result ) {
+    $spectrum{mz} = $result->{proxiSpectrum}->{mzs};
+    $spectrum{intensities} = $result->{proxiSpectrum}->{intensities};
+    $spectrum{n_peaks} = scalar(@{$spectrum{mz}});
+    $spectrum{observedPrecursorMz} = $result->{observedPrecursorMz};
+    $spectrum{nativeId} = $result->{nativeId};
+    #### Silliness to fool later if statements. ugh.
+    @mass_intensities = ( [1,1] );
+  }
+
+  if ( ! @mass_intensities) {
+    print("Trying getSpectrumPeaks_plotmsms<BR>\n") if ( $verbose);
+    @mass_intensities = $spectra->getSpectrumPeaks_plotmsms(
+      proteomics_search_batch_id => $search_batch_id,
+      spectrum_name => $spectrum_name,
+      fraction_tag => $fraction_tag,
+      parameters => $parameters,
+    );
+    print("Length of mass intensitities is " . scalar(@mass_intensities) . "<BR>\n") if ( $verbose);
+  }
+
+  if ( ! @mass_intensities) {
+    print("Trying getSpectrumPeaks<BR>\n") if ( $verbose);
+    @mass_intensities = $spectra->getSpectrumPeaks(
+      proteomics_search_batch_id => $search_batch_id,
+      spectrum_name => $spectrum_name,
+      fraction_tag => $fraction_tag,
+      );
+    print("Length of mass intensitities is " . scalar(@mass_intensities) . "<BR>\n") if ( $verbose);
+  }
 
   if ( ! @mass_intensities and (-e $library_idx_file || -e $comp_idx_file )) {
+    print("Trying getSpectrumPeaks_Lib<BR>\n") if ( $verbose);
     @mass_intensities = $spectra->getSpectrumPeaks_Lib(
     spectrum_name => $spectrum_name,
     library_idx_file => $library_idx_file,
    );
+    print("Length of mass intensitities is " . scalar(@mass_intensities) . "<BR>\n") if ( $verbose);
   }
 
 
@@ -1118,13 +1163,12 @@ sub get_spectrum
     push(@intensities,$mass_intensities[$i]->[1]);
   }
 
-  $spectrum{n_peaks} = $#mass_intensities + 1;
-
-
-  #### Put data into hash and return
-  $spectrum{mz} = \@masses;
-  $spectrum{intensities} = \@intensities;
-
+  #### If the spectrum isn't already there, then put the data into hash and return
+  if ( ! $spectrum{mz} ) {
+    $spectrum{n_peaks} = $#mass_intensities + 1;
+    $spectrum{mz} = \@masses;
+    $spectrum{intensities} = \@intensities;
+  }
 
   # have to return scalar before hash
   return ($search_batch_id, %spectrum);
@@ -1401,6 +1445,7 @@ sub getUSIInputForm {
 
   #### Process specific parameters
   my $cgiParameters = processParameters( name=>'parameters', required=>0, allowUndef=>0, response=>$response, parameters=>\%parameters, caller=>$METHOD );
+  my $usi = processParameters( name=>'usi', required=>0, allowUndef=>1, response=>$response, parameters=>\%parameters, caller=>$METHOD );
 
   #### Die if any unexpected parameters are passed
   my $unexpectedParameters = '';
@@ -1410,19 +1455,24 @@ sub getUSIInputForm {
   #### Return if there was a problem with the required parameters
   return $response if ( $response->{errorCode} =~ /MissingParameter/i );
  
-  my $usi = $cgiParameters->{USI};
+  #### If it wasn't passed, check the CGI parameters
+  unless ( $usi ) {
+    $usi = $cgiParameters->{USI} || $cgiParameters->{usi};
+  }
   $usi = "" unless ( $usi );
 
   my $buffer = qq~<TABLE BORDER=0><TR><TD>
        <SCRIPT LANGUAGE="JavaScript">
        function fillInUSI(input_field) {
-         exampleNumber = Math.floor((Math.random()*4))
+         exampleNumber = Math.floor((Math.random()*5))
          if ( exampleNumber == 0 ) {
            document.USIForm.USI.value = "mzspec:PXD000561:Adult_Urinarybladder_bRP_Elite_71_f14:scan:1872:FSGSSSGADR/2";
          } else if ( exampleNumber == 1 ) {
            document.USIForm.USI.value = "mzspec:PXD000865:00603_F01_P004608_B00F_A00_R1:scan:14453:SSLLDVLAAR/2";
          } else if ( exampleNumber == 2 ) {
            document.USIForm.USI.value = "mzspec:PXD002286:081213-Wittie-Phos-1A:scan:14366:MVC[Carbamidomethyl]S[Phospho]PVTVR/2";
+         } else if ( exampleNumber == 3 ) {
+           document.USIForm.USI.value = "mzspec:PXD001464:CL_1hRP_rep3:nativeId:1,1,2740,10:Q[Gln->pyro-Glu]IGDALPVSC[Carbamidomethyl]TISASR/2";
          } else {
            document.USIForm.USI.value = "mzspec:PXD002255:ES_XP_Ubi_97H_HCD_349:scan:9617:LAEIYVNSSFYK/2";
          }
@@ -1795,6 +1845,36 @@ sub getSpectrumFromMzmlFile {
     }
   }
 
+  #### If the scanNumber has a comma, assume it is a nativeId and try to translate it
+  if ( $scanNumber =~ /,/ ) {
+    my $mappingFile = $filePath;
+    $mappingFile =~ s/\.gz$//;
+    $mappingFile =~ s/mzML$//;
+    $mappingFile .= 'txt';
+    print("INFO: Checking for nativeId mapping file '$mappingFile'<BR>\n") if ($verbose);
+    if ( -e $mappingFile ) {
+      if ( open(INFILE,$mappingFile) ) {
+	print("INFO: Reading nativeId mapping file '$mappingFile'<BR>\n") if ($verbose);
+	my $iLine = 0;
+	while ( my $line = <INFILE> ) {
+	  chomp($line);
+	  my @columns = split("\t",$line);
+	  my $compactNativeId=$columns[3];
+	  $compactNativeId =~ s/\s+/,/g;
+	  $compactNativeId =~ s/[A-Za-z=]+//g;
+	  if ( $compactNativeId eq $scanNumber ) {
+	    $scanNumber = $columns[0];
+	    print("INFO: Found scanNumber $scanNumber for compactNativeId '$compactNativeId'<BR>\n") if ($verbose);
+	    last;
+	  }
+	  #print("INFO: Reading compactNativeId '$compactNativeId'<BR>\n") if ($verbose && $columns[3] =~ /1475/);
+	  $iLine++;
+        }
+      }
+    }
+  }
+
+
   #### Create a virtual filename to fetch the spectrum
   my $filename = "/proteomics/sw/tpp-dev/bin/readmzXML $filePath $scanNumber |";
   print "Fetch command: $filename\n" if ($verbose);
@@ -1812,7 +1892,7 @@ sub getSpectrumFromMzmlFile {
   my $nativeId = '';
   while (my $line = <DTAFILE>) {
     $line =~ s/[\r\n]//g;
-    print "$line<BR>\n" if ($verbose);
+    #print "$line<BR>\n" if ($verbose);
 
     #### Extract the precursor mz information from that line
     if ( $line =~ /precursorMZ: ([\d\.]+)/ ) {
@@ -1848,6 +1928,7 @@ sub getSpectrumFromMzmlFile {
   $response->{mz} = \@mz_intensities;
   $response->{observedPrecursorMz} = $observedPrecursorMz;
   $response->{nativeId} = $nativeId;
+  $response->{scanNumber} = $scanNumber;
 
   #### Build a prototype PROXI spectrum
   my $proxiSpectrum = {};
