@@ -940,8 +940,8 @@ my $atlas_data;
         $data = "";
     }
     $tip = "Transcript structure for: $biosequence_name";
-    my $svg_url = "http://gaggle.systemsbiology.net/projects/halo/transcript_structure_svgz/$biosequence_name.svgz";
-    $url = "http://gaggle.systemsbiology.net/projects/halo/transcript_structure/$biosequence_name.pdf";
+    my $svg_url = "http://networks.systemsbiology.net/projects/halo/transcript_structure_svgz/$biosequence_name.svgz";
+    $url = "http://networks.systemsbiology.net/projects/halo/transcript_structure/$biosequence_name.pdf";
     my $transcript_structure_link = getColorizedTD (tag=>"Transcript Structure",
                                             data=>$seq_name,
                                             text=>'S',
@@ -1103,7 +1103,7 @@ my $atlas_data;
 	  <A HREF="GetHaloAnnotations?search_scope=$parameters{search_scope}&search_key=$parameters{search_key}&action=GO&dna_biosequence_set_id=$parameters{dna_biosequence_set_id}&protein_biosequence_set_id=$parameters{protein_biosequence_set_id}&apply_action=QUERY&output_mode=tsv">-Download Tab-delimited Summary</A><BR>
 	  ~ . $table_html;
   	$table_html = qq~
-  	  <A HREF="http://gaggle.systemsbiology.net/projects/halo/transcript_structure/">-Legend and index for transcriptome structure plots</A><BR>
+  	  <A HREF="http://networks.systemsbiology.net/projects/halo/transcript_structure/">-Legend and index for transcriptome structure plots</A><BR>
   	  ~ . $table_html;
 	if (@p_ids) {
 	  my $p_list = join ",", @p_ids;
