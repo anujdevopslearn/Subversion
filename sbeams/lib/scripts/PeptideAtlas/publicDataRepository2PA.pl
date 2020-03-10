@@ -244,6 +244,7 @@ sub main
 	  my $response = check_project($dataset_identifier);
     if (check_project($dataset_identifier)){
       $project_id = $response;
+      print "have project already: $project_id\n";
     }
 
     if(! $response && ($OPTIONS{"insertProject"} ||  $OPTIONS{"setup_PR_Experiment"}) ){
@@ -442,17 +443,25 @@ sub insert_project_PXD{
   #use Data::Dumper;
   #print Dumper($data);
   if (defined $data->{ContactList} ){
-    my $contact = $data->{ContactList}->{Contact}->[0]->{cvParam};
-    foreach my $cvParam (@$contact){
-      if($cvParam->{name} =~ /email/i){
-        $contact_email = $cvParam->{value};
-      }elsif($cvParam->{name}  =~ /(organization|affiliation)/i){
-        $contact_aff = $cvParam->{value} ;
-      }elsif($cvParam->{name}  =~ /contact name/i){
-         $contact_name = $cvParam->{value};
-      }
+    #my $contact = $data->{ContactList}->{Contact}->[0]->{cvParam};
+    foreach my $contact (@{$data->{ContactList}->{Contact}}){
+      next if($contact->{id} ne 'project_lab_head');
+			foreach my $cvParam (@{$contact->{cvParam}}){
+				if($cvParam->{name} =~ /email/i){
+					$contact_email = $cvParam->{value};
+				}elsif($cvParam->{name}  =~ /(organization|affiliation)/i){
+					$contact_aff = $cvParam->{value} ;
+				}elsif($cvParam->{name}  =~ /contact name/i){
+					 $contact_name = $cvParam->{value};
+				}
+			}
     }
   }
+  if ( ! $contact_name){
+    $contact_name =  get_user_input ('contact_name', '', 100);
+    $contact_email = get_user_input ('contact_email', '', 100);
+  }
+
 
   if (defined $data->{PublicationList} ){
     $pubmed_id = $data->{PublicationList}->{Publication}->[0]->{id};
@@ -500,7 +509,7 @@ sub insert_project_PXD{
 
 sub insert_project_PASS{
   my $dataset_identifier = shift;
-  my $description_file = "/regis/passdata/home/$dataset_identifier/$dataset_identifier". "_DESCRIPTION.txt";
+  my $description_file = "/proteomics/peptideatlas2/home/$dataset_identifier/$dataset_identifier". "_DESCRIPTION.txt";
   if ( ! -e "$description_file"){
     die "cannot find $description_file\n";
   }
@@ -638,6 +647,8 @@ sub insert_project{
   if($pubmed_id && $pubmed_id =~ /\d+/){
     $publication_id =  get_publication_id ( $pubmed_id);
   }
+  print "pubmed_id $pubmed_id\npublication_id  $publication_id\n";
+
   my $sql = qq~
     SELECT PROJECT_ID 
     FROM $TB_PROJECT
@@ -764,6 +775,7 @@ sub get_publication_id {
   use SBEAMS::Connection::PubMedFetcher;
   my $PubMedFetcher = new SBEAMS::Connection::PubMedFetcher;
   my $pubmed_info = $PubMedFetcher->getArticleInfo(PubMedID=>$pubmed_id);
+
   if ($pubmed_info) {
     my %keymap = (
 				MedlineTA=>'journal_name',
@@ -778,6 +790,9 @@ sub get_publication_id {
     my %rowdata= ();
     while (my ($key,$value) = each %{$pubmed_info}) {
       if ($keymap{$key}) {
+        if ($key eq 'AuthorList'){
+           $value =~ s/([^,]+),.*/$1, et al./;
+         } 
         $rowdata{$keymap{$key}} = $value;
       }
     }
@@ -1018,6 +1033,7 @@ sub load_proteomics_experiments {
          desc=>"organism_id",
          ask=>1,
        );
+    }
     print "\nplease enter proteomics biosequence_set_id\n\n";
     list_pr_biosequence_set($organism_id);
     $biosequence_set_id = <STDIN>;
@@ -1053,7 +1069,6 @@ sub load_proteomics_experiments {
 					experiment_path => $exp_path,
 					search_batch_subdir=>$search_batch_subdir,
 			);
-    }
   }
 }
 ###############################################################################
@@ -1089,7 +1104,7 @@ sub addSearchBatchEntry {
     my %rowdata;
     $rowdata{experiment_id} = $experiment_id;
     $rowdata{biosequence_set_id} = $biosequence_set_id;
-    $rowdata{data_location} = $search_batch_subdir;
+    $rowdata{data_location} = $experiment_path; 
     $rowdata{search_batch_subdir} = $search_batch_subdir;
     $search_batch_id = $sbeams->insert_update_row(
       insert=>1,
@@ -1103,7 +1118,8 @@ sub addSearchBatchEntry {
     unless ($search_batch_id) {
       die "ERROR: Failed to retreive PK search_batch_id\n";
     }
-    print "created search_batch_id for experiment $experiment_id\n";
+    print "created search_batch_id $search_batch_id for experiment $experiment_id\n";
+    print "/regis/sbeams/archive/$experiment_path/$search_batch_subdir\n";
   #### If there's exactly one, the that's what we want
   } elsif (scalar(@search_batch_ids) == 1) {
     print "experiment $experiment_id has search_batch_ids $search_batch_ids[0]\n";
@@ -1189,8 +1205,8 @@ sub insert_proteomics_experiments{
       print "getting experiment description for experiment $n_expt\n";
       my @data = ();
       foreach my $name (@fields){
-        $name = get_user_input ($name, '', $length_limit{$name});
-        push @data, $name;
+        my $value = get_user_input ($name, '', $length_limit{$name});
+        push @data, $value;
       }     
       push @description , [@data];
       $n_expt--;
