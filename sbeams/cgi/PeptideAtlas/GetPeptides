@@ -720,9 +720,9 @@ sub handle_request {
     $show_sql = 1;
   }
 
-  @column_array = ( @column_array , 
-                    ["row_number" , "row_number() over (order by P.peptide_accession)", "row_number"]
-                  );
+  #@column_array = ( @column_array , 
+  #                  ["row_number" , "row_number() over (order by P.peptide_accession)", "row_number"]
+  #                );
   #### Build the columns part of the SQL statement
   my %colnameidx = ();
   my @column_titles = ();
