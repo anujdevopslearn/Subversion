@@ -27,6 +27,7 @@ use vars qw(@ISA @EXPORT
     $TBAT_QUERY_OPTION
 
     $TBAT_ATLAS_BUILD
+    $TBAT_ATLAS_BUILD_PUBLIC
     $TBAT_DEFAULT_ATLAS_BUILD
     $TBAT_ATLAS_SEARCH_BATCH
     $TBAT_SAMPLE
@@ -82,6 +83,7 @@ use vars qw(@ISA @EXPORT
     $TBAT_NIST_SPECTRUM_TYPE
 
     $TBAT_SPECTRUM_IDENTIFICATION
+    $TBAT_SPECTRUM_IDENTIFICATION_CP
     $TBAT_SPECTRUM_PTM_IDENTIFICATION
     $TBAT_SPECTRUM
     $TBAT_SPECTRUM_PEAK
@@ -104,7 +106,9 @@ use vars qw(@ISA @EXPORT
     $TBAT_PROTEIN_PRESENCE_LEVEL
     $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE
     $TBAT_PROTEIN_IDENTIFICATION
+    $TBAT_PROTEIN_IDENTIFICATION_NEXTPROT
     $TBAT_BIOSEQUENCE_RELATIONSHIP
+    $TBAT_BIOSEQUENCE_RELATIONSHIP_NEXTPROT
     $TBAT_UNIPROT_DB
     $TBAT_UNIPROT_DB_ENTRY
 
@@ -189,6 +193,7 @@ require Exporter;
     $TBAT_QUERY_OPTION
 
     $TBAT_ATLAS_BUILD
+    $TBAT_ATLAS_BUILD_PUBLIC
     $TBAT_DEFAULT_ATLAS_BUILD
     $TBAT_ATLAS_SEARCH_BATCH
     $TBAT_SAMPLE
@@ -252,6 +257,7 @@ require Exporter;
     $TBAT_NIST_SPECTRUM_TYPE
 
     $TBAT_SPECTRUM_IDENTIFICATION
+    $TBAT_SPECTRUM_IDENTIFICATION_CP
     $TBAT_SPECTRUM_PTM_IDENTIFICATION
     $TBAT_SPECTRUM
     $TBAT_SPECTRUM_PEAK
@@ -272,7 +278,9 @@ require Exporter;
     $TBAT_PROTEIN_PRESENCE_LEVEL
     $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE
     $TBAT_PROTEIN_IDENTIFICATION
+    $TBAT_PROTEIN_IDENTIFICATION_NEXTPROT
     $TBAT_BIOSEQUENCE_RELATIONSHIP
+    $TBAT_BIOSEQUENCE_RELATIONSHIP_NEXTPROT
     $TBAT_UNIPROT_DB
     $TBAT_UNIPROT_DB_ENTRY
 
@@ -361,6 +369,7 @@ $TBAT_BIOSEQUENCE_PROPERTY_SET = "${mod}biosequence_property_set";
 $TBAT_QUERY_OPTION          = "${mod}query_option";
 
 $TBAT_ATLAS_BUILD           = "${mod}atlas_build";
+$TBAT_ATLAS_BUILD_PUBLIC    = "${mod}atlas_build_public";
 $TBAT_DEFAULT_ATLAS_BUILD   = "${mod}default_atlas_build";
 $TBAT_ATLAS_SEARCH_BATCH    = "${mod}atlas_search_batch";
 $TBAT_SAMPLE                = "${mod}sample";
@@ -419,6 +428,7 @@ $TBAT_NIST_SPECTRUM_TYPE             = "${mod}consensus_spectrum_type";
 $TBAT_SEARCH_BATCH_STATISTICS   = "${mod}search_batch_statistics";
 
 $TBAT_SPECTRUM_IDENTIFICATION    = "${mod}spectrum_identification";
+$TBAT_SPECTRUM_IDENTIFICATION_CP    = "${mod}spectrum_identification_cp";
 $TBAT_SPECTRUM_PTM_IDENTIFICATION    = "${mod}spectrum_ptm_identification";
 $TBAT_SPECTRUM                   = "${mod}spectrum";
 $TBAT_SPECTRUM_PEAK              = "${mod}spectrum_peak";
@@ -447,7 +457,9 @@ $TBAT_PROTEOTYPIC_PEPTIDE_XSPECIES_MAPPING  = "${mod}proteotypic_peptide_xspecie
 $TBAT_PROTEIN_PRESENCE_LEVEL        = "${mod}protein_presence_level";
 $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE = "${mod}biosequence_relationship_type";
 $TBAT_PROTEIN_IDENTIFICATION        = "${mod}protein_identification";
+$TBAT_PROTEIN_IDENTIFICATION_NEXTPROT = "${mod}protein_identification_nextprot";
 $TBAT_BIOSEQUENCE_RELATIONSHIP      = "${mod}biosequence_relationship";
+$TBAT_BIOSEQUENCE_RELATIONSHIP_NEXTPROT = "${mod}biosequence_relationship_nextprot";
 $TBAT_UNIPROT_DB                    = "${mod}uniprot_db";
 $TBAT_UNIPROT_DB_ENTRY              = "${mod}uniprot_db_entry";
 

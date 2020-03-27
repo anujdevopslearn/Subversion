@@ -161,14 +161,9 @@ sub main {
       # Some action
 
   } else {
-      my $project_id = $sbeamsMOD->getProjectID(
-          atlas_build_id => $parameters{atlas_build_id}
-          );
       # TMF
       processDatabaseActions();
-      $sbeamsMOD->display_page_header(project_id => $project_id, init_tooltip => 1);
       handle_request(ref_parameters=>\%parameters);
-      $sbeamsMOD->display_page_footer();
   }
 
 
@@ -291,15 +286,12 @@ sub handle_request {
 
 
   # put a spacer so that showing hidden content doesn't mangle the layout
-  print "<BR>$spacer\n" if $htmlmode;
 
   #### Get the HTML to display the tabs
   my $tabMenu = $sbeamsMOD->getTabMenu(
     parameters_ref => \%parameters,
     program_name => $PROG_NAME,
   );
-  print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
-
   my $contact_id = $sbeams->getCurrent_contact_id();
 #  die $contact_id;
 
@@ -338,6 +330,55 @@ sub handle_request {
 
   #### Get the search keyword
   my $protein_name = $parameters{"protein_name"};
+  if (! $parameters->{caching}){
+    my $html_cache_name ='';
+		if ($ENV{REQUEST_URI} =~ /GetProtein$/){
+       $protein_name =~ s/^\s+|\s+$//;
+       $html_cache_name = lc("apply_action=QUERY\&atlas_build_id=$atlas_build_id".
+                    "\&protein_name=$protein_name");
+		}else{
+			if($ENV{"REQUEST_URI"}=~ /\?/) {
+          my ($path , $query_string) = split(/\?/,  $ENV{"REQUEST_URI"});
+          my %parameter_hash =();
+					my @TempArray=split("&", $query_string);
+					foreach my $item (@TempArray) {
+						my ($Key, $Value)=split("=", $item);
+            $Value =~ s/^\s+|\s+$//;
+						$parameter_hash{$Key}=$Value;
+					}
+          @TempArray = ();
+          foreach my $param(sort {$a cmp $b} keys %parameter_hash){
+            push @TempArray, "$param=$parameter_hash{$param}";
+          }
+          $html_cache_name= lc(join('&', @TempArray));
+			}
+		}
+		my $html_cache_loc  = '';
+    if ($PHYSICAL_BASE_DIR !~ /dev\w+\/sbeams/){
+      $html_cache_loc = "/net/dblocal/www/html/sbeamscommon/htmlcache/GetProtein";
+    }else{
+      $html_cache_loc = "$PHYSICAL_BASE_DIR/htmlcache/GetProtein";
+    }
+    #$log->debug("html_cache_name  $ENV{REQUEST_URI}  $html_cache_loc/$html_cache_name");
+		if ( -e "$html_cache_loc/$html_cache_name"){
+			 if (open (IN,"<$html_cache_loc/$html_cache_name")){
+				 print "Content-type: text/html\n\n";
+				 print $_ while (<IN>);
+				 close IN;
+				 exit;
+			 }
+		}
+  }
+
+
+	my $project_id = $sbeamsMOD->getProjectID(
+			atlas_build_id => $parameters{atlas_build_id}
+			);
+  $sbeamsMOD->display_page_header(project_id => $project_id, init_tooltip => 1);
+  print "<BR>$spacer\n" if $htmlmode;
+  print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+
+
   my ($tube, $origene_accession,$expected_prot);
 
   #### If a new protein_name was supplied, store it
@@ -1191,6 +1232,7 @@ sub handle_request {
 	  $group_by_clause
     ORDER BY P.peptide_accession
   ~;
+
   #### Define the hypertext links for columns that need them
   %url_cols = (
     'Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
@@ -2014,7 +2056,7 @@ sub handle_request {
     #############################################################################
     my $sample_ids = getSampleList( sample_list => \@sample_list );
 
-    $log->debug( "UA is $ENV{HTTP_USER_AGENT}" );
+    #$log->debug( "UA is $ENV{HTTP_USER_AGENT}" );
 
     my $sampleMap = $sbeamsMOD->getSampleMapDisplay( sample_ids => $sample_ids,
 						     instance_ids => \%instance_ids,
@@ -2075,6 +2117,7 @@ sub handle_request {
     }
   }
 
+  $sbeamsMOD->display_page_footer();
 } # end handle_request
 
 
@@ -3417,7 +3460,8 @@ sub displayAnnotatedSequence {
   }
 
   my $ub_id = $parameters->{uniprot_db_id} || 0;
-  my $use_nextprot = ( $parameters->{use_nextprot} ) ? 1 : 0;
+  my $use_nextprot = ( $parameters->{use_nextprot} ne '' && $parameters->{use_nextprot} == 0  ) ? 0 : 1;
+  
   $alt_enz = [ qw( aspn gluc chymotrypsin ) ];
   $args{is_trypsin_build} = 'N';
   my $html_seq = $sbeamsMOD->get_html_seq_vars( seq => $sequence,
@@ -3826,7 +3870,7 @@ sub prepareJavaWebStartFiles {
         $peptide_hash{$canonical_name}++;
         push(@new_peptide_list,$canonical_name);
         $is_new_peptide = 1;
-        $log->debug("Added new peptide $canonical_name at iteration $loop_cnt" );
+        #$log->debug("Added new peptide $canonical_name at iteration $loop_cnt" );
       }
 
       #### Add connections to proteins
@@ -3870,7 +3914,7 @@ sub prepareJavaWebStartFiles {
     #######################################################
     #### Now get the protein information for these peptides
 
-    $log->debug("Getting new info for " . scalar( @new_peptide_list) . " at iteration $loop_cnt" );
+    #$log->debug("Getting new info for " . scalar( @new_peptide_list) . " at iteration $loop_cnt" );
     #### Return protein information for these peptides
     my $protein_resultset = getProteinInformationForPeptides(
       peptide_list_ref => \@new_peptide_list,
@@ -3896,7 +3940,7 @@ sub prepareJavaWebStartFiles {
       my $canonical_name = $row->[$col->{biosequence_name}];
       my $is_new_protein = 0;
       unless ($protein_hash{$canonical_name}) {
-        $log->debug("Added new protein $canonical_name at iteration $loop_cnt" );
+        #$log->debug("Added new protein $canonical_name at iteration $loop_cnt" );
         $protein_hash{$canonical_name}++;
         push(@new_protein_list,$canonical_name);
 	$is_new_protein = 1;
@@ -3934,7 +3978,7 @@ sub prepareJavaWebStartFiles {
 
   } # end while 1
 
-  $log->debug( "Done building cytoscape webstart, " . scalar( @{$java_web_start->{files}->{'commonName.noa'}} )  . "proteins in total of $loop_cnt passes through the loop" );
+  #$log->debug( "Done building cytoscape webstart, " . scalar( @{$java_web_start->{files}->{'commonName.noa'}} )  . "proteins in total of $loop_cnt passes through the loop" );
 } # end prepareJavaWebStartFiles
 
 

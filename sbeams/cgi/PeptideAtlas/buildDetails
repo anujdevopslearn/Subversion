@@ -16,6 +16,7 @@
 ###############################################################################
 use strict;
 #use vars qw ($sbeams);
+
 use lib qw (../../lib/perl);
 #use CGI::Carp qw(fatalsToBrowser croak);
 use vars qw($PROGRAM_FILE_NAME);
@@ -49,7 +50,8 @@ my $show_image = 0;
 
 { # Main 
 
-	  my $t0 = time;
+    
+
     # Authenticate or exit
     my $username = $sbeams->Authenticate( permitted_work_groups_ref => 
                                                       ['PeptideAtlas_user',
@@ -99,6 +101,32 @@ my $show_image = 0;
 		   $atlas->display_page_footer();
        exit;
     }
+
+    if (! $params->{caching} && ! $section){
+				my $page_url = 'http';
+				if ($ENV{HTTPS} = "on") {
+					$page_url .= "s";
+				}
+				$page_url .= "://$ENV{SERVER_NAME}$ENV{REQUEST_URI}";
+				#my $url_mdsum = md5_hex( $page_url ); 
+        my $html_cache_name = $page_url;
+        $html_cache_name =~ s/.*\?//;
+				my $html_cache_loc  = '';
+				if ($PHYSICAL_BASE_DIR !~ /dev\w+\/sbeams/){
+					$html_cache_loc = "/net/dblocal/www/html/sbeamscommon/htmlcache/buildDetails";
+				}else{
+					$html_cache_loc = "$PHYSICAL_BASE_DIR/htmlcache/buildDetails";
+				}
+       
+        if ( -e "$html_cache_loc/$html_cache_name"){
+           if (open (IN,"<$html_cache_loc/$html_cache_name")){
+             print "Content-type: text/html\n\n";
+             print $_ while (<IN>);
+             close IN; 
+             exit;
+           }
+        }
+    } 
 
     # Add general section 
     if (! $section  || $section =~ /overview/i){
@@ -167,10 +195,6 @@ my $show_image = 0;
 			}
 
     $atlas->display_page_footer();
-      
-		my $tx = time;
-		my $td = $tx - $t0;
-		$log->debug("No SQL, time is $td for the whole page\n");
   }
 } # end main
 
