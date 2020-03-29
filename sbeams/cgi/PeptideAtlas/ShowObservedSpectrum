@@ -984,6 +984,7 @@ sub showSpectrumText {
 
   } elsif ( $parameters->{SAWB_DisplayMode} eq 'denovo' ) {
     my %deNovoModifications = ( 'C[160]'=>1, 'M[147]'=>1 );
+    #my %deNovoModifications = ( 'C[160]'=>1, 'M[147]'=>1, 'S[167]'=>1, 'T[181]'=>1 );
     if ( $peptideIon =~ /n\[145\]/ ) {
       %deNovoModifications = ( 'n[145]'=> 1,'K[272]'=>1,'C[160]'=>1, 'M[147]'=>1 );
     }
@@ -2091,6 +2092,7 @@ sub writeSpectrum {
  
   if ( uc($output_mode) eq 'JSON' ) {
     use JSON;
+    print("Access-Control-Allow-Origin: *\n");
     print("Content-type: application/json\n\n");
     print(encode_json($proxiSpectrum));
 
