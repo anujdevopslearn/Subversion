@@ -319,6 +319,9 @@ sub processRequest {
 	    if ( $charge ) {
 	      push(@{$getSpectrumResult->{proxiSpectrum}->{attributes}}, { accession=>"MS:1000041", name=>"charge state", value=>$charge } );
 	      push(@{$getSpectrumResult->{proxiSpectrum}->{attributes}}, { accession=>"MS:1003061", name=>"spectrum name", value=>"$peptidoform/$charge" } );
+	      my $pep = Proteomics::Sequence::Peptide->new(sequenceString=>$peptidoform);
+	      my $unmodified_peptide_sequence = $pep->getSequenceString();
+	      push(@{$getSpectrumResult->{proxiSpectrum}->{attributes}}, { accession=>"MS:1000888", name=>"unmodified peptide sequence", value=>$unmodified_peptide_sequence } );
 	    }
 
 	    if ( $output_mode ne 'HTML' ) {
@@ -2182,6 +2185,7 @@ sub writeResponse {
 
   if ( $output_mode eq 'JSON' ) {
     use JSON;
+    print("Access-Control-Allow-Origin: *\n");
     print("Content-type: application/json\n\n");
     my $http_response = { "status"=> 484, "title"=> $error_response->{errorCode}, "detail"=> $error_response->{fullMessage}, "type"=> "about:blank" };
     print(encode_json($http_response));
