@@ -61,6 +61,8 @@ my $CLASS = $PROG_NAME;
 my $DEBUG = 0;
 my $VERBOSE = 0;
 
+my $output_mode = 'HTML';
+
 # Allowable neutral losses
 my @neutral_loss_masses = ();
 
@@ -249,7 +251,17 @@ sub processRequest {
     my %parameters;
     $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
     $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
     my $apply_action  = $q->param('apply_action');
+
+    #### Determine and set the output_mode
+    $output_mode = uc( $sbeams->output_mode() || scalar $q->param('output_mode') || scalar $q->param('outputMode') || '' );
+    my %allowed_output_modes = ( 'HTML'=>'HTML', 'JSON'=>'JSON', 'TEXT'=>'TEXT', 'TXT'=>'TEXT' );
+    if ( $allowed_output_modes{$output_mode} ) {
+      $output_mode = $allowed_output_modes{$output_mode};
+    } else {
+      $output_mode = 'HTML';
+    }
 
     my $verbose = 0;
 
@@ -268,10 +280,10 @@ sub processRequest {
 
 
     #### If a Universal Spectral Identifier is supplied, interpret it
-    my $usiStr = $q->param('USI') || $q->param('usi');
+    my $usiStr = $q->param('USI') || $q->param('usi') || $parameters{usi};
     if ( $usiStr ) {
       print("INFO: Received USI string '$usiStr' for processing<BR>\n") if ($verbose);
-      my $result = interpretUSI( usiStr=>$usiStr, outputDestination=>'STDOUT' );
+      my $result = interpretUSI( usiStr=>$usiStr, outputDestination=>'STDERR' );
       print("INFO: peptidoform is $result->{peptidoform}<BR>\n") if ($verbose);
 
       #### If a successful interpretation
@@ -283,7 +295,7 @@ sub processRequest {
 
 	#### If it is a PXL identifier
 	if ( $result->{datasetIdentifier} =~ /PXL/ ) {
-	  my $getSpectrumResult = getSpectrumFromProteomeCentral( usiStr=>$usiStr , verbose=>0, debug=>0, quiet=>0, outputDestination=>'STDOUT' );
+	  my $getSpectrumResult = getSpectrumFromProteomeCentral( usiStr=>$usiStr , verbose=>0, debug=>0, quiet=>0, outputDestination=>'STDERR' );
 	  if ( $getSpectrumResult->{status} eq 'OK' ) {
 	    @spectrum_array = @{$getSpectrumResult->{mz}};
 	    $observedPrecursorMz = $getSpectrumResult->{observedPrecursorMz};
@@ -297,14 +309,20 @@ sub processRequest {
 	#### Else it must be a PXD identifier
         } else {
 	  my $filePath = $result->{mzMLFilePath};
-	  my $getSpectrumResult = getSpectrumFromMzmlFile( filePath=> $filePath, scanNumber=>$scanNumber, verbose=>$verbose, debug=>0, quiet=>0, outputDestination=>'STDOUT' );
+	  my $getSpectrumResult = getSpectrumFromMzmlFile( filePath=> $filePath, scanNumber=>$scanNumber, verbose=>$verbose, debug=>0, quiet=>0, outputDestination=>'STDERR' );
 	  if ( $getSpectrumResult->{status} eq 'OK' ) {
 	    @spectrum_array = @{$getSpectrumResult->{mz}};
 	    $observedPrecursorMz = $getSpectrumResult->{observedPrecursorMz};
 	    $nativeId = $getSpectrumResult->{nativeId} if ($getSpectrumResult->{nativeId});
 	    $scanNumber = $getSpectrumResult->{scanNumber} if ($getSpectrumResult->{scanNumber});
-	    if ( $q->param('output_mode') && uc($q->param('output_mode')) ne 'HTML' ) {
-	      writeSpectrum(proxiSpectrum=>$getSpectrumResult->{proxiSpectrum}, output_mode=>$q->param('output_mode'));
+
+	    if ( $charge ) {
+	      push(@{$getSpectrumResult->{proxiSpectrum}->{attributes}}, { accession=>"MS:1000041", name=>"charge state", value=>$charge } );
+	      push(@{$getSpectrumResult->{proxiSpectrum}->{attributes}}, { accession=>"MS:1003061", name=>"spectrum name", value=>"$peptidoform/$charge" } );
+	    }
+
+	    if ( $output_mode ne 'HTML' ) {
+	      writeSpectrum(proxiSpectrum=>$getSpectrumResult->{proxiSpectrum}, output_mode=>$output_mode);
 	      return;
 	    }
           } else {
@@ -315,9 +333,11 @@ sub processRequest {
 
       #### Otherwise this USI not available
       } else {
-	writeResponse(response=>$result, output_mode=>$q->param('output_mode'));
-	#print("<BR><BR><BR><H1><font color=\"red\">One of the main PeptideAtlas storage disk arrays has failed. The disk array is being rebuilt and all data must be restored from backup tape. This process is expected to be complete by January 24, 2020. Until then, the spectrum you have requested is unavailable. We apologize for the problem.</font></H1><BR><BR>\n");
-	print("<BR><BR><BR><H1><font color=\"red\">The spectrum you have requested is not found in the expected location. Please report this problem.</font></H1><BR><BR>\n");
+	writeResponse(response=>$result, output_mode=>$output_mode);
+	if ( $output_mode eq 'HTML' ) {
+          #print("<BR><BR><BR><H1><font color=\"red\">One of the main PeptideAtlas storage disk arrays has failed. The disk array is being rebuilt and all data must be restored from backup tape. This process is expected to be complete by January 24, 2020. Until then, the spectrum you have requested is unavailable. We apologize for the problem.</font></H1><BR><BR>\n");
+	  print("<BR><BR><BR><H1><font color=\"red\">The spectrum you have requested is not found in the expected location. Please report this problem.</font></H1><BR><BR>\n");
+        }
         return;
       }
 
@@ -463,7 +483,7 @@ sub processRequest {
 
     #### Show the universal spectrum identifier input box
     my $htmlBuffer = getUSIInputForm( usi => $usiStr, parameters => \%parameters );
-    if ($sbeams->output_mode() eq 'html') {
+    if ( $output_mode eq 'HTML' ) {
       print $htmlBuffer;
     } else {
       print "Please specify the USI or PeptideAtlas spectrum_identification_id\n";
@@ -471,7 +491,7 @@ sub processRequest {
 
     #### If there's no USI and no spectrum identifier, then just quietly finish after displaying the USI input form
     unless ( $usiStr || $parameters{'spectrum_identification_id'} ) {
-      if ($sbeams->output_mode() eq 'html') {
+      if ( $output_mode eq 'HTML' ) {
         print "Please specify the desired Universal Spectrum Identifier above an click [VIEW]<BR>\n";
       }
       return;
@@ -1534,17 +1554,19 @@ sub interpretUSI {
 
   #### Parse the passed USI
   my $usi = Proteomics::Spectra::UniversalSpectrumIdentifier->new( usi=>$usiStr );
-  my $result = $usi->parse( verbose=>$verbose, debug=>$verbose,  outputDestination=>$outputDestination );
+  my $result = $usi->parse( verbose=>$verbose, debug=>$verbose,  outputDestination=>'STDERR' );
   #print(Data::Dumper->Dump([$result]))."\n";
 
   #### If the USI string was not successfully parsed, then just return
   if ( $result->{status} ne 'OK' ) {
-    print "Content-type: text/plain\n\n";
-    print "<PRE>\n";
-    print "Provided identifier=$usiStr\n";
-    $result->show();
+    if ( $output_mode eq 'HTML' ) {
+      print "Content-type: text/plain\n\n";
+      print "<PRE>\n";
+      print "Provided identifier=$usiStr\n";
+      $result->show();
+      print "</PRE>\n";
+    }
     $response->mergeResponse( sourceResponse=>$result, verbose=>0, debug=>0, outputDestination=>$outputDestination );
-    print "</PRE>\n";
     return $response;
   }
 
@@ -1780,7 +1802,7 @@ sub getSpectrumFromMzmlFile {
   my $outputDestination = processParameters( name=>'outputDestination', required=>0, allowUndef=>0, default=>'STDERR', parameters=>\%parameters, caller=>$METHOD, response=>$response );
   print "DEBUG: Entering $CLASS.$METHOD\n" if ( $debug && !$DEBUG );
 
-  #$verbose = 1;
+  $verbose = 0;
   #print("Forcing verbose=1<BR>\n");
 
   #### Process specific parameters
@@ -1877,7 +1899,9 @@ sub getSpectrumFromMzmlFile {
 
 
   #### Create a virtual filename to fetch the spectrum
-  my $filename = "/proteomics/sw/tpp-dev/bin/readmzXML $filePath $scanNumber |";
+  #my $filename = "/proteomics/sw/tpp-dev/bin/readmzXML $filePath $scanNumber |";
+  # Switch temporarily to Luis's compiled version
+  my $filename = "/proteomics/lmendoza/sw/tpp/bin/readmzXML $filePath $scanNumber |";
   print "Fetch command: $filename\n" if ($verbose);
 
   #### Try to open the spectrum for reading
@@ -1890,14 +1914,19 @@ sub getSpectrumFromMzmlFile {
   #### Read the spectrum data
   my @mz_intensities;
   my $observedPrecursorMz = 0;
+  my $charge = 0;
   my $nativeId = '';
   while (my $line = <DTAFILE>) {
     $line =~ s/[\r\n]//g;
     #print "$line<BR>\n" if ($verbose);
 
-    #### Extract the precursor mz information from that line
+    #### Extract the precursor mz and charge information from that line
     if ( $line =~ /precursorMZ: ([\d\.]+)/ ) {
       $observedPrecursorMz = $1;
+      next;
+    }
+    if ( $line =~ /precursorZ: ([\d]+)/ ) {
+      $charge = $1;
       next;
     }
 
@@ -1924,7 +1953,7 @@ sub getSpectrumFromMzmlFile {
 
   #### Return result
   $response->logEvent( level=>'INFO', minimumVerbosity=>1, verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
-    message=>scalar(@mz_intensities)." mass-inten pairs read");
+    message=>scalar(@mz_intensities)." mass-inten pairs read") if ($verbose);
 
   $response->{mz} = \@mz_intensities;
   $response->{observedPrecursorMz} = $observedPrecursorMz;
@@ -1936,6 +1965,8 @@ sub getSpectrumFromMzmlFile {
   $proxiSpectrum->{attributes} = [];
   push(@{$proxiSpectrum->{attributes}}, { accession=>"MS:1008025", name=>"scan number", value=>$scanNumber } );
   push(@{$proxiSpectrum->{attributes}}, { accession=>"MS:1000827", name=>"isolation window target m/z", value=>$observedPrecursorMz } );
+  push(@{$proxiSpectrum->{attributes}}, { accession=>"MS:1000041", name=>"charge state", value=>$charge } ) if ( $charge );
+
   my @mzs;
   my @intensities;
   foreach my $peak ( @mz_intensities ) {
@@ -1968,6 +1999,7 @@ sub getSpectrumFromProteomeCentral {
   my $quiet = processParameters( name=>'quiet', required=>0, allowUndef=>0, default=>0, parameters=>\%parameters, caller=>$METHOD, response=>$response );
   my $outputDestination = processParameters( name=>'outputDestination', required=>0, allowUndef=>0, default=>'STDERR', parameters=>\%parameters, caller=>$METHOD, response=>$response );
   print "DEBUG: Entering $CLASS.$METHOD\n" if ( $debug && !$DEBUG );
+
   #$verbose = 1;
 
   #### Process specific parameters
@@ -2090,17 +2122,17 @@ sub writeSpectrum {
   #### Return if there was a problem with the required parameters
   return $response if ( $response->{errorCode} =~ /MissingParameter/i );
  
-  if ( uc($output_mode) eq 'JSON' ) {
+  if ( $output_mode eq 'JSON' ) {
     use JSON;
     print("Access-Control-Allow-Origin: *\n");
     print("Content-type: application/json\n\n");
     print(encode_json($proxiSpectrum));
 
-  } elsif ( uc($output_mode) eq 'TEXT' || uc($output_mode) eq 'TXT' ) {
+  } elsif ( $output_mode eq 'TEXT' ) {
     print("Content-type: text/plain\n\n");
     print(encode_json($proxiSpectrum));
 
-  } elsif ( uc($output_mode) eq 'TSV' || uc($output_mode) eq 'CSV' ) {
+  } elsif ( $output_mode eq 'TSV' || $output_mode eq 'CSV' ) {
     print("Content-type: text/plain\n\n");
     print("Output mode $output_mode not yet supported\n");
 
@@ -2144,26 +2176,24 @@ sub writeResponse {
   #### Return if there was a problem with the required parameters
   return $response if ( $response->{errorCode} =~ /MissingParameter/i );
 
-  $output_mode = 'HTML' if ( !defined($output_mode) );
-
   #print("Content-type: text/plain\n\n");
   #print Data::Dumper->Dump([$error_response]);
   #return;
 
-  if ( uc($output_mode) eq 'JSON' ) {
+  if ( $output_mode eq 'JSON' ) {
     use JSON;
     print("Content-type: application/json\n\n");
     my $http_response = { "status"=> 484, "title"=> $error_response->{errorCode}, "detail"=> $error_response->{fullMessage}, "type"=> "about:blank" };
     print(encode_json($http_response));
 
-  } elsif ( uc($output_mode) eq 'TEXT' || uc($output_mode) eq 'TXT' ) {
+  } elsif ( $output_mode eq 'TEXT' ) {
     print("Content-type: text/plain\n\n");
     print($error_response->serialize());
 
-  } elsif ( uc($output_mode) eq 'HTML' ) {
+  } elsif ( $output_mode eq 'HTML' ) {
     print($error_response->serialize());
 
-  } elsif ( uc($output_mode) eq 'TSV' || uc($output_mode) eq 'CSV' ) {
+  } elsif ( $output_mode eq 'TSV' || $output_mode eq 'CSV' ) {
     print("Content-type: text/plain\n\n");
     print("Output mode $output_mode not yet supported\n");
 
