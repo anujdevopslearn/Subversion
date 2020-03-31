@@ -322,6 +322,7 @@ sub processRequest {
 	      my $pep = Proteomics::Sequence::Peptide->new(sequenceString=>$peptidoform);
 	      my $unmodified_peptide_sequence = $pep->getSequenceString();
 	      push(@{$getSpectrumResult->{proxiSpectrum}->{attributes}}, { accession=>"MS:1000888", name=>"unmodified peptide sequence", value=>$unmodified_peptide_sequence } );
+	      push(@{$getSpectrumResult->{proxiSpectrum}->{attributes}}, { accession=>"MS:1009999", name=>"delta mass peptidoform sequence", value=>$pep->{deltaMassSequenceString} } );
 	    }
 
 	    if ( $output_mode ne 'HTML' ) {
