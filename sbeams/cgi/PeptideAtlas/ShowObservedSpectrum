@@ -1570,6 +1570,7 @@ sub interpretUSI {
       print "</PRE>\n";
     }
     $response->mergeResponse( sourceResponse=>$result, verbose=>0, debug=>0, outputDestination=>$outputDestination );
+    $response->{statusCode} = 400;
     return $response;
   }
 
@@ -1659,7 +1660,7 @@ sub interpretUSI {
     }
 
     if ( $nRows == 0 ) {
-      $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'DatasetNotHere', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
+      $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'DatasetNotHere', statusCode=>404, verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
          message=>"Dataset '$datasetIdentifier' is not stored here at PeptideAtlas.");
       return $response;
     }
@@ -1674,7 +1675,7 @@ sub interpretUSI {
 
       #### Is this a directory?
       unless ( -d $data_location ) {
-        $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'InvalidDataLocation', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
+        $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'InvalidDataLocation', statusCode=>500, verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
           message=>"Although the dataset '$datasetIdentifier' was found, the internal data location appears to be invalid. This needs to be fixed. Please report this error. Looking for data location '$data_location'");
 	return($response)
       }
@@ -1728,7 +1729,7 @@ sub interpretUSI {
 
   #### If no files were found, this must be a bad MS Run name
   if ( $nFoundFiles == 0 ) {
-    $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'MsRunNotFound', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
+    $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'MsRunNotFound', statusCode=>400, verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
       message=>"Although the dataset '$datasetIdentifier' was found, no mzML file root '$msRunName' was found");
     return $response;
 
@@ -1761,7 +1762,7 @@ sub interpretUSI {
 	  $foundFile = $foundNoFragFile;
           last;
         } else {
-          $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'FoundMultipleMatchingMsRuns', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
+          $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'FoundMultipleMatchingMsRuns', statusCode=>500, verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
             message=>"Under dataset '$datasetIdentifier', multiple mzML files with file root '$msRunName' were found. This cannot be properly handled yet");
           return $response;
         }
@@ -1865,7 +1866,7 @@ sub getSpectrumFromMzmlFile {
 
     #### If still not, admit defeat
     if ( ! $found ) {
-      $response->logEvent( level=>'ERROR', errorCode=>'MsRunFileNotFound', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
+      $response->logEvent( level=>'ERROR', errorCode=>'MsRunFileNotFound', statusCode=>400, verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
         message=>"Specified filePath '$filePath' is not a file");
       return $response;
     }
@@ -1909,7 +1910,7 @@ sub getSpectrumFromMzmlFile {
 
   #### Try to open the spectrum for reading
   unless (open(DTAFILE,$filename)) {
-    $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'MsRunFileNotReadable', verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
+    $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'MsRunFileNotReadable', statusCode=>500, verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
       message=>"Specified filePath '$filePath' exists, but cannot be read");
     return $response;
   }
@@ -1949,7 +1950,7 @@ sub getSpectrumFromMzmlFile {
 
   #### If there were no values, print diagnostics and return
   unless (@mz_intensities) {
-    $response->logEvent( level=>'ERROR', errorCode=>'NoPeaksRead', verbose=>$verbose, debug=>$debug, quiet=>$quiet,
+    $response->logEvent( level=>'ERROR', errorCode=>'NoPeaksRead', statusCode=>500, verbose=>$verbose, debug=>$debug, quiet=>$quiet,
       message=>"No peaks returned from extraction attempt of scan $scanNumber from file '$filePath'");
     return $response;
    }
@@ -2077,7 +2078,7 @@ sub getSpectrumFromProteomeCentral {
 
   #### If there were no values, print diagnostics and return
   unless (@mz_intensities) {
-    $response->logEvent( level=>'ERROR', errorCode=>'NoPeaksRead', verbose=>$verbose, debug=>$debug, quiet=>$quiet,
+    $response->logEvent( level=>'ERROR', errorCode=>'NoPeaksRead', statusCode=>500, verbose=>$verbose, debug=>$debug, quiet=>$quiet,
       message=>"No peaks returned from USI $usiStr'");
     return $response;
  }
@@ -2183,25 +2184,38 @@ sub writeResponse {
   #print Data::Dumper->Dump([$error_response]);
   #return;
 
+  my $statusCode = 200;
+  $statusCode = 400 if ( $error_response->{errorCode} ne 'OK' );
+  $statusCode = $error_response->{statusCode} if ( $error_response->{statusCode} );
+
   if ( $output_mode eq 'JSON' ) {
     use JSON;
+    print("Status: $statusCode $error_response->{errorCode}\n");
     print("Access-Control-Allow-Origin: *\n");
     print("Content-type: application/json\n\n");
-    my $http_response = { "status"=> 484, "title"=> $error_response->{errorCode}, "detail"=> $error_response->{fullMessage}, "type"=> "about:blank" };
+    my $http_response = { "status"=> $statusCode, "title"=> $error_response->{errorCode}, "detail"=> $error_response->{fullMessage}, "type"=> "about:blank" };
     print(encode_json($http_response));
 
   } elsif ( $output_mode eq 'TEXT' ) {
+    print("Status: $statusCode $error_response->{errorCode}\n");
+    print("Access-Control-Allow-Origin: *\n");
     print("Content-type: text/plain\n\n");
     print($error_response->serialize());
 
   } elsif ( $output_mode eq 'HTML' ) {
+    print("Status: $statusCode $error_response->{errorCode}\n");
+    print("Access-Control-Allow-Origin: *\n");
     print($error_response->serialize());
 
   } elsif ( $output_mode eq 'TSV' || $output_mode eq 'CSV' ) {
+    print("Status: $statusCode $error_response->{errorCode}\n");
+    print("Access-Control-Allow-Origin: *\n");
     print("Content-type: text/plain\n\n");
     print("Output mode $output_mode not yet supported\n");
 
   } else {
+    print("Status: $statusCode $error_response->{errorCode}\n");
+    print("Access-Control-Allow-Origin: *\n");
     print("Content-type: text/plain\n\n");
     print("Output mode $output_mode not yet supported\n");
   }
