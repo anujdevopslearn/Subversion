@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/perl
 
 ###############################################################################
 # Program     : calcPeptideListStatistics.pl
@@ -145,6 +145,9 @@ sub main {
   my %all_peptides;
   my %sample_tags;
 
+  unlink "psbi";
+  unlink "peptidehash";
+
   tie %all_peptides, "DB_File", "peptidehash";
 
   #### Hashes containing canonical protein info
@@ -152,9 +155,10 @@ sub main {
   my %pepmap_hash;
   my %n_canonical_prots;
   my %n_cumulative_canonical_prots;
+  my %pepmap_all_hash;
 
   ### First, read prot info if provided
-  my %excluded_peptides = ();
+  my %included_peptides = ();
   if (defined $prot_file) {
     # read header and get index of biosequence_name from it
 #protein_group_number,biosequence_name,probability,confidence,n_observations,n_distinct_peptides,level_name,represented_by_biosequence_name,subsumed_by_biosequence_name,estimated_ng_per_ml,abundance_uncertainty,is_covering,group_size
@@ -175,16 +179,22 @@ sub main {
       print STDERR "ERROR in $0: $search_for not found in header of $prot_file\n";
       return(0);
     }
+
     while ($line = <PROTFILE>) {
       chomp $line;
       @fields = split(",", $line);
       if ( ($fields[$level_name_idx] eq 'canonical') &&
-           ($fields[$biosequence_name_idx] !~ /UNMAPPED/) &&
-           ($fields[$biosequence_name_idx] !~ /^DECOY_/) && 
-           ($fields[$biosequence_name_idx] !~ /^CONTAM_/) && 
-           ($fields[$biosequence_name_idx] !~ /($ex_tag_list)/) 
+           ($fields[$biosequence_name_idx] !~ /UNMAPPED/i) &&
+           ($fields[$biosequence_name_idx] !~ /^DECOY_/i) && 
+           ($fields[$biosequence_name_idx] !~ /^CONTAM_/i)
         ) {
-	$canonical_hash{$fields[$biosequence_name_idx]} = 1;
+         if ($ex_tag_list){
+            if ($fields[$biosequence_name_idx] !~ /($ex_tag_list)/){
+            	$canonical_hash{$fields[$biosequence_name_idx]} = 1;
+            }
+         }else{
+           $canonical_hash{$fields[$biosequence_name_idx]} = 1;
+         }
       }
     }
     close PROTFILE;
@@ -193,15 +203,20 @@ sub main {
     print "$n_canonicals total distinct canonical protein identifiers found\n";
 
     #### Make a hash of peptide -> canonical proteins
+    #### Make a hash of peptide -> non-decoy, non-contam proteins
     my $n_pep_mappings = 0;
     # for line in peptide_mapping.tsv (lacks header)
     while ($line = <PEPMAPFILE>) {
       chomp $line;
       # get peptide, protein
-      my ($pep_acc, $unmod_pep_seq, $prot_acc) = split("\t", $line);
-      $excluded_peptides{$unmod_pep_seq} = 1;
-      next if ($prot_acc =~ /($ex_tag_list|^CONTAM|^DECOY)/);
-      $excluded_peptides{$unmod_pep_seq} = 0;
+    
+      my ($pep_acc,$unmod_pep_seq, $prot_acc) = split("\t", $line);
+      next if (! $prot_acc);
+      next if ($prot_acc =~ /(^CONTAM|^DECOY)/i);
+      if ($ex_tag_list){
+         next if ($prot_acc =~ /($ex_tag_list)/);
+      }
+      $included_peptides{$unmod_pep_seq} = 1;
 
       # if protein is canonical
       if (defined $canonical_hash{$prot_acc}) {
@@ -218,7 +233,7 @@ sub main {
     close PEPMAPFILE;
     print "$n_pep_mappings total peptide->canonical mappings\n";
     my $n_mapped_peps = keys %pepmap_hash;
-    print "$n_mapped_peps distinct unmodified peptides mapped\n";
+    print "$n_mapped_peps distinct unmodified peptides mapped to canonical protein\n";
   }
 
   ##### Skip header
@@ -246,8 +261,10 @@ sub main {
     if ($line = <INFILE>) {
       chomp($line);
       @columns = split(/\t/,$line);
-      if(defined $excluded_peptides{$columns[3]} and $excluded_peptides{$columns[3]} == 1){
-        print "$columns[3] \n";
+my  $unmodified_pepseq = $columns[$origseqcol];
+
+      print "'$unmodified_pepseq'\n" if ($unmodified_pepseq =~ /TPATAFR/);
+      if(not defined $included_peptides{$columns[3]}){ 
         next;
       }
       next if ($columns[$origprobcol] < $P_threshold);
@@ -319,6 +336,8 @@ sub main {
       my $prob = $columns[$origprobcol];
       my $one_mapped_protid = $columns[$origprotcol];
       my $tmp = "$unmodified_pepseq,$prob,$one_mapped_protid";
+     print "2: $tmp\n" if ($unmodified_pepseq eq 'TPATAFR');
+
       push(@search_batch_peptides,$tmp);
       #push(@peptides,$tmp);
       $n_assignments++;
@@ -335,6 +354,8 @@ sub main {
 
   close(INFILE);
   print "Done reading.\n";
+print scalar keys %distinct_peptides;
+print " distinct\n";
 
   #### Now build a hash out of all peptides and count the distinct ones
 #  my %distinct_peptides;
@@ -435,12 +456,14 @@ sub main {
       foreach my $line ( @lines ) {
         my @tmp = split(",", $line);
         my $peptide = \@tmp;
-				$batch_distinct_peptides_all{$peptide->[$seqcol]}++;
-				$total_distinct_peptides_all{$peptide->[$seqcol]}++;
-				if ($distinct_peptides{$peptide->[$seqcol]}->{count} > 1) {
-					$batch_distinct_peptides_multobs{$peptide->[$seqcol]}++;
-					$total_distinct_peptides_multobs{$peptide->[$seqcol]}++;
-				}
+        if ( $included_peptides{$peptide->[$seqcol]}){
+					$batch_distinct_peptides_all{$peptide->[$seqcol]}++;
+					$total_distinct_peptides_all{$peptide->[$seqcol]}++;
+					if ($distinct_peptides{$peptide->[$seqcol]}->{count} > 1) {
+						$batch_distinct_peptides_multobs{$peptide->[$seqcol]}++;
+						$total_distinct_peptides_multobs{$peptide->[$seqcol]}++;
+					}
+        }
       }
       my $n_goodspec = scalar @lines;
       $cum_nspec += $n_goodspec;
@@ -464,6 +487,7 @@ sub main {
       $p_cum_n_new_all = $cum_n_new_all;
       untie @lines;
     }
+
   }
   print "$outfile2 written.\n" if $VERBOSE;
   unlink "peptidehash";
