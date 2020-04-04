@@ -97,10 +97,12 @@ Options:
   --default_sample_project_id default project_id  needed for auto-creation of tables (best to set
                               default to dev/private access and open access later)
   --spectrum_fragmentation_type
+  --peptide_net_ncm           update peptide_instance NET and NCM
 
  e.g.:  ./load_atlas_build.pl --atlas_build_name \'Human_P0.9_Ens26_NCBI35\' --organism_abbrev \'Hs\' --load --default_sample_project_id 476
 
  e.g.: ./load_atlas_build.pl --atlas_build_name \'TestAtlas\' --delete
+
 EOU
 
 #### Process options
@@ -108,7 +110,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
         "testvars","delete", "purge", "load", "check_tables",
         "atlas_build_name:s", "organism_abbrev:s", "default_sample_project_id:s",
         "list","spectra","prot_info","coordinates","instance_searchbatch_obs",
-        "spectrum_fragmentation_type",
+        "spectrum_fragmentation_type","peptide_net_ncm",
     )) {
 
     die "\n$USAGE";
@@ -312,21 +314,21 @@ sub handleRequest {
     if ($purge && !$load) {
        print "Purging protein identification info from $atlas_build_name ($ATLAS_BUILD_ID): \n";
        purgeProteinIdentificationInfo(
-	 atlas_build_id => $ATLAS_BUILD_ID,
+				 atlas_build_id => $ATLAS_BUILD_ID,
        );
     } else {
       use SBEAMS::PeptideAtlas::ProtInfo;
       my $prot_info = new SBEAMS::PeptideAtlas::ProtInfo;
       my $atlas_build_directory = get_atlas_build_directory(
-	atlas_build_id => $ATLAS_BUILD_ID,
-      );
-      $prot_info->setSBEAMS($sbeams);
-      $prot_info->setVERBOSE($VERBOSE);
-      $prot_info->setTESTONLY($TESTONLY);
-      $prot_info->loadBuildProtInfo(
-	atlas_build_id => $ATLAS_BUILD_ID,
-	atlas_build_directory => $atlas_build_directory,
-      );
+			atlas_build_id => $ATLAS_BUILD_ID,
+					);
+					$prot_info->setSBEAMS($sbeams);
+					$prot_info->setVERBOSE($VERBOSE);
+					$prot_info->setTESTONLY($TESTONLY);
+					$prot_info->loadBuildProtInfo(
+			atlas_build_id => $ATLAS_BUILD_ID,
+			atlas_build_directory => $atlas_build_directory,
+					);
     }
   }
 
@@ -370,23 +372,21 @@ sub handleRequest {
 
 
     # Get search_batch to peptide_source_type mapping
-    my $asb2pst = $sbeamsMOD->getAtlasSB2PeptideSrcType();
-
-
-
-
+      my $asb2pst = $sbeamsMOD->getAtlasSB2PeptideSrcType();
       my $inst_obs = $sbeamsMOD->cntObsFromIdentlist( identlist_file => $identlist,
 			                                          key_type => 'peptide',
 													  psb2asb => $psb2asb );
 
-			print "Updating pep instance records\n";
+      my $cnt = 0;
+      my $commit_interval = 50;
+      print "Updating pep instance records\n";
       my $inst_recs = $sbeamsMOD->getPepInstRecords( build_id => $ATLAS_BUILD_ID );
       initiate_transaction();
 
       my $cnt = 0;
       my $commit_interval = 50;
-			for my $peptide ( keys( %{$inst_recs} ) ) {
-				for my $sbatch( keys( %{$inst_recs->{$peptide}} ) ) {
+      for my $peptide ( keys( %{$inst_recs} ) ) {
+        for my $sbatch( keys( %{$inst_recs->{$peptide}} ) ) {
           if ( $inst_obs->{$peptide}->{$sbatch}  ) {
             $sbeams->updateOrInsertRow( update => 1,
                                     table_name => $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH,
@@ -396,18 +396,18 @@ sub handleRequest {
                           add_audit_parameters => 1,
                                        verbose => $VERBOSE,
                                       testonly => $TESTONLY,
-                                   );             
-						$cnt++;
-						commit_transaction() unless $commit_interval % $cnt;
-#					  my $sql = " UPDATE peptide_instance_sample SET n_observations = $inst_obs->{$peptide}->{$sample} WHERE peptide_instance_sample_id = $inst_recs->{$peptide}->{$sample}";
-					}
-				}
-			}
- 			commit_transaction() unless $cnt && $commit_interval % $cnt;
+                                   );
+            $cnt++;
+            commit_transaction() unless $commit_interval % $cnt;
+          }
+        }
+      }
+      commit_transaction() unless $cnt && $commit_interval % $cnt;
+
 
 			print "Updating modified pep instance records\n";
       my $mod_inst_recs = $sbeamsMOD->getModPepInstRecords( build_id => $ATLAS_BUILD_ID );
-
+      initiate_transaction();
 	   	$cnt = 0;
 			for my $peptide ( keys( %{$mod_inst_recs} ) ) {
 				for my $search_batch( keys( %{$mod_inst_recs->{$peptide}} ) ) {
@@ -424,12 +424,11 @@ sub handleRequest {
                                    );             
 						$cnt++;
 						commit_transaction() unless $commit_interval % $cnt;
+            print "$cnt... " if ($cnt % 10000 ==0);
 #						my $sql = "UPDATE modified_peptide_instance_sample SET n_observations = $inst_obs->{$peptide}->{$sample} WHERE peptide_instance_sample_id = $mod_inst_recs->{$peptide}->{$sample}";
 					}
 				}
 			}
-     # last commit, then reset to standard autocommit mode
-     commit_transaction() unless $cnt && $commit_interval % $cnt;
      reset_dbh();
     }
   }
@@ -450,6 +449,11 @@ sub handleRequest {
     $spectra->loadSpectrum_Fragmentation_Type(
       atlas_build_id => $ATLAS_BUILD_ID,
     );
+  }
+
+  ### if peptide_net_ncm
+  if ($OPTIONS{"peptide_net_ncm"}){
+     update_peptide_net_ncm( atlas_build_id => $ATLAS_BUILD_ID);
   }
 
   ## handle --delete:
@@ -626,7 +630,48 @@ sub removeAtlas {
    }
 
 } # end removeAtlas
+###############################################################################
+#get_last_pepide_instance
+#get last inserted pepide_instance, delete it and its children and resume loading
+#from this pepide_instance
+###############################################################################
+sub get_last_pepide_instance {
+   my %args = @_;
+   my $atlas_build_id = $args{'atlas_build_id'};
 
+   my $sql =qq~
+			SELECT TOP 1 P.PEPTIDE_ACCESSION , PI.PEPTIDE_INSTANCE_ID
+			FROM $TBAT_PEPTIDE_INSTANCE PI JOIN $TBAT_PEPTIDE P ON (P.PEPTIDE_ID = PI.PEPTIDE_ID)
+			WHERE ATLAS_BUILD_ID = '$atlas_build_id'
+      ORDER BY PI.PEPTIDE_INSTANCE_ID DESC
+			~;
+   my @rows = $sbeams->selectSeveralColumns($sql);
+   if (@rows){
+     my ($peptide_accession, $peptide_instance_id) = @{$rows[0]};
+     
+		 my %table_child_relationship = (
+				peptide_instance => 'peptide_mapping(C),peptide_instance_sample(C),peptide_instance_search_batch(C),modified_peptide_instance(C)',
+				modified_peptide_instance => 'modified_peptide_instance_sample(C),modified_peptide_instance_search_batch(C)',
+		 );
+      print "delete children of peptide_instance $peptide_instance_id peptide_accession $peptide_accession\n";
+      my $result = $sbeams->deleteRecordsAndChildren(
+         table_name => 'peptide_instance',
+         table_child_relationship => \%table_child_relationship,
+         delete_PKs => [ $peptide_instance_id ],
+         delete_batch => 1000,
+         database => $DBPREFIX{PeptideAtlas}, 
+         verbose => 1,
+         testonly => $TESTONLY,
+      );
+      #print "delete peptide instance $peptide_instance_id record \n";
+      #my $sql = qq~ DELETE FROM $TBAT_PEPTIDE_INSTANCE WHERE PEPTIDE_INSTANCE_ID = $peptide_instance_id ~;
+      #my $msg = $sbeams->executeSQL($sql);
+     return $peptide_accession;
+  }else{
+     return '';
+  }
+
+}
 
 ###############################################################################
 # purgeProteinIdentificationInfo -- delete all records for given build in
@@ -637,11 +682,19 @@ sub purgeProteinIdentificationInfo {
 
     my $atlas_build_id = $args{'atlas_build_id'} or die
         " need atlas_build_id";
-
+    my $table = $args{'table'} || $TBAT_PROTEIN_IDENTIFICATION;
+    my $constraint = '';
+    if ($table =~ /nextprot/i){
+      if (! $args{'nextprot_mapping_id'}){
+         die "ERROR: need nextprot_mapping_id\n";
+      }
+      $constraint = "AND nextprot_mapping_id =  $args{'nextprot_mapping_id'} ";
+    }
     my $sql = qq~
 	DELETE
-	FROM $TBAT_PROTEIN_IDENTIFICATION
+	FROM $table
 	WHERE atlas_build_id = '$atlas_build_id'
+  $constraint
 	~;
 
     print "Purging protein_identification table ...\n";
@@ -657,6 +710,14 @@ sub purgeProteinIdentificationInfo {
     print "Purging biosequence_relationship table ...\n";
 
     $sbeams->executeSQL($sql);
+
+   print "Purging caching\n";
+   $sql = qq~
+     DELETE FROM sbeams.dbo.cached_resultset WHERE key_value = $atlas_build_id
+   ~;
+   $sbeams->executeSQL($sql);
+
+
 }
 
 
@@ -695,11 +756,11 @@ sub loadAtlas {
     
         ## if has entries, tell user...atlas_build_name might be a user error
         if (@peptide_instance_array && $TESTONLY == 0) { 
-            print "ERROR: Records already exist in atlas $\atlas_build name\n";
+            print "WARNING: Records already exist in atlas $\atlas_build name\n";
             print "To purge existing records and load new records\n";
             print "  use: --purge --load \n";
-            print "$USAGE";
-            return;
+            #print "$USAGE";
+            #return;
         }
 
     }
@@ -781,9 +842,13 @@ sub buildAtlas {
     my $PAxmlfile = $source_dir . "APD_" . $organism_abbrev . "_all.PAxml";
 
     if (-e $PAxmlfile) {
+        ## get last pepide_instance of the build
+        ## if exist, delete it and its child entries and start loading from here
+        my $peptide_accession = get_last_pepide_instance ( atlas_build_id => $atlas_build_id);
         initiate_transaction();
         loadFromPAxmlFile(
             infile => $PAxmlfile,
+            peptide_accession => $peptide_accession,
             sbid_asbid_sid_hash_ref => \%proteomicsSBID_hash,
             atlas_build_id => $ATLAS_BUILD_ID,
         );
@@ -911,6 +976,49 @@ sub get_search_batch_and_sample_id_hash
                 my ($s_id) = @{$row};
                 $sample_id = $s_id;
                 $sample_exists = "true";
+                ### check to see if there is update on sample publication
+                my $query1 = qq~
+                   SELECT distinct P.publication_id 
+                   FROM $TBAT_ATLAS_SEARCH_BATCH ASB 
+									 JOIN $TBAT_SAMPLE S ON (s.sample_id = ASB.sample_id) 
+									 JOIN $TBPR_SEARCH_BATCH SB ON (SB.SEARCH_BATCH_ID = ASB.PROTEOMICS_SEARCH_BATCH_ID)
+									 JOIN $TBPR_PROTEOMICS_EXPERIMENT PE ON (PE.EXPERIMENT_ID = SB.EXPERIMENT_ID)
+									 JOIN $TB_PROJECT P ON (P.PROJECT_ID = PE.PROJECT_ID)
+									 LEFT JOIN $TBAT_SAMPLE_PUBLICATION SP ON (SP.sample_id = S.sample_id)
+									WHERE S.sample_id = $sample_id 
+								~;
+                my ($pid_str1,$pid_str2) ='';
+                my @result1 = $sbeams->selectOneColumn($sql);
+                $pid_str1 = join(",", @result1) if (@result1);
+                my $query2= qq~
+                    select sample_publication_ids
+                    from $TBAT_SAMPLE
+                    where S.sample_id = $sample_id
+                ~;
+                my @result2 = $sbeams->selectOneColumn($sql);
+                $pid_str2 = $result2[0] if (@result2);
+                $pid_str2 =~ s/\s+//;
+
+                if ($pid_str1 ne $pid_str2){
+                  print "Update publcation record for sample $sample_id, $pid_str1\n";
+                  $sbeams->executeSQL("delete from $TBAT_SAMPLE_PUBLICATION where sample_id = $sample_id");
+                  $sbeams->executeSQL("update $TBAT_SAMPLE set sample_publication_ids='$pid_str1' where sample_id = $sample_id");
+                  foreach my $pid (@result1){
+                     my %rowdata = (publication_id => $pid,
+                                        sample_id => $sample_id);
+                     my $success = $sbeams->updateOrInsertRow(
+                                 insert =>1,
+                                 table_name=>$TBAT_SAMPLE_PUBLICATION,
+                                 rowdata_ref=>\%rowdata,
+                                 PK => 'sample_publication_id',
+                                 return_PK => 1,
+                                 verbose=>$VERBOSE,
+                                 testonly=>$TESTONLY,
+                                );
+                  }
+                    
+                }
+ 
             }
         }
         ## Lastly, if no sample_id, create one from protomics record.  
@@ -919,8 +1027,21 @@ sub get_search_batch_and_sample_id_hash
        if ( ($asb_exists eq "false") || ($sample_exists eq "false") )
        {
             $sql = qq~
-                SELECT distinct SB.search_batch_id, PE.experiment_name, PE.experiment_tag,
-                SB.data_location, P.project_id, P.publication_id
+                SELECT --distinct 
+                       SB.search_batch_id, 
+                       PE.experiment_name, 
+                       PE.experiment_tag,
+                       SB.data_location, 
+                       P.project_id, 
+                       P.publication_id, 
+                       pe.protease_id, 
+                       pe.organism_id,
+                       pe.cell_line,
+                       pe.tissue_cell_type,
+                       pe.disease,
+                       pe.treatment_physiological_state,
+                       pe.sample_preparation,
+                       pe.sample_category_id
                 FROM $TBPR_PROTEOMICS_EXPERIMENT PE
                 JOIN $TBPR_SEARCH_BATCH SB
                 ON ( PE.EXPERIMENT_ID = SB.EXPERIMENT_ID)
@@ -936,7 +1057,9 @@ sub get_search_batch_and_sample_id_hash
 
             foreach my $row (@rows)
             {
-                my ($sb_id, $exp_name, $exp_tag, $d_l, $p_id, $pub_id) = @{$row};
+                my ($sb_id, $exp_name, $exp_tag, $d_l, $p_id, $pub_id,$protease_id,$organism_id,
+                    $cell_line,$tissue_cell_type,$disease,$treatment_physiological_state,
+                    $sample_preparation,$sample_category_id) = @{$row};
 
                 ## create [sample] record if it doesn't exist:
                 if ($sample_exists eq "false")
@@ -948,12 +1071,23 @@ sub get_search_batch_and_sample_id_hash
                         sample_title => $exp_name,
                         sample_description => $exp_name,
                         is_public => 'N',
-              peptide_source_type => 'Natural',
+                        peptide_source_type => 'Natural',
                         project_id => $p_id,
-                        sample_publication_ids => $pub_id
+                        sample_publication_ids => $pub_id,
+                        protease_id =>  $protease_id,
+                        organism_id => $organism_id,
+                        cell_line => $cell_line,
+                        tissue_cell_type => $tissue_cell_type, 
+                        disease => $disease,
+                        treatment_physiological_state => $treatment_physiological_state, 
+                        sample_preparation => $sample_preparation,
+                        sample_category_id => $sample_category_id,
                     );
 
                     $sample_id = insert_sample( rowdata_ref => \%rowdata );
+                    print "#######insert  $sample_id $exp_tag $exp_name\n";
+                    insert_sample_publications($sample_id, $pub_id);
+
                 }
 
 
@@ -983,30 +1117,54 @@ sub get_search_batch_and_sample_id_hash
         $loaded_sbid_asbid_sid_hash{$loading_sb_id}->{atlas_search_batch_id} = 
             $atlas_search_batch_id;
 
+				## create [atlas_build_search_batch] record
+        my ($atlas_build_search_batch_id, $atlas_build_sample_id);
+        my $sql = qq~
+          SELECT ATLAS_BUILD_SEARCH_BATCH_ID 
+          FROM $TBAT_ATLAS_BUILD_SEARCH_BATCH
+          WHERE SAMPLE_ID = $sample_id 
+          AND ATLAS_BUILD_ID = $atlas_build_id
+          AND ATLAS_SEARCH_BATCH_ID = $atlas_search_batch_id
+        ~;
+        @rows = $sbeams->selectOneColumn($sql);
 
-        ## create [atlas_build_search_batch] record
-        my $atlas_build_search_batch_id = 
-            create_atlas_build_search_batch(
-                atlas_build_id => $atlas_build_id,
-                sample_id => $sample_id,
-                atlas_search_batch_id => $atlas_search_batch_id,
-            );
+				$atlas_build_search_batch_id = 
+						create_atlas_build_search_batch(
+								atlas_build_id => $atlas_build_id,
+								sample_id => $sample_id,
+								atlas_search_batch_id => $atlas_search_batch_id,
+				) if (! @rows);
 
-        ## create a [spectra_description_set] record
-        insert_spectra_description_set( 
-            atlas_build_id => $atlas_build_id,
-            sample_id => $sample_id,
-            atlas_search_batch_id => $atlas_search_batch_id,
-            search_batch_dir_path =>$loading_sbid_searchdir_hash{$loading_sb_id}
-        );
-         
+				## create a [spectra_description_set] record
+        $sql = qq~
+          SELECT SPECTRA_DESCRIPTION_SET_ID
+          FROM $TBAT_SPECTRA_DESCRIPTION_SET
+          WHERE SAMPLE_ID = $sample_id 
+          AND ATLAS_BUILD_ID = $atlas_build_id
+          AND ATLAS_SEARCH_BATCH_ID = $atlas_search_batch_id
+        ~;
+        @rows = $sbeams->selectOneColumn($sql);
 
-        ## create [atlas_build_sample] record
-        my $atlas_build_sample_id = createAtlasBuildSampleLink(
-            sample_id => $sample_id,
-            atlas_build_id => $atlas_build_id,
-        );
+				insert_spectra_description_set( 
+						atlas_build_id => $atlas_build_id,
+						sample_id => $sample_id,
+						atlas_search_batch_id => $atlas_search_batch_id,
+						search_batch_dir_path =>$loading_sbid_searchdir_hash{$loading_sb_id}
+				) if (! @rows);
+				 
 
+				## create [atlas_build_sample] record
+        $sql = qq~
+          SELECT ATLAS_BUILD_SAMPLE_ID
+          FROM $TBAT_ATLAS_BUILD_SAMPLE
+          WHERE SAMPLE_ID = $sample_id
+          AND ATLAS_BUILD_ID = $atlas_build_id 
+        ~;
+        @rows = $sbeams->selectOneColumn($sql);
+				$atlas_build_sample_id = createAtlasBuildSampleLink(
+						sample_id => $sample_id,
+						atlas_build_id => $atlas_build_id,
+				) if (! @rows);
 
 #       my $path = "$dl/$sub_dir";
 #
@@ -1184,7 +1342,7 @@ sub create_atlas_search_batch
     #$experiment_path =~ s/^(.+)\/(.+)\/(.+)\/(.+)\/(.+)/$2\/$3\/$4/gi;
 
     my $TPP_version = getTPPVersion( directory => $proteomics_search_batch_path);
-print "TPP version $TPP_version\n";
+		print "TPP version $TPP_version\n";
     ## attributes for atlas_search_batch_record
     my %rowdata = (             ##  atlas_search_batch
         proteomics_search_batch_id => $sbid,
@@ -1414,6 +1572,54 @@ sub create_atlas_search_batch_parameter_recs
     return 1;
 
 }
+##################################################################
+### insert_sample_publications 
+##################################################################
+
+sub insert_sample_publications{
+  my $sample_id = shift;
+  my $publication_ids = shift;
+  my @ids = split(",", $publication_ids);
+  my $current_contact_id = $sbeams->getCurrent_contact_id;
+  my $current_work_group_id = $sbeams->getCurrent_work_group_id;
+  my ($sec,$min,$hour,$mday,$mon,$year, $wday,$yday,$isdst) = localtime time;
+  $year += 1900;
+  $mon++;
+  my $date = "$year\-$mon\-$mday $hour:$min:$sec";
+
+  foreach my $id (@ids){
+    my $sql = qq~
+          select sample_publication_id
+          FROM $TBAT_SAMPLE_PUBLICATION
+          where sample_id = $sample_id and publication_id = $id;
+        ~;
+        my @result = $sbeams->selectOneColumn($sql);
+      if (!@result){
+
+       my %rowdata = (
+          sample_id => $sample_id,
+          publication_id => $id,
+          date_created       =>  $date,
+          created_by_id      =>  $current_contact_id,
+          date_modified      =>  $date,
+          modified_by_id     =>  $current_contact_id,
+          owner_group_id     =>  $current_work_group_id,
+          record_status      =>  'N',);
+        my $sample_publication_id = $sbeams->updateOrInsertRow(
+            table_name=>$TBAT_SAMPLE_PUBLICATION,
+            insert=>1,
+            rowdata_ref=>\%rowdata,
+            PK => 'sample_publication_id',
+            return_PK=>1,
+            add_audit_parameters => 1,
+            verbose=>$VERBOSE,
+            testonly=>$TESTONLY,
+        );
+      }
+  }
+
+
+}
 
 
 ###############################################################################
@@ -1445,6 +1651,22 @@ sub insert_sample
     );
 
     print "INFO[$METHOD]: created sample record $sample_id\n";
+    ## insert sample publication 
+    my @pids = split(",", $rowdata{sample_publication_ids});
+    foreach my $pid (@pids){
+      print "INFO[$METHOD]: insert publication $pid for sample $sample_id\n";
+		  %rowdata = (    publication_id     =>  $pid,
+										sample_id => $sample_id);
+		  my $success = $sbeams->updateOrInsertRow(
+						 insert =>1,
+						 table_name=>$TBAT_SAMPLE_PUBLICATION,
+						 rowdata_ref=>\%rowdata,
+						 PK => 'sample_publication_id',
+						 return_PK => 1,
+						 verbose=>$VERBOSE,
+						 testonly=>$TESTONLY,
+						);
+     }
 
     return $sample_id;
 
@@ -1699,7 +1921,7 @@ sub insert_spectra_description_set
 
     } else
     { 
-
+        $search_batch_dir_path =~ s/\s+//g;
         ## read experiment's pepXML file to get an mzXML file name
         my @mzXMLFileNames = getSpectrumXMLFileNames( 
                              search_batch_dir_path => $search_batch_dir_path);
@@ -1982,16 +2204,16 @@ sub readCoords_updateRecords_calcAttributes {
     my %duplicate_proteins;
     if ( -e "$source_dir/duplicate_groups.txt" ) {
       if (open(INFILE,"$source_dir/duplicate_groups.txt")) {
-	my $header = <INFILE>;
-	while (my $line = <INFILE>) {
-	  chomp($line);
-	  my @protein_names = split(/\s+/,$line);
-	  my $reference = shift(@protein_names);
-	  foreach my $duplicate ( @protein_names ) {
-	    $duplicate_proteins{$duplicate} = $reference;
-	    #print "$duplicate = $reference\n";
-	  }
-	}
+				my $header = <INFILE>;
+				while (my $line = <INFILE>) {
+					chomp($line);
+					my @protein_names = split(/\s+/,$line);
+					my $reference = shift(@protein_names);
+					foreach my $duplicate ( @protein_names ) {
+						$duplicate_proteins{$duplicate} = $reference;
+						#print "$duplicate = $reference\n";
+					}
+				}
       }
       close(INFILE);
     }
@@ -2001,7 +2223,7 @@ sub readCoords_updateRecords_calcAttributes {
     my (@chromosome, @strand, @start_in_chromosome, @end_in_chromosome);
     my (@n_protein_mappings, @n_genome_locations, @is_exon_spanning);
     my (@start_in_biosequence, @end_in_biosequence);
-
+    my (@peptide_preceding_residue,@peptide_following_residue);
 
     ## hash with key = $peptide_accession[$ind], 
     ##           value = string of array indices holding given peptide_accession
@@ -2013,6 +2235,7 @@ sub readCoords_updateRecords_calcAttributes {
     #### where the peptide also maps to a forward protein
     open(INFILE, $infile) or die "ERROR: Unable to open for reading $infile ($!)";
     my $outfile = "${infile}-noDECOYdup";
+if (! -e $outfile){
     open(OUTFILE, ">$outfile") or die "ERROR: Unable to open for writing $outfile ($!)";
     print "\nTransforming $infile\n";
     my $bufferWithDecoys = '';
@@ -2048,6 +2271,8 @@ sub readCoords_updateRecords_calcAttributes {
 		}
 		close(INFILE);
 		close(OUTFILE);
+}
+
 		$infile = $outfile;
 
 
@@ -2065,17 +2290,14 @@ sub readCoords_updateRecords_calcAttributes {
 		#### Load information from the coordinate mapping file:
 		#### into a series of arrays, one element per row
 		my $ind=0;
+    my %data_hash = ();
 		while ($line = <INFILE>) {
 				chomp($line);
 				my @columns = split(/\t/,$line);
 				my $pep_acc = $columns[0];
+        push(@peptide_accession, $columns[0]);
+        my $tmp_chromosome = $columns[10];
 
-				push(@peptide_accession, $columns[0]);
-				push(@biosequence_name, $columns[2]);
-				push(@start_in_biosequence, $columns[5]);
-				push(@end_in_biosequence, $columns[6]);
-
-				my $tmp_chromosome = $columns[8]; 
 				## parsing for chromosome:   this is set for Ens 21 and 22 notation...
 				if ($tmp_chromosome =~ /^(chromosome:)(NCBI.+:)(.+)(:.+:.+:.+)/ ) {
 						$tmp_chromosome = $3;
@@ -2095,11 +2317,6 @@ sub readCoords_updateRecords_calcAttributes {
 				#if ( ($tmp =~ /^(\d+)_NT_(\d+)$/) || ($tmp_chromosome =~ /^((X)|(Y))_NT_(\d+)$/) ) {
 				#    $tmp_chromosome = $tmp_chromosome;
 
-				push(@chromosome, $tmp_chromosome);
-				push(@strand,$columns[9]);
-				push(@start_in_chromosome,$columns[10]);
-				push(@end_in_chromosome,$columns[11]);
-
 				## hash with
 				## keys =  peptide accession
 				## values = space-separated string list of array indices (of the arrays above, holding pep_accession)
@@ -2109,17 +2326,28 @@ sub readCoords_updateRecords_calcAttributes {
 				} else {
 					 $index_hash{$pep_acc} = $ind;
 				}
-				push(@n_protein_mappings, 1);  ##unless replaced in next section
-				push(@n_genome_locations, 1);  ##unless replaced in next section
-				push(@is_exon_spanning, 'N');  ##unless replaced in next section
-
+        # 0.  peptide_accession
+        # 1.  biosequence_name
+        # 2.  start_in_biosequence
+        # 3.  end_in_biosequence
+        # 4.  peptide_preceding_residue
+        # 5.  peptide_following_residue
+        # 6.  tmp_chromosome
+        # 7.  strand
+        # 8.  start_in_chromosome
+        # 9.  end_in_chromosome,
+        # 10. n_protein_mappings
+        # 11. n_genome_locations
+        # 12. is_exon_spanning
+        my @data = ($columns[0],$columns[2],$columns[5],$columns[6],$columns[7],$columns[8],
+                    $tmp_chromosome,$columns[11],$columns[12],$columns[13],1,1,'N');
+        $data_hash{$ind} = join(",", @data);
 				$ind++;
 
     }   ## END reading coordinate mapping file
 
     close(INFILE) or die "Cannot close $infile ($!)";
     print "\nFinished reading .../coordinate_mapping.txt\n";
-
 
 
     if ($TESTONLY) {
@@ -2165,74 +2393,70 @@ sub readCoords_updateRecords_calcAttributes {
 
     ## looping through a peptide's array indices to calculate these:
     foreach my $tmp_ind_str (values ( %index_hash ) ) {  #key = peptide_accession
-
-        #### Recreate an array of rows for this peptide from the space-separated string
+       #### Recreate an array of rows for this peptide from the space-separated string
         my @tmp_ind_array = split(" ", $tmp_ind_str);
-
         my (%protein_mappings_hash, %chromosomal_mappings_hash);
-				my %distinct_proteins_hash;
-
+        my %distinct_proteins_hash;
         my $peptide = $peptide_accession[$tmp_ind_array[0]];
         my $protein;
 
-
         #### Loop over all the rows for this peptide
-				my $first_index = -1;
+        my $first_index = -1;
         for (my $ii = 0; $ii <= $#tmp_ind_array; $ii++) {
-
             my $i_ind=$tmp_ind_array[$ii];
-						if ($ii == 0) {
-							$first_index = $i_ind;
-						}
+            if ($ii == 0) {
+              $first_index = $i_ind;
+            }
+            #my $chrom = $chromosome[$i_ind];
+            #my $start = $start_in_chromosome[$i_ind];
+            #my $end = $end_in_chromosome[$i_ind];
+            my @data = split(",", $data_hash{$i_ind});
+            $protein = $data[1];
+            my $chrom = $data[6];
+            my $start = $data[8];
+            my $end = $data[9];
+            my $coord_str = "$chrom:$start:$end";
+            my $diff_coords = abs($start - $end);
+            my $seq_length =
+              length($peptideAccession_peptideSequence{$peptide});
 
-						$protein = $biosequence_name[$i_ind];
+            ## If entire sequence fits between coordinates, the protein has
+            ## redundant sequences.  If the sequence doesn't fit between
+            ## coordinates, it's exon spanning:
+            if ( $diff_coords > 0 ) {
+              if ( ($diff_coords + 1) != ($seq_length * 3) ) {
+                      #$is_exon_spanning[$first_index] = 'Y';
+                     my @values = split(",", $data_hash{$first_index});
+                     $values[12] = 'Y';
+                     $data_hash{$first_index} = join(",", @values);
+              }
 
-						my $chrom = $chromosome[$i_ind];
-						my $start = $start_in_chromosome[$i_ind];
-						my $end = $end_in_chromosome[$i_ind];
-						my $coord_str = "$chrom:$start:$end";
+            #### Only count a chromosomal mapping the first time it is seen
+              #### with different start/end coords for a protein
+            #### FIXME: Note if a peptide legitimately maps to two different places
+            #### in a protein, then this logic fails. Always has and continues to...
+             ####
+              my @prev_coords = split(":", $protein_mappings_hash{$protein});
+              if ( ! $protein_mappings_hash{$protein} ||
+                     ($prev_coords[1] eq $prev_coords[2] )) {  # this means mapping wasn't stored last time
+                  $chromosomal_mappings_hash{$coord_str} = $protein;
+              }
+            }
 
-						my $diff_coords = abs($start - $end);
+            if (! defined $protein_mappings_hash{$protein} || $coord_str ne "0:0:0") {
+                $protein_mappings_hash{$protein} = $coord_str;
+            }
 
-						my $seq_length = 
-							length($peptideAccession_peptideSequence{$peptide});
+            #### If this protein is really a duplicate of another, then reset the
+            #### protein name to the primary refernce for counting purposes
+            if ($duplicate_proteins{$protein}) {
+              $protein = $duplicate_proteins{$protein};
+            }
 
-						## If entire sequence fits between coordinates, the protein has
-						## redundant sequences.  If the sequence doesn't fit between
-						## coordinates, it's exon spanning:
-						if ( $diff_coords > 0 ) {
-							if ( ($diff_coords + 1) != ($seq_length * 3) ) {
-											$is_exon_spanning[$first_index] = 'Y';
-							}
-
-						#### Only count a chromosomal mapping the first time it is seen
-							#### with different start/end coords for a protein
-						#### FIXME: Note if a peptide legitimately maps to two different places
-						#### in a protein, then this logic fails. Always has and continues to...
-
-							#### 
-							my @prev_coords = split(":", $protein_mappings_hash{$protein});
-						if ( ! $protein_mappings_hash{$protein} ||
-									 ($prev_coords[1] eq $prev_coords[2] )) {  # this means mapping wasn't stored last time
-						$chromosomal_mappings_hash{$coord_str} = $protein;
-						} 
-					} 
-
-						if (! defined $protein_mappings_hash{$protein} || $coord_str ne "0:0:0") {
-								$protein_mappings_hash{$protein} = $coord_str;
-						}
-
-						#### If this protein is really a duplicate of another, then reset the
-						#### protein name to the primary refernce for counting purposes
-						if ($duplicate_proteins{$protein}) {
-							$protein = $duplicate_proteins{$protein};
-						}
-
-							if (! defined $distinct_proteins_hash{$protein} || $coord_str ne "0:0:0") {
-									$distinct_proteins_hash{$protein} = $coord_str;
-							}
-					}
-
+            if (! defined $distinct_proteins_hash{$protein} || $coord_str ne "0:0:0") {
+                $distinct_proteins_hash{$protein} = $coord_str;
+            }
+          }
 
         ## Count the number of chromosomal mappings and protein_mappings
         my $pep_n_genome_locations = keys( %chromosomal_mappings_hash);
@@ -2242,8 +2466,13 @@ sub readCoords_updateRecords_calcAttributes {
 
         ## Assign values to all array members:
         foreach my $tmpind (@tmp_ind_array) {
-            $n_protein_mappings[$tmpind] = $pep_n_protein_mappings;
-            $n_genome_locations[$tmpind] = $pep_n_genome_locations;
+            #$n_protein_mappings[$tmpind] = $pep_n_protein_mappings;
+            #$n_genome_locations[$tmpind] = $pep_n_genome_locations;
+           my @values = split(",", $data_hash{$tmpind});
+           $values[10] = $pep_n_protein_mappings;
+           $values[11] = $pep_n_genome_locations;
+           $data_hash{$tmpind} = join(",", @values);
+           #print "$values[0] $pep_n_protein_mappings $pep_n_genome_locations \n";
         }
 
     } ## end calculate n_genome_locations, n_protein_mappings and is_exon_spanning loop
@@ -2271,6 +2500,27 @@ sub readCoords_updateRecords_calcAttributes {
    ## ---> n_genome_locations = 2 for all
    ## ---> n_protein_mappings = 2 for both
    ## ---> is_exon_spanning   = y for all
+
+   ### 2015-09-24 above logic fix below case also 
+	 ##PAp00092783     10      ENSP00000321334 100     1064    0       160599568       160599597
+	 ##PAp00092783     10      ENSP00000321334 100     152     0       160644915       160644944
+	 ##PAp00092783     10      ENSP00000321334 100     266     0       160639368       160639397
+	 ##PAp00092783     10      ENSP00000321334 100     380     0       160633821       160633850
+	 ##PAp00092783     10      ENSP00000321334 100     38      0       160650406       160650435
+	 ##PAp00092783     10      ENSP00000321334 100     494     0       160628275       160628304
+	 ##PAp00092783     10      ENSP00000321334 100     608     0       160622731       160622760
+	 ##PAp00092783     10      ENSP00000321334 100     722     0       160617185       160617214
+	 ##PAp00092783     10      ENSP00000321334 100     836     0       160611630       160611659
+	 ##PAp00092783     10      ENSP00000395608 100     311     0       160599568       160599597
+	 ##PAp00092783     10      ENSP00000395608 100     83      0       160611630       160611659
+	 ##PAp00092783     10      ENSP00000480589 100     197     0       160633821       160633850
+	 ##PAp00092783     10      ENSP00000480589 100     311     0       160628275       160628304
+	 ##PAp00092783     10      ENSP00000480589 100     425     0       160622731       160622760
+	 ##PAp00092783     10      ENSP00000480589 100     539     0       160617185       160617214
+	 ##PAp00092783     10      ENSP00000480589 100     83      0       160639368       160639397
+   ## ---> n_genome_locations = 1 
+   ## ---> n_protein_mappings = 3
+   ## ---> is_exon_spanning   = n
 
 
    ## testing match to above rules:
@@ -2310,50 +2560,60 @@ sub readCoords_updateRecords_calcAttributes {
 
     ## hash with key = peptide_accession, value = sub-peptide string list
     my %peptideAccession_subPeptide;
-    
-    my @peptideAccession_peptideSequence ='';
-    foreach my $pep_acc (keys %peptideAccession_peptideSequence){
-      push @peptideAccession_peptideSequence, "$pep_acc.$peptideAccession_peptideSequence{$pep_acc}";
-    }
-    foreach my $sub_pep_acc (keys %peptideAccession_peptideSequence){
-      my $sub_pep = $peptideAccession_peptideSequence{$sub_pep_acc};
-      my @matches = grep (/$sub_pep/, @peptideAccession_peptideSequence);
-      foreach my $m (@matches){
-        $m =~ /(.*)\.(.*)/;
-        if($1 ne $sub_pep_acc){
-          if ( exists $peptideAccession_subPeptide{$sub_pep_acc} ){
-            $peptideAccession_subPeptide{$sub_pep_acc} =join ",", $peptideAccession_subPeptide{$sub_pep_acc},
-                                                         $peptides{$1};
-          }else{
-            $peptideAccession_subPeptide{$sub_pep_acc} = $peptides{$1};
+    my $subpep_file = "$source_dir/is_subpep_of.tsv";
+    if ( ! -e "$subpep_file" ) {
+  
+			my @peptideAccession_peptideSequence ='';
+			foreach my $pep_acc (keys %peptideAccession_peptideSequence){
+				push @peptideAccession_peptideSequence, "$pep_acc.$peptideAccession_peptideSequence{$pep_acc}";
+			}
+			foreach my $sub_pep_acc (keys %peptideAccession_peptideSequence){
+				my $sub_pep = $peptideAccession_peptideSequence{$sub_pep_acc};
+				my @matches = grep (/$sub_pep/, @peptideAccession_peptideSequence);
+				foreach my $m (@matches){
+					$m =~ /(.*)\.(.*)/;
+					if($1 ne $sub_pep_acc){
+						if ( exists $peptideAccession_subPeptide{$sub_pep_acc} ){
+							$peptideAccession_subPeptide{$sub_pep_acc} =join ",", $peptideAccession_subPeptide{$sub_pep_acc},
+																													 $peptides{$1};
+						}else{
+							$peptideAccession_subPeptide{$sub_pep_acc} = $peptides{$1};
+						}
+					} 
+				}     
+				 if(length($peptideAccession_subPeptide{$sub_pep_acc}) > 1023){
+					 #print "truncate super_pep from $peptideAccession_subPeptide{$sub_pep_acc}\n";
+					 my $str = substr ($peptideAccession_subPeptide{$sub_pep_acc} , 0, 1015);
+					 $str =~ s/\,\w+$//;
+					 $peptideAccession_subPeptide{$sub_pep_acc} = $str. ",...";
+					 #print "to $peptideAccession_subPeptide{$sub_pep_acc}\n";
+				 }
+			}
+			undef @peptideAccession_peptideSequence;
+    }else{
+			open (SUB ,"<$subpep_file" ) or die "cannot open $subpep_file\n";
+			while (my $line = <SUB>){
+				chomp $line;
+				my($sub_pep_acc, $str ) = split("\t", $line);
+        if ($str =~ /PAp/){
+          my @peps =();
+          foreach my $acc (split(",", $str)){
+            #print "$acc $peptides{$acc}\n";
+            push @peps, $peptides{$acc};
           }
-        } 
-      }     
-
-    #foreach my $sub_pep_acc (keys %peptideAccession_peptideSequence){
-    #   for my $super_pep_acc (keys %peptideAccession_peptideSequence){
-    #        if ( ( index($peptideAccession_peptideSequence{$super_pep_acc}, 
-    #            $peptideAccession_peptideSequence{$sub_pep_acc}) >= 0) 
-    #            && ($super_pep_acc ne $sub_pep_acc) ) {
-    #            if ( exists $peptideAccession_subPeptide{$sub_pep_acc} ){
-    #                $str =
-    #                    join ",", $peptideAccession_subPeptide{$sub_pep_acc},
-    #                    $peptides{$super_pep_acc};
-    #
-    #            } else { 
-    #                $peptideAccession_subPeptide{$sub_pep_acc} = $peptides{$super_pep_acc};
-    #            }
-    #       }
-    #    }
-			 if(length($peptideAccession_subPeptide{$sub_pep_acc}) > 1023){
-				 print "truncate super_pep from $peptideAccession_subPeptide{$sub_pep_acc}\n";
-				 my $str = substr ($peptideAccession_subPeptide{$sub_pep_acc} , 0, 1015);
-				 $str =~ s/\,\w+$//;
-				 $peptideAccession_subPeptide{$sub_pep_acc} = $str. ",...";
-				 print "to $peptideAccession_subPeptide{$sub_pep_acc}\n";
-			 }
-    }
-    undef @peptideAccession_peptideSequence;
+          $str = join(",", @peps);
+        }
+				$peptideAccession_subPeptide{$sub_pep_acc} = $str;
+        
+				if(length($peptideAccession_subPeptide{$sub_pep_acc}) > 1023){
+					 #print "truncate super_pep from $peptideAccession_subPeptide{$sub_pep_acc}\n";
+					 my $str = substr ($peptideAccession_subPeptide{$sub_pep_acc} , 0, 1015);
+					 $str =~ s/\,\w+$//;
+					 $peptideAccession_subPeptide{$sub_pep_acc} = $str. ",...";
+					 #print "to $peptideAccession_subPeptide{$sub_pep_acc}\n";
+				 }
+      }
+   }
 
 
    if ($TESTVARS) {
@@ -2467,47 +2727,63 @@ sub readCoords_updateRecords_calcAttributes {
     initiate_transaction();
     for (my $row = 0; $row <= $#peptide_accession; $row++){
 
-      #### Convert varied strand notations to single notation: +,-,?
-      my $tmp = $strand_xlate{$strand[$row]}
-            or die("ERROR: Unable to translate strand $strand[$row]");
-      $strand[$row] = $tmp;
+     #### Convert varied strand notations to single notation: +,-,?
+      my @data = split(",", $data_hash{$row});
+      my $tmp = $strand_xlate{$data[7]}
+            or die("ERROR: Unable to translate strand $data[7]");
+      $data[7] = $tmp;
 
       #### Make sure we can resolve the biosequence_id
-      my $biosequence_id = $biosequence_ids{$biosequence_name[$row]};
+      my $biosequence_id = $biosequence_ids{$data[1]};
       if ( !$biosequence_id ) {
         # Battle known incrementing error
-        if ( $biosequence_name[$row] =~ /\d+\.\d+$/ ) {
+        if ( $data[1]=~ /\d+\.\d+$/ ) {
           # Try the trimmed version
-          my $name = $biosequence_name[$row];
+          my $name = $data[1];
           $name =~ s/\.\d+$//;
           $biosequence_id = $biosequence_ids{$name};
           if ( !$biosequence_id ) {
-            die("ERROR: BLAST matched biosequence_name $biosequence_name[$row] does not appear to be in the biosequence table!!");
+            die("ERROR: BLAST matched biosequence_name $data[1] does not appear to be in the biosequence table!!");
           }
           # Cache the incremented version
-          $biosequence_ids{$biosequence_name[$row]} = $biosequence_id;
+          $biosequence_ids{$data[1]} = $biosequence_id;
         } else {
-          die("ERROR: Unable to map biosequence_name $biosequence_name[$row] to a biosequence_id. Atlas build record references biosequence_set $args{biosequence_set_id}; probably you mapped this build against a different biosequence_set.");
+          die("ERROR: Unable to map biosequence_name $data[1] to a biosequence_id. Atlas build record references biosequence_set $args{biosequence_set_id}; probably you mapped this build against a different biosequence_set.");
         }
       }
 
       my $tmp_pep_acc = $peptide_accession[$row];
+
+      if( $tmp_pep_acc =~ /(PAp02122881|PAp01657280|PAp00972436|PAp00133923|PAp04626425)/){
+          if ($tmp_pep_acc ne $previous_peptide_accession) {
+            $previous_peptide_accession = $tmp_pep_acc;
+            $mapping_record_count = 0;
+         }
+         next;
+      }
+      if(!  $peptides{$tmp_pep_acc} ){ print "$tmp_pep_acc\n";};
+
       my $peptide_id = $peptides{$tmp_pep_acc} ||
             die("ERROR: Wanted to insert data for peptide $peptide_accession[$row] ".
             "which is in the BLAST output summary, but not in the input ".
             "peptide file??");
 
       my $peptide_instance_id = $peptideAccession_peptideInstanceID{$tmp_pep_acc};
-
-
-      #### If this is the first row for a peptide, then UPDATE peptide_instance record
+     #### If this is the first row for a peptide, then UPDATE peptide_instance record
       if ($tmp_pep_acc ne $previous_peptide_accession) {
-        my %rowdata = (   ##   peptide_instance    table attributes
-            n_genome_locations => $n_genome_locations[$row],
-            is_exon_spanning => $is_exon_spanning[$row],
-            n_protein_mappings => $n_protein_mappings[$row],
+        #my %rowdata = (   ##   peptide_instance    table attributes
+        #    n_genome_locations => $n_genome_locations[$row],
+        #    is_exon_spanning => $is_exon_spanning[$row],
+        #    n_protein_mappings => $n_protein_mappings[$row],
+        #    is_subpeptide_of => $peptideAccession_subPeptide{$tmp_pep_acc},
+        # );
+        my %rowdata = (
+            n_genome_locations => $data[11],
+            is_exon_spanning =>  $data[12],
+            n_protein_mappings => $data[10],
             is_subpeptide_of => $peptideAccession_subPeptide{$tmp_pep_acc},
-          );
+        );
+
         my $success = $sbeams->updateOrInsertRow(
             update=>1,
             table_name=>$TBAT_PEPTIDE_INSTANCE,
@@ -2517,7 +2793,7 @@ sub readCoords_updateRecords_calcAttributes {
             verbose=>$VERBOSE,
             testonly=>$TESTONLY,
           );
-	    }
+      }
 
       #### If there are already peptide_mapping records
       if ($existing_mapping_records{$peptide_instance_id}) {
@@ -2534,16 +2810,18 @@ sub readCoords_updateRecords_calcAttributes {
         }
 
         #### If there weren't already records, CREATE peptide_mapping record
-      } else {
+   } else {
         my %rowdata = (   ##   peptide_mapping      table attributes
             peptide_instance_id => $peptide_instance_id,
             matched_biosequence_id => $biosequence_id,
-            start_in_biosequence => $start_in_biosequence[$row],
-            end_in_biosequence => $end_in_biosequence[$row],
-            chromosome => $chromosome[$row],
-            start_in_chromosome => $start_in_chromosome[$row],
-            end_in_chromosome => $end_in_chromosome[$row],
-            strand => $strand[$row],
+            start_in_biosequence => $data[2], #$start_in_biosequence[$row],
+            end_in_biosequence => $data[3], #$end_in_biosequence[$row],
+            peptide_preceding_residue => $data[4], #$peptide_preceding_residue[$row],
+            peptide_following_residue => $data[5], #$peptide_following_residue[$row],
+            chromosome => $data[6], #$chromosome[$row],
+            strand => $data[7], #$strand[$row],
+            start_in_chromosome => $data[8], #$start_in_chromosome[$row],
+            end_in_chromosome => $data[9], #$end_in_chromosome[$row],
         );
         $sbeams->updateOrInsertRow(
             insert=>1,
@@ -2562,11 +2840,10 @@ sub readCoords_updateRecords_calcAttributes {
       }
       $mapping_record_count++;
 
-      if ($row/100 == int($row/100)) {
+      if ($row/1000 == int($row/1000)) {
         print "$row...";
-       # $sbeams->commit_transaction();
+        $sbeams->commit_transaction();
       }
-
     }  ## end  create peptide_mapping records and update peptide_instance records
     print "\n";
 
@@ -2667,8 +2944,6 @@ sub readCoords_updateRecords_calcAttributes {
        }
 
    }
-
-
 }
 
 
@@ -2694,6 +2969,13 @@ sub loadFromPAxmlFile {
 
   my $atlas_build_id = $args{'atlas_build_id'} or die
     "need atlas_build_id ($!)";
+
+  my $peptide_accession = $args{'peptide_accession'};
+
+  my $load_start = 0;
+  if ( $peptide_accession eq ''){
+    $load_start = 1;
+  }
 
   ## hash with key = atlas_search_batch_id, value = sample_id
   my %sbid_asbid_sid_hash = %{ $sbid_asbid_sid_hash_ref };
@@ -2751,7 +3033,8 @@ sub loadFromPAxmlFile {
     \%sbid_asbid_sid_hash;
 
   $CONTENT_HANDLER->{peptide_acc_id_hash} = \%peptide_acc_id_hash;
-
+  $CONTENT_HANDLER->{peptide_accession} = $peptide_accession;
+  $CONTENT_HANDLER->{load_start} = $load_start;
 
   $parser->parse(XML::Xerces::LocalFileInputSource->new($infile));
 
@@ -2932,7 +3215,7 @@ sub getSpectrumXMLFileNamesFromPepXMLFile
             $spectrumXMLFileName = "$basename$extension";
             #print "got spectrumXMLFileName $spectrumXMLFileName\n";
             push (@spectrumXMLFileNames, $spectrumXMLFileName);
-	}
+	     }
     }
     close(INFILE) or die "Cannot close $infile";
 
@@ -2969,7 +3252,7 @@ sub getSpectrumXMLFileNames
         search_path => $search_batch_dir_path
       );
       if ( $infile eq "" ) {
-	die("ERROR: Unable to auto-detect an interact file in $search_batch_dir_path");
+					die("ERROR: Unable to auto-detect an interact file in $search_batch_dir_path");
       }
     }
 
@@ -2996,8 +3279,17 @@ sub getSpectrumXMLFileNames
         }elsif ( -e $file.".gz" ){
            push (@foundmzXMLFiles, $file.".gz"); 
         }else {
-          print "ERROR: Unable to determine location of file '$mzXMLFileNames[$i]'\n";
-          print "  (also tried: $file)\n";
+					if ($file =~ /.gz/ && $file !~ /(mzML|mzXML)/){
+						 $file =~ s/.gz//;
+						 if ( -e "$file.mzML.gz"){
+								push (@foundmzXMLFiles, $file.".mzML.gz");
+						 }elsif( -e "$file.mzXML.gz"){
+								push (@foundmzXMLFiles, $file.".mzXML.gz");
+						 }
+					}else{
+              print "ERROR: Unable to determine location of file '$mzXMLFileNames[$i]'\n";
+              print "  (also tried: $file)\n";
+          }
         }
       }
     }
@@ -3015,6 +3307,7 @@ sub insert_peptide {
 
   my $rowdata_ref = $args{'rowdata_ref'} or die("need rowdata_ref");
 
+  
   my $sequence = $rowdata_ref->{peptide_sequence};
   my $mw =  $massCalculator->getPeptideMass( mass_type => 'monoisotopic',
                                               sequence => $sequence );
@@ -3554,4 +3847,51 @@ sub print_hash
     }
 
 }
+#######################################################################
+#  peptide highest_n_enzymatic_termini and lowest_n_missed_cleavages
+#
+#
+#######################################################################
+sub update_peptide_net_ncm {
+  my %args = @_;
+  my $atlas_build_id = $args{atlas_build_id} || die "need atlas_build_id\n";
 
+  my $build_path = get_atlas_build_directory (atlas_build_id=>$atlas_build_id);
+
+  my $file = "$build_path/peptide_NET_NMC.tsv";
+  my %values = ();
+  open (IN, "<$file") or die "cannot open $file\n";
+  while (my $line = <IN>){
+    chomp $line;
+    my ($pepacc, $highest_n_enzymatic_termini, $lowest_n_missed_cleavages) = split("\t", $line);
+    $values{$pepacc}{highest_n_enzymatic_termini} = $highest_n_enzymatic_termini;
+    $values{$pepacc}{lowest_n_missed_cleavages} = $lowest_n_missed_cleavages;
+  }
+
+  my $sql = qq~
+    SELECT P.PEPTIDE_ACCESSION, PEPTIDE_INSTANCE_ID
+    FROM $TBAT_PEPTIDE_INSTANCE PI
+    JOIN $TBAT_PEPTIDE P ON (P.PEPTIDE_ID = PI.PEPTIDE_ID)
+    WHERE PI.ATLAS_BUILD_ID = $atlas_build_id
+  ~;
+
+  my @rows = $sbeams->selectSeveralColumns($sql);
+
+  foreach my $row (@rows){
+    my ($pepacc, $peptide_instance_id) = @$row;
+    my %rowdata = (
+      highest_n_enzymatic_termini => $values{$pepacc}{highest_n_enzymatic_termini},
+      lowest_n_missed_cleavages => $values{$pepacc}{lowest_n_missed_cleavages},
+    );
+    my $success = $sbeams->updateOrInsertRow(
+        update=>1,
+        table_name=>$TBAT_PEPTIDE_INSTANCE,
+        rowdata_ref=>\%rowdata,
+        PK => 'peptide_instance_id',
+        PK_value => $peptide_instance_id,
+        verbose=>$VERBOSE,
+        testonly=>$TESTONLY,
+    );
+  }
+}
+                                 
