@@ -988,11 +988,11 @@ sub showSpectrumText {
     $spectrum->show(format=>'simple');
 
   } elsif ( $parameters->{SAWB_DisplayMode} eq 'reannotatedDifference' ) {
-    $spectrum->reannotate( ppm => $usePPMTolerance );
+    $spectrum->reannotate( ppm => $usePPMTolerance, exhaustive=>0 );
     use Clone 'clone';
     my $compSpectrum = clone($spectrum);
     $compSpectrum->setModifiedSequence($parameters->{comp_sequence});
-    $compSpectrum->reannotate( ppm => $usePPMTolerance );
+    $compSpectrum->reannotate( ppm => $usePPMTolerance, exhaustive=>0 );
     #$spectrum->show(format=>'simple',secondary=>$compSpectrum);
     #$compSpectrum->show(format=>'simple',secondary=>$compSpectrum);
     $spectrum->show(format=>'difference',secondary=>$compSpectrum);
@@ -1904,9 +1904,9 @@ sub getSpectrumFromMzmlFile {
 
 
   #### Create a virtual filename to fetch the spectrum
-  #my $filename = "/proteomics/sw/tpp-dev/bin/readmzXML $filePath $scanNumber |";
+  my $filename = "/proteomics/sw/tpp-dev/bin/readmzXML $filePath $scanNumber |";
   # Switch temporarily to Luis's compiled version
-  my $filename = "/proteomics/lmendoza/sw/tpp/bin/readmzXML $filePath $scanNumber |";
+  #my $filename = "/proteomics/lmendoza/sw/tpp/bin/readmzXML $filePath $scanNumber |";
   print "Fetch command: $filename\n" if ($verbose);
 
   #### Try to open the spectrum for reading
