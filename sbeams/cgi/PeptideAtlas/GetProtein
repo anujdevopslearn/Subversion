@@ -397,6 +397,7 @@ sub handle_request {
       $parameters{'apply_action'} = 'GO';
     }
   }
+  $parameters{use_nextprot} =  ( $parameters->{use_nextprot} ne '' && $parameters->{use_nextprot} == 0  ) ? 0 : 1; 
   $swiss = $sbeamsMOD->get_uniprot_annotation( show_all_snps => 1,
 					           accession => $protein_name,
 					        use_nextprot => $parameters{use_nextprot} );
@@ -3460,7 +3461,7 @@ sub displayAnnotatedSequence {
   }
 
   my $ub_id = $parameters->{uniprot_db_id} || 0;
-  my $use_nextprot = ( $parameters->{use_nextprot} ne '' && $parameters->{use_nextprot} == 0  ) ? 0 : 1;
+  my $use_nextprot =  ( $parameters->{use_nextprot} ne '' && $parameters->{use_nextprot} == 0  ) ? 0 : 1;
   
   $alt_enz = [ qw( aspn gluc chymotrypsin ) ];
   $args{is_trypsin_build} = 'N';
