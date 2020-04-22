@@ -169,8 +169,14 @@ sub loadBuildSpectra {
   my ($start, $diff, $pre_search_batch_id, $n);
   $start = [gettimeofday];
   $n=0;
+  #my $counter = 0;
+
   while ( my $line = <INFILE>) {
     chomp $line;
+    #$counter++;
+    #if ($counter < 273031352){
+    #  next;
+    #}
     @columns = split("\t",$line,-1);
     #print "cols = ".scalar(@columns)."\n";
     unless (scalar(@columns) == $expected_n_columns) {
@@ -180,7 +186,7 @@ sub loadBuildSpectra {
 			#	scalar(@columns)."!=$expected_n_columns) in\n$line\n".
 			#		"This is likely missing ProteinProphet information, which is bad, but we will allow it until this bug is fixed.\n";
       #} 
-      if (scalar(@columns) == 18 || scalar(@columns) == 17) {
+      if (scalar(@columns) == 19 || scalar(@columns) == 18) {
 				
       } else {
 				die("ERROR: Unexpected number of columns (".
@@ -193,7 +199,7 @@ sub loadBuildSpectra {
         $probability,$massdiff,$protein_name,$proteinProphet_probability,
         $n_proteinProphet_observations,$n_sibling_peptides,
         $SpectraST_probability, $ptm_sequence,$precursor_intensity,
-        $total_ion_current,$signal_to_noise,$chimera_level);
+        $total_ion_current,$signal_to_noise,$retention_time_sec,$chimera_level);
     if ($filetype eq 'peplist') {
       ($search_batch_id,$peptide_sequence,$modified_sequence,$charge,
         $probability,$protein_name,$spectrum_name) = @columns;
@@ -215,6 +221,7 @@ sub loadBuildSpectra {
 				$precursor_intensity,
 				$total_ion_current,
 				$signal_to_noise,
+        $retention_time_sec,
 				$chimera_level) = @columns;
       #### Correction for occasional value '+-0.000000'
       $massdiff =~ s/\+\-//;
@@ -242,6 +249,7 @@ sub loadBuildSpectra {
 			 precursor_intensity => $precursor_intensity,
 			 total_ion_current => $total_ion_current,
 			 signal_to_noise => $signal_to_noise,
+       retention_time_sec => $retention_time_sec,
        chimera_level => $chimera_level);
 
     $n++;
@@ -288,7 +296,7 @@ sub insertSpectrumIdentification {
   my $precursor_intensity = $args{precursor_intensity};
   my $total_ion_current = $args{total_ion_current};
   my $signal_to_noise = $args{signal_to_noise};
-
+  my $retention_time_sec = $args{retention_time_sec};
   return if ($modified_sequence =~ /[JUO]/);
   our $counter;
 
@@ -327,7 +335,8 @@ sub insertSpectrumIdentification {
       chimera_level => $chimera_level,
       precursor_intensity => $precursor_intensity,
       total_ion_current => $total_ion_current,
-      signal_to_noise => $signal_to_noise
+      signal_to_noise => $signal_to_noise,
+      retention_time_sec => $retention_time_sec,
     );
   }
   #### Check to see if this spectrum_identification is in the database
@@ -589,6 +598,7 @@ sub insertSpectrumRecord {
   my $precursor_intensity = $args{precursor_intensity};
   my $total_ion_current = $args{total_ion_current};
   my $signal_to_noise = $args{signal_to_noise};
+  my $retention_time_sec = $args{retention_time_sec};
 
   #### Parse the name into components
   my ($fraction_tag,$start_scan,$end_scan);
@@ -616,8 +626,8 @@ sub insertSpectrumRecord {
     scan_index => -1,
     precursor_intensity => $precursor_intensity,
     total_ion_current => $total_ion_current,
-    signal_to_noise => $signal_to_noise
-
+    signal_to_noise => $signal_to_noise,
+    retention_time_sec=>$retention_time_sec
   );
 
 
@@ -851,6 +861,7 @@ sub getSpectrumPeaks_plotmsms {
   );
   $buffer .= "data_location = $data_location<br>\n";
  
+
   ($data_location, $buffer) = $self->groom_data_location(
     data_location => $data_location,
     history_buffer => $buffer,
@@ -1303,6 +1314,165 @@ sub insertSpectrumPTMIdentificationRecord {
 # loadSpectrum_Fragmentation_Type -- Loads all Spectrum_Fragmentation_Type for specified build
 ###############################################################################
 sub loadSpectrum_Fragmentation_Type {
+  my $METHOD = 'loadBuildSpectra';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+
+  #### Process parameters
+  my $atlas_build_id = $args{atlas_build_id}
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+
+  my $sql = qq~
+     SELECT FRAGMENTATION_TYPE, FRAGMENTATION_TYPE_ID
+     FROM $TBAT_FRAGMENTATION_TYPE
+  ~;
+  my %fragmentation_type_ids = $sbeams->selectTwoColumnHash($sql);
+
+  $sql = qq~
+    SELECT DISTINCT ASB.DATA_LOCATION, COALESCE(E.fragmentation_type_ids,S.fragmentation_type_ids)
+    FROM $TBAT_SPECTRUM SP
+    JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON (SP.SAMPLE_ID = ASB.SAMPLE_ID)
+    JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON (ABSB.ATLAS_SEARCH_BATCH_ID  = ASB.ATLAS_SEARCH_BATCH_ID )
+    JOIN $TBAT_SAMPLE  S ON (ABSB.SAMPLE_ID = S.SAMPLE_ID)
+    JOIN $TBPR_SEARCH_BATCH PSB ON (PSB.SEARCH_BATCH_ID = ASB.PROTEOMICS_SEARCH_BATCH_ID)
+    JOIN $TBPR_PROTEOMICS_EXPERIMENT E ON (E.EXPERIMENT_ID = PSB.EXPERIMENT_ID)
+    WHERE ABSB.ATLAS_BUILD_ID = $atlas_build_id
+    AND SP.FRAGMENTATION_TYPE_ID IS NULL
+  ~;
+  
+  my %directories = $sbeams->selectTwoColumnHash($sql);
+  foreach my $dir (keys %directories){
+    my $sql =qq~
+     SELECT  SP.SPECTRUM_NAME, SP.SPECTRUM_ID
+      FROM $TBAT_SPECTRUM SP
+      JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON (SP.SAMPLE_ID = ASB.SAMPLE_ID)
+      JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON (ABSB.ATLAS_SEARCH_BATCH_ID  = ASB.ATLAS_SEARCH_BATCH_ID )
+      WHERE ABSB.ATLAS_BUILD_ID = $atlas_build_id
+      AND SP.FRAGMENTATION_TYPE_ID IS NULL
+      AND ASB.DATA_LOCATION = '$dir'
+      ORDER BY SP.SPECTRUM_NAME
+    ~;
+    my @rows = $sbeams->selectSeveralColumns($sql);
+    my %scan2spectrum_id=();
+    my %data = ();
+    foreach my $row (@rows){
+      my ($spectrum_name, $id) = @$row;
+      $spectrum_name =~ /(.*)\.(\d+)\.\d+\.\d+/;
+      my $specfile = $1;
+      my $scan = $2;
+      $scan =~ s/^0+//;
+      $scan2spectrum_id{$specfile}{$scan} = $id;
+    }
+
+    ## 1. check the data folder for fragmentation_types.tsv files
+    ## 2. if not found or empty, use the type from proteomics experiment table, 
+    #     if more than one type, print warning
+    my $data_directory = "/regis/sbeams/archive/$dir/data";
+    if (! -d "$data_directory"){
+      print "ERROR cannot find $data_directory\n";
+      next;
+    }
+    opendir ( DIR, $data_directory ) || die "Error in opening dir $data_directory\n";
+    my @fragmentation_types_files = ();
+    while(my $filename = readdir(DIR)) {
+      if ($filename =~ /(.*).fragmentation_types.tsv/){
+        $filename ="$data_directory/$filename";
+        push @fragmentation_types_files ,$filename if (-s $filename);
+      }
+    }
+		closedir(DIR); 
+	  if (@fragmentation_types_files){
+      foreach my $filename (@fragmentation_types_files){	
+         if (open(F, "<$filename")){
+            print "\t$filename "; 
+            $filename =~ /^.*\/(.*).fragmentation_types.tsv$/;
+            my $specfile = $1;
+            if (not defined $scan2spectrum_id{$specfile}){
+              print "no update\n";
+              next;
+            }else{
+              print "\n";
+            }
+            my %fragmentation_types =();
+            foreach my $line(<F>){
+              if ($line =~ /unknown/){
+                 my $type = $directories{$dir};
+								 if ($type && $type !~/,/){
+									 $self->updateSpectrum_Fragmentation_Type(   scan2spectrum_id =>[values %{$scan2spectrum_id{$specfile}}],
+																															 fragmentation_type_id => $type);
+                   last;
+								 }else{
+									 print "WARNING: no update for $data_directory\n";
+								 }
+              }
+              if ($line =~ /^\*\s+(.*)/){
+                my $type = $1;
+                die "ERROR no fragmentation_type_id found for type '$type'\n" if (not defined $fragmentation_type_ids{$type});
+                $self->updateSpectrum_Fragmentation_Type(   scan2spectrum_id =>[values %{$scan2spectrum_id{$specfile}}],
+                                                     fragmentation_type_id => $fragmentation_type_ids{$type});
+                last;
+              }else{
+                 $line =~ /^(\d+)\s+(.*)$/;
+                 my $scan = $1;
+                 my $type = $2;
+                 die "ERROR no fragmentation_type_id found for type '$type'\n" if (not defined $fragmentation_type_ids{$type});      
+                 next if (not defined $scan2spectrum_id{$specfile}{$scan});
+                  
+                 $fragmentation_types{$fragmentation_type_ids{$type}}{$scan2spectrum_id{$specfile}{$scan}} =1;
+              } 
+            }
+            foreach my $id(keys %fragmentation_types){
+               print "$id\t";
+               print join("," ,keys %{$fragmentation_types{$id}} ) ."\n";;
+               $self -> updateSpectrum_Fragmentation_Type( scan2spectrum_id =>[keys %{$fragmentation_types{$id}}],
+                                                     fragmentation_type_id => $id);
+            }
+         }else{
+           print "ERROR: failed to open $filename\n";
+           next;
+         }
+      }
+		}else{
+       ## check if it is tof
+       my $type = $directories{$dir};
+       if ($type && $type !~/,/){
+          foreach my $specfile (keys %scan2spectrum_id){
+             print "\t$data_directory/$specfile, no fragmentation_types.tsv file\n";
+             $self->updateSpectrum_Fragmentation_Type(   scan2spectrum_id =>[values %{$scan2spectrum_id{$specfile}}],
+                                                     fragmentation_type_id => $type);
+          }
+       }else{
+         print "WARNING: no update for $data_directory\n";
+       }
+    }
+  }
+}
+
+sub updateSpectrum_Fragmentation_Type {
+  my $METHOD = 'updateSpectrum_Fragmentation_Type';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+  my @ids = @{$args{scan2spectrum_id}};
+  my $fragmentation_type_id = $args{fragmentation_type_id};
+  my $n= scalar @ids;
+
+  for (my $i=0; $i<$n; $i+=500){
+    my @list = ();
+    for (my $j=$i;$j<$i+500 && $j<$n;$j++){
+      push @list, $ids[$j];
+    }
+    my $str = join(",", @list);
+    my $sql = qq~
+			UPDATE $TBAT_SPECTRUM 
+			SET FRAGMENTATION_TYPE_ID = $fragmentation_type_id
+			WHERE SPECTRUM_ID IN ($str)
+    ~;
+    $sbeams->executeSQL($sql);
+  }
+  print "\t$n spectra updated with type $fragmentation_type_id\n";
+
+}
+sub loadSpectrum_Fragmentation_Type_old {
   my $METHOD = 'loadBuildSpectra';
   my $self = shift || die ("self not passed");
   my %args = @_;
