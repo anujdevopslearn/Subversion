@@ -253,7 +253,7 @@ my $module_styles =<<"  END_STYLE";
 
   /* Style info below organized by originating module
   /* Peptide Atlas */
-  .cellblock_top { border-top:"1px solid"; border-color:black; border-left:"1px solid"; border-right:"1px solid"}
+  .cellblock_top { border-top:thin solid; border-color:black; border-left:thin solid; border-right:thin solid}
   .cellblock_bottom { border-bottom:thin solid; border-color:black; border-left:thin solid; border-right:thin solid}
   .cellblock { border-color:black; border-left:thin solid; border-right:thin solid}
   .small_form_field {    font-family: Verdana, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_SM}pt; color: #000000; background-color: #FFFFCC; padding: 1px; height: 16px; border: 1px solid #7F9DB9 }  
@@ -265,6 +265,7 @@ my $module_styles =<<"  END_STYLE";
   .bold_italic_text{font-weight:bold;font-style:italic}
   .bold_red_italic_text{font-weight:bold;font-style:italic;color:red}
   .inactive_text {color:#AAAAAA}
+  .active_text {color:#000000}
   .med_gray_bg{ background-color: #CCCCCC; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; Padding:2}
   .grey_header{ font-family: Helvetica, Arial, sans-serif; color: #000000; font-size: ${FONT_SIZE_HG}pt; background-color: #CCCCCC; font-weight: bold; padding:1 2}
   .section_description{ font-family: Helvetica, Arial, sans-serif; color: #666666; font-size: ${FONT_SIZE_HG}pt; font-weight: bold; padding:1}
@@ -1122,6 +1123,7 @@ sub get_content_type {
                  html => 'text/html',
                 excel => 'application/excel',
                  json => 'application/json',
+                  pdf => 'application/pdf',
                 force => 'application/force-download',
                 octet => 'application/octet-stream',
                  jpg  => 'image/jpeg',
