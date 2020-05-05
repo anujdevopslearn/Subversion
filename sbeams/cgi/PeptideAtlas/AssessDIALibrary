@@ -101,6 +101,12 @@ my $page = '';
       ~;
       $page .= $title;
       $page .= $tabMenu;
+      $page .= qq~
+    <script>
+    </script>
+
+      ~;
+
       if ( $params->{ion_library} ) {
         $page .= get_status_box("Analyzing library, may take several minutes") unless $params->{action} eq 'trigger';
         print $page;
@@ -124,7 +130,7 @@ my $page = '';
 //                 //this.files[0].size gets the size of your file.
 //                 alert(this.files[0].size);
 //                 });     
-        </script>
+    </script>
         ~;
         $page .= get_subset_form();
       }
@@ -142,14 +148,14 @@ my $page = '';
 sub get_status_box {
 
   my $msg = shift || '';
-  my $wait = "<img src='$HTML_BASE_DIR/images/wait_sm.gif'></img>";
+  my $wait = "\<img\ src=\"$HTML_BASE_DIR/images/wait_sm.gif\"\>\</img\>";
   if ( $msg ) {
   return qq~ 
       <div id='status' class=info_box width: 400px >$wait $msg</div><br><br>
       <script type='text/javascript'> 
       function set_status ( new_status ) {
         var status = document.getElementById( 'status' );
-        status.innerHTML = new_status;
+        status.innerHTML = '$wait' + new_status;
         return false;
       }
       function update_status ( new_status ) {
@@ -563,43 +569,55 @@ sub analyze_library {
   $log->info( "in analyze library");
   die unless $params->{ion_library};
   $log->info( "params->ion_library exists");
+
+  my $mode = $params->{mode};
+  my $mod_type = $params->{mod_type};
+  $log->info( "Mode is $mode\n");
+  $log->info( "Mod type is $mod_type\n");
   
-  my $exec = "/regis/sbeams/bin/ionlibrary/assess_swathlib.pl  ";
+  my $filebase = $sbeams->getRandomString( num_chars => 20 );
+  
+  my $run_dir = $PHYSICAL_BASE_DIR . '/tmp/PeptideAtlas/AssessDIALibrary/';
+  $log->info( $run_dir );
+
+  my $exec = "/regis/sbeams/bin/ionlibrary/assess_swathlib.pl ";
+  my $sfile = $filebase . '.swaths';
   if ( $params->{swaths_file} ) {
-    my $sfile = $sbeams->getRandomString( num_chars => 20 );
-    open SWATHS, ">/tmp/$sfile";
+    open SWATHS, ">$run_dir/$sfile";
     my $name = $q->param('swaths_file');
     while ( my $line = <$name> ) {
       print SWATHS $line;
     }
     close SWATHS;
-    $exec .= "--swath /tmp/$sfile ";
+    $exec .= "--swath $run_dir/$sfile ";
   }
 
-  my $pfile = $sbeams->getRandomString( num_chars => 20 );
+  my $pfile = $filebase . '.ppeps';
   if ( $params->{pep_file} ) {
-    open PEPS, ">/tmp/$pfile";
+    open PEPS, ">$run_dir/$pfile";
     my $name = $q->param('pep_file');
     while ( my $line = <$name> ) {
       print PEPS $line;
     }
     close PEPS;
   } else {
-    open PEPS, ">/tmp/$pfile" || die;
+    open PEPS, ">$run_dir/$pfile" || die;
     close PEPS;
   }
   $exec .= " --pep /tmp/$pfile ";
-  if ( -e "/tmp/$pfile" ) {
-    $log->info( "created peps" );
-#    print "Created peps file /tmp/$pfile!\n";
+  if ( -e "$run_dir/$pfile" ) {
+    $log->info( "created peps file $run_dir/$pfile" );
   } else {
     print "Error: Failed to create peps file!\n";
     $log->info( "failed to create peps" );
     return '';
   }
+  if ( $params->{massdiff} ) {
+    $exec .= ' --assess ';
+  }
   
-  my $libfile = $sbeams->getRandomString( num_chars => 20 );
-  open IONLIB, ">/tmp/$libfile";
+  my $libfile = $filebase . '.ionlib';
+  open IONLIB, ">$run_dir/$libfile";
   $log->info("created libfile");
   my $name = $q->param('ion_library');
   while ( my $line = <$name> ) {
@@ -607,40 +625,65 @@ sub analyze_library {
   }
   close IONLIB;
   $log->info("populated libfile");
-  $exec .= "--ion /tmp/$libfile  --assess --coldef";
-  if ( -e "/tmp/$libfile" ) {
-#    print "Created file!\n";
+  $exec .= " --ion $run_dir/$libfile --output $run_dir/$filebase  ";
+
+  if ( $mod_type ) {
+    if ( $mod_type eq 'filter' ) {
+      $exec .= " --filter ";
+    } else {
+      $exec .= " --correct ";
+    }
   } else {
+    $exec .= " --full_stats --rt_stats --coldef --invert ";
+  }
+
+  if ( !-e "$run_dir/$libfile" ) {
     print "Error: Failed to create file!\n";
     return '';
   }
-  
   $log->info( $exec );
+  my $lib = $params->{ion_library};
+  
 #  print "Going to execute $exec\n";
 
-  my @status = `$exec`;
-  use Data::Dumper;
-
+  my $result = `$exec 2>&1`;
+  $log->info( $result );
+  if ( -e "$run_dir/$filebase.QC" ) {
+    
+    my $update_libname = `perl -pi -e 's/$libfile/$lib/gm' "$run_dir/$filebase.QC"`;
+    $log->info( "QC file found, updated libname from $libfile to $lib: $update_libname\n" );
+  } else {
+    $log->info( "QC file not found, stopping\n");
+    return;
+  }
+  open QC, "$run_dir/$filebase.QC";
   my $return = '';
-#  $return .= "&nbsp;&nbsp;<table border = 1>\n";
-#  for my $line ( `ls /tmp/` ) {
-  for my $i ( 0, 1, 2 ) {
-    chomp $status[$i];
-    chomp $status[$i];
-  }
-  my @headings = split( /\t/, $status[0] );
-  my @values = split( /\t/, $status[1] );
-  my @defs = split( /\t/, $status[2] );
+  my $format;
   my @data = ( [ qw( Attribute Value Definition ) ] );
-  for ( my $i = 0; $i <= $#headings; $i++ ) {
-    $values[$i] = $params->{ion_library} unless $i;
-    my $def = $defs[$i];
-    $return .= "<tr><td><b>$headings[$i]</b></td><td align=right>$values[$i]</td><td>$def</td></tr>\n";
-    push @data, [ $headings[$i], $values[$i], $def ];
+  while ( my $line = <QC> ) {
+    chomp $line;
+    my @line = split( /\t/, $line );
+    if ( $line[0] eq 'library' ) {
+      $line[1] = $lib;
+    } elsif ( $line[0] eq 'format' ) {
+      $format = $line[1];
+    }
+    $return .= "<tr><td><b>$line[0]</b></td><td align=right>$line[1]</td><td>$line[2]</td></tr>\n";
+    push @data, \@line;
   }
+  close QC;
   $return .= "</table>\n";
-  exec `rm -f /tmp/$libfile /tmp/$pfile`;
- 
+  exec `rm -f $run_dir/$libfile $run_dir/$pfile $run_dir/$sfile`;
+
+  if ( $mod_type ) {
+    `rm -f $run_dir/$filebase.QC`;
+  } else { # no plots in filter mode
+    print_js_status("Finished analysis, plotting results...", 1);
+    my $exec = "/regis/sbeams/bin/ionlibrary/DIALib-QC_RPlot.pl $run_dir/$filebase.fullstats $run_dir/$filebase.RT ";
+    $log->info( $exec );
+    my $pdf_out = `$exec 2>&1`;
+    $log->info( $pdf_out );
+  }
 
    my ( $html, $rs_name ) = $atlas->encodeSectionTable( header => 1, 
                                                         width => '600',
@@ -654,7 +697,7 @@ sub analyze_library {
                                                manual_widgets => 1,
 #                                                    help_text => $help_text,
                                                   chg_bkg_idx => 0, 
-                                                 set_download => 'Download analysis', 
+#                                                 set_download => 'Download analysis', 
 #                                                download_form => $download_select, 
                                                     rs_params => { set_name => 'changeme' },
                                                   file_prefix => 'DIA_Lib_Analysis', 
@@ -666,7 +709,70 @@ sub analyze_library {
 
 
 
-  return "<table><table>$html</table>";
+  my $downloads = qq~
+  <table style="border-collapse: collapse" border=0 width=500>
+  <tr>
+    <td colspan=2 align=left><b>Download Files</b></td>
+  </tr>
+  <tr></tr>
+  <tr class="cellblock_top"> 
+    <td>&nbsp;</td> 
+    <td>&nbsp;</td> 
+  </tr>
+  ~;
+
+  my %type2download = ( pdf => 'Graphical depiction of library characteristics (PDF)',
+                        QC =>  'Library summary statistics, also depicted in table below (TSV)',
+                        mz_corrected => "Input library with m/z values re-computed ($format)",
+                        clean => "Input library with problem assays filtered out ($format)",
+                        problem => "Problem assays filtered from input library ($format)" );
+
+  my $lib_base = $lib;
+  $lib_base =~ s/\.[^\.]+$//;
+  if ( -e "$PHYSICAL_BASE_DIR/tmp/PeptideAtlas/AssessDIALibrary/$filebase.pdf" ) {
+    $downloads .= qq~
+      <tr class=cellblock>
+        <td align=left> <a href=$HTML_BASE_DIR/tmp/PeptideAtlas/AssessDIALibrary/$filebase.pdf> $lib_base.pdf </a> &nbsp;&nbsp;</td>
+        <td align=left><i>&nbsp; $type2download{pdf}</i></td>
+      </tr>
+    ~;
+  }
+  for my $type ( qw( QC mz_corrected clean problem ) ) {
+    my $fname = $lib_base . '.' . $type;
+    my $path_dir = "$PHYSICAL_BASE_DIR/tmp/PeptideAtlas/AssessDIALibrary/";
+    my $rel_path_dir = '/tmp/PeptideAtlas/AssessDIALibrary/';
+    my $path =  $path_dir . '/' . $filebase . '.' . $type;
+    my $rel_path =  $rel_path_dir . '/' . $filebase . '.' . $type;
+
+    if ( !-e $path ) {
+      $path = $run_dir . '/' . $filebase . '.ionlib.' . $type;
+      next unless -e $path;
+      $rel_path =  $rel_path_dir . '/' . $filebase . '.ionlib.' . $type;
+    }
+    $sbeams->makeSBEAMSTempLink( path => $path,
+                             linkname => $fname,
+                             relative => 0 );
+
+    my $dwn = "<a href=$CGI_BASE_DIR/downloadFile.cgi?name=$fname;format=tsv;tmp_file=$rel_path;raw_download=1>$fname</a>";
+                        
+    my $link = qq~  
+    <tr class=cellblock>
+      <td align=left>$dwn &nbsp;&nbsp;</td>
+      <td align=left><i>&nbsp; $type2download{$type}</i></td>
+    </tr>
+    ~;
+    $downloads .= $link;
+  }
+
+  $downloads .= qq~
+  <tr class=cellblock_bottom>
+    <td colspan=2>&nbsp;</td>
+  </tr>
+  </table>
+  ~;
+  $html = '' if $mod_type;
+
+  return "$downloads  <br><br><table>$html</table>";
 }
   
 sub get_subset_form {
@@ -681,13 +787,60 @@ sub get_subset_form {
   my $form = qq~
   $help
   <script type=text/javascript>
-  function check_form() {
-    var ionlib = document.getElementById( 'ion_library' );
-    if ( ionlib.value.length == 0 ) {
-      alert( "You must provide an ion library to use this feature" );
-      return false;
+  function check_form(mode) {
+    if ( mode == "submit" ) {
+      var ionlib = document.getElementById( 'ion_library' );
+      if ( ionlib.value.length == 0 ) {
+        alert( "You must provide an ion library to use this feature" );
+        return false;
+      }
+      return true;
+    } else if ( mode == "assess" ) {
+      var correct_cell = document.getElementById( 'correct_cell' );
+      correct_cell.className = 'inactive_text';
+      var filter_cell = document.getElementById( 'filter_cell' );
+      filter_cell.className = 'inactive_text';
+      var csubmit_cell = document.getElementById( 'correct_submit' );
+      csubmit_cell.className = 'inactive_text';
+      var correct = document.getElementById( 'correct' );
+      correct.checked = false;
+      var filter = document.getElementById( 'filter' );
+      filter.checked = false;
+      var asubmit = document.getElementById( 'assess_submit' );
+      asubmit.className = 'active_text';
+    } else if ( mode == "correct" ) {
+      var correct_cell = document.getElementById( 'correct_cell' );
+      correct_cell.className = 'active_text';
+      var filter_cell = document.getElementById( 'filter_cell' );
+      filter_cell.className = 'active_text';
+      var csubmit = document.getElementById( 'correct_submit' );
+      csubmit.className = 'active_text';
+      var asubmit = document.getElementById( 'assess_submit' );
+      asubmit.className = 'inactive_text';
+    } else if ( mode == "blur" ) {
+      if ( document.getElementById( "analyze" ).checked ) {
+        var correct = document.getElementById( 'correct' );
+        correct.checked = false;
+        var filter = document.getElementById( 'filter' );
+        filter.checked = false;
+      }
+    } else if ( mode == "correct_submit" ) {
+      if ( document.getElementById( "analyze" ).checked ) {
+        return false;
+      }
+      var correct = document.getElementById( 'correct' );
+      var filter = document.getElementById( 'filter' );
+      if ( correct.checked == false && filter.checked == false ) {
+        alert( "Must select either filter or mz_correct" );
+        return false;
+      }
+    } else if ( mode == "assess_submit" ) {
+      if ( document.getElementById( "update" ).checked ) {
+        return false;
+      }
+    } else {
+      alert( mode );
     }
-    return true;
   }
   function popitup(url) {
     newwindow=window.open( url ,'helpwin','height=400,width=300,dependent=yes,screenX=5000,screenY=50,scrollbars=yes,resizable=yes');
@@ -697,17 +850,11 @@ sub get_subset_form {
 
   </script>
   <br><br>
-  <style type="text/css">
-   .cellblock_top { border-top:1px solid; border-color:black; border-left:1px solid; border-right:1px solid; padding:10px }
-   .cellblock_bottom { border-bottom:thin solid; border-color:black; border-left:thin solid; border-right:thin solid; padding:10px }
-   .cellblock { border-color:black; border-left:thin solid; border-right:thin solid}
-   .cellblock_complete { border-color:black; border-left:thin solid; border-right:thin solid; border-top: thin solid; border-bottom:thin solid }
-  </style>
 
-  <table style="border-collapse: collapse" border=0>
-  <form method=post id=assess onSubmit="return check_form()" enctype="multipart/form-data">
+  <table style="border-collapse: collapse" border=0 width=500>
+  <form method=post id=assess onSubmit="return check_form('submit')" enctype="multipart/form-data">
 
-
+  <b>Input data</b>
   <tr class="cellblock_top">
     <td>&nbsp;</td>
     <td>&nbsp;</td>
@@ -728,6 +875,21 @@ sub get_subset_form {
     $title2help->{pep_file}
     <td><input type=file name=pep_file id=pep_file></input></td>
   </tr>
+  <tr class="cellblock_bottom">
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+  <tr><td/></tr>
+  <tr><td/></tr>
+  <tr><td/></tr>
+  <tr><td/></tr>
+  <tr><td colspan=3 align=left><input type=radio id=analyze value=analyze name=mode checked onclick=check_form('assess')><b>Analyze Library</b></td></tr>
+  <tr class="cellblock_top">
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
   <tr class=cellblock>
     <td align=right><b><i>Assess mass diffs(optional):</i></b></td>
     $title2help->{assess_massdiff}
@@ -739,18 +901,38 @@ sub get_subset_form {
     <td>Yes<input type=radio name=coldefs checked=yes>&nbsp;No<input type=radio name=coldefs></td>
   </tr>
   <tr class=cellblock>
-    <td align=right><b><i>Skip DECOYs(optional):</i></b></td>
-    $title2help->{skip_decoys}
-    <td>Yes<input type=radio name=skip_decoy checked=no>&nbsp;No<input checked=yes type=radio name=skip_decoy></td>
+    <td>&nbsp;</td>
+    <td colspan=2 align=left><input type=submit value='Assess Ion Library' id=assess_submit class=active_text onclick="return check_form('assess_submit')"></input></td>
+  </tr>
+  <tr class="cellblock_bottom">
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+  <tr><td/></tr>
+  <tr><td/></tr>
+  <tr><td/></tr>
+  <tr><td/></tr>
+
+  <tr><td colspan=3 align=left><input type=radio id=update value=correct name=mode onclick=check_form('correct') ><b>Correct Library</b></td></tr>
+  <tr class="cellblock_top">
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
   </tr>
   <tr class=cellblock>
-    <td align=right><b><i>Alternate DECOY string (optional):</i></b></td>
-    $title2help->{alt_decoy}
-    <td>Yes<input type=text length=25></td>
+    <td align=right class=inactive_text id=filter_cell><b><i>Filter problem assays:</i></b></td>
+    $title2help->{assess_massdiff}
+    <td><input type=radio name=mod_type id=filter value=filter onclick=check_form('blur') >&nbsp;</td>
+  </tr>
+  <tr class=cellblock>
+    <td align=right class="inactive_text" id=correct_cell><b><i>Re-compute m/z values:</i></b></td>
+    $title2help->{assess_massdiff}
+    <td><input type=radio name=mod_type id=correct value=correct onclick=check_form('blur')>&nbsp;</td>
   </tr>
   <tr class=cellblock>
     <td>&nbsp;</td>
-    <td colspan=2 align=left><input type=submit value='Assess Ion Library'></input></td>
+    <td colspan=2 align=left><input id=correct_submit type=submit value='Repair Ion Library' class=inactive_text onclick="return check_form('correct_submit')"></input></td>
   </tr>
   <tr class="cellblock_bottom">
     <td>&nbsp;</td>
@@ -764,7 +946,25 @@ sub get_subset_form {
   <br>
   ~;
 
+
+
   return $form;
+  my $extra = qq~
+
+  <tr class=cellblock>
+    <td align=right><b><i>Skip DECOYs(optional):</i></b></td>
+    $title2help->{skip_decoys}
+    <td>Yes<input type=radio name=skip_decoy checked=no>&nbsp;No<input checked=yes type=radio name=skip_decoy></td>
+  </tr>
+  <tr class=cellblock>
+    <td align=right><b><i>Alternate DECOY string (optional):</i></b></td>
+    $title2help->{alt_decoy}
+    <td>Yes<input type=text length=25></td>
+  </tr>
+
+  ~;
+
+
 }
 
 sub process_params {
@@ -779,344 +979,6 @@ $q = new CGI;
   return( $params );
 }
 
-sub get_cmod_select {
-  
-  my $curr_val = shift || '';
-  my %sel = ( K8 => '', R10 => '', K6 => '', R6 => '' );
-  my %seen;
-  for my $curr ( split( ',', $curr_val ) ) {
-    $sel{$curr} = 'SELECTED';
-  }
-
-  my $cmod_sel = qq~
-    <SELECT SIZE=4 MULTIPLE NAME=cmod_mass>
-      <OPTION VALUE='' ></OPTION>
-      <OPTION VALUE=K8 $sel{K8}>Lysine + 8</OPTION>
-      <OPTION VALUE=R10 $sel{R10}>Arginine + 10</OPTION>
-      <OPTION VALUE=K6 $sel{K6}>Lysine + 6</OPTION>
-      <OPTION VALUE=R6 $sel{R6}>Arginine + 6</OPTION>
-    </SELECT>
-  ~;
-  return $cmod_sel;
-}
-
-sub get_cmod_radio {
-  my $curr_val = shift || 'light_only';
-  my %sel = (  light_only => '', 'heavy_only' => '', both => '' );
-  $sel{$curr_val} = 'checked';
-
-  my $cmod_radio = qq~
-  <INPUT TYPE=radio name=cmod_opts $sel{light_only} value=light_only> Light only </INPUT>
-  <INPUT TYPE=radio name=cmod_opts $sel{heavy_only} value=heavy_only> Heavy only </INPUT>
-  <INPUT TYPE=radio name=cmod_opts $sel{both} value=both> L & H </INPUT>
-  ~;
-  return $cmod_radio;
-}
-
-
-
-sub authenticate_to_basespace {
-
-  my $uri = $basespace{appsessionuri};
-  my @appsession = split( /\//, $uri );
-  my $appsession_id = $appsession[$#appsession];
-  $basespace{appsession_id} = $appsession_id;
-
-  # Have we been through authentication in this page?
-  if ( $basespace{access_token} ) {
-#    $log->info( "Already authenticated, returning" );
-    return;
-  }
-
-  # Will need a new user agent for subsequent transactions
-  my $ua = LWP::UserAgent->new();
-  $ua->cookie_jar( {} );
-
-  # Is there a cached value?
-  my $token = $sbeams->getSessionAttribute( key => $basespace{appsessionuri} );
-
-  if ( $token ) {   # Yes, will use to set header
-#    $log->info( "Fetched token from Session Cookie" );
-
-  } else { # No, fetch from bs using client ids and auth_code
-
-    my $client = $CONFIG_SETTING{BASESPACE_IONLIBRARY_CLIENT_ID} || '';
-    my $client_secret = $CONFIG_SETTING{BASESPACE_IONLIBRARY_CLIENT_SECRET_ID} || '';
-    my $redirect = "https://db.systemsbiology.net" . $HTML_BASE_DIR . '/cgi/PeptideAtlas/GetDIALibs';
-
-    my $auth_code = $basespace{authorization_code};
-
-    my $auth_url = 'https://api.basespace.illumina.com/v1pre3/oauthv2/token';
-    my $post_param_ref = { client_id => $client,
-                       client_secret => $client_secret, 
-                                code => $auth_code, 
-                        redirect_uri => $redirect, 
-                          grant_type => 'authorization_code' };
-
-    my $response = $ua->post( $auth_url, $post_param_ref );
-
-    for my $line ( split( "\n", $response->content() ) ) {
-      if ( $line =~ /"access_token":"([^"]+)"/ ) {
-        $token = $1;
-        last;
-      }
-    }
-  }
-
-  if ( !$token ) {
-    $log->warn( "Unable to get authorization from Base Space" );
-  } else {
-
-    # Place access token in default header for user agent
-    # for all subsequent transactions.
-    $ua->default_header( 'x-access-token' => $token );
-    $basespace{ua} = $ua;
-    $basespace{token} = $token;
-
-    # Cache token for subsequent cgi calls with this appsession
-    $sbeams->setSessionAttribute( key => $basespace{appsessionuri}, value => $token );
-  }
-
-} # End authenticate_to_basespace
-
-# Fetch appsession info, includes project name and ID to write to
-sub get_appsession_properties {
-
-  if ( !$basespace{access_token} ) {
-    authenticate_to_basespace();
-  } 
-
-  # User Agent created during authentication
-  my $ua = $basespace{ua} || return;
-
-  my $appsession_url = $basespace{appsession_url} || 'https://api.basespace.illumina.com/' . $basespace{appsessionuri};
-  $basespace{appsession_url} ||= $appsession_url;
-
-  my $response = $ua->get( $appsession_url );
-  my @content = $response->content();
-  my $appsession = $json->decode( $content[0] );
-  $basespace{appsession} = $appsession;
-
-  # Fetch project_id from Response->Properties, as per Illumina. 
-  # Response->References also contains info, but is deprecated.
-  if ( $appsession->{Response} ) {
-    if ( $appsession->{Response}->{Properties} ) {
-      for my $ref ( @{$appsession->{Response}->{Properties}->{Items}} ) {
-        my $name = $ref->{Name};
-        $name =~ s/Input\.//;
-        if ( $ref->{Name} eq 'Input.project-id' ) {
-          $basespace{project} = $ref->{Content}->{Name};
-          $basespace{project_id} = $ref->{Content}->{Id};
-        } else {
-          $basespace{$name} = $ref->{Content};
-        }
-      }
-    }
-  }
-#  $basespace{ua} = '';
-#  $basespace{appsession} = '';
-#  die Dumper( %basespace );
-
-} # End get_appsession_properties
-
-
-sub upload_to_basespace {
-
-  my %args = @_;
-
-  my $tmp_file = $args{tmpfile_name} || "$PHYSICAL_BASE_DIR/tmp/$params->{tmp_file}";
-
-  # If we came from basespace, are downloading an entire peakview file:
-  if (  $params->{format} &&  $params->{format} =~ /peakview/i && $params->{name} &&  $params->{tmp_file} ) {
-    $params->{name} =~ s/.csv$/.txt/;
-    $params->{name} =~ s/.tsv$/.txt/;
-  }
-  my $basename = $args{basename} || $params->{name};
-
-  if ( $basename !~ /\.txt$/ ) {
-    $basename =~ s/\....$/.txt/;
-  }
-  if ( $basename !~ /\.txt$/ ) {
-    $basename .= '.txt';
-  }
-
-  my $status = $args{status} || '';
-
-  if ( ! -e $tmp_file ) {
-    die "No tmp file $tmp_file";
-    $log->warn( "Missing file $tmp_file" );
-    return;
-  }
-
-  if ( !$basespace{appsession} ) {
-    get_appsession_properties();
-  }
-#  set_appsession_status( 'Running' );
-
-  my $project = $basespace{project};
-  my $project_id = $basespace{project_id};
-  my $appsessionuri = $basespace{appsessionuri};
-  my $appsession_id = $basespace{appsession_id};
-  my $ua = $basespace{ua};
-  my $token = $basespace{token};
-  if ( !$token ) {
-    $basespace{ua} = '';
-    $basespace{appsession} = '';
-    die Dumper( %basespace );
-  }
-
-  if ( $project_id && $project ) {
-
-    # We will assume that no App Results called 'SWATHIonLibraries' exists
-    # for this project. Try to create.
-    # Required info: Project.Id, AppResult.Name, .Desc, AppSession.ID 
-    $basespace{ua} = '';
-    $basespace{appsession} = '';
-
-    my $appresult_url = "https://api.basespace.illumina.com/v1pre3/projects/$project_id/appresults";
-#    my $appresult_param_ref = { Name => 'SWATHAtlasIonLibraries.txt',
-    my $appresult_param_ref = { Name => $basename,
-                                Description => "Ion Library $basename from SWATH Atlas for SWATH Analysis",
-                                HrefAppSession => $appsessionuri
-                              };
-
-    my $ar_result = $ua->post( $appresult_url, $appresult_param_ref );
-    my @content = $ar_result->content();
-    my $ar_object = $json->decode( $content[0] );
-    my $HrefFiles = $ar_object->{Response}->{HrefFiles} || die Dumper( $ar_object );
-
-    # TODO validate ar_result?
-    # We have a project, and have created an AppResult. Now upload file
-
-#    $log->info( join( "\t", qw( Auth_code URI Token AppResult Project Project_name basename tmp_file client client_secret ) ) );
-#    $log->info( join( "\t", $auth_code, $appsession_id, $token, 'AppResultId', $project_id, $project, $basename, $tmp_file, $client, $client_secret  ) );
-
-    print_js_status( "Uploading file to Base Space, may take a minute or two. <br>" );
-    my $t0 = time();
-
-    upload_file_multipart( token => $token, tmp_file => $tmp_file, href => $HrefFiles, name => $basename );
-#    upload_file( token => $token, tmp_file => $tmp_file, href => $HrefFiles, name => $basename );
-
-    my $t1 = time();
-    my $tdelta = $t1 - $t0;
-
-    # Set analysis Status to Complete
-    set_appsession_status( 'Complete', $status );
-
-#    if ( $params->{mode} eq 'download_libs' ) {
-#      print_js_status( "Finished upload <br><br>", 1 );
-#    }
-    print_js_status( "File $basename uploaded to project $project in Base Space in $tdelta seconds<br>" );
-    print_js_status( "Returning to Base Space...<br>" );
-    sleep 4;
-    js_redirect( "https://basespace.illumina.com/analyses/$appsession_id/files" );
-    sleep 4;
-
-  } else {
-    print_js_status( "<br>Failure: no Base Space projects to write to" );
-    return;
-  }
-
-}  # End upload_to_basespace
-
-sub upload_file {
-  my %args = @_;
-  my $token = $args{token};
-  my $tmp_file = $args{tmp_file};
-  my $basename = $args{name};
-  my $HrefFiles = $args{href};
-
-#    my $exe = "curl -v -H 'x-access-token: $token' -d '\@$tmp_file' -H 'Content-Type: text/tab-separated-values' 'https://api.basespace.illumina.com/" . $HrefFiles . "?name=$basename'";
-    my $exe = "curl -v -H 'x-access-token: $token' -d '\@$tmp_file' -H 'Content-Type: application/octet-stream' 'https://api.basespace.illumina.com/" . $HrefFiles . "?name=$basename'";
-    my @result = `$exe`;
-#    $log->info( $exe );
-#    $log->info( join( "\n", @result ) );
-}
-
-
-#curl -H 'x-access-token: 20dd0ed0340942a49a5b938a592b6900' -H 'Content-Type: text/tab-separated-values' -X POST https://api.basespace.illumina.com/v1pre3/appresults/16026018/files?name=Frankenfile\&multipart=true
-
-#curl -H 'x-access-token: 20dd0ed0340942a49a5b938a592b6900' -H 'Content-Type: text/tab-separated-values' -X POST -T /tmp/20_parts00 -X PUT https://api.basespace.illumina.com/v1pre3/files/16026108/parts/1
-
-#curl -H 'x-access-token: 20dd0ed0340942a49a5b938a592b6900'  -X PUT https://api.basespace.illumina.com/v1pre3/files/998044314?uploadstatus=Complete
-
-
-sub upload_file_multipart {
-  my %args = @_;
-  my $token = $args{token};
-  my $tmp_file = $args{tmp_file};
-  my $basename = $args{name};
-  my $HrefFiles = $args{href};
-
-# /v1pre3/appresults/XXXXX/files/;
-  my $parts_href = $HrefFiles;
-  $parts_href =~ s/\/files/\/parts/;
-  $parts_href =~ s/\/appresults/\/files/;
-
-  my $finish_href = $HrefFiles;
-  $finish_href =~ s/\/files//;
-  $finish_href =~ s/\/appresults/\/files/;
-
-  my $rdir = $sbeams->getRandomString( num_chars => 20 );
-  `mkdir /tmp/$rdir/`;
-  `split -b10000000 -d $tmp_file /tmp/$rdir/upload_ `;
-
-   # Initiate upload 
-   my $exe = "curl -H 'x-access-token: $token' -H 'Content-Type: text/tab-separated-values' -X POST https://api.basespace.illumina.com/$HrefFiles?name=$basename" . '\&multipart=true';
-   my @results = `$exe`;
-#   $log->info( "started multipart upload" );
-#   $log->info( $exe );
-#   $log->info( $results[0] );
-    
-   my $multipart_upload = $json->decode( $results[0] );
-   my $upload_href = $multipart_upload->{Response}->{Href};
-
-   # Upload the parts
-   opendir DIR, "/tmp/$rdir/";
-   my @files = sort( grep( !/\./, readdir DIR ) );
-   my $part = 1;
-   for my $file ( @files ) {
-     if ( -e $file  ) {
-#       $log->info( $file . " exists" );
-     }
-     $exe = "curl -H 'x-access-token: $token' -H 'Content-Type: text/tab-separated-values' -X POST -T /tmp/$rdir/$file -X PUT https://api.basespace.illumina.com/$upload_href/parts/$part";
-#    $log->info( $exe );
-     @results = `$exe`;
-#     $log->info( "uploaded part $part" );
-#     $log->info( join( "\n", @results ) );
-     $part++;
-   }
-
-   # Finish upload
-# curl -H 'x-access-token: 20dd0ed0340942a49a5b938a592b6900'  -X POST https://api.basespace.illumina.com/v1pre3/files/998044314?uploadstatus=Complete
-   $exe = "curl -H 'x-access-token: $token' -X POST https://api.basespace.illumina.com/$upload_href?uploadstatus=complete";
-   @results = `$exe`;
-#   $log->info( $exe );
-#   $log->info( "finished multipart upload" );
-#   $log->info( join( "\n", @results  ) );
-   `rm -Rf /tmp/$rdir/`;
-
-}
-
-sub set_appsession_status {
-
-  my $new_status = shift || return;
-  my $status_description = shift || '';
-  $status_description =~ s/<br>//gi;
-
-  if ( !$basespace{ua} ) {
-    authenticate_to_basespace();
-  } 
-
-  my $ua = $basespace{ua};
-
-  my $appsession_url = $basespace{appsession_url};
-  $ua->post( $appsession_url, [ Status => $new_status, Statussummary => $status_description ] );
-  $ua->post( "$appsession_url/properties", [ 'Logs.tail' => $status_description ] );
-  $ua->post( "$appsession_url/properties", [ 'Logs' => $status_description ] );
-#  die "$appsession_url/properties";
-
-}
 
 sub js_redirect {
   my $url = shift || return;
@@ -1125,6 +987,7 @@ sub js_redirect {
 
 sub print_js_status {
   my $msg = shift or return;
+  $log->info( $msg );
   my $replace = shift || 0;
 
   if ( $replace ) {
