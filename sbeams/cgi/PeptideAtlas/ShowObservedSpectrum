@@ -1740,7 +1740,7 @@ sub interpretUSI {
     $nFoundFiles = 0;
     my $nNoFragFiles = 0;
     my $foundNoFragFile = '';
-    for my $level ( (0,1,2,3) ) {
+    for my $level ( (0,1,2,3,4) ) {
       foreach my $file ( @{$foundFiles} ) {
         print("  - $file->[0] - $file->[1]<BR>\n") if ( $debug );
         if ( $file->[0] == $level ) {
@@ -1763,9 +1763,13 @@ sub interpretUSI {
 	  $foundFile = $foundNoFragFile;
           last;
         } else {
-          $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'FoundMultipleMatchingMsRuns', statusCode=>500, verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
-            message=>"Under dataset '$datasetIdentifier', multiple mzML files with file root '$msRunName' were found. This cannot be properly handled yet");
-          return $response;
+          #$response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'FoundMultipleMatchingMsRuns', statusCode=>500, verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
+          #  message=>"Under dataset '$datasetIdentifier', multiple mzML files with file root '$msRunName' were found. This cannot be properly handled yet");
+          #return $response;
+          print("INFO: We several files at level $level so we'll just pick one and hope for the best<BR>\n") if ( $debug );
+	  $nFoundFiles = 1;
+	  #$foundFile = $foundNoFragFile;
+          last;
         }
       }
     }
