@@ -604,7 +604,7 @@ sub analyze_library {
     open PEPS, ">$run_dir/$pfile" || die;
     close PEPS;
   }
-  $exec .= " --pep /tmp/$pfile ";
+  $exec .= " --pep $run_dir/$pfile ";
   if ( -e "$run_dir/$pfile" ) {
     $log->info( "created peps file $run_dir/$pfile" );
   } else {
@@ -730,9 +730,14 @@ sub analyze_library {
   my $lib_base = $lib;
   $lib_base =~ s/\.[^\.]+$//;
   if ( -e "$PHYSICAL_BASE_DIR/tmp/PeptideAtlas/AssessDIALibrary/$filebase.pdf" ) {
+
+    
+    my $ln_out = `cp $PHYSICAL_BASE_DIR/tmp/PeptideAtlas/AssessDIALibrary/$filebase.pdf $PHYSICAL_BASE_DIR/tmp/PeptideAtlas/AssessDIALibrary/$lib_base.pdf`;
+    $log->info( $ln_out );
+    
     $downloads .= qq~
       <tr class=cellblock>
-        <td align=left> <a href=$HTML_BASE_DIR/tmp/PeptideAtlas/AssessDIALibrary/$filebase.pdf> $lib_base.pdf </a> &nbsp;&nbsp;</td>
+        <td align=left> <a href=$HTML_BASE_DIR/tmp/PeptideAtlas/AssessDIALibrary/$lib_base.pdf> $lib_base.pdf </a> &nbsp;&nbsp;</td>
         <td align=left><i>&nbsp; $type2download{pdf}</i></td>
       </tr>
     ~;
