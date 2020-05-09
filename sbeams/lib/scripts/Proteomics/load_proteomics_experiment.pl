@@ -263,6 +263,9 @@ sub handleRequest {
 
       $experiment_tag = getExperimentTag( exp_id => $experiment_id );
 
+      if ($experiment_tag eq ''){
+         die "no experiment_tag found for experiment_id $experiment_id\n";
+      }
   }
 
 
@@ -290,7 +293,7 @@ sub handleRequest {
 
   #### If there was a set_tag specified, and no experiment_id specified,
   #### identify from tag:
-  if ($experiment_tag && (!$experiment_id) ) {
+  if ($experiment_tag ){
       $sql = qq~
           SELECT PE.experiment_id
           FROM $TBPR_PROTEOMICS_EXPERIMENT PE
@@ -310,6 +313,7 @@ sub handleRequest {
 
   #### If there was NOT a experiment_tag specified, scan for all available ones
   } else {
+    die "needs experiment_tag or experiment_id\n";
     $sql = qq~
           SELECT PE.experiment_id
             FROM $TBPR_PROTEOMICS_EXPERIMENT PE
@@ -323,7 +327,6 @@ sub handleRequest {
 
     die "No experiments found with experiment_tag = '$experiment_tag'"
       if ($n_experiment_ids < 1);
-
     ## xxxxxxx note, need assignment to experiment_id here, but not sure that
     ## original intention of this section is still carried through rest of code
 
@@ -380,7 +383,6 @@ sub handleRequest {
           $search_batch_id,$search_batch);
       }
     }
-
 
     #### Figure out what search_batches to work on
     #### If the user supplied one, go to work on it
@@ -664,9 +666,11 @@ sub loadProteomicsExperiment {
            -f "$source_dir/interact.xml" ||
            -f "$source_dir/interact-prob.xml" ||
            -f "$source_dir/sequest.params" ||
-	   -f "$source_dir/interact-prob.pep.xml" ||
-	   -f "$source_dir/interact-prob-data.htm" ||
-           -f "$source_dir/interact-combined.pep.xml" ) {
+           -f "$source_dir/comet.params" || 
+	         -f "$source_dir/interact-prob.pep.xml" ||
+	         -f "$source_dir/interact-prob-data.htm" ||
+           -f "$source_dir/interact-combined.pep.xml" ||
+           -f "$source_dir/interact-ipro.pep.xml") {
     die("ERROR: '$source_dir' just doesn't look like a search results ".
         "directory");
   }
@@ -710,7 +714,6 @@ sub loadProteomicsExperiment {
 
       #### And if so, add it to out list
       push(@fractions,$element) if ($OKflag);
-
     } ## end if
 
   } ## end foreach
@@ -723,61 +726,59 @@ sub loadProteomicsExperiment {
 
       #### If the --force_ref_db option was supplied, use that
       if ($OPTIONS{force_ref_db}) {
-	$search_database = $OPTIONS{force_ref_db};
+      	$search_database = $OPTIONS{force_ref_db};
 
       #### Else try to get the information from the params file
       } elsif (-e "$source_dir/sequest.params") {
-	my $line;
-	open(INF,"$source_dir/sequest.params");
-	while ($line = <INF>) {
-	  $line =~ s/[\r\n]//g;
-	  if ($line =~ /database_name\s*=\s*(\S+)\s*$/) {
-	    if ($1) {
+				my $line;
+				open(INF,"$source_dir/sequest.params");
+				while ($line = <INF>) {
+					$line =~ s/[\r\n]//g;
+				  if ($line =~ /database_name\s*=\s*(\S+)\s*$/) {
+	          if ($1) {
               if ($search_database) {
                 die("ERROR: more than one search database_name defined.  This is not yet supported.");
               } else {
                 $search_database = $1;
               }
             }
-	  }
-	}
-	close(INF);
-      }
+	       }  
+	    }
+     	close(INF);
+   }
 
 
-      if ($search_database) {
-	my $search_batch_id = addSearchBatchEntry(
-            experiment_id=>$experiment_id,
-            search_database=>$search_database,
-            search_directory=>$source_dir,
-            fraction_directory=>"$source_dir"
-        );
-	print "Added search_batch_id $search_batch_id\n";
-	
-	              if ($experiment_list_file) 
-	                {
-			    open(EXP_IN, ">>$experiment_list_file") or exit(0);
+		if ($search_database) {
+			my $search_batch_id = addSearchBatchEntry(
+							experiment_id=>$experiment_id,
+							search_database=>$search_database,
+							search_directory=>$source_dir,
+							fraction_directory=>"$source_dir"
+					);
+			print "Added search_batch_id $search_batch_id\n";
+		 
+			if ($experiment_list_file) {
+				open(EXP_IN, ">>$experiment_list_file") or exit(0);
 
-                           print (EXP_IN "$search_batch_id\t$source_dir\n");
-    
-                            close(EXP_IN);
-                        }
-                       else 
-                        {
-                        print "[INFO]: Path to Experiment.list not provided ";
+					print (EXP_IN "$search_batch_id\t$source_dir\n");
+			
+					close(EXP_IN);
+		 }
+		 else {
+				print "[INFO]: Path to Experiment.list not provided ";
 
-                        }
-         
-         
-	
-      } else {
-	print "ERROR: Unable to determine search_database from sequest.params\n";
-      }
+		 }
+					 
+					 
+		
+	 } else {
+			print "ERROR: Unable to determine search_database from sequest.params\n";
+	 }
 
-    } else {
-      print "ERROR: There do not appear to be any fractions to load\n";
-    }
-  }
+	 } else {
+				print "ERROR: There do not appear to be any fractions to load\n";
+	 }
+ }
 
 
   #### Define a hash to hold the fraction_id's
@@ -796,8 +797,8 @@ sub loadProteomicsExperiment {
     #### Check to make sure there isn't some different-case version
     if (exists($lower_case_fractions{lc($element)})) {
         print "ERROR: There is already another fraction with this same name ".
-	  "but with different capitalization in this experiment.  Since ".
-	  "most RDBMS's are case-insensitive, this cannot be.\n";
+    	  "but with different capitalization in this experiment.  Since ".
+	      "most RDBMS's are case-insensitive, this cannot be.\n";
         next;
       }
 
@@ -903,27 +904,24 @@ sub loadProteomicsExperiment {
     $timepoints{'A #getDirListing'} += tv_interval($t0,$t1);
 
     print "\nProcessing data in $element\n";
-
     if ($use_batch_transactions && !$TESTONLY) {
       $sbeams->initiate_transaction();
     }
-
     #### Loop over each file, INSERTing into database if a .dta file
     foreach $file (@file_list) {
 
       if ($file =~ /\.dta$/) {
-
         #### Insert the contents of the .dta file into the database and
         #### return the autogen PK, or if it already exists (from
         #### another search batch) then just return that PK
-	my $t0local = [gettimeofday()];
+				my $t0local = [gettimeofday()];
         $msms_spectrum_id = addMsmsSpectrumEntry(
           "$source_dir/$element/$file",$fraction_id);
-        unless ($msms_spectrum_id) {
+          unless ($msms_spectrum_id) {
           die "ERROR: Did not receive msms_spectrum_id\n";
         }
-	$t1 = [gettimeofday()];
-	$timepoints{'B #addMsmsSpectrumEntry'} += tv_interval($t0local,$t1);
+				$t1 = [gettimeofday()];
+				$timepoints{'B #addMsmsSpectrumEntry'} += tv_interval($t0local,$t1);
 
 
         #### Set $outfile to the corresponding .out file
@@ -940,13 +938,13 @@ sub loadProteomicsExperiment {
 
 
         #### Load the .out file
-	$t0 = [gettimeofday()];
+				$t0 = [gettimeofday()];
         my %data = $sbeamsPROT->readOutFile(
           inputfile => "$source_dir/$element/$outfile");
         my $file_root = ${$data{parameters}}{file_root};
         my $mass = ${$data{parameters}}{sample_mass_plus_H};
-	$t1 = [gettimeofday()];
-	$timepoints{'C #readOutFile'} += tv_interval($t0,$t1);
+				$t1 = [gettimeofday()];
+				$timepoints{'C #readOutFile'} += tv_interval($t0,$t1);
 
         #### if $search_database not yet defined (very first .out file)
         #### then create and entry so we know $search_batch_id
@@ -957,6 +955,7 @@ sub loadProteomicsExperiment {
               "supplied forced '$force_ref_db'\n";
             $search_database = $force_ref_db;
           }
+
           $search_batch_id = addSearchBatchEntry(
             experiment_id=>$experiment_id,
             search_database=>$search_database,
@@ -990,10 +989,10 @@ sub loadProteomicsExperiment {
         if ($search_id > 0) {
 
           #### Insert the entries into table "search_hit"
-	  $t0 = [gettimeofday()];
+				  $t0 = [gettimeofday()];
           $search_hit_id = addSearchHitEntry($data{matches},$search_id);
-	  $t1 = [gettimeofday()];
-	  $timepoints{'E #addSearchHitEntry'} += tv_interval($t0,$t1);
+				  $t1 = [gettimeofday()];
+				  $timepoints{'E #addSearchHitEntry'} += tv_interval($t0,$t1);
 
           #print "Successfully loaded $file_root (mass = $mass)\n";
           print ".";
@@ -1002,11 +1001,11 @@ sub loadProteomicsExperiment {
 
         $filecounter++;
 
-	if ($use_batch_transactions && !$TESTONLY && ($filecounter%10 == 0)) {
-	  print "#";
-	  $sbeams->commit_transaction();
-	  $sbeams->initiate_transaction();
-	}
+				if ($use_batch_transactions && !$TESTONLY && ($filecounter%10 == 0)) {
+					 print "#";
+				  $sbeams->commit_transaction();
+					$sbeams->initiate_transaction();
+				}
 
       }
 
@@ -1017,16 +1016,16 @@ sub loadProteomicsExperiment {
     } ## endwhile
 
     if ($use_batch_transactions && !$TESTONLY) {
-      print "#";
+      print "#reset";
+      $sbeams->reset_dbh();
       $sbeams->commit_transaction();
       $sbeams->setAutoCommit(1);
+      print "*************\n";
     }
-
     print "\nFound $filecounter .out files to process\n";
     $total_files += $filecounter;
 
   } ## endforeach
-
   #### Store timepoint
   $timepoints{t2} = [gettimeofday()];
   showTimeStatus(total_files=>$total_files);
@@ -1118,13 +1117,14 @@ sub loadProteomicsExperimentFromPepXML {
     }
   } else {
     my @potential_xml_files = (
+      "$source_dir/interact-ipro.pep.xml",
       "$source_dir/interact-prob.xml",
       "$source_dir/interact.xml",
     );
     foreach my $potential_xml_file ( @potential_xml_files ) {
       if ( -f $potential_xml_file ) {
-	$infile = $potential_xml_file;
-	last;
+      	$infile = $potential_xml_file;
+      	last;
       }
     }
   }
@@ -1136,6 +1136,7 @@ sub loadProteomicsExperimentFromPepXML {
 
   print "INFO: Loading from $infile\n";
   use SBEAMS::Proteomics::PepXMLLoader;
+
   my $pepXMLLoader = new SBEAMS::Proteomics::PepXMLLoader;
   my $result = $pepXMLLoader->loadExperimentFromPepXMLFile(
     experiment_id=>$experiment_id,
@@ -1146,7 +1147,7 @@ sub loadProteomicsExperimentFromPepXML {
 
   return 1;
 
-  }
+}
 
 
 ###############################################################################
@@ -1184,41 +1185,41 @@ sub addMsmsSpectrumEntry {
       my $mzXML_filename = "$search_batch_path/$msrun_name.mzXML";
       my $buffer = "INFO: Looking for '$mzXML_filename'<BR>\n";
       if ( -e $mzXML_filename ) {
-	$buffer .= "INFO: Found '$mzXML_filename'<BR>\n";
-	$buffer .= "INFO: Spectrum number is $start_scan<BR>\n";
-	my $filename = "$PHYSICAL_BASE_DIR/lib/c/Proteomics/getSpectrum/".
+      	$buffer .= "INFO: Found '$mzXML_filename'<BR>\n";
+      	$buffer .= "INFO: Spectrum number is $start_scan<BR>\n";
+       	my $filename = "$PHYSICAL_BASE_DIR/lib/c/Proteomics/getSpectrum/".
         "getSpectrum $start_scan $mzXML_filename |";
-	unless (open(DTAFILE,$filename)) {
-	  $buffer .= "ERROR Cannot open '$filename'!!<BR>\n";
-	  print $buffer;
-	  return;
-	}
-	my @mz_intensities;
-	while (my $line = <DTAFILE>) {
-	  chomp($line);
-	  my @values = split(/\s+/,$line);
-	  push(@mz_intensities,\@values);
-	}
-	close(DTAFILE);
-	$result->{parameters}->{file_root} = "$msrun_name.$start_scan.$end_scan";
-        $result->{parameters}->{start_scan} = $start_scan;
-	$result->{parameters}->{end_scan} = $end_scan;
-	$result->{parameters}->{n_peaks} = scalar(@mz_intensities);
-	$result->{mass_intensities} = \@mz_intensities;
+      	unless (open(DTAFILE,$filename)) {
+    	    $buffer .= "ERROR Cannot open '$filename'!!<BR>\n";
+    	    print $buffer;
+	        return;
+    	  } 
+    	  my @mz_intensities;
+    	  while (my $line = <DTAFILE>) {
+	        chomp($line);
+  	      my @values = split(/\s+/,$line);
+    	    push(@mz_intensities,\@values);
+	      }
+				close(DTAFILE);
+				$result->{parameters}->{file_root} = "$msrun_name.$start_scan.$end_scan";
+				$result->{parameters}->{start_scan} = $start_scan;
+				$result->{parameters}->{end_scan} = $end_scan;
+				$result->{parameters}->{n_peaks} = scalar(@mz_intensities);
+				$result->{mass_intensities} = \@mz_intensities;
 
-	$buffer .= "file_root=$msrun_name\n";
-	$buffer .= "start_scan=$start_scan, end_scan=$end_scan\n";
-	$buffer .= "n_peaks=".scalar(@mz_intensities)."\n";
-	print $buffer if ($VERBOSE > 1);
+				$buffer .= "file_root=$msrun_name\n";
+				$buffer .= "start_scan=$start_scan, end_scan=$end_scan\n";
+				$buffer .= "n_peaks=".scalar(@mz_intensities)."\n";
+				print $buffer if ($VERBOSE > 1);
 
-      } else {
-	die("ERROR: Unable to find $inputfile or mzXML_filename");
-      }
     } else {
-      die "ERROR: Unable to read dta file '$inputfile'\n";
+    	die("ERROR: Unable to find $inputfile or mzXML_filename");
     }
-
+  } else {
+      die "ERROR: Unable to read dta file '$inputfile'\n";
   }
+
+}
 
   my $file_root = ${$result}{parameters}->{file_root};
   $t1 = [gettimeofday()];
@@ -1869,7 +1870,6 @@ sub getDirListing {
     || die "[${PROG_NAME}:getDirListing] Cannot open $dir: $!";
   @files = grep (!/(^\.$)|(^\.\.$)/, readdir(DIR));
   closedir(DIR);
-
   return sort(@files);
 }
 
@@ -2139,6 +2139,7 @@ sub updateProbabilities {
   {
       my @potential_xml_files;
 
+      push( @potential_xml_files, "$source_dir/interact-ipro.pep.xml" );
       push( @potential_xml_files, "$source_dir/interact-prob.xml" );
 
       push( @potential_xml_files, "$source_dir/interact.xml" );
@@ -3367,7 +3368,7 @@ sub deleteFraction {
   my $fraction_tag = $args{'fraction_tag'}
    || die "ERROR[$SUB_NAME]: fraction_tag not passed";
 
-
+  print "aaaaaaaaa $fraction_tag $experiment_tag\n";
   #### Try to find this fraction in database
   my $sql = qq~
      SELECT fraction_id
