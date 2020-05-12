@@ -522,6 +522,7 @@ sub pepXML_start_element {
     $self->{pepcache}->{precursor_intensity} = $attrs{precursor_intensity};
     $self->{pepcache}->{total_ion_current} = $attrs{total_ion_current};
     $self->{pepcache}->{signal_to_noise} = $attrs{signal_to_noise};
+    $self->{pepcache}->{retention_time_sec} = $attrs{retention_time_sec};
   }
 
   #### If this is the search_hit, then store some attributes
@@ -611,7 +612,7 @@ sub pepXML_start_element {
   if ($localname eq 'ptmprophet_result'){
     #prior="0.285714" ptm="PTMProphet_STY79.9663"
     #ptm_peptide="AY(0.000)VY(0.000)ADWVEHAT(0.026)S(0.026)EIEPGT(0.961)T(0.493)T(0.493)VLR">
-    if ($attrs{ptm} =~ /PTMProphet_STY/){
+    if ($attrs{ptm} =~ /79\.9/){
       $self->{pepcache}->{ptm_peptide} = $attrs{ptm_peptide};
     }
   }
@@ -895,7 +896,8 @@ sub pepXML_end_element {
            $protein_name,
            $self->{pepcache}->{precursor_intensity},
            $self->{pepcache}->{total_ion_current},
-           $self->{pepcache}->{signal_to_noise}
+           $self->{pepcache}->{signal_to_noise},
+           $self->{pepcache}->{retention_time_sec},
 					]
       );
     }
@@ -2475,9 +2477,9 @@ sub main {
       my $output_file = $sorted_identlist_file;
       $output_file =~ s/sorted/srtcor/;
       apply_decoy_corrections(
-	input_file => $sorted_identlist_file,
-	output_file => $output_file,
-	decoy_corrections => \%decoy_corrections,
+				input_file => $sorted_identlist_file,
+				output_file => $output_file,
+				decoy_corrections => \%decoy_corrections,
       );
       $sorted_identlist_file = $output_file;
     }
@@ -2491,6 +2493,7 @@ sub main {
     #### Loop through all rows, grouping by peptide sequence, writing
     #### out information for each group of peptide sequence
     my $prev_peptide_sequence = '';
+    my $pre_peptide_accesion ='';
     my $done = 0;
     my @rows;
     while (! $done) {
@@ -2500,14 +2503,19 @@ sub main {
 
       #### Unless we're at the end of the file
       if ($line) {
-	chomp($line);
-	@columns = split("\t",$line);
-	$peptide_sequence = $columns[3];
+				chomp($line);
+				@columns = split("\t",$line);
+				$peptide_sequence = $columns[3];
+        
       }
 
       #### If we're encountering the new peptide, process and write the previous
       if ($prev_peptide_sequence &&
           $peptide_sequence ne $prev_peptide_sequence) {
+          $pre_peptide_accesion =~ /PAp0+(\d+)/;
+          #my $n = $1;
+          #if ($n > 8352023){ 
+          #print "$pre_peptide_accesion $n\n";
          	my $peptide_summary = coalesceIdentifications(
 	        rows => \@rows,
 	        column_names => \@column_names,
@@ -2518,7 +2526,9 @@ sub main {
           writeToPAxmlFile(
         	  peptide_summary => $peptide_summary,
         	);
+         #}
         	$prev_peptide_sequence = $peptide_sequence;
+          $pre_peptide_accesion =  $columns[2];
         	@rows = ();
       }
 
@@ -2531,7 +2541,9 @@ sub main {
 
       #### Needed for the very first row
       unless ($prev_peptide_sequence) {
-	$prev_peptide_sequence = $peptide_sequence;
+				$prev_peptide_sequence = $peptide_sequence;
+ $pre_peptide_accesion = $columns[2];
+
       }
 
     }
@@ -2686,7 +2698,8 @@ sub writePepIdentificationListFile {
                           protXML_n_sibling_peptides
                           precursor_intensity  
                           total_ion_current 
-                          signal_to_noise );
+                          signal_to_noise
+                          retention_time_sec );
 
   print OUTFILE join("\t",@column_names)."\n";
 
@@ -2778,14 +2791,15 @@ sub writePepIdentificationListFile {
       $n_adjusted_observations = $info->{n_adjusted_observations};
       $n_sibling_peptides = $info->{n_sibling_peptides};
       #push(@{$identification},$adjusted_probability,$n_adjusted_observations,$n_sibling_peptides);
-      $extra_cols_array[$idx] = "$identification->[8],$identification->[9],$identification->[10],$adjusted_probability,$n_adjusted_observations,$n_sibling_peptides".
-                                ",$identification->[11],$identification->[12],$identification->[13]";
+      $extra_cols_array[$idx] = "$identification->[8],$identification->[9],$identification->[10],".
+                                "$adjusted_probability,$n_adjusted_observations,$n_sibling_peptides".
+                                ",$identification->[11],$identification->[12],$identification->[13],$identification->[14]";
       if ($initial_probability) {
 				$probability_adjustment_factor = $adjusted_probability / $initial_probability;
       }
     }else{
       $extra_cols_array[$idx] = "$identification->[8],$identification->[9],$identification->[10],,,".
-                                ",$identification->[11],$identification->[12],$identification->[13]";
+                                ",$identification->[11],$identification->[12],$identification->[13],$identification->[14]";
     }
     #### If there is spectral library information, look at that
     #print "spectral_library_data = $spectral_library_data\n";
@@ -2835,13 +2849,13 @@ sub writePepIdentificationListFile {
 				$probability = 1 if ($probability > 1);
 				$identification->[8] = $probability;
         $extra_cols_array[$idx] = "$identification->[8],$identification->[9],$identification->[10],".
-                                    "$identification->[11],$identification->[12],$identification->[13]"; 
+                                    "$identification->[11],$identification->[12],$identification->[13],$identification->[14]"; 
 				### tmf debugging 12/08
 				if ($diff_is_great)
 					 { print "Final adj prob = $probability: REJECTED!!!\n"; }
 			} else {
 				 $extra_cols_array[$idx] = "$identification->[8],$identification->[9],$identification->[10],".
-											"$identification->[11],$identification->[12],$identification->[13]";
+											"$identification->[11],$identification->[12],$identification->[13],$identification->[14]";
 				 print "WARNING: No adjusted probability for $charge-$modified_peptide\n";
 			}
     }
@@ -2918,7 +2932,7 @@ sub writePepIdentificationListFile {
     chomp $line;
     my @columns = split("\t", $line);
     if($extra_cols_array[$idx]){
-      splice(@columns,$#columns-5,6);
+      splice(@columns,$#columns-6,7);
       push @columns, split(",", $extra_cols_array[$idx],-1);
     }else{
       print "WARINING: only 7 columns\n";
@@ -3998,7 +4012,7 @@ sub writePepIdentificationListTemplateFile {
   my @column_names = qw ( search_batch_id spectrum_query peptide_accession
     peptide_sequence preceding_residue modified_peptide_sequence
     following_residue charge probability massdiff protein_name 
-    precursor_intensity total_ion_current signal_to_noise);
+    precursor_intensity total_ion_current signal_to_noisei retention_time_sec);
 
   print OUTFILE join("\t",@column_names)."\n";
 
