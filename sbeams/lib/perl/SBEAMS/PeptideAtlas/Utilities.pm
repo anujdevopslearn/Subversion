@@ -2587,6 +2587,7 @@ sub get_clustal_display {
   my $scroll_class = ( scalar( @{$args{alignments}} ) > 16 ) ? 'clustal_peptide' : 'clustal';
 
   my $style = '';
+  my $style2= '';
   my $px = 0;
   for my $seq ( @{$args{alignments}} ) {
     my $sequence = $seq->[1];
@@ -2595,7 +2596,7 @@ sub get_clustal_display {
       $sequence = $self->highlight_sites( seq => $sequence, 
                                           acc => $seq->[0], 
                                           nogaps => 1,
-					                                coverage => $args{coverage}->{$seq->[0]});
+					  coverage => $args{coverage}->{$seq->[0]});
     }
 
     if ( $args{snp_cover} ) {
@@ -2606,26 +2607,33 @@ sub get_clustal_display {
 
     if ( $seq->[0] ) {
       if ($seq->[0] eq 'Primary'){
-         $style = "style ='position: sticky; top: $px"."px; background:#f3f1e4'";
-         $px += 15; 
+	$style2= "style ='position: sticky; top: ${px}px;left: 0px;z-index:99;background:#f3f1e4'";
+	$style = "style ='position: sticky; top: ${px}px;z-index:9;background:#f3f1e4'";
+	$px += 15;
+      }
+      else {
+	$style2= "style ='position: sticky; left: 0px;z-index:90;background:#f3f1e4'";
       }
       $table_rows .= qq~
       <TR >
-        <TD ALIGN=right class=pa_sequence_font $style>$seq->[0]:</TD>
+        <TD ALIGN=right class=pa_sequence_font $style2>$seq->[0]:</TD>
         <TD NOWRAP=1 class=pa_sequence_font $style >$sequence</TD>
       </TR>
       ~;
       $style = '';
+      $style2= '';
     } else {
-      $style = "style ='position: sticky; top: $px". "px;background:#f3f1e4'";
+      $style2= "style ='position: sticky; top: ${px}px;left: 0px;z-index:99;background:#f3f1e4'";
+      $style = "style ='position: sticky; top: ${px}px;left: 0px;z-index:95;background:#f3f1e4'";
       $px += 15;
       $table_rows .= qq~
       <TR>
-        <TD ALIGN=right class=pa_sequence_font $style></TD>
+        <TD ALIGN=right class=pa_sequence_font $style2></TD>
         <TD NOWRAP=1 class=pa_sequence_font $style>$sequence</TD>
       </TR>
       ~;
       $style = '';
+      $style2= '';
     }
   }
 
