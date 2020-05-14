@@ -934,7 +934,7 @@ sub handle_request {
 
     # PEFF
     my $had_peff = 0;
-    while ($biosequence->{biosequence_desc} =~ m/\\([^=]+)=(\S+)/g) {
+    while ($biosequence->{biosequence_desc} =~ m/\\([^=]+)=([^\\]+)/g) {
       $had_peff++;
       $htmlcontent .= $sbeamsMOD->encodeSectionItem(
 	key=>"&nbsp;&nbsp;&nbsp;<span class='pa_snp_warn_font'>PEFF</span> $1",
