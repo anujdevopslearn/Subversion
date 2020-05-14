@@ -7,7 +7,7 @@
 # Description : Prints summary of a given protein given selection
 #               atlas build and protein name.
 #
-# SBEAMS is Copyright (C) 2000-2019 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2020 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -3546,8 +3546,8 @@ sub displayAnnotatedSequence {
           push @{$var}, "<a href='GetVariantEvidence?type=init_met;protein_name=$biosequence->{biosequence_name};atlas_build_id=$args{atlas_build_id};action=GO' title='View evidence for Initiator Methionine cleavage in $biosequence->{biosequence_name}'><img src=$HTML_BASE_DIR/images/search_icon_small.png /></a>";
 
         }
+	my $v1num = $var->[1];
         if ( $var->[5] eq 'seen' ) {
-
           my $skey = $var->[0] . '_' . $var->[1];
           my $nobs = $html_seq->{site_nobs};
           my $site = $nobs->{$skey}->{site};
@@ -3583,16 +3583,16 @@ sub displayAnnotatedSequence {
               }
               $uniq = "($nobs->{unique}->{$skey} unique)" if $nobs->{unique}->{$skey};
             }
-  #          Not yet ready to release
+
             $var->[1] = "<a href=ViewPeptideExpression?atlas_build_id=$args{atlas_build_id};spep=$spep;opep=$opep;use_nextprot=$use_nextprot;acc=$biosequence->{biosequence_name} title='View SNP expression profile'>$var->[1]</a>";
             $title .= "<br>Supporting Peptides:<br>$spep_str";
             $var->[4] = qq~<span class=$class onMouseout="hideTooltip()" onMouseover="showTooltip(event,'$title')">Obs $perc ~ . '% (' . "$post_cnt/$total) $uniq </span> $var->[4] ";
 
-  #          $var->[1] = "<span class=pa_ title='observed SNP'>$var->[1]</span>";
-            }
-          }
+	    #  $var->[1] = "<span class=pa_ title='observed SNP'>$var->[1]</span>";
+	  }
+	}
         my $prot = $biosequence->{biosequence_name};
-        $seqHTML .= "<script type='text/javascript'>check_mupit( '$prot', $var->[3], $var->[1] )</script>" unless $var->[1] eq 'Num'; #  if $class eq 'visible';
+        $seqHTML .= "<script type='text/javascript'>check_mupit( '$prot', $var->[3], $v1num )</script>\n" unless $v1num eq 'Num'; #  if $class eq 'visible';
         $class = ( $class eq 'hidden' ) ? 'hidden' : 'hidden';
         $prot =~ s/NX_//g;
         my $mupit_link = "&nbsp;&nbsp;|<a target=_mupit href=http://cravat.us/MuPIT_Interactive/?gm=${prot}:$var->[3]&protquery=y title='View this residue highlighted in green in the $prot structure at MuPit Interactive'><img src=$HTML_BASE_DIR/images/3D_smallest.png border=0></a>|";
