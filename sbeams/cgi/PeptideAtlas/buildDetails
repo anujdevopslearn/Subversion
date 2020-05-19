@@ -261,6 +261,8 @@ sub get_table_help {
                  { key => 'Indistinguishable Representative Protein', value=>'Indistinguishable representative means that there are peptides that map uniquely to a set of non-canonical proteins, thereby indicating that at least one of the proteins in the set must be present, but it cannot be determined which it is.'},
                  { key => 'Marginally Distinguished Proteins', value=>'Marginally distinguished means that this protein has peptides that are shared with a canonical peptide, but it also has a small number of peptides that appear to distinguish it from the canonical identification.'},
                  { key => 'Representative Proteins', value=>'Representative means that there are peptides that map uniquely to a set of non-canonical proteins, thereby indicating that at least one of the proteins in the set must be present, but it cannot be determined which it is.'},
+                 { key => 'Insufficient evidence', value=>'Protein has one or more apparently uniquely mapping peptides but none are 9AA or greater'},
+                 { key => 'weak', value=>'Protein has one peptide that is uniquely mapping and at least 9 AA long, but is missing a second peptide that meets HPP guidelines'},
         );
                  
     $showtext = 'show row descriptions';
@@ -699,7 +701,7 @@ sub get_build_overview {
   AND PPL.level_name in 
       ('canonical', 'indistinguishable representative', 
        'marginally distinguished', 'representative',
-       'possibly_distinguished')
+       'possibly_distinguished','weak', 'insufficient evidence')
   AND BS.biosequence_name NOT LIKE 'DECOY%'
   AND BS.biosequence_name NOT LIKE '%UNMAPPED%'
   AND BS.biosequence_name NOT LIKE '%CONTAM%'
