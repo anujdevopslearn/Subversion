@@ -301,6 +301,13 @@ sub processRequest {
 	    $observedPrecursorMz = $getSpectrumResult->{observedPrecursorMz};
 	    $peptidoform = $getSpectrumResult->{peptideStr} unless ( $peptidoform );
 	    $charge = $getSpectrumResult->{charge} unless ( $charge );
+            #print("INFO: Read ".length(@spectrum_array)." peaks\n");
+            #print("INFO: output_mode = $output_mode\n");
+            if ( $output_mode ne 'HTML' ) {
+              writeSpectrum(proxiSpectrum=>$getSpectrumResult->{proxiSpectrum}, output_mode=>$output_mode);
+              return;
+            }
+
           } else {
 	    print "ERROR: Unable to read peaks.\n";
             return;
@@ -325,15 +332,18 @@ sub processRequest {
 	      push(@{$getSpectrumResult->{proxiSpectrum}->{attributes}}, { accession=>"MS:1009999", name=>"delta mass peptidoform sequence", value=>$pep->{deltaMassSequenceString} } );
 	    }
 
-	    if ( $output_mode ne 'HTML' ) {
-	      writeSpectrum(proxiSpectrum=>$getSpectrumResult->{proxiSpectrum}, output_mode=>$output_mode);
-	      return;
-	    }
+            if ( $output_mode ne 'HTML' ) {
+              writeSpectrum(proxiSpectrum=>$getSpectrumResult->{proxiSpectrum}, output_mode=>$output_mode);
+              return;
+            }
+
           } else {
 	    print "ERROR: Unable to read peaks.\n";
 	    return;
           }
+
         }
+
 
       #### Otherwise this USI not available
       } else {
@@ -2039,11 +2049,12 @@ sub getSpectrumFromProteomeCentral {
   my $lwp = LWP::UserAgent->new;
   my $lwp_response = $lwp->request( $request );
   if ( $lwp_response->is_success() ) {
-    my $response = JSON::Parse::parse_json($lwp_response->content());
+    my $proxiSpectrum = JSON::Parse::parse_json($lwp_response->content());
+    $response->{proxiSpectrum} = $proxiSpectrum;
 
     #### Extract the precursor mz
-    if ( $response->{'attributes'} ) {
-      my @attributes = @{$response->{'attributes'}};
+    if ( $proxiSpectrum->{'attributes'} ) {
+      my @attributes = @{$proxiSpectrum->{'attributes'}};
       foreach my $attribute (@attributes) {
         if ( $attribute->{accession} eq "MS:1000744" ) {  # selected ion m/z
 	  $observedPrecursorMz = $attribute->{value};
@@ -2058,8 +2069,8 @@ sub getSpectrumFromProteomeCentral {
     }
 
     #### Extract the spectra data
-    if ( $response->{'mzs'} ) {
-      my @peaks = @{$response->{'mzs'}};
+    if ( $proxiSpectrum->{'mzs'} ) {
+      my @peaks = @{$proxiSpectrum->{'mzs'}};
       my $counter = 0;
       foreach my $peak (@peaks) {
         $mz_intensities[$counter] = [ $peak ];
@@ -2068,8 +2079,8 @@ sub getSpectrumFromProteomeCentral {
     }
 
     #### Extract the spectra data
-    if ( $response->{'intensities'} ) {
-      my @peaks = @{$response->{'intensities'}};
+    if ( $proxiSpectrum->{'intensities'} ) {
+      my @peaks = @{$proxiSpectrum->{'intensities'}};
       my $counter = 0;
       foreach my $peak (@peaks) {
         $mz_intensities[$counter][1] = $peak;
