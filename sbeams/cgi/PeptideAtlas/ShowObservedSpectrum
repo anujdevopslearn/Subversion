@@ -1694,6 +1694,9 @@ sub interpretUSI {
       #### Set some other places to look
       my @locations = ( "$data_location/data", "$data_location/../data", "$data_location", "$data_location/.." );
 
+      #### If the MSRun name has a suffix of .mzML, strip that
+      $msRunName =~ s/\.mzML$//;
+
       #### Loop over the various places to find it
       my $iLocation = 0;
       my $foundHere = 0;
