@@ -720,7 +720,7 @@ sub handle_request {
   if ($n_biosequences == 0) {
     if ($sbeams->output_mode() eq 'html') {
       print qq~
-        Protein identifier '$protein_name' not found in
+        This protein identifier was not found in
         atlas build '$atlas_build_names{$atlas_build_id}'.
 	<br>
 	Please check selections and try again.
