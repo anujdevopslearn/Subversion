@@ -1616,19 +1616,6 @@ sub handle_request {
 	) if $htmlmode;
 
 
-    #### Create Cytoscape format files if selected
-    my $java_web_start = { template => 'GetProtein' };
-    if ($sbeams->output_mode() eq 'cytoscape') {
-      prepareJavaWebStartFiles( rs_params_ref=>\%rs_params,
-				resultset_ref=>$resultset_ref,
-				query_parameters_ref=>\%parameters,
-				url_cols_ref=>\%url_cols,
-				column_titles_ref=>\@column_titles,
-				hidden_cols_ref=>\%hidden_cols,
-				java_web_start=>$java_web_start,
-	  );
-    }
-
     #### Since we don't display the controls, make the default page size
     #### huge, otherwise the user may not see all peptides
     $rs_params{page_size} = 500;
@@ -1791,17 +1778,8 @@ sub handle_request {
       max_widths=>\%max_widths,
       column_titles_ref=>\@column_titles,
       base_url=>$base_url,
-      cytoscape=>$java_web_start,
       no_escape => 1
     );
-
-
-    #### Display a hyperlink for viewing this information in Cytoscape
-    if ($sbeams->output_mode() eq 'html') {
-      my $GetProtein_hlink = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_build_id&protein_name=$protein_name&output_mode=cytoscape&action=GO";
-
-      print qq~<TABLE><TR><TD><A HREF="$GetProtein_hlink"><IMG BORDER="0" SRC="$HTML_BASE_DIR/images/PAcyto_icon.png"></A></TD><TD valign="center"><A HREF="$GetProtein_hlink">[ View peptides and related proteins as a network with Cytoscape ]</A></TD></TR></TABLE><BR>~;
-    }
 
 
     #### Display the resultset controls
@@ -2107,14 +2085,14 @@ sub handle_request {
 				 );
     }
 
-
+    print "<BR><BR>";  #give the last item some breathing room
 
     #### If QUERY was not selected, then tell the user to enter some parameters
   } else {
     if ($sbeams->invocation_mode() eq 'http') {
       print "<H4>Select parameters above and press QUERY</H4>\n";
     } else {
-      print "You need to supply some parameters to contrain the query\n";
+      print "You need to supply some parameters to constrain the query\n";
     }
   }
 
@@ -3389,7 +3367,7 @@ sub displayAnnotatedSequence {
 # TMF: added this statement for special need
 # print STDERR int($observed_residues/$seq_length*1000)/1000,"\t",int(($observed_residues)/($seq_length-$cnt)*1000)/1000,"\n";
 #  print "\n\n";
-#  print "Protein Coverage = ",int($observed_residues/$seq_length*1000)/10,"%";
+#  print "Protein Coverage = ".int($observed_residues/$seq_length*1000)/10 . "%";
 #  $log->debug( "OBS: $observed_residues, SEQLEN: $seq_length, CNT $cnt" );
 #  print ' (' . int(($observed_residues)/($seq_length-$cnt)*1000)/10,"% of likely observable sequence)";
 
@@ -3482,7 +3460,11 @@ sub displayAnnotatedSequence {
                                         digest_type => $digest_type,
                                        show_clustal => $args{show_clustal} );
 
-  $seqHTML .= "$html_seq->{seq_display} <BR>\n";
+  $seqHTML .= "$html_seq->{seq_display}\n";
+
+  $seqHTML .= "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Protein Coverage = <b style='color:red;'>".int($observed_residues/$seq_length*1000)/10 ."% </b>";
+  my $likely = ( $seq_length-$cnt ) ? int(($observed_residues)/($seq_length-$cnt)*1000)/10 : 0;
+  $seqHTML .= " ($likely% of likely observable sequence)<BR><BR>";
 
   if ( $html_seq->{clustal_display} ) { # If we have any annotations
     my $variant_list = '';
@@ -3643,9 +3625,6 @@ sub displayAnnotatedSequence {
     $seqHTML .= "<BR><b>No $atype found in $curr_source </b> $look_src<BR>\n";
   } # End if !variants
 
-  $seqHTML .= "Protein Coverage = ",int($observed_residues/$seq_length*1000)/10,"% ";
-  my $likely = ( $seq_length-$cnt ) ? int(($observed_residues)/($seq_length-$cnt)*1000)/10 : 0;
-  $seqHTML .= " ($likely% of likely observable sequence)<BR>";
   #$seqHTML .= "<BR><BR>Notes:<BR>\n$notes_buffer" if ($notes_buffer);
 
 
@@ -3791,461 +3770,13 @@ sub getProteinStructure {
   }
 
   return($rows[0]);
-
 }
 
 
+#### 04/30/13: get_table_help Superceded by make_table_help in Annotations.pm.
+#### Enter new column definitions in %coldefs therein.
+#### 06/11/20: Finally removed commented-out code herein.
 
-###############################################################################
-# prepareJavaWebStartFiles
-#
-# Prepares the required noa and sif files for Cytoscape from this dataset
-###############################################################################
-sub prepareJavaWebStartFiles {
-  my %args = @_;
-
-  #### Process the arguments list
-  my $resultset_ref = $args{'resultset_ref'};
-  my $rs_params_ref = $args{'rs_params_ref'};
-  my $query_parameters_ref = $args{'query_parameters_ref'};
-  my $url_cols_ref = $args{'url_cols_ref'};
-  my $hidden_cols_ref = $args{'hidden_cols_ref'};
-  my $column_titles_ref = $args{'column_titles_ref'};
-  my $java_web_start = $args{'java_web_start'};
-  my %rs_params = %{$rs_params_ref};
-  my %parameters = %{$query_parameters_ref};
-
-  my $atlas_build_id = $parameters{atlas_build_id};
-
-  #### Set up some data data structures to hold Java Web Start data
-  my %java_web_start_file_header = ( 'network.sif' => undef,
-				     'commonName.noa' => 'commonName',
-				     'organism.noa' => 'species',
-				     'webLookup.noa' => 'webLookup',
-				     'bioentityType.noa' => 'bioentityType',
-				   );
-  while ( my ($filename,$header_name) = each %java_web_start_file_header ) {
-    my @tmp = ( $header_name );
-    $java_web_start->{files}->{$filename} = \@tmp;
-  }
-
-  my %protein_hash = ();
-  my @new_protein_list = ( $query_parameters_ref->{protein_name} );
-  my %peptide_hash = ();
-  my @new_peptide_list = keys(%peptide_hash);
-  my %interaction_hash;
-
-  my $loop_cnt = 0;
-  #### Keep looping until the entire network is fleshed out
-  while (1) {
-    $loop_cnt++;
-
-    #### Return peptide information for these proteins
-    my $peptide_resultset = getPeptideInformationForProteins(
-      protein_list_ref => \@new_protein_list,
-      atlas_build_id => $query_parameters_ref->{atlas_build_id},
-    );
-
-    #### Also include all other columns
-    my $all_columns = $peptide_resultset->{column_list_ref};
-    my $cols = $peptide_resultset->{column_hash_ref};
-    my $i=0;
-    foreach my $column ( @{$all_columns} ) {
-      my $title = $peptide_resultset->{column_titles_ref}->[$i++];
-      my @tmp = ( $title || $column );
-      unless ($java_web_start->{files}->{"$column.noa"}) {
-	$java_web_start->{files}->{"$column.noa"} = \@tmp;
-      }
-    }
-
-#print "Content-type: text/html\n\n<PRE>\n";
-
-    my $nrows = scalar(@{$peptide_resultset->{data_ref}});
-    my $col = $peptide_resultset->{column_hash_ref};
-    foreach my $row ( @{$peptide_resultset->{data_ref}} ) {
-
-      #### Determine the best canonical name. We must have one
-      my $canonical_name = $row->[$col->{peptide_accession}];
-      my $is_new_peptide = 0;
-      unless ($peptide_hash{$canonical_name}) {
-        $peptide_hash{$canonical_name}++;
-        push(@new_peptide_list,$canonical_name);
-        $is_new_peptide = 1;
-        #$log->debug("Added new peptide $canonical_name at iteration $loop_cnt" );
-      }
-
-      #### Add connections to proteins
-      my $edge = "$row->[$col->{biosequence_name}] contains $canonical_name";
-      unless ($interaction_hash{$edge}) {
-	push(@{$java_web_start->{files}->{'network.sif'}},$edge);
-	$interaction_hash{$edge}++;
-      }
-
-      next unless ($is_new_peptide);
-
-      #### Add standard attributes
-      push(@{$java_web_start->{files}->{'commonName.noa'}},"$canonical_name = $canonical_name");
-      push(@{$java_web_start->{files}->{'organism.noa'}},"$canonical_name = unknown");
-      push(@{$java_web_start->{files}->{'webLookup.noa'}},"$canonical_name = $SERVER_BASE_DIR/$CGI_BASE_DIR/PeptideAtlas/GetPeptide?&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$canonical_name&action=QUERY");
-
-      #### Add regular peptide attributes
-      $i=0;
-      foreach my $column ( @{$all_columns} ) {
-        my $title = $peptide_resultset->{column_titles_ref}->[$i++];
-        my $value = $row->[$col->{$column}];
-        push(@{$java_web_start->{files}->{"$column.noa"}},
-          "$canonical_name = $value") if ($value);
-      }
-
-
-      #### Calculate a special proteotypic attribute
-      my $peptide_type = 'peptide';
-      if ($row->[$cols->{n_protein_mappings}] == 1 &&
-	  $row->[$cols->{n_observations}] > 2 &&
-	  $row->[$cols->{empirical_proteotypic_score}] > 0.3) {
-	$peptide_type = 'proteotypic peptide';
-      }
-      push(@{$java_web_start->{files}->{'bioentityType.noa'}},"$canonical_name = $peptide_type");
-
-    }
-
-    last if (scalar(@new_peptide_list) == 0);
-    @new_protein_list = ();
-
-    #######################################################
-    #### Now get the protein information for these peptides
-
-    #$log->debug("Getting new info for " . scalar( @new_peptide_list) . " at iteration $loop_cnt" );
-    #### Return protein information for these peptides
-    my $protein_resultset = getProteinInformationForPeptides(
-      peptide_list_ref => \@new_peptide_list,
-      atlas_build_id => $query_parameters_ref->{atlas_build_id},
-    );
-
-    #### Also include all other columns
-    my $all_columns = $protein_resultset->{column_list_ref};
-    my $i=0;
-    foreach my $column ( @{$all_columns} ) {
-      my $title = $protein_resultset->{column_titles_ref}->[$i++];
-      my @tmp = ( $title || $column );
-      unless ($java_web_start->{files}->{"$column.noa"}) {
-	$java_web_start->{files}->{"$column.noa"} = \@tmp;
-      }
-    }
-
-    my $nrows = scalar(@{$protein_resultset->{data_ref}});
-    my $col = $protein_resultset->{column_hash_ref};
-    foreach my $row ( @{$protein_resultset->{data_ref}} ) {
-
-      #### Determine the best canonical name. We must have one
-      my $canonical_name = $row->[$col->{biosequence_name}];
-      my $is_new_protein = 0;
-      unless ($protein_hash{$canonical_name}) {
-        #$log->debug("Added new protein $canonical_name at iteration $loop_cnt" );
-        $protein_hash{$canonical_name}++;
-        push(@new_protein_list,$canonical_name);
-	$is_new_protein = 1;
-      }
-
-      #### Add edges to peptides
-      my $edge = "$row->[$col->{biosequence_name}] contains $row->[$col->{peptide_accession}]";
-      unless ($interaction_hash{$edge}) {
-	push(@{$java_web_start->{files}->{'network.sif'}},$edge);
-	$interaction_hash{$edge}++;
-      }
-
-      next unless ($is_new_protein);
-
-      #### Add standard attributes
-      push(@{$java_web_start->{files}->{'commonName.noa'}},"$canonical_name = $canonical_name");
-      push(@{$java_web_start->{files}->{'organism.noa'}},"$canonical_name = unknown");
-      push(@{$java_web_start->{files}->{'webLookup.noa'}},"$canonical_name = $SERVER_BASE_DIR/$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_build_id&protein_name=$canonical_name&action=GO");
-      push(@{$java_web_start->{files}->{'bioentityType.noa'}},"$canonical_name = protein");
-
-      #### Add regular proteins attributes
-      $i=0;
-      foreach my $column ( @{$all_columns} ) {
-        my $title = $protein_resultset->{column_titles_ref}->[$i++];
-        my $value = $row->[$col->{$column}];
-        push(@{$java_web_start->{files}->{"$column.noa"}},
-          "$canonical_name = $value") if ($value);
-      }
-
-    }
-
-    last if (scalar(@new_protein_list) == 0);
-    @new_peptide_list = ();
-
-
-  } # end while 1
-
-  #$log->debug( "Done building cytoscape webstart, " . scalar( @{$java_web_start->{files}->{'commonName.noa'}} )  . "proteins in total of $loop_cnt passes through the loop" );
-} # end prepareJavaWebStartFiles
-
-
-
-###############################################################################
-# getPeptideInformationForProteins
-#
-# Returns a resultset of peptide information for an input list of proteins
-###############################################################################
-sub getPeptideInformationForProteins {
-  my %args = @_;
-
-  #### Process the arguments list
-  my $protein_list_ref = $args{'protein_list_ref'};
-  my $atlas_build_id = $args{'atlas_build_id'};
-
-
-  #### Create a comma separated list of proteins
-  my $protein_list_str = join("','",@{$protein_list_ref}) || '';
-  $protein_list_str = "'$protein_list_str'";
-
-
-  #### Define the desired columns in the query
-  #### [friendly name used in url_cols,SQL,displayed column title]
-  my @column_array = (
-    ["peptide_accession","P.peptide_accession","Peptide Accession"],
-    ["peptide_sequence","P.peptide_sequence","Peptide Sequence"],
-    ["best_probability","STR(PI.best_probability,7,3)","Best Prob"],
-    ["n_observations","PI.n_observations","N Obs"],
-    ["empirical_proteotypic_score","STR(PI.empirical_proteotypic_score,7,2)","Empirical Proteotypic Score"],
-    ["SSRCalc_relative_hydrophobicity","STR(P.SSRCalc_relative_hydrophobicity,7,2)","SSRCalc Relative Hydrophob"],
-    ["n_protein_mappings","PI.n_protein_mappings","N Protein Mappings"],
-    ["n_genome_locations","PI.n_genome_locations","N Genome Locations"],
-    ["biosequence_name","BS.biosequence_name","Protein Name"],
-  );
-
-  #### Build the columns part of the SQL statement
-  my %colnameidx = ();
-  my @column_titles = ();
-  ## Sends @column_array_ref to build_SQL_columns_list, which
-  ## (1) appends the 2nd element in array to $columns_clause
-  ## (2) fills %colnameidx_ref as a hash with key = 1st element
-  ## and value = 3rd element, and (3) fills @column_titles_ref
-  ## array with the 3rd element
-  my $columns_clause = $sbeams->build_SQL_columns_list(
-    column_array_ref=>\@column_array,
-    colnameidx_ref=>\%colnameidx,
-    column_titles_ref=>\@column_titles
-  );
-  my @column_list;
-  foreach my $column ( @column_array ) {
-    push(@column_list,$column->[0]);
-  }
-
-  #### Define a query to return peptides for this protein
-  my $sql = qq~
-     SELECT $columns_clause
-     FROM $TBAT_PEPTIDE_INSTANCE PI
-    INNER JOIN $TBAT_PEPTIDE P
-          ON ( PI.peptide_id = P.peptide_id )
-     LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
-          ON ( PI.peptide_instance_id = PM.peptide_instance_id )
-    INNER JOIN $TBAT_ATLAS_BUILD AB
-          ON ( PI.atlas_build_id = AB.atlas_build_id )
-     LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
-          ON ( AB.biosequence_set_id = BSS.biosequence_set_id )
-     LEFT JOIN $TB_ORGANISM O
-          ON ( BSS.organism_id = O.organism_id )
-     LEFT JOIN $TBAT_BIOSEQUENCE BS
-          ON ( PM.matched_biosequence_id = BS.biosequence_id )
-     LEFT JOIN $TBAT_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
-    WHERE 1 = 1
-    AND AB.atlas_build_id IN ( $atlas_build_id )
-	  AND BS.biosequence_name IN ( $protein_list_str )
-    AND LEN( P.peptide_sequence ) > 4
-    ORDER BY BS.biosequence_name,P.peptide_accession
-  ~;
-
-  my @rows = $sbeams->selectSeveralColumns($sql);
-
-  my $resultset = {
-    column_hash_ref => \%colnameidx,
-    column_list_ref => ,\@column_list,
-    column_titles_ref=>\@column_titles,
-    data_ref => \@rows,
-  };
-
-
-  return $resultset;
-
-
-  print "<PRE>Peptides:\n$sql\n";
-
-  foreach my $row (@rows) {
-    print "  $row->[0]\t$row->[8]\n";
-  }
-
-  print "</PRE>\n";
-
-  return $resultset;
-
-}
-
-
-
-###############################################################################
-# getProteinInformationForPeptides
-#
-# Returns a resultset of protein information for an input list of peptides
-###############################################################################
-sub getProteinInformationForPeptides {
-  my %args = @_;
-
-  #### Process the arguments list
-  my $peptide_list_ref = $args{'peptide_list_ref'};
-  my $atlas_build_id = $args{'atlas_build_id'};
-
-
-  #### Create a comma separated list of proteins
-  my $peptide_list_str = join("','",@{$peptide_list_ref}) || '';
-  $peptide_list_str = "'$peptide_list_str'";
-
-
-  #### Define the desired columns in the query
-  #### [friendly name used in url_cols,SQL,displayed column title]
-  my @column_array = (
-    ["peptide_accession","P.peptide_accession","Peptide Accession"],
-    ["biosequence_name","BS.biosequence_name","Protein Name"],
-  );
-
-  #### Build the columns part of the SQL statement
-  my %colnameidx = ();
-  my @column_titles = ();
-  ## Sends @column_array_ref to build_SQL_columns_list, which
-  ## (1) appends the 2nd element in array to $columns_clause
-  ## (2) fills %colnameidx_ref as a hash with key = 1st element
-  ## and value = 3rd element, and (3) fills @column_titles_ref
-  ## array with the 3rd element
-  my $columns_clause = $sbeams->build_SQL_columns_list(
-    column_array_ref=>\@column_array,
-    colnameidx_ref=>\%colnameidx,
-    column_titles_ref=>\@column_titles
-  );
-  my @column_list;
-  foreach my $column ( @column_array ) {
-    push(@column_list,$column->[0]);
-  }
-
-  #### Define a query to return peptides for this protein
-  my $sql = qq~
-     SELECT $columns_clause
-     FROM $TBAT_PEPTIDE_INSTANCE PI
-    INNER JOIN $TBAT_PEPTIDE P
-          ON ( PI.peptide_id = P.peptide_id )
-     LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
-          ON ( PI.peptide_instance_id = PM.peptide_instance_id )
-    INNER JOIN $TBAT_ATLAS_BUILD AB
-          ON ( PI.atlas_build_id = AB.atlas_build_id )
-     LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
-          ON ( AB.biosequence_set_id = BSS.biosequence_set_id )
-     LEFT JOIN $TB_ORGANISM O
-          ON ( BSS.organism_id = O.organism_id )
-     LEFT JOIN $TBAT_BIOSEQUENCE BS
-          ON ( PM.matched_biosequence_id = BS.biosequence_id )
-     LEFT JOIN $TBAT_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
-    WHERE 1 = 1
-          AND AB.atlas_build_id IN ( $atlas_build_id )
-	  AND P.peptide_accession IN ( $peptide_list_str )
-    ORDER BY BS.biosequence_name,P.peptide_accession
-  ~;
-
-  my @rows = $sbeams->selectSeveralColumns($sql);
-
-  my $resultset = {
-    column_hash_ref => \%colnameidx,
-    column_list_ref => ,\@column_list,
-    column_titles_ref=>\@column_titles,
-    data_ref => \@rows,
-  };
-
-
-  return $resultset;
-
-
-  print "<PRE>\nProteins:\n$sql\n";
-
-  foreach my $row (@rows) {
-    print "  $row->[0]\t$row->[1]\n";
-  }
-
-  print "</PRE>\n";
-
-  return $resultset;
-
-}
-
-
-#### 04/30/13: Superceded by make_table_help in Annotations.pm.
-####  Enter new column definitions in %coldefs therein.
-#--------------------------------------------------
-# sub get_table_help {
-#   my $name = shift;
-#   return '' unless $name;
-#   my @entries;
-#   my $hidetext;
-#   my $showtext;
-#   my $heading;
-#   my $description;
-#   if ( $name eq 'observed_peptides' ) {
-#     @entries = (
-#     { key => "Peptide Accession", value => 'Peptide Atlas accession number, beginning with PAp followed by 9 digits.' },
-#     { value => 'Preceding (towards the N terminus) amino acid', key => 'Pre AA' },
-#     { value => 'Amino Acid sequence of this peptide', key => 'Peptide Sequence'},
-#     { value => 'Following (towards the C terminus) amino acid', key => 'Fol AA' },
-#     { value => 'Score derived from peptide probability, EOS, and sequence characteristics such as missed cleavage <SUP><FONT COLOR=RED>[MC]</FONT></SUP> or semi-tryptic <SUP><FONT COLOR=RED>[ST]</FONT></SUP>, or <BR> multiple genome locations <SUP><FONT COLOR=RED>[MGL]</FONT></SUP>.  These are annotated in red as shown.', key => 'Suitability Score' },
-#     { value => 'Highest PeptideProphet probability for this observed sequence', key => 'Best Prob' },
-#     { value => '', key => 'Best Adjusted Prob'},
-#     { value => 'Total number of observations in all modified forms and charge states', key => 'N Obs' },
-#     { value => 'Empirical Observability Score', key => 'EOS' },
-#     { value => 'SSRCalc Relative Hydrophobicity score', key => 'RHS' },
-#     { value => 'Number of proteins in the reference database to which this peptide maps', key => 'N Protein Mappings' },
-#     { value => 'Number of discrete genome locations which encode this amino acid sequence', key => 'N Genome Locations' },
-#     { value => 'Samples in which this sequence was seen', key => 'Sample IDs' },
-#     { value => 'Observed peptides of which this peptide is a subsequence', key => 'Parent Peptides' },
-#     { value => 'Observed peptides of which this peptide is a subsequence', key => 'Parent Peptides' },
-#
-#     );
-#
-#     $showtext = 'show column descriptions';
-#     $hidetext = 'hide column descriptions';
-#     $heading = 'Observed Peptides';
-#     $description= 'Peptides observed in MS/MS experiments';
-#
-#   } elsif ( $name eq 'annotated_transitions' ) {
-#     @entries = (
-#       { key => 'Sequence', value => 'Amino acid sequence of detected pepide, including any mass modifications.' },
-#       { key => 'Charge', value => 'Charge on Q1 (precursor) peptide ion.' },
-#       { key => 'q1_mz', value => 'Mass to charge ratio of precursor peptide ion.' },
-#       { key => 'q3_mz', value => 'Mass to charge ratio of fragment ion.' },
-#       { key => 'Label', value => 'Ion-series designation for fragment ion (Q3).' },
-#       { key => 'Intensity', value => 'Intensity of peak in CID spectrum' },
-#       { key => 'CE', value => 'Collision energy, the kinetic energy conferred to the peptide ion and resulting in peptide fragmentation. (eV)' },
-#       { key => 'RT', value => 'Peptide retention time( in minutes ) in the LC/MS system.' },
-#       { key => 'SSRCalc', value => "Sequence Specific Retention Factor provides a hydrophobicity measure for each peptide using the algorithm of Krohkin et al. Version 3.0 <A HREF=http://hs2.proteome.ca/SSRCalc/SSRCalc.html target=_blank>[more]</A>" },
-#       { key => 'Instr', value => 'Model of mass spectrometer on which transition pair was validated.' },
-#       { key => 'Annotator', value => 'Person/lab who contributed validated transition.' },
-#       { key => 'Quality', value => 'Crude scale of quality for the observation, currently one of Best, OK, and No. ' },
-#       );
-#
-#     $showtext = 'show column descriptions';
-#     $hidetext = 'hide column descriptions';
-#     $heading = 'Annotated Tranitions';
-#     $description= 'Contributed Q1/Q3 transition pairs for SRM experiments';
-# 	}
-#
-#   return unless @entries;
-#   my $help = $sbeamsMOD->get_table_help_section( name => $name,
-#   description => $description,
-#   heading => $heading,
-#   entries => \@entries,
-#   showtext => $showtext,
-#   hidetext => $hidetext  );
-#   return $help;
-#
-# } # end get_table_help
-#--------------------------------------------------
 
 ###############################################################################
 # printUserAnnotations
@@ -4769,6 +4300,3 @@ sub renderProteinAccessionAndStatus {
 
   return(1);
 }
-
-
-

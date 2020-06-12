@@ -385,7 +385,7 @@ sub pathway_details {
   }
   $table->alternateColors( FIRSTROW => 2, PERIOD => 1, BGCOLOR => '#DDDDDD', DEF_BGCOLOR => '#FFFFFF' );
   $table->setColAttr( ALIGN => 'RIGHT', COLS => [3], ROWS => [2..$table->getRowNum()] );
-  my $cytolink = 'Open <A ONCLICK="submit_cytoscape();"><DIV CLASS="visilink"> Cytoscape </DIV></A>network with protein list';
+
   if ($kegg_organism =~ /bbu/){
      my @genes = map( /$kegg_organism:(.*)/, @{$gene_list} );
      $gene_list = \@genes; 
@@ -423,17 +423,10 @@ sub pathway_details {
   print <<"  END";
 
   <BR>
-  <!--  $cytolink -->
   $gaggle_info
   <BR>
   <BR>
   <BR>
-  <SCRIPT LANGUAGE="javascript">
-  function submit_cytoscape() {
-    document.cytoscape.submit();
-  }
-  </SCRIPT>
-  <FORM NAME=cytoscape METHOD="POST" ACTION="getCytoscapeWebstart">
   $table
   <INPUT TYPE=HIDDEN NAME=apply_action VALUE='gene_list'></INPUT> 
   <INPUT TYPE=HIDDEN NAME=path_id VALUE='$params->{path_id}'></INPUT> 

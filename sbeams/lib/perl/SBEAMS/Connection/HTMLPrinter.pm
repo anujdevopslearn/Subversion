@@ -362,7 +362,7 @@ table.freeze_table { table-layout: fixed; width: 1000px; *margin-left: -100px;/*
   table.tbl_visible { display: table; }
   table.tbl_hidden { display: none; }
   tr.tbl_visible { display: table-row; }
-  .hoverabletitle { margin-top: 8px; background:#f3f1e4; color:#555; font-size:large; font-weight:bold; border-top:1px solid #b00; border-left:15px solid #b00; padding:0.5em}
+  .hoverabletitle { cursor:pointer; margin-top: 8px; background:#f3f1e4; color:#555; font-size:large; font-weight:bold; border-top:1px solid #b00; border-left:15px solid #b00; padding:0.5em}
   .hoverabletitle:hover { box-shadow:0 3px 5px 3px #aaa;}
   tr.hoverable:hover td { background:#ffad4e; }
   td.key   { border-bottom:1px solid #ddd; background:#d3d1c4;}

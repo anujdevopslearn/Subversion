@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 
 ###############################################################################
-# $Id: $
+# $Id$
 #
 # SBEAMS is Copyright (C) 2000-2007 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
@@ -242,7 +242,6 @@ sub get_list_entries {
 #      trim_width_ref=> $trim_width_ref,
       column_titles_ref=>\@column_titles,
       base_url=> $base_url,
-#      cytoscape=>$java_web_start,
       no_escape => 1
     );
 
@@ -367,4 +366,3 @@ sub get_draw_chart_function {
 	my $header = $GV->getHeaderInfo();
   return ( $chart, $header );
 }
-
