@@ -177,7 +177,6 @@ sub main {
 # Handle Request
 ###############################################################################
 sub handle_request {
-
   my %args = @_;
 
   my $spacer = $sbeams->getGifSpacer( 900 );
@@ -312,4 +311,3 @@ sub getSampleList {
   my @keys = keys( %observed_samples );
   return \@keys;
 }
-
