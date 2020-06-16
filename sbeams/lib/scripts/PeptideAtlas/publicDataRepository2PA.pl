@@ -426,6 +426,19 @@ sub update_public_data_repository {
 
 sub insert_project_PXD{
   my $dataset_identifier = shift;
+  ##Public data repository
+  my $sql = qq~
+    SELECT DATASET_ID
+    FROM $TBAT_PUBLIC_DATA_REPOSITORY
+    WHERE DATASET_IDENTIFIER = '$dataset_identifier'
+  ~;
+  my @rows = $sbeams->selectOneColumn($sql);
+  if (! @rows){
+   print "$dataset_identifier not in PUBLIC_DATA_REPOSITORY table, please run ". 
+         '$SBEAMS/lib/scripts/PeptideAtlas/get_public_repository_dataset.pl' ."\n";
+   exit;
+  } 
+
   my $result = `wget  -qO- "http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=$dataset_identifier&outputMode=XML&test=no"`;
   my @lines = split(/\n/, $result);
   ## get contact id, project name, tag, description, and publication
@@ -451,17 +464,16 @@ sub insert_project_PXD{
 					$contact_email = $cvParam->{value};
 				}elsif($cvParam->{name}  =~ /(organization|affiliation)/i){
 					$contact_aff = $cvParam->{value} ;
-				}elsif($cvParam->{name}  =~ /contact name/i){
-					 $contact_name = $cvParam->{value};
-				}
+				}#elsif($cvParam->{name}  =~ /contact name/i){
+				 #	 $contact_name = $cvParam->{value};
+				#}
 			}
     }
   }
-  if ( ! $contact_name){
-    $contact_name =  get_user_input ('contact_name', '', 100);
-    $contact_email = get_user_input ('contact_email', '', 100);
-  }
-
+  #if ( ! $contact_name){
+  #  $contact_name =  get_user_input ('contact_name', '', 100);
+  #  $contact_email = get_user_input ('contact_email', '', 100);
+  #}
 
   if (defined $data->{PublicationList} ){
     $pubmed_id = $data->{PublicationList}->{Publication}->[0]->{id};
@@ -489,8 +501,8 @@ sub insert_project_PXD{
     project_tag: $project_tag
     project_description: $project_description
     pubmed_id: $pubmed_id
-    contact_name: $contact_name
-    contact_email: $contact_email
+    #contact_name: $contact_name
+    #contact_email: $contact_email
     contact affiliation: $contact_aff
   ~ if($VERBOSE);
 
@@ -499,8 +511,8 @@ sub insert_project_PXD{
       project_tag => $project_tag,
       description => $project_description,
       pubmed_id => $pubmed_id,
-      contact_name => $contact_name,
-      contact_email => $contact_email,
+      #contact_name => $contact_name,
+      #contact_email => $contact_email,
       contact_aff => $contact_aff,
   );
   return $project_id ; 
@@ -635,13 +647,14 @@ sub insert_project{
   my $project_tag = $args{project_tag} || die "needs project tag\n";
   my $description = $args{description} || die "needs description\n";
   my $pubmed_id = $args{pubmed_id};
-  my $contact_name = $args{contact_name} || die "needs contact name\n";
-  my $contact_email = $args{contact_email};
-  my $contact_aff = $args{contact_aff};
-  my $contact_id = get_contact_id(       
-      contact_name => $contact_name,
-      contact_email => $contact_email,
-      contact_aff => $contact_aff);
+  #my $contact_name = $args{contact_name} || die "needs contact name\n";
+  #my $contact_email = $args{contact_email};
+  #my $contact_aff = $args{contact_aff};
+  #my $contact_id = get_contact_id(       
+  #    contact_name => $contact_name,
+  #    contact_email => $contact_email,
+  #    contact_aff => $contact_aff);
+  
 
   my $publication_id = '';
   if($pubmed_id && $pubmed_id =~ /\d+/){
@@ -664,7 +677,7 @@ sub insert_project{
     my %rowdata= (
 			name => $name, 
 			project_tag =>  $project_tag,
-			pi_contact_id => $contact_id,
+			pi_contact_id => $current_contact_id,
 			description =>  $description,
 			budget =>  "N/A",
       created_by_id => $current_contact_id,
