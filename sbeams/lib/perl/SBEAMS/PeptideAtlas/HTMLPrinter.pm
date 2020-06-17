@@ -1932,29 +1932,33 @@ sub get_proteome_coverage {
   my $sbeams = $self->getSBEAMS();
 
   my $sql = qq~
-  (
-  SELECT COUNT(*), B.dbxref_id, dbxref_name, B.biosequence_set_id 
-  FROM $TBAT_ATLAS_BUILD AB
-  JOIN $TBAT_BIOSEQUENCE B ON B.biosequence_set_id = AB.biosequence_set_id
-  JOIN biolink.dbo.dbxref DX ON DX.dbxref_id = B.dbxref_id
-  WHERE atlas_build_id = $build_id
-  AND B.dbxref_id IS NOT NULL
-  GROUP BY B.dbxref_id, dbxref_name, B.biosequence_set_id
-  )
-  UNION 
-  (SELECT COUNT(DISTINCT B2.BIOSEQUENCE_ID) AS CNT, 
-         '', 
-         LEFT (B2.BIOSEQUENCE_NAME, PATINDEX('%[_]%', B2.BIOSEQUENCE_NAME)) AS CAT, 
-         B2.BIOSEQUENCE_SET_ID 
-  FROM $TBAT_ATLAS_BUILD AB2
-  JOIN $TBAT_BIOSEQUENCE B2 ON B2.BIOSEQUENCE_SET_ID = AB2.BIOSEQUENCE_SET_ID
-  WHERE atlas_build_id = $build_id 
-	AND B2.DBXREF_ID IS NULL
-	AND B2.BIOSEQUENCE_NAME LIKE '%\\_%' ESCAPE '\\'
-  AND B2.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
-  AND B2.BIOSEQUENCE_NAME NOT LIKE 'ENST%'
-	GROUP BY B2.BIOSEQUENCE_SET_ID , LEFT (B2.BIOSEQUENCE_NAME, PATINDEX( '%[_]%', B2.BIOSEQUENCE_NAME ))
-  )
+  select * 
+  FROM(
+		(
+		SELECT COUNT(*) AS CNT, B.DBXREF_ID AS ID , DBXREF_NAME AS NAME , B.BIOSEQUENCE_SET_ID AS SETID
+		FROM $TBAT_ATLAS_BUILD AB
+		JOIN $TBAT_BIOSEQUENCE B ON B.biosequence_set_id = AB.biosequence_set_id
+		JOIN biolink.dbo.dbxref DX ON DX.dbxref_id = B.dbxref_id
+		WHERE atlas_build_id = $build_id
+		AND B.dbxref_id IS NOT NULL
+		GROUP BY B.dbxref_id, dbxref_name, B.biosequence_set_id
+		)
+		UNION 
+		(SELECT COUNT(DISTINCT B2.BIOSEQUENCE_ID) AS CNT, 
+					 '' AS ID, 
+					 LEFT (B2.BIOSEQUENCE_NAME, PATINDEX('%[_]%', B2.BIOSEQUENCE_NAME)) AS NAME, 
+					 B2.BIOSEQUENCE_SET_ID AS SETID
+		FROM $TBAT_ATLAS_BUILD AB2
+		JOIN $TBAT_BIOSEQUENCE B2 ON B2.BIOSEQUENCE_SET_ID = AB2.BIOSEQUENCE_SET_ID
+		WHERE atlas_build_id = $build_id 
+		AND B2.DBXREF_ID IS NULL
+		AND B2.BIOSEQUENCE_NAME LIKE '%\\_%' ESCAPE '\\'
+		AND B2.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
+		AND B2.BIOSEQUENCE_NAME NOT LIKE 'ENST%'
+		GROUP BY B2.BIOSEQUENCE_SET_ID , LEFT (B2.BIOSEQUENCE_NAME, PATINDEX( '%[_]%', B2.BIOSEQUENCE_NAME ))
+		)
+  )CAT
+  ORDER BY NAME
   ~;
   my $sth = $sbeams->get_statement_handle( $sql );
   my @names;
@@ -1987,6 +1991,7 @@ sub get_proteome_coverage {
   GROUP BY LEFT (B2.BIOSEQUENCE_NAME, PATINDEX( '%[_]%', B2.BIOSEQUENCE_NAME ))
   )
   ~;
+
   my $obssth = $sbeams->get_statement_handle( $obs_sql );
   my %obs;
   while ( my @row = $obssth->fetchrow_array() ) {
@@ -2141,8 +2146,7 @@ sub get_what_is_new {
   $table .= $self->encodeSectionHeader(
       LMTABS => 1,
       no_toggle => 1,
-      text => 'What\'s new',
-      mouseover => "This shows the differences between this build and the previous build, and the new sample talbe.",
+      text => "What&#39s new",
   );
 
   $table .= $self->encodeSectionTable( rows => \@return,
