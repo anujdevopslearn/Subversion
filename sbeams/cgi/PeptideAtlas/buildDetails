@@ -282,7 +282,7 @@ sub get_table_help {
 #                 { key => 'Sens', value => 'The sensitivity of the Peptide Prophet model at a probablility of 0.9, the percent of true positives that would be included at that threshold was used as a cutoff. ' },
                  { key => 'FDR_(%)', value => 'The error rate of peptides above the threshold Peptide Prophet model at a probablility of 0.9, the percent of false positives that would be included at the build threshold. ' },
                  { key => 'Experiment_Date', value => ''},
-                 { key => 'Pubmed_ID', value => ''}, 
+                 { key => 'Pubmed/DOI', value => ''}, 
                  { key => 'Other_Repos', value=>''}
         );
     $heading = 'Experiment Overview'; 
@@ -858,7 +858,11 @@ sub get_sample_info {
       my @ids = split(",", $batch->[$idx]);
       $batch->[$idx] ='';
       foreach my $id(@ids){
-        $batch->[$idx] .= "<a href='http://www.ncbi.nlm.nih.gov/pubmed/?term=$id'>$id</a>,";
+        if ($id =~ /^\d+$/){
+          $batch->[$idx] .= "<a href='http://www.ncbi.nlm.nih.gov/pubmed/?term=$id'>$id</a>,";
+        }else{
+          $batch->[$idx] .= "<a href='https://doi.org/$id'>$id</a>,";
+        }
       }
       $batch->[$idx] =~ s/,$//;
     }
