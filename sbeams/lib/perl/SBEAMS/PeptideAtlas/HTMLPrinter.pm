@@ -1163,16 +1163,15 @@ sub getSampleMapDisplay {
   $args{header_text} = ( $args{header_text} ) ? "<TR $trinfo><TD ALIGN=CENTER CLASS=section_description>$args{header_text}</TD></TR>" : '';
   $args{second_header} = ( $args{second_header} ) ? "<TR $trinfo><TD ALIGN=CENTER CLASS=info_text>$args{second_header}</TD></TR>" : '';
   my $content = qq~
+  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/prototype/1.6.1.0/prototype.js"></script>
   <script type="text/javascript" src="https://www.google.com/jsapi"></script>
   <script type="text/javascript">
     google.load("visualization", "1", {});
-    google.load("prototype", "1.6");
-  </script>    
+  </script>
   <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/main/js/load.js"></script>
   <script type="text/javascript">
     systemsbiology.load("visualization", "1.0", {packages:["bioheatmap"]});
   </script>
-
   $array_def
 
   $args{header_text}
@@ -1337,11 +1336,11 @@ sub getSampleMapDisplayMod {
 	$args{header_text} = ( $args{header_text} ) ? "<TR $trinfo><TD ALIGN=CENTER CLASS=section_description>$args{header_text}</TD></TR>" : '';
 	$args{second_header} = ( $args{second_header} ) ? "<TR $trinfo><TD ALIGN=CENTER CLASS=info_text>$args{second_header}</TD></TR>" : '';
 	my $content = qq~
+  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/prototype/1.6.1.0/prototype.js"></script>
   <script type="text/javascript" src="https://www.google.com/jsapi"></script>
   <script type="text/javascript">
     google.load("visualization", "1", {});
-    google.load("prototype", "1.6");
-  </script>    
+  </script>
   <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/main/js/load.js"></script>
   <script type="text/javascript">
     systemsbiology.load("visualization", "1.0", {packages:["bioheatmap"]});

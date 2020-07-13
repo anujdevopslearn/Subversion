@@ -264,17 +264,17 @@ sub getHeaderInfo {
 #    <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/defaultbarchart.js"></script>
 #    <script type="text/javascript" src="https://www.google.com/javascript/ga.js"></script>
 #    <script type="text/javascript" src="https://www.google.com/defaultbarchart.js"></script>
-  if ( $CONFIG_SETTING{USE_LOCAL_GOOGLEVIS} ) {
-    $log->debug( "Using local version" );
-    $header_info =<<"  END_SCRIPT";
-    <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/jsapi"></script>
-    <script type="text/javascript">
-    google.load("visualization", "1", {packages:[$pkgs]});
-		$callbacks
-		$functions
-    </script>
-  END_SCRIPT
-  } else {
+#  if ( $CONFIG_SETTING{USE_LOCAL_GOOGLEVIS} ) {
+#    $log->debug( "Using local version" );
+#    $header_info =<<"  END_SCRIPT";
+#    <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/jsapi"></script>
+#    <script type="text/javascript">
+#    google.load("visualization", "1", {packages:[$pkgs]});
+#		$callbacks
+#		$functions
+#    </script>
+#  END_SCRIPT
+#  } else {
     $log->debug( "Using google version" );
     $header_info =<<"  END_SCRIPT";
     <script type="text/javascript" src="https://www.google.com/jsapi"></script>
@@ -284,7 +284,7 @@ sub getHeaderInfo {
 		$functions
     </script>
   END_SCRIPT
-  }
+#  }
 
   return $header_info;
 }
