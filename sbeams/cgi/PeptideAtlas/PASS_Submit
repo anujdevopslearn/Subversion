@@ -92,13 +92,14 @@ if ($DEBUG) {
   print "  DEBUG = $DEBUG\n";
 }
 
-     my @datasetTypes = ( 'MSMS' => 'MS/MS dataset (discouraged)',
+     my @datasetTypes = ( 'DDA' => 'DDA MS/MS dataset (disabled)',
 			  'SRM' => 'SRM dataset',
-			  'MS1' => 'MS1 dataset',
-			  'SWATH' => 'SWATH MS dataset',
-			  'XlinkMS' => 'Cross-linking MS dataset',
-			  'QC' => 'Ongoing QC dataset',
-			  'Other' => 'Other',
+			  'DIA' => 'DIA MS dataset (disabled)',
+			  'MS1' => 'MS1 dataset (disabled)',
+			  'SWATH' => 'SWATH MS dataset (disabled)',
+			  'XlinkMS' => 'Cross-linking MS dataset (disabled)',
+			  'QC' => 'Ongoing QC dataset (disabled)',
+			  'Other' => 'Other (disabled)',
 			);
 
 ###############################################################################
@@ -365,15 +366,15 @@ sub handle_request {
   #### Print the form
   if ($sbeams->output_mode() eq 'html' && $printForm) {
      print "<H3>Submit a new Dataset</H3>";
-     print "<P>Thank you for submitting a dataset to PeptideAtlas.<BR><BR>";
+     print "<P>Thank you for submitting a dataset to PASSEL.<BR><BR>";
 
-     print qq~<table border="1" bgcolor="red" cellpadding="4" width="650"><tr><td><img height="50" width="50" src="../../images/alert-icon.png"></td><td><font color="white"><b>NOTICE: If you are submitting a shotgun proteomics (DDA MS/MS) dataset, you are strongly encouraged to <a href="http://www.proteomexchange.org/submission">submit to PRIDE or Massive via ProteomeXchange instead</a>. Shotgun proteomics datasets submitted here do not get announced via ProteomeXchange.<BR>However, SRM datasets should still be submitted below, and are announced via ProteomeXchange.<BR></b></font></td></tr></table>
+     print qq~<table border="1" bgcolor="red" cellpadding="4" width="650"><tr><td><img height="50" width="50" src="../../images/alert-icon.png"></td><td><font color="white"><b>NOTICE: This submission system does not accept DDA and DIA datasets anymore, only SRM datasets. If you have a DDA or DIA dataset to submit, please <a href="http://www.proteomexchange.org/submission">submit to PRIDE or MassIVE via ProteomeXchange instead</a>. SRM datasets may still be submitted to PASSEL below.<BR></b></font></td></tr></table>
      ~;
 
      print "<UL><LI>Please fill out the form below to register a new submission.";
      print "<LI>After completing the form, you will receive instructions on how to upload your data via FTP";
      print "<LI>Items <B><font color=\"red\">in red</B></font> are required";
-     print "<LI>For SRM datasets, please prepare your transition list (methods file) in <a href='http://www.mcponline.org/content/early/2011/12/12/mcp.R111.015040.abstract'><font color=\'red\'><b>TraML</b></font></a> format (or, if not possible, using this <a href='http://www.peptideatlas.org/upload/PASSEL_transition_list_template.xlsx'><font color=\'red\'>tsv template</font></a>).";
+     print "<LI>Please prepare your transition list (methods file) in <a href='http://www.mcponline.org/content/early/2011/12/12/mcp.R111.015040.abstract'><font color=\'red\'><b>TraML</b></font></a> format (or, if not possible, using this <a href='http://www.peptideatlas.org/upload/PASSEL_transition_list_template.xlsx'><font color=\'red\'>tsv template</font></a>).";
      print "</UL></P>";
 
      if (@errors) {
