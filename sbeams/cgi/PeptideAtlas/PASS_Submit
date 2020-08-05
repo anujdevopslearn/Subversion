@@ -6,7 +6,7 @@
 #
 # Description : PeptideAtlas Submission System main submit page
 #
-# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2020 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -92,15 +92,16 @@ if ($DEBUG) {
   print "  DEBUG = $DEBUG\n";
 }
 
-     my @datasetTypes = ( 'DDA' => 'DDA MS/MS dataset (disabled)',
-			  'SRM' => 'SRM dataset',
-			  'DIA' => 'DIA MS dataset (disabled)',
-			  'MS1' => 'MS1 dataset (disabled)',
-			  'SWATH' => 'SWATH MS dataset (disabled)',
-			  'XlinkMS' => 'Cross-linking MS dataset (disabled)',
-			  'QC' => 'Ongoing QC dataset (disabled)',
-			  'Other' => 'Other (disabled)',
-			);
+my @datasetTypes = (
+  'DDA'     => 'DDA MS/MS dataset (disabled)',
+  'SRM'     => 'SRM dataset',
+  'DIA'     => 'DIA MS dataset (disabled)',
+  'MS1'     => 'MS1 dataset (disabled)',
+  'SWATH'   => 'SWATH MS dataset (disabled)',
+  'XlinkMS' => 'Cross-linking MS dataset (disabled)',
+  'QC'      => 'Ongoing QC dataset (disabled)',
+  'Other'   => 'Other (disabled)',
+    );
 
 ###############################################################################
 # Set Global Variables and execute main()
@@ -365,16 +366,16 @@ sub handle_request {
   #########################################################################
   #### Print the form
   if ($sbeams->output_mode() eq 'html' && $printForm) {
-     print "<H3>Submit a new Dataset</H3>";
+     print "<H3>Submit a new SRM Dataset</H3>";
      print "<P>Thank you for submitting a dataset to PASSEL.<BR><BR>";
 
-     print qq~<table border="1" bgcolor="red" cellpadding="4" width="650"><tr><td><img height="50" width="50" src="../../images/alert-icon.png"></td><td><font color="white"><b>NOTICE: This submission system does not accept DDA and DIA datasets anymore, only SRM datasets. If you have a DDA or DIA dataset to submit, please <a href="http://www.proteomexchange.org/submission">submit to PRIDE or MassIVE via ProteomeXchange instead</a>. SRM datasets may still be submitted to PASSEL below.<BR></b></font></td></tr></table>
+     print qq~<table style="border:2px solid #b00;background:#f3f1e4;" cellpadding="5"><tr><td><img height="50" width="50" src="../../images/alert-icon.png"></td><td style="color:#b00;"><b>NOTICE:</b> This submission system accepts <b>only SRM datasets</b>.<br><br>If you have a DDA or DIA dataset to submit, please <a href="http://www.proteomexchange.org/submission">submit to PRIDE or MassIVE via ProteomeXchange instead</a>.<br><br><b>SRM datasets may still be submitted to PASSEL below.<BR></b></td></tr></table>
      ~;
 
      print "<UL><LI>Please fill out the form below to register a new submission.";
      print "<LI>After completing the form, you will receive instructions on how to upload your data via FTP";
-     print "<LI>Items <B><font color=\"red\">in red</B></font> are required";
-     print "<LI>Please prepare your transition list (methods file) in <a href='http://www.mcponline.org/content/early/2011/12/12/mcp.R111.015040.abstract'><font color=\'red\'><b>TraML</b></font></a> format (or, if not possible, using this <a href='http://www.peptideatlas.org/upload/PASSEL_transition_list_template.xlsx'><font color=\'red\'>tsv template</font></a>).";
+     print "<LI>Items <B><font color=\"#b00\">in red</B></font> are required";
+     print "<LI>Please prepare your transition list (methods file) in <a href='http://www.mcponline.org/content/early/2011/12/12/mcp.R111.015040.abstract'><font color=\'#b00\'><b>TraML</b></font></a> format (or, if not possible, using this <a href='http://www.peptideatlas.org/upload/PASSEL_transition_list_template.xlsx'><font color=\'#b00\'>tsv template</font></a>).";
      print "</UL></P>";
 
      if (@errors) {
@@ -394,13 +395,13 @@ sub handle_request {
                           -name=>"MainForm",
 			 );
 
-     print "<B><font color=\"red\">Submitter email address</B></font> (This is your login name and the address that PASS will use to communicate with you)<BR>\n";
+     print "<B><font color=\"#b00\">Submitter email address</B></font> (This is your login name and the address that PASS will use to communicate with you)<BR>\n";
      #### Strangly, using the Perl CGI call leads to strange persistence effects that I can't defeat
      #print $q->textfield( "emailAddress", $emailAddress, 50, 80);
      print qq~<input type="text" name="emailAddress" value="$emailAddress" size=50 maxlength=80/>~;
      print "<BR>\n";
 
-     print "<B><font color=\"red\">Submitter password</B></font> (Enter your password if you already have an account or choose a password for a new account)<BR>\n";
+     print "<B><font color=\"#b00\">Submitter password</B></font> (Enter your password if you already have an account or choose a password for a new account)<BR>\n";
      #print $q->textfield( "password", $password, 10, 50);
      print qq~<input type="password" name="password" value="$password" size=10 maxlength=50/>~;
      print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
@@ -417,18 +418,18 @@ sub handle_request {
      print "<BR>\n";
 
      if ($authentication->{result} ne 'Success') {
-       print "<B><font color=\"red\">Confirm password</font></B> (If you don't yet have an account, please confirm your password by entering it again)<BR>\n";
+       print "<B><font color=\"#b00\">Confirm password</font></B> (If you don't yet have an account, please confirm your password by entering it again)<BR>\n";
        #print $q->textfield( "confirmingPassword", $parameters{'confirmingPassword'}, 10, 50);
        print qq~<input type="password" name="confirmingPassword" value="$confirmingPassword" size=10 maxlength=50/>~;
        print "<BR>\n";
      }
 
-     print "<B><font color=\"red\">Submitter first name</B></font> (Enter submitter's first name)<BR>\n";
+     print "<B><font color=\"#b00\">Submitter first name</B></font> (Enter submitter's first name)<BR>\n";
      #print $q->textfield(-name=>"firstName",-value=>$firstName,-size=>50,-maxlength=>100);
      print qq~<input type="text" name="firstName" value="$firstName" size=50 maxlength=100/>~;
      print "<BR>\n";
 
-     print "<B><font color=\"red\">Submitter last name</B></font> (Enter submitter's last name)<BR>\n";
+     print "<B><font color=\"#b00\">Submitter last name</B></font> (Enter submitter's last name)<BR>\n";
      #print $q->textfield( "lastName", $lastName, 50, 100);
      print qq~<input type="text" name="lastName" value="$lastName" size=50 maxlength=100/>~;
      print "<BR>\n";
@@ -441,23 +442,25 @@ sub handle_request {
      print "<HR>\n";
 
 
-     print "<B><font color=\"red\">Dataset type</B></font> (Please select the broad category classifying the dataset. This will aid in determining how to process it.)<BR>\n";
+#     print "<B><font color=\"#b00\">Dataset type</B></font> (Please select the broad category classifying the dataset. This will aid in determining how to process it.)<BR>\n";
+     print "<B><font color=\"#b00\">Dataset type</B> (Please note that <b>only SRM datasets can be accepted</b> at this time.)</font><BR>\n";
      print qq~<select name="datasetType">~;
      my $selectedDatasetType = $parameters{'datasetType'} || 'SRM';
      for (my $i=0; $i < scalar(@datasetTypes); $i+=2) {
        my ($key,$label) = @datasetTypes[$i..$i+1];
        my $selected = '';
        $selected = 'selected="true" ' if ($selectedDatasetType eq $key);
+       $selected .= 'disabled ' unless ($key eq 'SRM');
        print qq~  <option $selected value="$key">$label</option>\n~;
      }
      print "</select>\n";
      print "<BR>\n";
 
-     print "<B><font color=\"red\">Dataset tag</B></font> (Enter a short {up to 20 characters} \"tag\" for this dataset)<BR>It should be globally unique. It will be used in lists of datasets where the title might be too long.<BR>\n";
+     print "<B><font color=\"#b00\">Dataset tag</B></font> (Enter a short {up to 20 characters} \"tag\" for this dataset)<BR>It should be globally unique. It will be used in lists of datasets where the title might be too long.<BR>\n";
      print $q->textfield( "datasetTag", $parameters{'datasetTag'}, 20, 20);
      print "<BR>\n";
 
-     print "<B><font color=\"red\">Dataset title</B></font> (Enter a nice descriptive title {up to 200 characters} for this dataset)<BR>\n";
+     print "<B><font color=\"#b00\">Dataset title</B></font> (Enter a nice descriptive title {up to 200 characters} for this dataset)<BR>\n";
      print $q->textarea( "datasetTitle", $parameters{'datasetTitle'}, 3, 66);
      print "<BR>\n";
 
@@ -477,7 +480,7 @@ sub handle_request {
        </SCRIPT>
      ~;
 
-     print "<B><font color=\"red\">Dataset Release Date</B></font> (Enter the date on which the data may be released publicly)<BR>\n";
+     print "<B><font color=\"#b00\">Dataset Release Date</B></font> (Enter the date on which the data may be released publicly)<BR>\n";
      print "(Please use the format  2011-08-16)<BR>\n";
      print $q->textfield( "publicReleaseDate", $parameters{'publicReleaseDate'}, 10, 10);
      print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
@@ -485,47 +488,47 @@ sub handle_request {
      print "<BR>\n";
      print "<HR>\n";
 
-     print "<B><font color=\"red\">Contributors</B></font> (Enter the names of people who are contributing this dataset, including the submitter, if applicable)<BR>\n";
+     print "<B><font color=\"#b00\">Contributors</B></font> (Enter the names of people who are contributing this dataset, including the submitter, if applicable)<BR>\n";
      print $q->textarea( "contributors", $parameters{'contributors'}, 5, 50);
      print "<BR>\n";
 
-     print "<B><font color=\"red\">Submitter organization</B></font> (Enter submitter's organization)<BR>\n";
+     print "<B><font color=\"#b00\">Submitter organization</B></font> (Enter submitter's organization)<BR>\n";
      print qq~<input type="text" name="submitter_organization" value="$submitter_organization" size=100 maxlength=255/>~;
      print "<BR>\n";
 
-     print "<B><font color=\"red\">Lab head</B></font> (Enter full name of lab head)<BR>\n";
+     print "<B><font color=\"#b00\">Lab head</B></font> (Enter full name of lab head)<BR>\n";
      print qq~<input type="text" name="lab_head_full_name" value="$lab_head_full_name" size=100 maxlength=255/>~;
      print "<BR>\n";
 
-     print "<B><font color=\"red\">Lab head email</B></font> (Enter email of lab head)<BR>\n";
+     print "<B><font color=\"#b00\">Lab head email</B></font> (Enter email of lab head)<BR>\n";
      print qq~<input type="text" name="lab_head_email" value="$lab_head_email" size=100 maxlength=255/>~;
      print "<BR>\n";
 
-     print "<B><font color=\"red\">Lab head organization</B></font> (Enter organization of lab head)<BR>\n";
+     print "<B><font color=\"#b00\">Lab head organization</B></font> (Enter organization of lab head)<BR>\n";
      print qq~<input type="text" name="lab_head_organization" value="$lab_head_organization" size=100 maxlength=255/>~;
      print "<BR>\n";
 
-     print "<B><font color=\"red\">Lab head country</B></font> (Enter country of lab head's organization)<BR>\n";
+     print "<B><font color=\"#b00\">Lab head country</B></font> (Enter country of lab head's organization)<BR>\n";
      print qq~<input type="text" name="lab_head_country" value="$lab_head_country" size=100 maxlength=255/>~;
      print "<BR>\n";
 
-     print "<B><font color=\"red\">Publication</B></font> (Enter the associated publication with this dataset) (Please enter a PubMed ID if available.)<BR>\n";
+     print "<B><font color=\"#b00\">Publication</B></font> (Enter the associated publication with this dataset) (Please enter a PubMed ID if available.)<BR>\n";
      print "(If no PubMed ID is available yet, please use format: Smith, DA, and Wesson, TB, Manuscript Title, Journal, submitted)<BR>\n";
      print "(Or if no publication is on the horizon, please just enter \"unpublished\")<BR>\n";
      print $q->textarea( "publication", $parameters{'publication'}, 5, 50);
      print "<BR>\n";
 
-     print "<B><font color=\"red\">Instrument(s) used</B></font> (Enter the model name of the instrument(s) used for this dataset)<BR>\n";
+     print "<B><font color=\"#b00\">Instrument(s) used</B></font> (Enter the model name of the instrument(s) used for this dataset)<BR>\n";
      print "(Please use the format: Thermo Scientific LTQ Orbitrap Elite, AB SCIEX TripleTOF 5600, etc.) (You may enter more than one if applicable)<BR>\n";
      print $q->textarea( "instruments", $parameters{'instruments'}, 2, 40);
      print "<BR>\n";
 
-     print "<B><font color=\"red\">Species studied</B></font> (Enter the name of the species studied)<BR>\n";
+     print "<B><font color=\"#b00\">Species studied</B></font> (Enter the name of the species studied)<BR>\n";
      print "(Please use the format: Human, Mouse, Drosophila melanogaster, etc.) (You may enter more than one if applicable)<BR>\n";
      print $q->textarea( "species", $parameters{'species'}, 2, 40);
      print "<BR>\n";
 
-     print "<B><font color=\"red\">Mass modifications</B></font> (Enter any mass modifications applied to the sample)<BR>\n";
+     print "<B><font color=\"#b00\">Mass modifications</B></font> (Enter any mass modifications applied to the sample)<BR>\n";
      print "(Please use the format: static: C+57.021464, variable: K+8.014199, R+10.008269, or \"none\" if none.)<BR>\n";
      print $q->textarea( "massModifications", $parameters{'massModifications'}, 2, 40);
      print "<BR>\n";
@@ -547,19 +550,19 @@ sub handle_request {
      print $q->textarea( "extraction", $parameters{'extraction'}, 6, 80);
      print "<BR>\n";
 
-     print "<B>Separation Protocol</B> (Enter a free-text description of the separation of proteins and/or peptides))<BR>\n";
+     print "<B>Separation Protocol</B> (Enter a free-text description of the separation of proteins and/or peptides)<BR>\n";
      print $q->textarea( "separation", $parameters{'separation'}, 6, 80);
      print "<BR>\n";
 
-     print "<B>Digestion Protocol</B> (Enter a free-text description of the digestion of the proteins into peptides))<BR>\n";
+     print "<B>Digestion Protocol</B> (Enter a free-text description of the digestion of the proteins into peptides)<BR>\n";
      print $q->textarea( "digestion", $parameters{'digestion'}, 6, 80);
      print "<BR>\n";
 
-     print "<B>Acquisition Protocol</B> (Enter a free-text description of the acquisition of mass spectra from the peptide sample))<BR>\n";
+     print "<B>Acquisition Protocol</B> (Enter a free-text description of the acquisition of mass spectra from the peptide sample)<BR>\n";
      print $q->textarea( "acquisition", $parameters{'acquisition'}, 6, 80);
      print "<BR>\n";
 
-     print "<B>Informatics Protocol</B> (Enter a free-text description of the informatics processing of the raw data produced by the instrument(s)))<BR>\n";
+     print "<B>Informatics Protocol</B> (Enter a free-text description of the informatics processing of the raw data produced by the instrument(s))<BR>\n";
      print $q->textarea( "informatics", $parameters{'informatics'}, 6, 80);
      print "<BR>\n";
      print "<HR>\n";
