@@ -1,4 +1,4 @@
-package SBEAMS::PeptideAtlas::ProtInfo;
+;package SBEAMS::PeptideAtlas::ProtInfo;
 
 ###############################################################################
 # Class       : SBEAMS::PeptideAtlas::ProtInfo
@@ -166,6 +166,8 @@ sub loadBuildProtInfo {
         $seq_unique_prots_in_group,
         $norm_PSMs_per_100K,
 	  ) = split(",", $line, $nfields);
+
+
 #    if (! $subsumed_by_biosequence_name) {
 #      $subsumed_by_biosequence_name = '';
 #    }
@@ -175,8 +177,9 @@ sub loadBuildProtInfo {
 #    if (! $abundance_uncertainty) {
 #      $abundance_uncertainty = '';
 #    }
-
-
+    if ($norm_PSMs_per_100K  =~ /^\s+$/) {
+      $norm_PSMs_per_100K  = 'NULL';
+    }
     # I don't know what to do with nan. Let's set it to zero.
     if ($probability eq "nan") {
       $nan_count++;
@@ -288,10 +291,161 @@ sub loadBuildProtInfo {
     print "$unmapped_reference entries with UNMAPPED reference".
 	   " identifiers ignored.\n";
   }
-
+  ## add sample_specific_id to proteins that id in one sample only
+  print "Labeing sample_specific and dataset_specific proteins\n";
+  $self->update_protInfo_sampleSpecific ( 
+    atlas_build_id => $atlas_build_id
+  );
 } # end loadBuildProtInfo
 
+############################################
+#update_protInfo_sampleSpecific
+############################################`
+sub update_protInfo_sampleSpecific{ 
+  my $METHOD = 'update_protInfo_sampleSpecific';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+  my $atlas_build_id = $args{atlas_build_id};
+  my $sql = qq~
+     SELECT DISTINCT
+           BS.biosequence_id, PI.sample_ids
+     FROM $TBAT_PEPTIDE_INSTANCE PI
+    INNER JOIN $TBAT_PEPTIDE P
+          ON ( PI.PEPTIDE_ID = P.PEPTIDE_ID )
+     LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
+          ON ( PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID )
+    INNER JOIN $TBAT_ATLAS_BUILD AB
+          ON ( PI.ATLAS_BUILD_ID = AB.ATLAS_BUILD_ID )
+     LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
+          ON ( AB.BIOSEQUENCE_SET_ID = BSS.BIOSEQUENCE_SET_ID )
+     LEFT JOIN SBEAMS.DBO.ORGANISM O
+          ON ( BSS.ORGANISM_ID = O.ORGANISM_ID )
+     LEFT JOIN $TBAT_BIOSEQUENCE BS
+          ON ( PM.MATCHED_BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID )
+    LEFT JOIN $TBAT_PEPTIDE_INSTANCE_ANNOTATION PIA
+         ON  PIA.PEPTIDE_INSTANCE_ID = PI.PEPTIDE_INSTANCE_ID
+    LEFT JOIN $TBAT_SPECTRUM_ANNOTATION_LEVEL  SAL
+         ON  SAL.SPECTRUM_ANNOTATION_LEVEL_ID =
+       PIA.spectrum_annotation_level_id
+    AND PIA.RECORD_STATUS != 'D'
+    WHERE 1 = 1
+          AND AB.atlas_build_id IN ( $atlas_build_id )
+          AND BS.BIOSEQUENCE_NAME NOT LIKE 'CONTAM%'
+          AND BS.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
+          AND BS.BIOSEQUENCE_ID NOT IN (
+            SELECT BR.RELATED_BIOSEQUENCE_ID
+             FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR
+             where AB.atlas_build_id IN ($atlas_build_id)
+             AND RELATIONSHIP_TYPE_ID = 2
+            )
+  ~;
 
+  my @rows = $sbeams->selectSeveralColumns($sql);
+	my %result = ();
+	foreach my $row (@rows){
+		my ($bsid, $sample_id ) = @$row;
+		$result{$bsid}{$sample_id} =1;
+	}
+
+	my %unique =();
+	foreach my $bsid (keys %result){
+		next if(scalar keys %{$result{$bsid}}> 1);
+		my @samples = keys %{$result{$bsid}};
+		next if ($samples[0] =~ /,/);
+		$unique{$samples[0]}{$bsid} =1;
+	}
+  $sql = qq~
+      SELECT RELATED_BIOSEQUENCE_ID, BIOSEQUENCE_RELATIONSHIP_ID
+      FROM $TBAT_BIOSEQUENCE_RELATIONSHIP 
+      WHERE ATLAS_BUILD_ID IN ($atlas_build_id)
+  ~;
+  my %biosequenc_relateionship_id = $sbeams->selectTwoColumnHash($sql);
+
+  $sql = qq~
+      SELECT BIOSEQUENCE_ID, PROTEIN_IDENTIFICATION_ID
+      FROM $TBAT_PROTEIN_IDENTIFICATION
+      WHERE ATLAS_BUILD_ID IN ($atlas_build_id)
+  ~;
+  my %protein_identification_id = $sbeams->selectTwoColumnHash($sql);
+ 
+  foreach my $sample_id (keys %unique){
+    foreach my $bsid(keys %{$unique{$sample_id}}){
+			my $rowdata= {
+				sample_specific_id => $sample_id,
+			};
+      if (defined $protein_identification_id{$bsid}){
+        update_table( table_name => $TBAT_PROTEIN_IDENTIFICATION,
+                      key => 'protein_identification_id',
+                      key_value => $protein_identification_id{$bsid},
+                      rowdata_ref => $rowdata);
+      }elsif (defined $biosequenc_relateionship_id{$bsid}){
+        update_table( table_name => $TBAT_BIOSEQUENCE_RELATIONSHIP,
+                      key => 'BIOSEQUENCE_RELATIONSHIP_ID',
+                      key_value => $biosequenc_relateionship_id{$bsid}, 
+                      rowdata_ref => $rowdata);
+      }else{
+        print "No protein identification id for $bsid\n";
+      }
+
+    }
+  }
+
+  ## get dataset specific id
+  $sql = qq~
+    select S.sample_id, case when S.repository_identifiers is null then 'OTHERS' else S.repository_identifiers END  
+		FROM $TBAT_SAMPLE S
+		JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON (ABSB.SAMPLE_ID = S.SAMPLE_ID)
+		where ABSB.atlas_build_id = $atlas_build_id 
+  ~;
+  my %repository_id =  $sbeams->selectTwoColumnHash($sql);
+  #foreach my $sample_id(keys %repository_id){
+  #  my @identifiers = ();
+    #print "$sample_id $repository_id{$sample_id} ->";
+    #$repository_id{$sample_id} =~ s/[\s+\r]//g;
+    #$repository_id{$sample_id} =~ s/;+/,/g;
+    #foreach my $id(split(/\,/, $repository_id{$sample_id})){
+    #  push @identifiers, $id;
+    #}
+    #$repository_id{$sample_id} = join(",", sort {$a cmp $b} @identifiers);
+    #print " $repository_id{$sample_id} \n";
+  #}
+
+	%unique =();
+	foreach my $bsid (keys %result){
+		foreach my $sample_ids(keys %{$result{$bsid}}){
+			my @samples = split(",", $sample_ids);
+			foreach my $sample_id (@samples){
+				if (defined $repository_id{$sample_id}){
+					$unique{$bsid}{$repository_id{$sample_id}} = 1;
+				}else{
+					$unique{$bsid}{'OTHERS'} =1;
+				}
+			}
+		}
+    next if (scalar keys %{$unique{$bsid}} > 1);
+    my $dataset_specific_id = (keys %{$unique{$bsid}})[0];
+    #print "$bsid $dataset_specific_id\n";
+		my $rowdata= {
+			dataset_specific_id => $dataset_specific_id 
+		};
+		if (defined $protein_identification_id{$bsid}){
+			update_table( table_name => $TBAT_PROTEIN_IDENTIFICATION,
+										key => 'protein_identification_id',
+										key_value => $protein_identification_id{$bsid},
+										rowdata_ref => $rowdata);
+		}elsif (defined $biosequenc_relateionship_id{$bsid}){
+			update_table( table_name => $TBAT_BIOSEQUENCE_RELATIONSHIP,
+										key => 'BIOSEQUENCE_RELATIONSHIP_ID',
+										key_value => $biosequenc_relateionship_id{$bsid},
+										rowdata_ref => $rowdata);
+		}else{
+			print "no protein identification id for $bsid\n";
+		}
+  }
+ 
+		 
+
+}
 
 ###############################################################################
 # insertProteinIdentification --
@@ -324,7 +478,7 @@ sub insertProteinIdentification {
   my $is_covering = $args{is_covering};
   my $seq_unique_prots_in_group = $args{seq_unique_prots_in_group};
   my $norm_PSMs_per_100K = $args{norm_PSMs_per_100K};
-
+ 
   our $counter;
 
   #### Get the biosequence_ids
@@ -336,12 +490,14 @@ sub insertProteinIdentification {
     biosequence_name => $represented_by_biosequence_name,
     atlas_build_id => $atlas_build_id,
   );
+  return if (! $biosequence_id || ! $represented_by_biosequence_id); 
   my $subsumed_by_biosequence_id = '';
-  if ($subsumed_by_biosequence_name) {
+  if ($subsumed_by_biosequence_name && $subsumed_by_biosequence_name ne 'multiple') {
     $subsumed_by_biosequence_id = $self->get_biosequence_id(
       biosequence_name => $subsumed_by_biosequence_name,
       atlas_build_id => $atlas_build_id,
     );
+    return if (! $subsumed_by_biosequence_id);
   }
 
   #### Get the presence_level_id
@@ -418,9 +574,10 @@ sub insertProteinIdentificationRecord {
   my $is_covering = $args{is_covering};
   my $seq_unique_prots_in_group = $args{seq_unique_prots_in_group};
   my $norm_PSMs_per_100K = $args{norm_PSMs_per_100K};
-
+  my $table_name = $TBAT_PROTEIN_IDENTIFICATION;
+  my $rowdata = {};
   #### Define the attributes to insert
-  my $rowdata = {
+    $rowdata = {
      biosequence_id => $biosequence_id,
      atlas_build_id => $atlas_build_id,
      protein_group_number => $protein_group_number,
@@ -436,12 +593,12 @@ sub insertProteinIdentificationRecord {
      is_covering => $is_covering,
      seq_unique_prots_in_group => $seq_unique_prots_in_group,
      norm_PSMs_per_100K => $norm_PSMs_per_100K,
-  };
+   };
 
   #### Insert protein identification record
   my $protein_identification_id = $sbeams->updateOrInsertRow(
     insert => 1,
-    table_name => $TBAT_PROTEIN_IDENTIFICATION,
+    table_name => $table_name,
     rowdata_ref => $rowdata,
     PK => 'protein_identification_id',
     return_PK => 1,
@@ -486,11 +643,14 @@ sub insertBiosequenceRelationship {
     atlas_build_id => $atlas_build_id,
   );
 
+  return if (! $reference_biosequence_id || ! $related_biosequence_id);
+
   #### Get the relationship_type_id
   my $relationship_type_id = $self->get_biosequence_relationship_type_id(
     relationship_name => $relationship_name,
   );
 
+  
   #### Check to see if this biosequence_relationship is in the database
   my $biosequence_relationship_id = $self->get_biosequence_relationship_id(
     atlas_build_id => $atlas_build_id,
@@ -540,7 +700,7 @@ sub insertBiosequenceRelationshipRecord {
     or die("ERROR[$METHOD]:Parameter related_biosequence_id not passed");
   my $relationship_type_id = $args{relationship_type_id}
     or die("ERROR[$METHOD]:Parameter relationship_type_id not passed");
-
+  my $table_name = $TBAT_BIOSEQUENCE_RELATIONSHIP;
 
   #### Define the attributes to insert
   my $rowdata = {
@@ -554,7 +714,7 @@ sub insertBiosequenceRelationshipRecord {
   #### Insert protein identification record
   my $biosequence_relationship_id = $sbeams->updateOrInsertRow(
     insert => 1,
-    table_name => $TBAT_BIOSEQUENCE_RELATIONSHIP,
+    table_name => $table_name,
     rowdata_ref => $rowdata,
     PK => 'biosequence_relationship_id',
     return_PK => 1,
@@ -581,6 +741,7 @@ sub get_biosequence_id {
   my $atlas_build_id = $args{atlas_build_id}
     or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
 
+
   my $query = qq~
 	SELECT BS.biosequence_id
 	FROM $TBAT_BIOSEQUENCE BS, $TBAT_ATLAS_BUILD AB
@@ -589,10 +750,11 @@ sub get_biosequence_id {
 	AB.biosequence_set_id = BS.biosequence_set_id AND
 	BS.biosequence_name = '$biosequence_name'
   ~;
-  my ($biosequence_id) = $sbeams->selectOneColumn($query) or
+  my ($biosequence_id) = $sbeams->selectOneColumn($query);
+  if ( ! $biosequence_id ){
        die "\nERROR: Unable to find the biosequence_id" .
        " with $query\n\n";
-
+  }
   return $biosequence_id;
 
 } # end get_biosequence_id
@@ -609,6 +771,9 @@ sub get_protein_identification_id {
 
   #### Process parameters
   my $biosequence_id = $args{biosequence_id};
+
+  my $table_name = $TBAT_PROTEIN_IDENTIFICATION;
+
   my $biosequence_name;
   my $query;
   if (! $biosequence_id ) {
@@ -622,7 +787,7 @@ sub get_protein_identification_id {
   if ( $biosequence_id ) {
     $query = qq~
 	SELECT protein_identification_id
-	FROM $TBAT_PROTEIN_IDENTIFICATION
+	FROM $table_name 
 	WHERE
 	atlas_build_id = $atlas_build_id AND
 	biosequence_id = '$biosequence_id'
@@ -714,11 +879,12 @@ sub get_biosequence_relationship_id {
     or die("ERROR[$METHOD]: Parameter reference_biosequence_id not passed");
   my $related_biosequence_id = $args{related_biosequence_id}
     or die("ERROR[$METHOD]:Parameter related_biosequence_id not passed");
+  my $table_name = $TBAT_BIOSEQUENCE_RELATIONSHIP;
 
   #### Lookup and return biosequence_relationship_id
   my $query = qq~
 	SELECT biosequence_relationship_id
-	FROM $TBAT_BIOSEQUENCE_RELATIONSHIP
+	FROM $table_name 
 	WHERE
 	atlas_build_id = '$atlas_build_id' AND
 	reference_biosequence_id = '$reference_biosequence_id' AND
@@ -980,7 +1146,6 @@ sub is_uniprot_identifier {
 ###############################################################################
 sub get_swiss_prot_species {
   my $genus_species = shift;
-
   if ($genus_species =~ /homo.*sapiens/i) {
     return "HUMAN";
   } elsif ($genus_species =~ /mus.*musculus/i) {
@@ -999,6 +1164,8 @@ sub get_swiss_prot_species {
     return "RAT";
   } elsif ($genus_species =~ /(danio.*rerio|zebrafish)/){
     return "DANRE";
+  }elsif($genus_species =~ /(gallus*gallus|chick)/i){
+     return "CHICK";
   } else {
     return "";
   }

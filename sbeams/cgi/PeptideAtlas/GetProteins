@@ -309,7 +309,7 @@ sub handle_request {
   #### Set some reasonable defaults if no parameters supplied
   unless ($n_params_found) {
     $parameters{input_form_format} = "minimum_detail";
-    $parameters{presence_level_constraint} = "1,2";
+    $parameters{presence_level_constraint} = "1";
     $parameters{redundancy_constraint} = "4";
     $parameters{protein_properties_constraint} = "2";
     $parameters{covering_constraint} = "0";
@@ -526,6 +526,7 @@ sub handle_request {
     constraint_value=>$parameters{protein_group_number_constraint} );
   return if ($protein_group_number_clause eq '-1');
 
+
   #### Build PROTEIN_GROUP_REPRESENTATIVE constraint
   my $protein_group_representative_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"BS_REP.biosequence_name",
@@ -702,7 +703,8 @@ sub handle_request {
   my @is_keratin_sql;
   my @is_immunoglobulin_sql;
   my @biosequence_description_sql;
-
+  my @sample_specific_id_clause;
+  my @dataset_specific_id_clause;
 
   # Define subqueries for protein properties; they are the same for
   # all clauses of the union.
@@ -730,6 +732,8 @@ sub handle_request {
 		  AND BPS_SIBLING.is_immunoglobulin = '1'
 		)  > 0 THEN 'Ig' ELSE '' END)
     ~;
+   
+
   # Define SQL specific for displaying protein identifications
   $biosequence_name_sql[0] = "BS_REF.biosequence_name";
   $is_covering_sql[0] = "(CASE WHEN PID.is_covering=1 THEN 'C' ELSE '' END)";
@@ -754,6 +758,9 @@ sub handle_request {
   $is_immunoglobulin_sql[0]=$is_immunoglobulin_sql_all;
   $biosequence_description_sql[0] =
         "CAST(BS_REF.biosequence_desc AS varchar(255))";
+  $sample_specific_id_clause[0]  = "AND PID.sample_specific_id in ($parameters{sample_specific_id})" if (defined $parameters{sample_specific_id});
+  $dataset_specific_id_clause[0]  = "AND PID.dataset_specific_id in ('$parameters{dataset_specific_id}')" if (defined $parameters{dataset_specific_id});
+ 
 
   # Define SQL specific for displaying indistinguishables, identicals
   # relative to protein identifications
@@ -780,6 +787,8 @@ sub handle_request {
   $is_immunoglobulin_sql[1]=$is_immunoglobulin_sql_all;
   $biosequence_description_sql[1] =
         "CAST(BS_REL.biosequence_desc AS varchar(255))";
+  $sample_specific_id_clause[1]  = "AND BR.sample_specific_id in ($parameters{sample_specific_id})" if (defined $parameters{sample_specific_id});
+  $dataset_specific_id_clause[1]  = "AND BR.dataset_specific_id in ('$parameters{dataset_specific_id}')" if (defined $parameters{dataset_specific_id});
 
   # Define SQL specific for displaying biosequences identical to
   # indistinguishables
@@ -806,6 +815,9 @@ sub handle_request {
   $is_immunoglobulin_sql[2]=$is_immunoglobulin_sql_all;
   $biosequence_description_sql[2] =
         "CAST(BS_INDIS.biosequence_desc AS varchar(255))";
+  $sample_specific_id_clause[2]  = "AND BR_INDIS.sample_specific_id in ($parameters{sample_specific_id})" if (defined $parameters{sample_specific_id});
+
+  $dataset_specific_id_clause[2]  = "AND BR_INDIS.dataset_specific_id in ('$parameters{dataset_specific_id}')" if (defined $parameters{dataset_specific_id});
 
   if($atlas_build_name =~/Origene/i){                                        
       my  @column_array =(
@@ -1048,6 +1060,8 @@ sub handle_request {
          $protein_group_number_clause
          $presence_level_clause
          $special_clauses[$i]
+         $sample_specific_id_clause[$i]
+         $dataset_specific_id_clause[$i]
        )
     ~;
   }
@@ -1055,20 +1069,33 @@ sub handle_request {
 
   #### Define the SQL statement
   # ordering could be improved
-  $sql = qq~
-    $select_clause[0]
-       UNION
-    $select_clause[1]
-       UNION
-    $select_clause[2]
-   ORDER BY
-      group_number,
-      ppl_sort_order,
-      reference_biosequence,
-      brt_sort_order,
-      biosequence_name
-  ~;
-
+  if (! $parameters{presence_level_constraint} && $parameters{dataset_specific_id}){
+    $sql = qq~
+      $select_clause[1]
+         UNION
+      $select_clause[2]
+     ORDER BY
+        group_number,
+        ppl_sort_order,
+        reference_biosequence,
+        brt_sort_order,
+        biosequence_name
+    ~;
+  }else{
+		$sql = qq~
+			$select_clause[0]
+				 UNION
+			$select_clause[1]
+				 UNION
+			$select_clause[2]
+		 ORDER BY
+				group_number,
+				ppl_sort_order,
+				reference_biosequence,
+				brt_sort_order,
+				biosequence_name
+		~;
+  }
 
   #### Certain types of actions should be passed to links
   my $pass_action = "QUERY";
@@ -1109,7 +1136,7 @@ sub handle_request {
   #### Define the hypertext links for columns that need them
   # %NV inserts the value of column N
   %url_cols = (
-          'Biosequence Name' => "$CGI_BASE_DIR/PeptideAtlas/GetProtein?protein_name=\%$colnameidx{biosequence_name}V&apply_action=$pass_action",
+          'Biosequence Name' => "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_build_id&protein_name=\%$colnameidx{biosequence_name}V&apply_action=$pass_action",
           'SKU' =>  "http://www.origene.com/protein/\%$colnameidx{SKU}V/B2M.aspx",
           #'Tube' 
           'Biosequence Name_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein\'; return true"',

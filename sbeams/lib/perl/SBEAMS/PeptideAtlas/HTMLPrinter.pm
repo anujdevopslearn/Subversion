@@ -2379,6 +2379,58 @@ sub displayExperiment_contri_plotly{
   return $chart;
   
 }
+sub tableHeatMap{
+  my $self = shift;
+  my %args = @_;
+  my $table_id = $args{table_id};
+  my $str = qq~
+     <script type="text/javascript" src="$CGI_BASE_DIR/../usr/javascript/jquery/jquery.min.js"></script>
+     <script type="text/javascript">
+			\$(document).ready(function(){
+				// Function to get the Max value in Array
+					Array.max = function( array ){
+							return Math.max.apply( Math, array );
+					};
+
+					// get all values
+					var counts= \$('#$table_id  td:not(:first-child)').map(function() {
+							if (\$(this).text() ){
+								 return parseInt(\$(this).text());
+							}else{
+								 return 0;
+							}
+					}).get();
+
+				// return max value
+				var max = Array.max(counts);
+				
+				xr = 255;
+					xg = 255;
+					xb = 255;
+				 
+					yr = 243;
+					yg = 32;
+					yb = 117;
+
+					n = 100;
+				
+				// add classes to cells based on nearest 10 value
+				\$('#$table_id  td:not(:first-child)').each(function(){
+					
+					var val = parseInt(\$(this).text());
+					var pos = parseInt((Math.round((val/max)*100)).toFixed(0));
+					red = parseInt((xr + (( pos * (yr - xr)) / (n-1))).toFixed(0));
+					green = parseInt((xg + (( pos * (yg - xg)) / (n-1))).toFixed(0));
+					blue = parseInt((xb + (( pos * (yb - xb)) / (n-1))).toFixed(0));
+					clr = 'rgb('+red+','+green+','+blue+')';
+					\$(this).css({backgroundColor:clr});
+				});
+			});
+	 	</script>
+  ~;
+  return $str;
+}
+
 
 1;
 

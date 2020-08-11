@@ -164,15 +164,18 @@ my $show_image = 0;
     }
     # Print what we already have, speed up apparent page loading time.
     if (! $section){
+
       $atlas->display_page_header( header_info => $header, project_id => $project_id, onload => 'sortables_init()', sortable => 1 );
 		  print $page;
+      $page = "<BR>";
+      $page .= get_datasetContri_info( build_id => $build_id);
 			my $build_path = get_build_path( build_id => $build_id );
 			my $mayu_data_path = "$build_path/analysis/Mayu_out.csv";
 			if ( -e $mayu_data_path ) {
-				$page = "<BR>$mayu_help\n";
+				$page .= "<BR>$mayu_help\n";
 				$page .= get_mayu_info( $mayu_data_path );
-				print $page;
 			}
+			print $page;
 
 	#  print STDERR 'showtime ' . time() . "\n";
 			# Add peptide stats section
@@ -185,12 +188,15 @@ my $show_image = 0;
                                               column_name_ref => $column_name_ref); 
 				print $plots;
 			}
-			
+		
+ 
+	
 			if ( 1 ) {
 				my $map_display = getSampleMapDisplay ( %{$params}, build_id => $build_id );
 				print $map_display;
 			}
-
+    
+    print $atlas->tableHeatMap(table_id => 'datasetContri_info');
     $atlas->display_page_footer();
   }
 } # end main
@@ -280,7 +286,7 @@ sub get_table_help {
                  { key => '#_Proteins', value => 'The number of canonical (highly distinguishable, non-redundant) protein sequences identified from the peptides in this experiment.' },
                  { key => '#_Cum_Prots', value => 'Order-dependent cumulative number of canonical proteins contributed to build by this and previous experiments.<br>Counts non-human contaminants, so final tally may be greater than Canonical Proteins count in Build Overview. ' },
 #                 { key => 'Sens', value => 'The sensitivity of the Peptide Prophet model at a probablility of 0.9, the percent of true positives that would be included at that threshold was used as a cutoff. ' },
-                 { key => 'FDR_(%)', value => 'The error rate of peptides above the threshold Peptide Prophet model at a probablility of 0.9, the percent of false positives that would be included at the build threshold. ' },
+                 { key => '#_Unique_Prots', value => 'The number of proteins that have peptides observed in the sample only.'},
                  { key => 'Experiment_Date', value => ''},
                  { key => 'Pubmed/DOI', value => ''}, 
                  { key => 'Other_Repos', value=>''}
@@ -348,14 +354,13 @@ sub get_table_help {
   return $help;
 
 } # end get_table_help
-
 sub get_mayu_info {
   my $mayu_data_path = shift;
-  my $table = "<TABLE WIDTH=600>\n";
+  my $table = "<table width=600>\n";
 
   my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'mayu_info',
                                                   visible => 1,
-                                                  tooltip => 'Show/Hide Section',
+                                                  tooltip => 'show/hide section',
                                                   imglink => 1,
                                                   sticky  => 1 );
 
@@ -363,21 +368,21 @@ sub get_mayu_info {
       LMTABS => 1,
       no_toggle => 1,
       divname => 'mayu_div',
-      text => 'Mayu Decoy-Based FDR Analysis',
+      text => 'mayu decoy-based fdr analysis',
       link => $link,
       width => 920,
   );
-  open (MAYU, $mayu_data_path);
-  my $line = <MAYU>;
+  open (mayu, $mayu_data_path);
+  my $line = <mayu>;
   my @headings = split(",",$line);
   my @sortable;
   for my $col ( @headings ) {
     push @sortable, $col, $col;
   }
 
-  my $headings_ref = $atlas->make_sort_headings( headings => \@sortable, default => 'mFDR' );
+  my $headings_ref = $atlas->make_sort_headings( headings => \@sortable, default => 'mfdr' );
   my @records = ();
-  for $line (<MAYU>) {
+  for $line (<mayu>) {
     chomp ($line);
     my @fields = split(",",$line);
     push @records, \@fields;
@@ -389,10 +394,140 @@ right center center right right center center left center left center center
 center left center left center center center center left center center center
 center left) ], 
 					tr_info => $tr,
-					bg_color => '#EAEAEA',
+					bg_color => '#eaeaea',
           table_id => 'mayu_data',
 					sortable => 1 );
-  $table .= "\n</TABLE>\n";
+  $table .= "\n</table>\n";
+  return ($table);
+}
+
+sub get_datasetContri_info {
+  my %args = @_;
+  my $build_id = $args{build_id};
+  my $table = "<table width=900>\n";
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'datasetContri_info',
+                                                  visible => 1,
+                                                  tooltip => 'show/hide section',
+                                                  imglink => 1,
+                                                  sticky  => 1 );
+  $table .= $atlas->encodeSectionHeader(
+      LMTABS => 1,
+      no_toggle => 1,
+      divname => 'datasetContri_info_div',
+      text => 'Dataset Specific Protein Identification',
+      link => $link,
+      width => 920,
+  );
+
+  my $sql = qq~
+   SELECT A.repository_id , A.NAME, count (distinct A.ID) as cnt
+   FROM (
+     SELECT PID.dataset_specific_id as repository_id,
+            PRL.LEVEL_NAME AS NAME,
+            PID.biosequence_id as ID
+     FROM $TBAT_PROTEIN_IDENTIFICATION PID 
+     JOIN  $TBAT_PROTEIN_PRESENCE_LEVEL PRL
+     ON (PID.PRESENCE_LEVEL_ID = PRL.PROTEIN_PRESENCE_LEVEL_ID)
+     WHERE 1 = 1
+           AND atlas_build_id IN ($build_id)
+           AND dataset_specific_id is not null 
+           AND dataset_specific_id != 'OTHERS'
+     UNION
+     SELECT BR.DATASET_SPECIFIC_ID AS  repository_id, 
+            BRT.RELATIONSHIP_NAME AS NAME, 
+            BR.RELATED_BIOSEQUENCE_ID as ID 
+     FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR
+     JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT
+     ON (BR.RELATIONSHIP_TYPE_ID = BRT.BIOSEQUENCE_RELATIONSHIP_TYPE_ID)
+     WHERE 1 = 1
+           AND atlas_build_id IN ($build_id)
+           AND dataset_specific_id is not null 
+           AND dataset_specific_id != 'OTHERS'
+   ) AS A
+   GROUP BY A.repository_id, A.NAME
+   order by cnt DESC  
+  ~;
+  my @rows = $sbeams->selectSeveralColumns($sql);
+  return '' if (@rows < 1);
+  my %unique_prot2dataset_cnt;
+  my %presence_level_names = ();
+  foreach my $row(@rows){
+    my ($repository_id, $name,$cnt) =@$row;
+    $presence_level_names{$name} =1;
+    $unique_prot2dataset_cnt{$repository_id}{$name} = $cnt;
+ } 
+  my @level_names = sort {$a cmp $b} keys %presence_level_names;
+  $sql =qq~;
+    SELECT LEVEL_NAME AS NAME, PROTEIN_PRESENCE_LEVEL_ID AS ID
+    FROM $TBAT_PROTEIN_PRESENCE_LEVEL
+    UNION 
+    SELECT RELATIONSHIP_NAME AS NAME, BIOSEQUENCE_RELATIONSHIP_TYPE_ID AS ID
+    FROM $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE 
+  ~;
+  my %protein_level_ids = $sbeams->selectTwoColumnHash($sql);
+
+  my @headings =('Dataset', @level_names);
+  my @sortable=();
+  my @align=();
+  for my $col ( @headings ) {
+    $col =~ s/(\w+)/\u$1/g;
+    push @sortable, $col,$col;
+    push @align, 'center';
+  }
+  $align[0] = 'left';
+  my $headings_ref = $atlas->make_sort_headings( headings => \@sortable);
+  my @records = ();
+  my $sql = qq~
+  SELECT S.repository_identifiers 
+  FROM $TBAT_SEARCH_BATCH_STATISTICS SBS
+  JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
+  JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ( ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id )
+  JOIN $TBAT_SAMPLE S ON (S.sample_id = ASB.sample_id)
+  WHERE ABSB.atlas_build_id = $build_id
+  ORDER BY rownum
+  ~;
+
+  my @repository_ids = $sbeams->selectOneColumn($sql);
+  my %processed = ();
+  foreach my $repository_id (@repository_ids){ 
+  #foreach my $repository_id ( sort {$unique_prot2dataset_cnt{$b}{$level_names[0]} <=> $unique_prot2dataset_cnt{$a}{$level_names[0]}} keys %unique_prot2dataset_cnt){
+    next if (not defined $unique_prot2dataset_cnt{$repository_id} && not defined $processed{$repository_id});
+    $processed{$repository_id} =1;
+    my @row =();
+    push @row , $repository_id;
+    foreach my $level_name (@level_names){
+      my $cnt = $unique_prot2dataset_cnt{$repository_id}{$level_name} || '';
+      if (defined $unique_prot2dataset_cnt{$repository_id}{$level_name}){
+         my $cnt = $unique_prot2dataset_cnt{$repository_id}{$level_name};
+         my $level_id = $protein_level_ids{$level_name};
+         my $constraint = '';
+         if($level_name =~ /^indistinguishable$/i){
+            $constraint = "redundancy_constraint=1";
+         }elsif ($level_name =~ /(subsumbed_by|identical)/i){
+            $constraint = "redundancy_constraint=$level_id";
+         }else{
+           $constraint = "presence_level_constraint=$level_id&redundancy_constraint=4";
+        }
+         my $str  = $atlas->make_pa_tooltip( tip_text => $cnt,
+           link_text => "<a href='$CGI_BASE_DIR/PeptideAtlas/GetProteins?atlas_build_id=$build_id&dataset_specific_id=$repository_id&$constraint&apply_action=QUERY'>$cnt</a>" );
+         push @row , $str;
+      }else{
+         push @row ,'';
+      }
+    }
+    push @records, \@row;
+  }
+  $table .="<p class=plot_caption>Table below shows proteins that have peptides identified in a single dataset</p>";
+  $table .= $atlas->encodeSectionTable( rows => [ $headings_ref, @records ], 
+					header => 1, 
+					align => [ @align], 
+          width => 'auto', 
+          nowrap => [1..scalar(@headings)],
+					tr_info => $tr,
+          bg_color => '#EAEAEA',
+          rows_to_show => 25,
+					sortable => 1 );
+  $table .= "\n</table>\n";
   return ($table);
 }
 
@@ -838,16 +973,38 @@ sub get_sample_info {
 	my $td = $t2 - $t1;
   $log->debug( "build table SQL: $td" );
 
+  $sql = qq~
+   SELECT A.sample_id , count (distinct A.id)
+   FROM (
+		 SELECT sample_specific_id as sample_id, biosequence_id as id 
+		 FROM $TBAT_PROTEIN_IDENTIFICATION 
+		 WHERE 1 = 1
+					 AND atlas_build_id IN ($build_id)
+					 AND sample_specific_id is not null
+		 UNION 
+		 SELECT sample_specific_id as sample_id, related_biosequence_id as id 
+		 FROM $TBAT_BIOSEQUENCE_RELATIONSHIP
+		 WHERE 1 = 1
+					 AND atlas_build_id IN ($build_id)
+					 AND sample_specific_id is not null
+   ) AS A
+   GROUP BY A.sample_id
+	~;
+	my %unique_prot2sample_cnt = $sbeams->selectTwoColumnHash($sql);
   # Massage/format some of the columns in the sample info just retrieved
   my @samples;
   for my $batch ( @sample_info ) {
     $show_image++;
     # if these aren't defined, set to zero
     for my $idx ( 5, 6, 7, 8, 9 ) { $batch->[$idx] ||= 0; }
-    # if FDR not defined, set to ND. Else, make into string.
     for my $idx ( 10 ) {
-      $batch->[$idx] = $sbeams->makeInactiveText('ND') if !defined $batch->[$idx];
-      $batch->[$idx] = sprintf( "%0.1f", (100 * $batch->[$idx]))  if $batch->[$idx] !~ /FONT/;  # only one digit after decimal
+      if (defined $unique_prot2sample_cnt{$batch->[0]}){
+         $batch->[$idx] = $unique_prot2sample_cnt{$batch->[0]};
+         $batch->[$idx] = $atlas->make_pa_tooltip( tip_text => $batch->[$idx],
+           link_text => "<a href='$CGI_BASE_DIR/PeptideAtlas/GetProteins?atlas_build_id=$build_id&sample_specific_id=$batch->[0]&apply_action=QUERY'>$batch->[$idx]</a>" );
+      }else{
+        $batch->[$idx] = '';
+      }
     }
     for my $idx (1) {
       $batch->[$idx] = $atlas->make_pa_tooltip( tip_text => $batch->[$idx],
@@ -868,7 +1025,7 @@ sub get_sample_info {
     }
     for my $idx (13) {
       next if ( ! $batch->[$idx]);
-      my @ids = split(",", $batch->[$idx]);
+      my @ids = split(/[,;]/, $batch->[$idx]);
       $batch->[$idx] ='';
       foreach my $id(@ids){
         my $link = '';
@@ -877,7 +1034,10 @@ sub get_sample_info {
           $link = "http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=";
         }elsif($id =~ /PASS/){
           $link = "http://www.peptideatlas.org/PASS/";
+        }elsif($id =~ /S\d+/){
+          $link = "https://cptac-data-portal.georgetown.edu/study-summary/";
         }
+
         $batch->[$idx] .= "<a href='$link$id'>$id</a>,";
       }
       $batch->[$idx] =~ s/,$//;
@@ -917,7 +1077,7 @@ sub get_sample_info {
                                         header => 1, 
                                         nowrap => [1..scalar(@headings)], 
                                         table_id => 'sample_contribution',
-                                        align => [ qw(center left right right right right right right right right right center,center) ], 
+                                        align => [ qw(center left center center center center center center center center center center center) ], 
                                         tr_info => $tr,
                                         bg_color => '#EAEAEA',
                                         rows_to_show => 25,
