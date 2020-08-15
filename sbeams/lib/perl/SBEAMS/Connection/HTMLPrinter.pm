@@ -310,6 +310,9 @@ my $module_styles =<<"  END_STYLE";
   .clustal_peptide {width: 1000px; height: 400px; overflow-x: scroll; overflow-y: scroll; scrollbar-arrow-color: blue; scrollbar- face-color: #e7e7e7; scrollbar-3dlight-color: #a0a0a0; scrollbar-darkshadow-color: #888888}
   .fade_header { background-image: url($HTML_BASE_DIR/images/fade_orange_header_2.png); background-repeat: no-repeat }
 
+  .form_button { background: #ffffff; color: #333; border: 2px solid #333; font-weight: 800; padding: 0px 25px; }
+  .form_button:hover { background: #b00; color: #fff; }
+
   /* Glycopeptide */
   .blue_bg_glyco{ font-family: Helvetica, Arial, sans-serif; background-color: #4455cc; font-size: ${FONT_SIZE_MED}pt; font-weight: bold; color: white}
   .identified_pep{ background-color: #882222; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5;	color:white; Padding:1; border-style: solid; border-left-width: 1px; border-right-width: 1px; border-top-width: 1px; border-left-color: #eeeeee; border-right-color: #eeeeee; border-top-color: #aaaaaa; border-bottom-color:#aaaaaa; }

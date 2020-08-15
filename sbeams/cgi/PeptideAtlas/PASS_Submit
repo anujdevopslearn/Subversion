@@ -310,6 +310,7 @@ sub handle_request {
   #### If SUBMIT, see if there's enough information to submit the dataset
   if ($action =~ /SUBMIT/i && ! @errors) {
     my $authentication = authenticateUser(emailAddress=>$emailAddress,password=>$password);
+
     if ($authentication->{result} eq 'Success') {
 
     } elsif ($authentication->{result} eq 'NoSuchUser') {
@@ -367,224 +368,289 @@ sub handle_request {
   #### Print the form
   if ($sbeams->output_mode() eq 'html' && $printForm) {
      print "<H3>Submit a new SRM Dataset</H3>";
-     print "<P>Thank you for submitting a dataset to PASSEL.<BR><BR>";
+     print "<P>Thank you for submitting a dataset to PASSEL.</P>";
 
-     print qq~<table style="border:2px solid #b00;background:#f3f1e4;" cellpadding="5"><tr><td><img height="50" width="50" src="../../images/alert-icon.png"></td><td style="color:#b00;"><b>NOTICE:</b> This submission system accepts <b>only SRM datasets</b>.<br><br>If you have a DDA or DIA dataset to submit, please <a href="http://www.proteomexchange.org/submission">submit to PRIDE or MassIVE via ProteomeXchange instead</a>.<br><br><b>SRM datasets may still be submitted to PASSEL below.<BR></b></td></tr></table>
+     print qq~<table style="border:3px solid #b00;background:#f3f1e4;" cellpadding="5"><tr><td><img height="50" width="50" src="../../images/alert-icon.png"></td><td style="color:#b00;"><b>NOTICE:</b> This submission system accepts <b>only SRM datasets</b>.<br><br>If you have a DDA or DIA dataset to submit, please <a href="http://www.proteomexchange.org/submission">submit to PRIDE or MassIVE via ProteomeXchange instead</a>.<br><br><b>SRM datasets may still be submitted to PASSEL below.<BR></b></td></tr></table>
      ~;
 
-     print "<UL><LI>Please fill out the form below to register a new submission.";
+     print "<UL style='font-size:larger;'><LI>Please fill out the form below to register a new submission.";
      print "<LI>After completing the form, you will receive instructions on how to upload your data via FTP";
-     print "<LI>Items <B><font color=\"#b00\">in red</B></font> are required";
+     print "<LI>&#11088; items are required";
      print "<LI>Please prepare your transition list (methods file) in <a href='http://www.mcponline.org/content/early/2011/12/12/mcp.R111.015040.abstract'><font color=\'#b00\'><b>TraML</b></font></a> format (or, if not possible, using this <a href='http://www.peptideatlas.org/upload/PASSEL_transition_list_template.xlsx'><font color=\'#b00\'>tsv template</font></a>).";
-     print "</UL></P>";
+     print "</UL>";
 
-     if (@errors) {
-     print "<HR>\n";
-       print "<TABLE cellpadding=\"5\"><TR><TD bgcolor=\"#ff9999\">";
-       foreach my $error ( @errors ) {
-	 print "<LI>$error\n";
-       }
-       print "</TD></TR></TABLE>\n";
-     }
-
-
-     print "<HR>\n";
-     print "<nobr>";
      print $q->start_form(-method=>"POST",
                           -action=>"$base_url",
                           -name=>"MainForm",
 			 );
 
-     print "<B><font color=\"#b00\">Submitter email address</B></font> (This is your login name and the address that PASS will use to communicate with you)<BR>\n";
-     #### Strangly, using the Perl CGI call leads to strange persistence effects that I can't defeat
-     #print $q->textfield( "emailAddress", $emailAddress, 50, 80);
-     print qq~<input type="text" name="emailAddress" value="$emailAddress" size=50 maxlength=80/>~;
-     print "<BR>\n";
+     print "<table cellpadding='8' style='border-collapse:collapse;margin-bottom:50px;' class='info_box'>";
 
-     print "<B><font color=\"#b00\">Submitter password</B></font> (Enter your password if you already have an account or choose a password for a new account)<BR>\n";
-     #print $q->textfield( "password", $password, 10, 50);
-     print qq~<input type="password" name="password" value="$password" size=10 maxlength=50/>~;
-     print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
-
-     if ($authentication->{result} eq 'Success') {
-       print $q->submit(-name => "action",
-			-value => 'LOGOUT',
-			-label => 'LOGOUT');
-     } else {
-       print $q->submit(-name => "action",
-			-value => 'LOGIN',
-			-label => 'LOGIN');
+     if (@errors) {
+       print "<tr><td colspan='4' style='background:#b00;color:#fff;text-align:center;font-weight:bold;'>ERRORS</td></tr>";
+       print "<tr><td colspan='4' bgcolor='#ff9999'>";
+       foreach my $error ( @errors ) {
+	 print "<li>$error\n";
+       }
+       print "</td></tr>\n";
      }
-     print "<BR>\n";
+
+     print &printPASSFormField(
+       field      => 'HEADING',
+       field_text => 'Account');
+
+     print &printPASSFormField(
+       field      => 'emailAddress',
+       field_text => 'Submitter email address',
+       required   => 1,
+       value      => $emailAddress,
+       help_text  => 'This is your login name and the address that PASS will use to communicate with you');
+
+     print &printPASSFormField(
+       input_type => 'password',
+       field      => 'password',
+       field_text => 'Submitter password',
+       required   => 1,
+       value      => $password,
+       auth_result=> $authentication->{result},
+       help_text  => 'Enter your password if you already have an account or choose a password for a new account.');
 
      if ($authentication->{result} ne 'Success') {
-       print "<B><font color=\"#b00\">Confirm password</font></B> (If you don't yet have an account, please confirm your password by entering it again)<BR>\n";
-       #print $q->textfield( "confirmingPassword", $parameters{'confirmingPassword'}, 10, 50);
-       print qq~<input type="password" name="confirmingPassword" value="$confirmingPassword" size=10 maxlength=50/>~;
-       print "<BR>\n";
+       print "<tr><td colspan='4'><hr style='border-top:1px dotted #444;'></td></tr>\n";
+       print &printPASSFormField(
+	 input_type => 'password',
+	 field      => 'confirmingPassword',
+	 field_text => 'Confirm password',
+	 required   => 1,
+	 value      => $confirmingPassword,
+	 help_text  => "If you don't yet have an account, please confirm your password by entering it again.");
      }
 
-     print "<B><font color=\"#b00\">Submitter first name</B></font> (Enter submitter's first name)<BR>\n";
-     #print $q->textfield(-name=>"firstName",-value=>$firstName,-size=>50,-maxlength=>100);
-     print qq~<input type="text" name="firstName" value="$firstName" size=50 maxlength=100/>~;
-     print "<BR>\n";
+     print &printPASSFormField(
+       field      => 'firstName',
+       field_text => 'Submitter first name',
+       required   => 1,
+       value      => $firstName,
+       help_text  => "Enter submitter's first name");
 
-     print "<B><font color=\"#b00\">Submitter last name</B></font> (Enter submitter's last name)<BR>\n";
-     #print $q->textfield( "lastName", $lastName, 50, 100);
-     print qq~<input type="text" name="lastName" value="$lastName" size=50 maxlength=100/>~;
-     print "<BR>\n";
+     print &printPASSFormField(
+       field      => 'lastName',
+       field_text => 'Submitter last name',
+       required   => 1,
+       value      => $lastName,
+       help_text  => "Enter submitter's last name");
+
      if ($authentication->{result} ne 'Success') {
-       print $q->submit(-name => "action",
-			-value => 'REGISTER',
-			-label => 'REGISTER');
-       print "&nbsp;&nbsp;(Click before completing remainder of form.)<BR>\n";
+       print &printPASSFormField(
+         input_type => 'REGISTER',
+         field      => 'REGISTER',
+         field_text => 'New Account',
+         help_text  => "Click before completing remainder of form.");
      }
-     print "<HR>\n";
 
+
+     print &printPASSFormField(
+       field      => 'HEADING',
+       field_text => 'Dataset');
 
 #     print "<B><font color=\"#b00\">Dataset type</B></font> (Please select the broad category classifying the dataset. This will aid in determining how to process it.)<BR>\n";
-     print "<B><font color=\"#b00\">Dataset type</B> (Please note that <b>only SRM datasets can be accepted</b> at this time.)</font><BR>\n";
-     print qq~<select name="datasetType">~;
+
+     print "<tr><td class='bold_text'>Dataset type</td><td class='req'>&#11088;</td><td>";
+     print qq~<select style="min-width:50%;" name="datasetType">~;
      my $selectedDatasetType = $parameters{'datasetType'} || 'SRM';
      for (my $i=0; $i < scalar(@datasetTypes); $i+=2) {
        my ($key,$label) = @datasetTypes[$i..$i+1];
-       my $selected = '';
-       $selected = 'selected="true" ' if ($selectedDatasetType eq $key);
-       $selected .= 'disabled ' unless ($key eq 'SRM');
+       my $selected = ($key eq 'SRM') ? 'selected="true" ' : 'disabled ';
        print qq~  <option $selected value="$key">$label</option>\n~;
      }
      print "</select>\n";
-     print "<BR>\n";
+     print "</td><td style='color:#b00;' class='textsm'>Please note that <b>only SRM datasets can be accepted</b> at this time.</td></tr>";
 
-     print "<B><font color=\"#b00\">Dataset tag</B></font> (Enter a short {up to 20 characters} \"tag\" for this dataset)<BR>It should be globally unique. It will be used in lists of datasets where the title might be too long.<BR>\n";
-     print $q->textfield( "datasetTag", $parameters{'datasetTag'}, 20, 20);
-     print "<BR>\n";
+     print &printPASSFormField(
+       field      => 'datasetTag',
+       field_text => 'Dataset tag',
+       required   => 1,
+       value      => $parameters{'datasetTag'},
+       help_text  => 'Enter a short (up to 20 characters) "tag" for this dataset<BR>It should be globally unique. It will be used in lists of datasets where the title might be too long.');
 
-     print "<B><font color=\"#b00\">Dataset title</B></font> (Enter a nice descriptive title {up to 200 characters} for this dataset)<BR>\n";
-     print $q->textarea( "datasetTitle", $parameters{'datasetTitle'}, 3, 66);
-     print "<BR>\n";
+     print &printPASSFormField(
+       input_type => 'textarea',
+       field      => 'datasetTitle',
+       field_text => 'Dataset title',
+       required   => 1,
+       value      => $parameters{'datasetTitle'},
+       help_text  => "Enter a nice descriptive title (up to 200 characters) for this dataset");
 
-     print qq~
-       <SCRIPT LANGUAGE="JavaScript">
-       function ClickedTodayButton(input_field) {
-         today = new Date();
-         month = today.getMonth()+1;
-         if (month < 10) { month = "0" + month; }
-         date = today.getDate();
-         if (date < 10) { date = "0" + date; }
-         date_value =
-           today.getFullYear() + "-" + month + "-" + date;
-         document.MainForm.publicReleaseDate.value = date_value;
-         return;
-       }
-       </SCRIPT>
-     ~;
+     print &printPASSFormField(
+       input_type => 'date',
+       field      => 'publicReleaseDate',
+       field_text => 'Dataset Release Date',
+       required   => 1,
+       value      => $parameters{'publicReleaseDate'},
+       help_text  => "Select or enter date on which the data may be released publicly.");
 
-     print "<B><font color=\"#b00\">Dataset Release Date</B></font> (Enter the date on which the data may be released publicly)<BR>\n";
-     print "(Please use the format  2011-08-16)<BR>\n";
-     print $q->textfield( "publicReleaseDate", $parameters{'publicReleaseDate'}, 10, 10);
-     print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
-     print qq~<INPUT TYPE="button" NAME="publicReleaseDate_button" VALUE="TODAY" onClick="ClickedTodayButton(publicReleaseDate)">\n~;
-     print "<BR>\n";
-     print "<HR>\n";
 
-     print "<B><font color=\"#b00\">Contributors</B></font> (Enter the names of people who are contributing this dataset, including the submitter, if applicable)<BR>\n";
-     print $q->textarea( "contributors", $parameters{'contributors'}, 5, 50);
-     print "<BR>\n";
+     print &printPASSFormField(
+       field      => 'HEADING',
+       field_text => 'Experiment');
 
-     print "<B><font color=\"#b00\">Submitter organization</B></font> (Enter submitter's organization)<BR>\n";
-     print qq~<input type="text" name="submitter_organization" value="$submitter_organization" size=100 maxlength=255/>~;
-     print "<BR>\n";
+     print &printPASSFormField(
+       input_type => 'textarea',
+       field      => 'contributors',
+       field_text => 'Contributors',
+       required   => 1,
+       value      => $parameters{'contributors'},
+       help_text  => "Enter the names of people who are contributing this dataset, including the submitter, if applicable");
 
-     print "<B><font color=\"#b00\">Lab head</B></font> (Enter full name of lab head)<BR>\n";
-     print qq~<input type="text" name="lab_head_full_name" value="$lab_head_full_name" size=100 maxlength=255/>~;
-     print "<BR>\n";
 
-     print "<B><font color=\"#b00\">Lab head email</B></font> (Enter email of lab head)<BR>\n";
-     print qq~<input type="text" name="lab_head_email" value="$lab_head_email" size=100 maxlength=255/>~;
-     print "<BR>\n";
+     print &printPASSFormField(
+       field      => 'submitter_organization',
+       field_text => 'Submitter organization',
+       required   => 1,
+       value      => $submitter_organization,
+       help_text  => "Enter submitter's organization");
 
-     print "<B><font color=\"#b00\">Lab head organization</B></font> (Enter organization of lab head)<BR>\n";
-     print qq~<input type="text" name="lab_head_organization" value="$lab_head_organization" size=100 maxlength=255/>~;
-     print "<BR>\n";
+     print &printPASSFormField(
+       field      => 'lab_head_full_name',
+       field_text => 'Lab head',
+       required   => 1,
+       value      => $lab_head_full_name,
+       help_text  => "Enter full name of lab head");
 
-     print "<B><font color=\"#b00\">Lab head country</B></font> (Enter country of lab head's organization)<BR>\n";
-     print qq~<input type="text" name="lab_head_country" value="$lab_head_country" size=100 maxlength=255/>~;
-     print "<BR>\n";
+     print &printPASSFormField(
+       field      => 'lab_head_email',
+       field_text => 'Lab head email',
+       required   => 1,
+       value      => $lab_head_email,
+       help_text  => "Enter email of lab head");
 
-     print "<B><font color=\"#b00\">Publication</B></font> (Enter the associated publication with this dataset) (Please enter a PubMed ID if available.)<BR>\n";
-     print "(If no PubMed ID is available yet, please use format: Smith, DA, and Wesson, TB, Manuscript Title, Journal, submitted)<BR>\n";
-     print "(Or if no publication is on the horizon, please just enter \"unpublished\")<BR>\n";
-     print $q->textarea( "publication", $parameters{'publication'}, 5, 50);
-     print "<BR>\n";
+     print &printPASSFormField(
+       field      => 'lab_head_organization',
+       field_text => 'Lab head organization',
+       required   => 1,
+       value      => $lab_head_organization,
+       help_text  => "Enter organization of lab head");
 
-     print "<B><font color=\"#b00\">Instrument(s) used</B></font> (Enter the model name of the instrument(s) used for this dataset)<BR>\n";
-     print "(Please use the format: Thermo Scientific LTQ Orbitrap Elite, AB SCIEX TripleTOF 5600, etc.) (You may enter more than one if applicable)<BR>\n";
-     print $q->textarea( "instruments", $parameters{'instruments'}, 2, 40);
-     print "<BR>\n";
+     print &printPASSFormField(
+       field      => 'lab_head_country',
+       field_text => 'Lab head country',
+       required   => 1,
+       value      => $lab_head_country,
+       help_text  => "Enter country of lab head's organization");
 
-     print "<B><font color=\"#b00\">Species studied</B></font> (Enter the name of the species studied)<BR>\n";
-     print "(Please use the format: Human, Mouse, Drosophila melanogaster, etc.) (You may enter more than one if applicable)<BR>\n";
-     print $q->textarea( "species", $parameters{'species'}, 2, 40);
-     print "<BR>\n";
+     print &printPASSFormField(
+       input_type => 'textarea',
+       field      => 'publication',
+       field_text => 'Publication',
+       required   => 1,
+       value      => $parameters{'publication'},
+       help_text  => 'Enter the associated publication with this dataset.  Please enter a PubMed ID if available.<BR>If no PubMed ID is available yet, please use format: <i>Smith, DA, and Wesson, TB, Manuscript Title, Journal, submitted</i>.<BR>Or if no publication is on the horizon, please just enter "unpublished"');
 
-     print "<B><font color=\"#b00\">Mass modifications</B></font> (Enter any mass modifications applied to the sample)<BR>\n";
-     print "(Please use the format: static: C+57.021464, variable: K+8.014199, R+10.008269, or \"none\" if none.)<BR>\n";
-     print $q->textarea( "massModifications", $parameters{'massModifications'}, 2, 40);
-     print "<BR>\n";
-     print "<HR>\n";
+     print &printPASSFormField(
+       input_type => 'textarea',
+       field      => 'instruments',
+       field_text => 'Instrument(s) used',
+       required   => 1,
+       value      => $parameters{'instruments'},
+       help_text  => "Enter the model name of the instrument(s) used for this dataset.<BR>Please use the format: Thermo Scientific LTQ Orbitrap Elite, AB SCIEX TripleTOF 5600, etc.<BR>You may enter more than one if applicable.");
 
-     print "<B>Summary</B> (Enter a free-text summary or description of the dataset, experiment, or project)<BR>\n";
-     print $q->textarea( "summary", $parameters{'summary'}, 6, 80);
-     print "<BR>\n";
+     print &printPASSFormField(
+       input_type => 'textarea',
+       field      => 'species',
+       field_text => 'Species studied',
+       required   => 1,
+       value      => $parameters{'species'},
+       help_text  => "Enter the name of the species studied.<BR>Please use the format: Human, Mouse, Drosophila melanogaster, etc.<BR>You may enter more than one if applicable.");
 
-     print "<B>Growth Protocol</B> (Enter a free-text description of the growth protocol or organism preparation)<BR>\n";
-     print $q->textarea( "growth", $parameters{'growth'}, 6, 80);
-     print "<BR>\n";
+     print &printPASSFormField(
+       input_type => 'textarea',
+       field      => 'massModifications',
+       field_text => 'Mass modifications',
+       required   => 1,
+       value      => $parameters{'massModifications'},
+       help_text  => 'Enter any mass modifications applied to the sample.<BR>Please use the format: static: C+57.021464, variable: K+8.014199, R+10.008269, or "none" if none.');
 
-     print "<B>Treatment Protocol</B> (Enter a free-text description of the treatments applied to the organism prior to sample acquisition)<BR>\n";
-     print $q->textarea( "treatment", $parameters{'treatment'}, 6, 80);
-     print "<BR>\n";
 
-     print "<B>Extraction Protocol</B> (Enter a free-text description of the extraction of proteins from the treated sample(s))<BR>\n";
-     print $q->textarea( "extraction", $parameters{'extraction'}, 6, 80);
-     print "<BR>\n";
+     print &printPASSFormField(
+       field      => 'HEADING',
+       field_text => 'Methods');
 
-     print "<B>Separation Protocol</B> (Enter a free-text description of the separation of proteins and/or peptides)<BR>\n";
-     print $q->textarea( "separation", $parameters{'separation'}, 6, 80);
-     print "<BR>\n";
+     print &printPASSFormField(
+       input_type => 'textarea',
+       field      => 'summary',
+       field_text => 'Summary',
+       value      => $parameters{'summary'},
+       help_text  => "Enter a free-text summary or description of the dataset, experiment, or project.");
 
-     print "<B>Digestion Protocol</B> (Enter a free-text description of the digestion of the proteins into peptides)<BR>\n";
-     print $q->textarea( "digestion", $parameters{'digestion'}, 6, 80);
-     print "<BR>\n";
+     print &printPASSFormField(
+       input_type => 'textarea',
+       field      => 'growth',
+       field_text => 'Growth Protocol',
+       value      => $parameters{'growth'},
+       help_text  => "Enter a free-text description of the growth protocol or organism preparation.");
 
-     print "<B>Acquisition Protocol</B> (Enter a free-text description of the acquisition of mass spectra from the peptide sample)<BR>\n";
-     print $q->textarea( "acquisition", $parameters{'acquisition'}, 6, 80);
-     print "<BR>\n";
+     print &printPASSFormField(
+       input_type => 'textarea',
+       field      => 'treatment',
+       field_text => 'Treatment Protocol',
+       value      => $parameters{'treatment'},
+       help_text  => "Enter a free-text description of the treatments applied to the organism prior to sample acquisition.");
 
-     print "<B>Informatics Protocol</B> (Enter a free-text description of the informatics processing of the raw data produced by the instrument(s))<BR>\n";
-     print $q->textarea( "informatics", $parameters{'informatics'}, 6, 80);
-     print "<BR>\n";
-     print "<HR>\n";
+     print &printPASSFormField(
+       input_type => 'textarea',
+       field      => 'extraction',
+       field_text => 'Extraction Protocol',
+       value      => $parameters{'extraction'},
+       help_text  => "Enter a free-text description of the extraction of proteins from the treated sample(s).");
 
-     print $q->submit(-name => "action",
+     print &printPASSFormField(
+       input_type => 'textarea',
+       field      => 'separation',
+       field_text => 'Separation Protocol',
+       value      => $parameters{'separation'},
+       help_text  => "Enter a free-text description of the separation of proteins and/or peptides.");
+
+     print &printPASSFormField(
+       input_type => 'textarea',
+       field      => 'digestion',
+       field_text => 'Digestion Protocol',
+       value      => $parameters{'digestion'},
+       help_text  => "Enter a free-text description of the digestion of the proteins into peptides.");
+
+     print &printPASSFormField(
+       input_type => 'textarea',
+       field      => 'acquisition',
+       field_text => 'Acquisition Protocol',
+       value      => $parameters{'acquisition'},
+       help_text  => "Enter a free-text description of the acquisition of mass spectra from the peptide sample.");
+
+     print &printPASSFormField(
+       input_type => 'textarea',
+       field      => 'informatics',
+       field_text => 'Informatics Protocol',
+       value      => $parameters{'informatics'},
+       help_text  => "Enter a free-text description of the informatics processing of the raw data produced by the instrument(s).");
+
+
+     print &printPASSFormField(
+       field      => 'HEADING',
+       field_text => 'Actions');
+
+
+     print "<tr><td></td><td></td><td style='padding:24px 8px;'>";
+     print $q->submit(-name  => "action",
+		      -class => 'form_button',
 		      -value => 'SUBMIT',
 		      -label => 'SUBMIT');
-     print $q->submit(-name => "refresh",
+     print $q->submit(-name  => "refresh",
+		      -class => 'form_button',
+		      -style => 'margin-left:100px;',
 		      -value => 'REFRESH',
 		      -label => 'REFRESH');
 
-
+     print "</td><td></td></tr></table>";
      print $q->end_form;
-     print "</nobr>";
-
-
-     print "</p>";
-    }
-
-
-
-
+  }
 
 
   $log->debug( "End samples, handlerequest " . time() );
@@ -691,13 +757,13 @@ sub registerUser {
     );
 
     $PK = $sbeams->updateOrInsertRow(
-					insert => 1,
-					table_name => $TBAT_PASS_SUBMITTER,
-					rowdata_ref => \%rowdata,
-					PK => 'submitter_id',
-					return_PK => 1,
-					add_audit_parameters => 1
-				       );
+      insert => 1,
+      table_name => $TBAT_PASS_SUBMITTER,
+      rowdata_ref => \%rowdata,
+      PK => 'submitter_id',
+      return_PK => 1,
+      add_audit_parameters => 1
+	);
 
   }
 
@@ -956,4 +1022,60 @@ sub generatePassword {
   $password =~ s/l/m/g;
 
   return($password);
+}
+
+
+#######################################################################
+# printPASSFormField
+#######################################################################
+sub printPASSFormField {
+  my %args = @_;
+  my $SUB_NAME = 'printPASSFormField';
+
+  #### Decode the argument list
+  my $field = $args{'field'} || die "[$SUB_NAME] ERROR:field not passed";
+  my $ftext = $args{'field_text'} || $field;
+  my $isreq = $args{'required'} || 0;
+  my $value = $args{'value'} || '';
+  my $itype = $args{'input_type'} || 'text';
+  my $htext = $args{'help_text'} || '';
+  my $auth  = $args{'auth_result'} || '';
+
+  if ($field eq 'HEADING') {
+    return "<tr><td style='text-align:center;background-color:#444;color:#fff;letter-spacing: 3px; text-transform: uppercase;font-weight: bold;}' colspan='4'>$ftext</td></tr>";
+  }
+
+  my $html = "<tr><td class='bold_text'>$ftext</td><td class='req'>";
+  $html .= "&#11088;" if $isreq;
+  $html .= "</td><td>";
+
+  if ($itype eq 'text') {
+    $html .= "<input type='text' name='$field' value='$value' size='60' maxlength='100'/>";
+  }
+  elsif ($itype eq 'textarea') {
+    $html .= "<textarea name='$field' rows='6' cols='62'>$value</textarea>";
+  }
+  elsif ($itype eq 'date') {
+    $html .= "<input type='date' style='min-width:50%;' name='$field' min='2000-01-01' max='2030-12-31' value='$value'/>";
+  }
+  elsif ($itype eq 'password') {
+    $html .= "<input type='password' name='$field' value='$value' size='10' maxlength='100'/>";
+    my $act = $auth eq 'Success' ? 'LOGOUT' : 'LOGIN';
+    $html .= $q->submit(-name  => "action",
+                        -class => 'form_button',
+			-style => 'margin-left:20px;',
+			-value => $act,
+			-label => $act)
+	unless $field =~ /^confirming/;
+  }
+  elsif ($itype eq 'REGISTER') {
+    $html .= $q->submit(-name  => "action",
+			-class => 'form_button',
+			-value => 'REGISTER',
+			-label => 'REGISTER');
+  }
+
+  $html .= "</td><td class='textsm'>$htext</td></tr>";
+
+  return $html;
 }
