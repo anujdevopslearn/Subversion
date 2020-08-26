@@ -235,6 +235,7 @@ sub findPepXMLFile  {
 	push @possible_names,
                         'interact-combined.pep.xml',  #iProphet
                         'interact-ipro.pep.xml',      #iProphet
+                        'interact-ipro.pep.xml.gz',
                         'interact-prob.pep.xml',
                         'interact-prob.xml',
                         'interact.pep.xml',
@@ -273,20 +274,28 @@ sub getNSpecFromFlatFiles {
 
   my $pepXMLfile = $self->findPepXMLFile( %args ) || return '';
   
-	%spectra = ();
-  if (-e $pepXMLfile) {
+	#%spectra = ();
+  #if (-e $pepXMLfile) {
 	  print STDERR "parsing XML file: $pepXMLfile!\n";
 
-    my $parser = new XML::Parser( );
-    $parser->setHandlers(Start => \&local_start_handler);
-    $parser->parsefile($pepXMLfile);
+  #  my $parser = new XML::Parser( );
+  #  $parser->setHandlers(Start => \&local_start_handler);
+  #  $parser->parsefile($pepXMLfile);
+  #}
+  #my $n0 = keys %spectra;
+  my $cmd = 'perl -ne \'/.*spectrum="([^"]+)(\.\d+)\.\d+.\d+".*/;$scan{$1} =1; $spec{"$1$2"}=1; END {print scalar keys %scan ; print "," . scalar keys %spec ; print "\n"}\'';
+  my $n0;
+  if ($pepXMLfile =~ /.gz$/){
+    $n0 = `zgrep '<spectrum_query' $pepXMLfile|$cmd`;
+  }else{
+    $n0 = `grep '<spectrum_query' $pepXMLfile|$cmd`;
   }
-  my $n0 = keys %spectra;
-  return $n0;
+  chomp $n0;
+  return split(",", $n0);
 
 
 } # End getNSpectraFromFlatFiles  
-  
+
 ###################################################################
 # local_start_handler -- local content handler for parsing of a
 # pepxml to get number of spectra in interact-prob.xml file

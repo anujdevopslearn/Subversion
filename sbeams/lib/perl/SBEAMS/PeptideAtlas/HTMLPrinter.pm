@@ -2243,18 +2243,23 @@ sub displayExperiment_contri_plotly{
   my $data_ref = $args{data_ref};
   my $tr = $args{tr};
   my $column_name_ref = $args{column_name_ref};
-  my $idx = 0;
   my @sample_label = ();
   my (@cumpepx, @cumpepy,@idvpepy,@cumprotx, @cumproty,@idvproty);
   my $pre_cum_n_good_spectra;
-
+  my %cols =();
+  my $idx =0;
+  foreach (@$column_name_ref){
+    $cols{lc($_)} = $idx;
+    $idx++;
+  } 
+  $idx=0;
   foreach my $row(@$data_ref){
-    my $n_good_spectra = $row->[3];
-    my $n_distinct_peptides = $row->[4];
-    my $cumulative_n_peptides = $row->[7];
-    my $n_canonical_proteins = $row->[8];
-    my $cumulative_n_proteins = $row->[9];
-    my $sample_tag =  $row->[1];
+    my $n_good_spectra = $row->[$cols{"#_spectra_id'd"}];
+    my $n_distinct_peptides = $row->[$cols{"#_distinct"}];
+    my $cumulative_n_peptides = $row->[$cols{"#_cumulative"}];
+    my $n_canonical_proteins = $row->[$cols{"#_proteins"}];
+    my $cumulative_n_proteins = $row->[$cols{"#_cum_prots"}];
+    my $sample_tag =  $row->[$cols{"experiment_name"}];
     $sample_tag =~ s/.*sample_id=\d+\'>//;
     $sample_tag =~ s/<.*//;
     push @sample_label, ($sample_tag,'','');

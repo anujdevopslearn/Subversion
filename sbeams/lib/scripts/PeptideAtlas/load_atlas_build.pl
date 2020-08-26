@@ -86,6 +86,7 @@ Options:
   --load                      Build an atlas (cannot currently be used in conjunction with --purge).
   --spectra                   Loads or updates the individual spectra for a build
   --prot_info                 Loads or updates protein identifications for a build (with --purge, purges)
+  --prot_info_sample_specific add sample specific info to protein_identification table
   --instance_searchbatch_obs           Loads or updates the number of observations per 
                               search_batch for peptide_instance and modified_pi tables
   --coordinates               Loads or updates the peptide coordinates
@@ -109,7 +110,7 @@ EOU
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
         "testvars","delete", "purge", "load", "check_tables",
         "atlas_build_name:s", "organism_abbrev:s", "default_sample_project_id:s",
-        "list","spectra","prot_info","coordinates","instance_searchbatch_obs",
+        "list","spectra","prot_info","prot_info_sample_specific", "coordinates","instance_searchbatch_obs",
         "spectrum_fragmentation_type","peptide_net_ncm",
     )) {
 
@@ -307,7 +308,7 @@ sub handleRequest {
   }
 
   #### If load or purge of protein information was requested
-  if ($OPTIONS{"prot_info"}) {
+  if ($OPTIONS{"prot_info"} || $OPTIONS{prot_info_sample_specific} ) {
     # if --purge, purge prot_info, unless load also requested, in which
     # case the entire load should have been purged already and we now
     # want to load prot_info
@@ -320,18 +321,23 @@ sub handleRequest {
       use SBEAMS::PeptideAtlas::ProtInfo;
       my $prot_info = new SBEAMS::PeptideAtlas::ProtInfo;
       my $atlas_build_directory = get_atlas_build_directory(
-			atlas_build_id => $ATLAS_BUILD_ID,
-					);
-					$prot_info->setSBEAMS($sbeams);
-					$prot_info->setVERBOSE($VERBOSE);
-					$prot_info->setTESTONLY($TESTONLY);
-					$prot_info->loadBuildProtInfo(
-			atlas_build_id => $ATLAS_BUILD_ID,
-			atlas_build_directory => $atlas_build_directory,
-					);
+					atlas_build_id => $ATLAS_BUILD_ID,
+				);
+			$prot_info->setSBEAMS($sbeams);
+			$prot_info->setVERBOSE($VERBOSE);
+			$prot_info->setTESTONLY($TESTONLY);
+      if ($OPTIONS{"prot_info"}){
+				$prot_info->loadBuildProtInfo(
+					atlas_build_id => $ATLAS_BUILD_ID,
+					atlas_build_directory => $atlas_build_directory,
+				);
+      }else{
+        $prot_info->update_protInfo_sampleSpecific(
+          atlas_build_id => $ATLAS_BUILD_ID,
+        );
+      }
     }
   }
-
 
   #### If coordinates only was requested
   if ($OPTIONS{"coordinates"}) {
@@ -1086,7 +1092,7 @@ sub get_search_batch_and_sample_id_hash
 
                     $sample_id = insert_sample( rowdata_ref => \%rowdata );
                     print "#######insert  $sample_id $exp_tag $exp_name\n";
-                    insert_sample_publications($sample_id, $pub_id);
+                    insert_sample_publications($sample_id, $pub_id) if ($pub_id);
 
                 }
 
@@ -1328,7 +1334,7 @@ sub create_atlas_search_batch
 
     my $atlas_search_batch_id;
 
-    my $nspec = $sbeamsMOD->getNSpecFromFlatFiles( search_batch_path => $proteomics_search_batch_path );
+    my ($nruns, $nspec) = $sbeamsMOD->getNSpecFromFlatFiles( search_batch_path => $proteomics_search_batch_path );
 
     my $search_batch_subdir =  $proteomics_search_batch_path;
 
@@ -1348,6 +1354,7 @@ sub create_atlas_search_batch
         proteomics_search_batch_id => $sbid,
         sample_id => $sid,
         n_searched_spectra => $nspec,
+        n_runs => $nruns,
         data_location => $experiment_path,
         search_batch_subdir => $search_batch_subdir,
         TPP_version => $TPP_version,
