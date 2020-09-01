@@ -717,50 +717,50 @@ sub handle_request {
       my %protein_map;
       foreach my $row (@rows) {
 
-	my ($pa, $seq, $prob, $n_obs, $n_g_loc, $n_prot_map, 
-	    $chr, $s_chr, $e_chr, $str, $b_name, $mw, $pi, 
-	    $ns, $nps, $eps, $org, $orig_name,
-	    $SSRCalc_relative_hydrophobicity, $protein_sequence, $bioseq_id, @annot ) = @{$row};
-	@pep_annot = @annot unless @pep_annot;
-	$protein_map{$bioseq_id} ||= { name  => $b_name,
-				       id    => $bioseq_id,
-				       seq   => $protein_sequence,
-				       level => 'tbd',
-				       pep_seq => $seq };
-	$peptide_accession[$i] = $pa;
-	$peptide_sequence[$i] = $seq;
-	$best_probability[$i] = $prob;
-	$n_observations[$i] = $n_obs;
-	$n_genome_locations[$i] = $n_g_loc;
-	$n_protein_mappings[$i] = $n_prot_map;
-	$chrom[$i] = $chr;
-	$start_chrom[$i] = $s_chr;
-	$end_chrom[$i] = $e_chr;
-	$strand[$i] = $str;
-	$biosequence_name[$i] = $b_name;
-	$biosequence_name{$b_name}++;
-	$mw[$i] = sprintf( "%0.2f", $mw);
-	$pi[$i] = sprintf( "%0.1f", $pi );
-	$nsamp[$i] = $ns;
-	$nprotsamp[$i] = $nps;
-	$epscore[$i] = $eps;
-	$organism[$i] = $org;
-	$original_name[$i] = $orig_name;
-	$SSRCalc_relative_hydrophobicity[$i] = $SSRCalc_relative_hydrophobicity;
-	#print "sql returns: $n_observations[$i] $sample_tag[$i] <br>";
-	$biosequence_id{$bioseq_id}++;
+					my ($pa, $seq, $prob, $n_obs, $n_g_loc, $n_prot_map, 
+							$chr, $s_chr, $e_chr, $str, $b_name, $mw, $pi, 
+							$ns, $nps, $eps, $org, $orig_name,
+							$SSRCalc_relative_hydrophobicity, $protein_sequence, $bioseq_id, @annot ) = @{$row};
+					@pep_annot = @annot unless @pep_annot;
+					$protein_map{$bioseq_id} ||= { name  => $b_name,
+											 id    => $bioseq_id,
+											 seq   => $protein_sequence,
+											 level => 'tbd',
+											 pep_seq => $seq };
+					$peptide_accession[$i] = $pa;
+					$peptide_sequence[$i] = $seq;
+					$best_probability[$i] = $prob;
+					$n_observations[$i] = $n_obs;
+					$n_genome_locations[$i] = $n_g_loc;
+					$n_protein_mappings[$i] = $n_prot_map;
+					$chrom[$i] = $chr;
+					$start_chrom[$i] = $s_chr;
+					$end_chrom[$i] = $e_chr;
+					$strand[$i] = $str;
+					$biosequence_name[$i] = $b_name;
+					$biosequence_name{$b_name}++;
+					$mw[$i] = sprintf( "%0.2f", $mw);
+					$pi[$i] = sprintf( "%0.1f", $pi );
+					$nsamp[$i] = $ns;
+					$nprotsamp[$i] = $nps;
+					$epscore[$i] = $eps;
+					$organism[$i] = $org;
+					$original_name[$i] = $orig_name;
+					$SSRCalc_relative_hydrophobicity[$i] = $SSRCalc_relative_hydrophobicity;
+					#print "sql returns: $n_observations[$i] $sample_tag[$i] <br>";
+					$biosequence_id{$bioseq_id}++;
 
-	my $key = join( ':::', $chr, $s_chr, $e_chr, $str, $seq );
+					my $key = join( ':::', $chr, $s_chr, $e_chr, $str, $seq );
 
-	# Could just push, thought this was clearer.
-	if ( !$chrom_map{$key} ) {
-	  # First time through, point to arrayref
-	  $chrom_map{$key} = [$b_name]; 
-	} else {
-	  # Subsequent visits push an item onto the list
-	  push @{$chrom_map{$key}}, $b_name; 
-	}
-	$i++;
+					# Could just push, thought this was clearer.
+					if ( !$chrom_map{$key} ) {
+						# First time through, point to arrayref
+						$chrom_map{$key} = [$b_name]; 
+					} else {
+						# Subsequent visits push an item onto the list
+						push @{$chrom_map{$key}}, $b_name; 
+					}
+					$i++;
       }
 
       ##xxxx PRINT RETURN to HTML HERE... 
@@ -884,127 +884,126 @@ sub handle_request {
 
       my @rows;
       my @prots;
-      for my $key ( keys( %chrom_map ) ) {
-    
-	my @map = split( ':::', $key );
+      for my $key ( sort {$a cmp $b} keys %chrom_map  ) {
+         
+					my @map = split( ':::', $key );
 
-	my $current_chrom = $map[0];
-	my $tmp_start = $map[1];
-	my $tmp_end = $map[2];
-	my $tmp_strand = $map[3];
-	my $peptide_sequence = $map[4];
-
-	# Select Uniprot ident if available (prev. to March 2013, selected 1st ident).
-	my $current_prot_num=0;
-	for (my $i=0; $i < scalar @{ $chrom_map{$key} }; $i++ ) {
-	  $current_prot_num = $i;
-	  last if ( SBEAMS::PeptideAtlas::ProtInfo::is_uniprot_identifier ( $chrom_map{$key}->[$i] ) );
-	}
-	my $current_prot = $chrom_map{$key}->[$current_prot_num];
-	push @prots, $current_prot;
-      
-	# This indicates an unmapped peptide
-	next unless $current_prot; 
-
-
-	## $current_peptide_seq is the entire peptide sequence, even if split over 2 exons
-	my $current_peptide_seq = $peptide_sequence;
-
-	#if ($current_chrom ne $last_chrom) {
-	#  $mapHTML .= "<TR><TD NOWRAP COLSPAN=2><B>Chromosome $current_chrom: </B></TD><TD></TD></TR>\n";
-	#}
-	my $tmp_protein = $current_prot;
-	my $tmp_seq;
-
-	#### get residues on given exons ####
-	my $exon_bp_length = ceil( (abs($tmp_end - $tmp_start)/3.) );
-
-	## if the strand is negative, count residues on exon starting from end
-	if ($tmp_strand eq "-") {
-	  if ($tmp_protein eq $last_protein) {
-	    $tmp_seq = substr($current_peptide_seq, 
-			      ((length $current_peptide_seq) - $last_seq_used_length - $exon_bp_length), 
-			      ((length $current_peptide_seq) - $last_seq_used_length ) );
-	  } else {
-	    $tmp_seq = substr($current_peptide_seq, 
-			      ((length $current_peptide_seq) - $exon_bp_length), 
-			      (length $current_peptide_seq) );
-	  }
-
-	  #### Else from the start
-	} elsif ($tmp_strand eq "+") {
-	  if ($tmp_protein eq $last_protein) {
-	    $tmp_seq = substr($current_peptide_seq, $last_seq_used_length, (length $current_peptide_seq));
-	  } else {
-	    $tmp_seq = substr($current_peptide_seq, 0, $exon_bp_length);
-	  }
-
-	  #### Otherwise, there's no proper mapping, but show information anyway
-	} else {
-	  $tmp_seq = $current_peptide_seq;
-	}
+					my $current_chrom = $map[0];
+					my $tmp_start = $map[1];
+					my $tmp_end = $map[2];
+					my $tmp_strand = $map[3];
+					my $peptide_sequence = $map[4];
+					# Select Uniprot ident if available (prev. to March 2013, selected 1st ident).
+					my $current_prot_num=0;
+					for (my $i=0; $i < scalar @{ $chrom_map{$key} }; $i++ ) {
+						$current_prot_num = $i;
+						last if ( SBEAMS::PeptideAtlas::ProtInfo::is_uniprot_identifier ( $chrom_map{$key}->[$i] ) );
+					}
+					my $current_prot = $chrom_map{$key}->[$current_prot_num];
+					push @prots, $current_prot;
+							
+					# This indicates an unmapped peptide
+					next unless $current_prot; 
 
 
-	$last_seq_used_length = length($tmp_seq);
+					## $current_peptide_seq is the entire peptide sequence, even if split over 2 exons
+					my $current_peptide_seq = $peptide_sequence;
 
-	# Set up protein[s] display
-	my $protein_display = makeProteinLink( name  => $tmp_protein, 
-					       build => $parameters{atlas_build_id}); 
+					#if ($current_chrom ne $last_chrom) {
+					#  $mapHTML .= "<TR><TD NOWRAP COLSPAN=2><B>Chromosome $current_chrom: </B></TD><TD></TD></TR>\n";
+					#}
+					my $tmp_protein = $current_prot;
+					my $tmp_seq;
 
-	my $extra = $#{$chrom_map{$key}};
-	if ( $extra ) {
-	  my $all = join ', ', @{$chrom_map{$key}};
-	  my $all_links;
-	  for my $p ( @{$chrom_map{$key}} ) {
-	    $all_links .= makeProteinLink( build => $parameters{atlas_build_id},
-					   name  => $p,
-					  target => '_prot_info' ) . "<BR>\n"; 
-	  }
+					#### get residues on given exons ####
+					my $exon_bp_length = ceil( (abs($tmp_end - $tmp_start)/3.) );
 
-	  $mapHTML .= $sbeams->getPopupDHTML();
-	  my $session_key = $sbeams->getRandomString( num_chars => 20,
-						      char_set => ['A'..'Z', 'a'..'z', 0..9] );
+					## if the strand is negative, count residues on exon starting from end
+					if ($tmp_strand eq "-") {
+						if ($tmp_protein eq $last_protein) {
+							$tmp_seq = substr($current_peptide_seq, 
+										((length $current_peptide_seq) - $last_seq_used_length - $exon_bp_length), 
+										((length $current_peptide_seq) - $last_seq_used_length ) );
+						} else {
+							$tmp_seq = substr($current_peptide_seq, 
+										((length $current_peptide_seq) - $exon_bp_length), 
+										(length $current_peptide_seq) );
+						}
 
-	  $sbeams->setSessionAttribute( key => $session_key,  value => $all_links );
+						#### Else from the start
+					} elsif ($tmp_strand eq "+") {
+						if ($tmp_protein eq $last_protein) {
+							$tmp_seq = substr($current_peptide_seq, $last_seq_used_length, (length $current_peptide_seq));
+						} else {
+							$tmp_seq = substr($current_peptide_seq, 0, $exon_bp_length);
+						}
 
-	  my $url = "$CGI_BASE_DIR/help_popup.cgi?title=Alternate%20Mappings;session_key=$session_key;email_link=no";
-	  my $more = qq~ &nbsp;&nbsp;[<A onClick=popitup("$url"); CLASS=pseudo_link>$extra more</A>]~;
-	  $protein_display = "<DIV TITLE='$all'>$protein_display $more</DIV>";
-	}
+						#### Otherwise, there's no proper mapping, but show information anyway
+					} else {
+						$tmp_seq = $current_peptide_seq;
+					}
 
 
-	my $ens_link = '';
-	my $range = '';
-	my $kaviar_link = '';
-	my $links = '';
-	if ( defined $tmp_start && defined $tmp_end && $tmp_end ) {
-	  $ens_link = makeGenomeLink( start => $tmp_start,
-				      end => $tmp_end,
-				      strand => $tmp_strand,
-				      chrom => $current_chrom,
-				      acc => $current_prot,
-				      org => $organism[0] );
+					$last_seq_used_length = length($tmp_seq);
 
-	  $range = $tmp_start . '-' . $tmp_end;
-	  $kaviar_link = makeKaviarLink( start => $tmp_start,
-					 end => $tmp_end,
-					 strand => $tmp_strand,
-					 chrom => $current_chrom,
-					 acc => $current_prot,
-					 org => $organism[0],
-					 build_id => $parameters{atlas_build_id} );
-	  $links = $ens_link if $ens_link;
-	  if ( $links && $kaviar_link ) {
-	    $links .= ",$kaviar_link";
-	  }
-	}
+					# Set up protein[s] display
+					my $protein_display = makeProteinLink( name  => $tmp_protein, 
+												 build => $parameters{atlas_build_id}); 
 
-	$current_chrom ||= $sbeams->makeInactiveText('n/a');
-	$tmp_strand = ( $tmp_strand =~ /\?/ ) ? $sbeams->makeInactiveText('n/a') : "<B>$tmp_strand</B>";
-	push @rows, [ $current_chrom, $protein_display, $tmp_seq, $range, $tmp_strand, $links ] if $tmp_seq;
+					my $extra = $#{$chrom_map{$key}};
+					if ( $extra ) {
+						my $all = join ', ', @{$chrom_map{$key}};
+						my $all_links;
+						for my $p ( @{$chrom_map{$key}} ) {
+							$all_links .= makeProteinLink( build => $parameters{atlas_build_id},
+										 name  => $p,
+										target => '_prot_info' ) . "<BR>\n"; 
+						}
 
-	$last_chrom = $current_chrom;
-	$last_protein = $current_prot;
+						$mapHTML .= $sbeams->getPopupDHTML();
+						my $session_key = $sbeams->getRandomString( num_chars => 20,
+													char_set => ['A'..'Z', 'a'..'z', 0..9] );
+
+						$sbeams->setSessionAttribute( key => $session_key,  value => $all_links );
+
+						my $url = "$CGI_BASE_DIR/help_popup.cgi?title=Alternate%20Mappings;session_key=$session_key;email_link=no";
+						my $more = qq~ &nbsp;&nbsp;[<A onClick=popitup("$url"); CLASS=pseudo_link>$extra more</A>]~;
+						$protein_display = "<DIV TITLE='$all'>$protein_display $more</DIV>";
+					}
+
+
+					my $ens_link = '';
+					my $range = '';
+					my $kaviar_link = '';
+					my $links = '';
+					if ( defined $tmp_start && defined $tmp_end && $tmp_end ) {
+						$ens_link = makeGenomeLink( start => $tmp_start,
+											end => $tmp_end,
+											strand => $tmp_strand,
+											chrom => $current_chrom,
+											acc => $current_prot,
+											org => $organism[0] );
+
+						$range = $tmp_start . '-' . $tmp_end;
+						$kaviar_link = makeKaviarLink( start => $tmp_start,
+									 end => $tmp_end,
+									 strand => $tmp_strand,
+									 chrom => $current_chrom,
+									 acc => $current_prot,
+									 org => $organism[0],
+									 build_id => $parameters{atlas_build_id} );
+						$links = $ens_link if $ens_link;
+						if ( $links && $kaviar_link ) {
+							$links .= ",$kaviar_link";
+						}
+					}
+
+					$current_chrom ||= $sbeams->makeInactiveText('n/a');
+					$tmp_strand = ( $tmp_strand =~ /\?/ ) ? $sbeams->makeInactiveText('n/a') : "<B>$tmp_strand</B>";
+					push @rows, [ $current_chrom, $protein_display, $tmp_seq, $range, $tmp_strand, $links ] if $tmp_seq;
+
+					$last_chrom = $current_chrom;
+					$last_protein = $current_prot;
 
       } # end for
 
