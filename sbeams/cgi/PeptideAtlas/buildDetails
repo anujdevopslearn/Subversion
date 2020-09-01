@@ -162,6 +162,7 @@ my $show_image = 0;
 			  $page .= "<BR>\n";
       }
     }
+    
     # Print what we already have, speed up apparent page loading time.
     if (! $section){
 
@@ -277,6 +278,7 @@ sub get_table_help {
   } elsif ( $name eq 'batch' ) {
     @entries = ( { key => 'ID', value => 'Database ID for this experiment (search batch) ' },
                  { key => 'Experiment_Name', value => 'Simple name for this experiment. ' },
+                 { key => '#_Runs', value=>'The total number of runs for this experiment.'},
                  { key => '#_Spectra_Searched', value => 'The total number of spectra searched in the experiment. ' },
                  { key => "#_Spectra_ID'd", value => 'The number of spectra identifed with a probability greater than the atlas threshold ' },
                  { key => '#_Distinct', value => 'The number of distinct peptide sequences, seen more than once (multiobs), in this build that are seen in this experiment. ' },
@@ -430,7 +432,8 @@ sub get_datasetContri_info {
      ON (PID.PRESENCE_LEVEL_ID = PRL.PROTEIN_PRESENCE_LEVEL_ID)
      WHERE 1 = 1
            AND atlas_build_id IN ($build_id)
-           AND dataset_specific_id is not null 
+           AND dataset_specific_id IS NOT NULL
+           AND dataset_specific_id != ''
            AND dataset_specific_id != 'OTHERS'
      UNION
      SELECT BR.DATASET_SPECIFIC_ID AS  repository_id, 
@@ -441,7 +444,8 @@ sub get_datasetContri_info {
      ON (BR.RELATIONSHIP_TYPE_ID = BRT.BIOSEQUENCE_RELATIONSHIP_TYPE_ID)
      WHERE 1 = 1
            AND atlas_build_id IN ($build_id)
-           AND dataset_specific_id is not null 
+           AND dataset_specific_id IS NOT NULL
+           AND dataset_specific_id != '' 
            AND dataset_specific_id != 'OTHERS'
    ) AS A
    GROUP BY A.repository_id, A.NAME
@@ -942,7 +946,7 @@ sub get_sample_info {
                                                   sticky  => 1 );
 
   my $sql =<<"  END";
-  SELECT S.sample_id, sample_tag, SBS.n_searched_spectra,
+  SELECT S.sample_id, sample_tag, SBS.n_runs, SBS.n_searched_spectra,
          n_good_spectra, n_distinct_multiobs_peptides,
          n_uniq_contributed_peptides, n_progressive_peptides,
          cumulative_n_peptides, n_canonical_proteins, cumulative_n_proteins,
@@ -996,8 +1000,8 @@ sub get_sample_info {
   for my $batch ( @sample_info ) {
     $show_image++;
     # if these aren't defined, set to zero
-    for my $idx ( 5, 6, 7, 8, 9 ) { $batch->[$idx] ||= 0; }
-    for my $idx ( 10 ) {
+    for my $idx ( 6, 7, 8, 9,10 ) { $batch->[$idx] ||= 0; }
+    for my $idx ( 11 ) {
       if (defined $unique_prot2sample_cnt{$batch->[0]}){
          $batch->[$idx] = $unique_prot2sample_cnt{$batch->[0]};
          $batch->[$idx] = $atlas->make_pa_tooltip( tip_text => $batch->[$idx],
@@ -1010,7 +1014,7 @@ sub get_sample_info {
       $batch->[$idx] = $atlas->make_pa_tooltip( tip_text => $batch->[$idx],
           link_text => "<a href='$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=AT_SAMPLE&sample_id=$batch->[0]'>$batch->[$idx]</a>" );
     }
-    for my $idx (12) {
+    for my $idx (13) {
       next if ( ! $batch->[$idx]);
       my @ids = split(",", $batch->[$idx]);
       $batch->[$idx] ='';
@@ -1023,7 +1027,7 @@ sub get_sample_info {
       }
       $batch->[$idx] =~ s/,$//;
     }
-    for my $idx (13) {
+    for my $idx (14) {
       next if ( ! $batch->[$idx]);
       my @ids = split(/[,;]/, $batch->[$idx]);
       $batch->[$idx] ='';
@@ -1056,7 +1060,6 @@ sub get_sample_info {
     push @headings, $row->{key}, $row->{value};
     push @column_names, $row->{key};
   }
-
 #  for my $h ( @headings ) {
 #    $log->info( $h );
 #  }
