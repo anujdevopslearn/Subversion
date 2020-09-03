@@ -24,7 +24,7 @@ use Getopt::Long;
 use FindBin;
 use Data::Dumper;
 
-use POSIX qw(ceil);
+use POSIX qw(ceil floor);
 
 use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
@@ -884,7 +884,8 @@ sub handle_request {
 
       my @rows;
       my @prots;
-      for my $key ( sort {$a cmp $b} keys %chrom_map  ) {
+      my $exon_bp_length_total =0;
+      for my $key (sort {$a cmp $b} keys (%chrom_map)  ) {
          
 					my @map = split( ':::', $key );
 
@@ -916,26 +917,30 @@ sub handle_request {
 					my $tmp_seq;
 
 					#### get residues on given exons ####
-					my $exon_bp_length = ceil( (abs($tmp_end - $tmp_start)/3.) );
-
+					my $exon_bp_length = ceil( (abs($tmp_end - $tmp_start) + 1 + $last_seq_used_length%3 )/3.) ;
 					## if the strand is negative, count residues on exon starting from end
 					if ($tmp_strand eq "-") {
 						if ($tmp_protein eq $last_protein) {
+              $exon_bp_length_total += abs($tmp_end - $tmp_start)+1;
 							$tmp_seq = substr($current_peptide_seq, 
-										((length $current_peptide_seq) - $last_seq_used_length - $exon_bp_length), 
-										((length $current_peptide_seq) - $last_seq_used_length ) );
+										((length $current_peptide_seq) - floor($last_seq_used_length/3.0) - $exon_bp_length), 
+										((length $current_peptide_seq) - floor($last_seq_used_length/3.0) ) );
 						} else {
+              
 							$tmp_seq = substr($current_peptide_seq, 
 										((length $current_peptide_seq) - $exon_bp_length), 
 										(length $current_peptide_seq) );
+              $exon_bp_length_total = abs($tmp_end - $tmp_start)+1;
 						}
 
 						#### Else from the start
 					} elsif ($tmp_strand eq "+") {
 						if ($tmp_protein eq $last_protein) {
-							$tmp_seq = substr($current_peptide_seq, $last_seq_used_length, (length $current_peptide_seq));
+              $exon_bp_length_total += abs($tmp_end - $tmp_start)+1;
+							$tmp_seq = substr($current_peptide_seq, floor($last_seq_used_length/3.0),$exon_bp_length );
 						} else {
 							$tmp_seq = substr($current_peptide_seq, 0, $exon_bp_length);
+              $exon_bp_length_total = abs($tmp_end - $tmp_start)+1;
 						}
 
 						#### Otherwise, there's no proper mapping, but show information anyway
@@ -944,7 +949,7 @@ sub handle_request {
 					}
 
 
-					$last_seq_used_length = length($tmp_seq);
+					$last_seq_used_length = $exon_bp_length_total; 
 
 					# Set up protein[s] display
 					my $protein_display = makeProteinLink( name  => $tmp_protein, 
