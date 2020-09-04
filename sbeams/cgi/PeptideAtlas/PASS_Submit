@@ -971,7 +971,6 @@ Thank you again for your contribution. If you have comments about this submissio
   #### Email PeptideAtlas team about the submission
   @toRecipients = (
     'Eric Deutsch','eric.deutsch@systemsbiology.org',
-    'Terry Farrah','terry.farrah@systemsbiology.org',
     'Zhi Sun','zhi.sun@systemsbiology.org',
   );
   @ccRecipients = ();

@@ -1,9 +1,9 @@
 #!/usr/local/bin/perl
 
 ###############################################################################
-# $Id: $
+# $Id$
 #
-# SBEAMS is Copyright (C) 2000-2016 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2020 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -83,9 +83,10 @@ my $show_image = 0;
 
     # Print what we already have, speed up apparent page loading time.
     $atlas->display_page_header( onload => "set_toggle_box( 'protein_list_table' );sortables_init()", sortable => 1 );
-		print $page;
 
-		$atlas->display_page_footer();
+    print $page;
+
+    $atlas->display_page_footer();
 
 } # end main
 
@@ -215,21 +216,16 @@ sub get_list_overview {
   BUILD
 
 
-  my $table = "<TABLE WIDTH=800>\n";
-
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'build_overview',
-                                                  visible => 1,
-                                                  tooltip => 'Show/Hide Section',
-                                                  imglink => 1,
-                                                  sticky  => 1 );
+  my $table = "<table style='margin-left: 15px;max-width:800px;'>\n";
+  my $tr = 'class="hoverable"';
 
   $table .= $atlas->encodeSectionHeader(
       LMTABS => 1,
       no_toggle => 1,
       text => ' Protein List Overview',
-      span => 4,
-      link => $link
+      span => 4
   );
+
   for my $key ( keys( %{$info} ) ) {
     $info->{lc($key)} = $info->{$key};
   }
@@ -353,11 +349,11 @@ sub get_list_table {
                                           '__use_thead' => 1 );
 
   $table->addRow( $headings_ref );
-  $table->setRowAttr( ROWS => [1], BGCOLOR => '#0000A0', CLASS => 'sortheader' );
+  $table->setRowAttr( ROWS => [1], BGCOLOR => '#003F72' );
   my $rnum = 2;
   for my $row ( @samples ) {
     $table->addRow( $row );
-    $table->setRowAttr( ROWS => [$rnum], BGCOLOR => '#EAEAEA' );
+    $table->setRowAttr( ROWS => [$rnum], BGCOLOR => '#f3f1e4' );
     $rnum++;
   }
 
