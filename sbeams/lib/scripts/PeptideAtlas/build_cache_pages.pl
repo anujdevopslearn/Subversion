@@ -103,24 +103,35 @@ sub main {
 ### get list of public build ids
 sub cache_buildDetail {
 	my $atlas_build_id = $OPTIONS{atlas_build_id} || ''; 
-
+  
 	my $sql = qq~
-		SELECT atlas_build_id
+		SELECT atlas_build_id atlas_build_name
 		FROM $TBAT_ATLAS_BUILD_PUBLIC 
 	~;
+	my %ids = $sbeams->selectTwoColumnHash($sql); 
+  my $SBEAMSentrycode='';
+  if ($atlas_build_id && not defined $ids{$atlas_build_id}){
+     ## internal build
+     ## get entry code
+     $SBEAMSentrycode = `grep html /net/dblocal/www/html/sbeams/lib/conf/SBEAMSentrycodes.conf | sed 's/\\s\\+.*//'`;
+     chomp $SBEAMSentrycode;
+     if (! $SBEAMSentrycode){
+       die "no SBEAMSentrycode found. Cannot create page for internal build\n";
+     }
+     $SBEAMSentrycode = '&SBEAMSentrycode=' .$SBEAMSentrycode;
+     $ids{$atlas_build_id} =1;
+  }
 
-	my @ids = $sbeams->selectOneColumn($sql); 
- 
+
   my $query_url="$BASE_URL/cgi/PeptideAtlas/buildDetails?atlas_build_id=";
 
-	foreach my $id(@ids){
+	foreach my $id(keys %ids){
 		next if ($atlas_build_id && $id ne $atlas_build_id);
     my $request_url="$query_url$id";
     #my $url_mdsum = md5_hex( $request_url );
     my $cache_filename = $request_url;
     $cache_filename =~ s/.*\?//;
-		my $url = "$query_url$id\&caching=1";
-		#print "$url\n";
+		my $url = "$query_url$id$SBEAMSentrycode\&caching=1";
 		my $response = HTTP::Tiny->new->get($url);
 		if ($response->{success}) { 
 			open (OUT, ">$cache_location/buildDetails/$cache_filename");

@@ -106,8 +106,8 @@ my $show_image = 0;
 				}
 				$page_url .= "://$ENV{SERVER_NAME}$ENV{REQUEST_URI}";
 				#my $url_mdsum = md5_hex( $page_url ); 
-        my $html_cache_name = $page_url;
-        $html_cache_name =~ s/.*\?//;
+        $page_url =~ /(atlas_build_id=\d+)/;
+        my $html_cache_name = $1; 
 				my $html_cache_loc  = '';
 				if ($PHYSICAL_BASE_DIR !~ /dev\w+\/sbeams/){
 					$html_cache_loc = "/net/dblocal/www/html/sbeamscommon/htmlcache/buildDetails";
