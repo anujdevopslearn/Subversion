@@ -1721,14 +1721,14 @@ sub handle_request {
 
       for my $idx ($resultset_ref->{column_hash_ref}{'sample_ids'},
 		   $resultset_ref->{column_hash_ref}{'is_subpeptide_of'} ) {
-	$row->[$idx] =~ s/\s//g;
-	my @samples = split( /,/, $row->[$idx] );
-	if ( $idx == $resultset_ref->{column_hash_ref}{'sample_ids'} ) {
-	  my $cnt = scalar( @samples );
-	  $row->[$idx] = ( $htmlmode ) ? "<A HREF='$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$row->[0]&action=QUERY#samples' TITLE='$row->[$idx]'> $cnt </A>" : $cnt;
-	} else {
-	  $row->[$idx] = scalar( @samples );
-	}
+				$row->[$idx] =~ s/\s//g;
+				my @samples = split( /,/, $row->[$idx] );
+				if ( $idx == $resultset_ref->{column_hash_ref}{'sample_ids'} ) {
+					my $cnt = scalar( @samples );
+					$row->[$idx] = ( $htmlmode ) ? "<A HREF='$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$row->[0]&action=QUERY#samples' TITLE='$row->[$idx]'> $cnt </A>" : $cnt;
+				} else {
+					$row->[$idx] = scalar( @samples );
+				}
       }
 
       my %sample_list = @sample_list;
@@ -1763,33 +1763,14 @@ sub handle_request {
 #    $resultset_ref->{precision_list_ref}->[4] = 36;
 
     my @row_color_list = ("#f3f1e4","#d3d1c4");
+    
+		my $distinct_obs_peptide_display = $sbeamsMOD->get_individual_spectra_display(
+																								column_titles_ref=>\@column_titles,
+																								colnameidx_ref => \%colnameidx,
+																								resultset_ref=> $resultset_ref,
+																								hidden_cols_ref=>\%hidden_cols );
 
-    #### Display the resultset
-    $sbeams->displayResultSet(
-      row_color_scheme_ref=>{
-	change_n_rows => 4,
-	color_list => \@row_color_list,
-      },
-      resultset_ref=>$resultset_ref,
-      query_parameters_ref=>\%parameters,
-      rs_params_ref=>\%rs_params,
-      url_cols_ref=>\%url_cols,
-      hidden_cols_ref=>\%hidden_cols,
-      max_widths=>\%max_widths,
-      column_titles_ref=>\@column_titles,
-      base_url=>$base_url,
-      no_escape => 1
-    );
-
-
-    #### Display the resultset controls
-#    $sbeams->displayResultSetControls(
-#      resultset_ref=>$resultset_ref,
-#      query_parameters_ref=>\%parameters,
-#      rs_params_ref=>\%rs_params,
-#      base_url=>$base_url,
-#    );
-
+		print "$distinct_obs_peptide_display" if $htmlmode;
 
     print "</DIV>" if $htmlmode;  ## close section!
 

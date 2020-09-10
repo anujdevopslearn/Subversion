@@ -1672,7 +1672,6 @@ sub get_html_seq_vars {
   my %return = ( seq_display => '',
                  clustal_display => '',
                  variant_list => [ [qw( Type Num Start End Info )] ] );
-
   
 # Let the caller do this.
 #  my $full_seq = $args{seq} || return '';
@@ -1903,7 +1902,7 @@ sub get_html_seq_vars {
   my $swiss = $self->{_swiss};
 
   # Or if there are no variants.
-  return \%return unless $swiss->{success};
+  #return \%return unless $swiss->{success};
 
   my $is_html = ( $self->getSBEAMS()->output_mode() eq 'html' ) ? 1 : 0;
   if ( $swiss->{fasta_seq} ne $args{seq} ) {
