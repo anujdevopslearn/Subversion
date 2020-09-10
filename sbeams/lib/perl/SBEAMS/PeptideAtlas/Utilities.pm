@@ -1834,7 +1834,12 @@ sub get_html_seq_vars {
   if( $args{digest_type} && $div_txt{$args{digest_type}} ){
     $display_div = $div_txt{$args{digest_type}};
     $display_div =~ s/display:none/display:block/g;
-    $display_div =~ s/ID=$args{digest_type}/ID=seq_display/;
+    if (length($seq) > 2700){
+      $display_div =~ s/ID=$args{digest_type}/ID=seq_display CLASS='clustal_peptide'/;
+    }else{
+      $display_div =~ s/ID=$args{digest_type}/ID=seq_display/;
+    }
+
     if ( $args{digest_type} eq 'tryp' ) {
       $tselect = "selected";
     } elsif ( $args{digest_type} eq 'inter' ) {
@@ -2537,8 +2542,8 @@ sub read_uniprot_dat_entry {
   return '' unless $args{path} && defined( $args{offset} );
 
   # Reset local record separator, read an entire record at a time
-  local $/ = "\n//\n";
 
+  local $/ = "\n//\n";
   open DAT, $args{path} || return '';
   seek( DAT, $args{offset}, 0 );
 
@@ -3765,7 +3770,7 @@ sub fetchResultHTMLTable{
   my $sbeams = $self->getSBEAMS();
 
   $resultset_ref = $args{'resultset_ref'};
-	
+
   if ( $args{use_caching} ) {
     my $rs_sql = qq~
 		SELECT cache_descriptor
@@ -3790,13 +3795,13 @@ sub fetchResultHTMLTable{
         $resultset_ref->{cache_descriptor} = $cache_descriptor;
         return;	
       } else {
-	my $clear_cache_sql = qq~
-				DELETE FROM $TB_CACHED_RESULTSET WHERE table_name = '$table_name' and key_value = '$key_value' 
-				~;
-	$sbeams->do( $clear_cache_sql );
-	$log->info( "Cleaned up problem cache" );
-	$self->fetchResultHTMLTable( %args, use_caching => 0 );
-	return;
+				my $clear_cache_sql = qq~
+							DELETE FROM $TB_CACHED_RESULTSET WHERE table_name = '$table_name' and key_value = '$key_value' 
+							~;
+				$sbeams->do( $clear_cache_sql );
+				$log->info( "Cleaned up problem cache" );
+				$self->fetchResultHTMLTable( %args, use_caching => 0 );
+				return;
       }
     }
   }
