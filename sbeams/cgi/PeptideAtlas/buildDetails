@@ -281,6 +281,7 @@ sub get_table_help {
                  { key => '#_Runs', value=>'The total number of runs for this experiment.'},
                  { key => '#_Spectra_Searched', value => 'The total number of spectra searched in the experiment. ' },
                  { key => "#_Spectra_ID'd", value => 'The number of spectra identifed with a probability greater than the atlas threshold ' },
+                 { key => "%_Spectra_ID'd", value => ''},
                  { key => '#_Distinct', value => 'The number of distinct peptide sequences, seen more than once (multiobs), in this build that are seen in this experiment. ' },
                  { key => '#_Unique', value => "The number of distinct, multiobs peptides that are seen only in this experiment (unique contribution).  This discriminates against smaller experiments, and is less useful in atlas' with a large number of experiments. " },
                  { key => '#_Progressive', value => 'Order-dependent unique multiobs peptides contributed by a given experiment.  The contribution for each experiment is based on the experiments that have gone before it, so later experiments tend to have a lower progressive contribution. ' },
@@ -947,7 +948,7 @@ sub get_sample_info {
 
   my $sql =<<"  END";
   SELECT S.sample_id, sample_tag, SBS.n_runs, SBS.n_searched_spectra,
-         n_good_spectra, n_distinct_multiobs_peptides,
+         n_good_spectra, FORMAT((n_good_spectra*1.00)/SBS.n_searched_spectra/1.00, 'P2') , n_distinct_multiobs_peptides,
          n_uniq_contributed_peptides, n_progressive_peptides,
          cumulative_n_peptides, n_canonical_proteins, cumulative_n_proteins,
          model_90_error_rate,CONVERT(VARCHAR(10), PE.date_created, 126) AS [YYYY-MM-DD],
@@ -971,6 +972,7 @@ sub get_sample_info {
   WHERE ABSB.atlas_build_id = $build_id
   ORDER BY rownum, cumulative_n_peptides, ABSB.atlas_build_search_batch_id ASC
   END
+
 	my $t1 = time;
   my @sample_info = $sbeams->selectSeveralColumns ( $sql );
 	my $t2 = time;
@@ -1000,8 +1002,8 @@ sub get_sample_info {
   for my $batch ( @sample_info ) {
     $show_image++;
     # if these aren't defined, set to zero
-    for my $idx ( 6, 7, 8, 9,10 ) { $batch->[$idx] ||= 0; }
-    for my $idx ( 11 ) {
+    for my $idx ( 7, 8, 9,10,11 ) { $batch->[$idx] ||= 0; }
+    for my $idx ( 12 ) {
       if (defined $unique_prot2sample_cnt{$batch->[0]}){
          $batch->[$idx] = $unique_prot2sample_cnt{$batch->[0]};
          $batch->[$idx] = $atlas->make_pa_tooltip( tip_text => $batch->[$idx],
@@ -1014,7 +1016,7 @@ sub get_sample_info {
       $batch->[$idx] = $atlas->make_pa_tooltip( tip_text => $batch->[$idx],
           link_text => "<a href='$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=AT_SAMPLE&sample_id=$batch->[0]'>$batch->[$idx]</a>" );
     }
-    for my $idx (13) {
+    for my $idx (14) {
       next if ( ! $batch->[$idx]);
       my @ids = split(",", $batch->[$idx]);
       $batch->[$idx] ='';
@@ -1027,7 +1029,7 @@ sub get_sample_info {
       }
       $batch->[$idx] =~ s/,$//;
     }
-    for my $idx (14) {
+    for my $idx (15) {
       next if ( ! $batch->[$idx]);
       my @ids = split(/[,;]/, $batch->[$idx]);
       $batch->[$idx] ='';
@@ -1080,7 +1082,7 @@ sub get_sample_info {
                                         header => 1, 
                                         nowrap => [1..scalar(@headings)], 
                                         table_id => 'sample_contribution',
-                                        align => [ qw(center left center center center center center center center center center center center) ], 
+                                        align => [ qw(center left center center center center center center center center center center center center) ], 
                                         tr_info => $tr,
                                         bg_color => '#EAEAEA',
                                         rows_to_show => 25,
@@ -1111,7 +1113,7 @@ sub get_draw_chart_function {
 
 	my @samples;
 	for my $s ( @{$sample_arrayref} ) {
-		push @samples, [ $s->[1], $s->[4], $s->[7] ];
+		push @samples, [ $s->[1], $s->[6], $s->[9] ];
 	}
 	my $GV = SBEAMS::Connection::GoogleVisualization->new();
   my ( $chart ) = $GV->setDrawBarChart(  samples => \@samples,
