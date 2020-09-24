@@ -1515,7 +1515,7 @@ sub getUSIInputForm {
        }
        </SCRIPT>
     <FORM NAME="USIForm" METHOD="post" action="$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROG_NAME">
-    <font size="+1">Universal Spectrum Identifier:</font>&nbsp;&nbsp;&nbsp;<a target="_blank" href="https://github.com/HUPO-PSI/UniversalSpectrumIdentifier">(what's this?)</a>&nbsp;&nbsp;&nbsp;
+    <font size="+1">Universal Spectrum Identifier:</font>&nbsp;&nbsp;&nbsp;<a target="_blank" href="http://psidev.info/usi/">(what's this?)</a>&nbsp;&nbsp;&nbsp;
           <INPUT TYPE="button" NAME="example_button" VALUE="example" onClick="fillInUSI(example_button)"><BR>
     <INPUT TYPE="text" NAME="USI" SIZE="100" VALUE="$usi"></INPUT>
     <INPUT TYPE='submit' VALUE='VIEW'>
