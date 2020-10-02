@@ -1732,6 +1732,9 @@ sub handle_request {
       }
 
       my %sample_list = @sample_list;
+
+      $row->[0] =  ( $htmlmode ) ? "<A HREF='$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$row->[0]&action=QUERY'>$row->[0] </A>" :$row->[0];
+
       my @errs;
 #      if($is_trypsin_build eq 'Y'){
       push @errs, 'mc' if $mc;
@@ -1750,12 +1753,6 @@ sub handle_request {
       }
       $row->[4] = sprintf( "%0.2f", $row->[4] ) . " $annot";
       my $cnt = 0;
-#    for my $p ( @{$resultset_ref->{precisions_list_ref}} ) {
-#			$log->debug( "$cnt) precisely $p for $row->[$cnt], $resultset_ref->{types_list_ref}->[$cnt] " );
-#			$cnt++;
-#		}
-
-
     }
 
     # Must... continue... hacking!!!
