@@ -312,47 +312,53 @@ sub drawPTMHisChart {
   my $dataTable = qq~ 
    var data = new google.visualization.DataTable();
    data.addColumn('string', 'AA');
-   data.addColumn('number', '< 0.3');
+   data.addColumn('number', '< 0.01');
    data.addColumn({type:'string', role:'annotation'});
-   data.addColumn('number', '0.30 - 0.70');
+   data.addColumn('number', '0.01 - 0.05');
    data.addColumn({type:'string', role:'annotation'});
-   data.addColumn('number', '0.70 - 0.90');
+   data.addColumn('number', '0.05 - 0.19');
    data.addColumn({type:'string', role:'annotation'});
-   data.addColumn('number', '0.90 - 0.98');
+   data.addColumn('number', '0.19 - 0.81');
    data.addColumn({type:'string', role:'annotation'});
-   data.addColumn('number', '0.98 - 1.00');
+   data.addColumn('number', '0.81 - 0.95');
+   data.addColumn({type:'string', role:'annotation'});
+   data.addColumn('number', '0.95 - 0.99');
+   data.addColumn({type:'string', role:'annotation'});
+   data.addColumn('number', '0.99 - 1.00');
    data.addColumn({type:'string', role:'annotation'});
    data.addRows([
   ~;
   my $not_sty='';
   my $total;
   my $max_obs = 0;
+  
   foreach my $pos(sort {$a <=> $b} keys %$data){
     my $aa=$data->{$pos}{aa};
-    my ($obsh,$obsmh,$obsm,$obsml,$obsl); 
+    my ($obshh,$obsmh, $obsh,$obsm,$obsml,$obsl,$obsll); 
     if ($aa =~ /[STY]/){
       if($not_sty){
-	$dataTable .= "['$not_sty',0,'',0,'',0,'',0,'',0,''],";
+				$dataTable .= "['$not_sty',0,'',0,'',0,'',0,'',0,'',0,'',0,''],";
       }
       $not_sty='';
-
+      $obshh= $data->{$pos}{obshh}  || 0;
+      $obsmh= $data->{$pos}{obsmh}  || 0;
       $obsh= $data->{$pos}{obsh}  || 0;
-      $obsmh = $data->{$pos}{obsmh} || 0;
-      $obsm = $data->{$pos}{obsm} || 0;
+      $obsm= $data->{$pos}{obsm}  || 0;
+      $obsl = $data->{$pos}{obsl} || 0;
       $obsml = $data->{$pos}{obsml} || 0;
-      $obsl=$data->{$pos}{obsl} || 0;
-      my $higestval = max ($obsl, $obsml,$obsm,$obsmh,$obsh);
+      $obsll = $data->{$pos}{obsll} || 0;
+      my $higestval = max ($obshh,$obsmh, $obsh,$obsm,$obsml,$obsl,$obsll);
       if ($max_obs < $higestval){
-	$max_obs = $higestval;
+				$max_obs = $higestval;
       } 
-      $dataTable .= "['$aa',$obsl,'$obsl',$obsml,'$obsml',$obsm,'$obsm',$obsmh,'$obsmh',$obsh,'$obsh'],";
-      $total = $obsl+$obsml+$obsm+$obsmh+$obsh;
+      $dataTable .= "['$aa',$obsll,'$obsll',$obsml,'$obsml',$obsl,'$obsl',$obsm,'$obsm',$obsh,'$obsh',$obsmh,'$obsmh',$obshh,'$obshh'],";
+      $total = $obshh+$obsmh+ $obsh+$obsm+$obsml+$obsl+$obsll; 
     }else{
       $not_sty .= "$aa";
     }
   }
   if($not_sty){
-    $dataTable .= "['$not_sty',0,'',0,'',0,'',0,'',0,'']";
+    $dataTable .=  "['$not_sty',0,'',0,'',0,'',0,'',0,'',0,'',0,''],"; 
   }
   $dataTable =~ s/,$//;
   $dataTable .= "]);";
@@ -360,6 +366,7 @@ sub drawPTMHisChart {
   $max_obs += ceil(0.2 * $max_obs);
   my $chart_div = qq~
     <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/jquery/jquery.js"></script>
+    <script>jQuery.noConflict();</script>
     <script type="text/javascript" src="https://www.google.com/jsapi"></script>
     <script type="text/javascript">
       google.load("visualization", "1", {packages:["corechart"]});
@@ -370,9 +377,9 @@ sub drawPTMHisChart {
 		     vAxis: {title: "N obs"},
                      vAxes: {0: {'maxValue':$max_obs }},
                      seriesType: "bars",
-		     annotations:{alwaysOutside:'true'},
-		     legend: { position: 'top' },
-		     'colors': ['#A6A6A6', '#7030A0', '#00B0F0', '#FFC000', '#00B050'],
+										 annotations:{alwaysOutside:'true'},
+										 legend: { position: 'top' },
+										 'colors': ['red','orange','purple','grey','#007eca','skyblue','green'], 
                      width: 900, height: 400,
                      chartArea: {left: 30, top: 50, width: "100%"},
                      focusTarget: 'category'
@@ -521,15 +528,16 @@ sub drawPTMHisChart_Protein {
 	           vAxis: {title: "N obs"},
                    vAxes: {0: {'maxValue':$max_obs }},
                    seriesType: "bars",
-		   annotations:{alwaysOutside:'true'},
-		   legend: { position: 'top' },
+									 annotations:{alwaysOutside:'true'},
+									 legend: { position: 'top' },
                    height: 400,
                    fontName: 'Arial',
                    fontSize: 12,
                    width: data.getNumberOfRows() * 65,
                    bar: {groupWidth: 40},
                    chartArea: {left: 30, top: 50, width: "100%"},
-                   focusTarget: 'category'
+                   focusTarget: 'category',
+                   'colors': ['red','orange','purple','grey','#007eca','skyblue','green']
          });
         var mydiv = document.getElementById('chart_ptm');
         var y0;
