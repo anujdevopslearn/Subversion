@@ -12,8 +12,6 @@ package SBEAMS::PeptideAtlas::HTMLPrinter;
 #		there are several different contexts under which the a user
 #		can be in, and the header, button bar, etc. vary by context
 ###############################################################################
-
-
 use strict;
 use LWP::UserAgent;
 use HTTP::Request;
@@ -49,7 +47,6 @@ sub printPageHeader {
 # display_page_header
 ###############################################################################
 sub display_page_header {
-
   my $self = shift;
 
   my %args = @_;
@@ -661,14 +658,14 @@ sub encodeSectionHeader {
     $args{no_toggle} ||= 0;
     $args{divname} ||= $sbeams->getRandomString( num_chars => 20 );
     $buffer = $sbeams->make_toggle_section( neutraltext => $text,
-                                                    sticky => 1,
-	                                                    name => $args{divname},
-	 	                                               tooltip => 'Show/Hide Section',
-	 	                                               barlink => 1,
-                                                 no_toggle => $args{no_toggle},
-	 	                                               visible => 1,
-                                                   content => $text
-	 	                                                );
+					    sticky => 1,
+					    name => $args{divname},
+					    tooltip => 'Show/Hide Section',
+					    barlink => 1,
+					    no_toggle => $args{no_toggle},
+					    visible => 1,
+					    content => $text
+	);
   }
 
 ###        <TR><TD colspan="$colspan" $link style="background:#f3f1e4;color:#555;border-top:1px solid #b00;border-left:15px solid #b00;padding:0.5em">$anchor$text</TD></TR> e2dcc2
@@ -1448,9 +1445,9 @@ sub getPTMTableDisplay {
       next if ($data->{$prot}{$pos}{nObs} ==0 );
       foreach my $col (@$cols){
         next if ($col =~ /offset/i);
-        if ($col eq 'Residue' && ($data->{$prot}{$pos}{nObs} > 0 
-                                || $data->{$prot}{$pos}{InUniprot} =='yes'  
-                                ||  $data->{$prot}{$pos}{InneXtprot} =='yes' )){
+        if ($col eq 'Residue' && ($data->{$prot}{$pos}{nObs} > 0            ||
+				  $data->{$prot}{$pos}{InUniprot}  eq 'yes' ||
+				  $data->{$prot}{$pos}{InNextProt} eq 'yes' )) {
           my $start_in_biosequence = $pos + 1;
           my $link = "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?".
                      "atlas_build_id=$self_build_id&searchWithinThis=Peptide+Sequence&searchForThis=".
@@ -1458,6 +1455,13 @@ sub getPTMTableDisplay {
           $data->{$prot}{$pos}{$col} = $self->make_pa_tooltip( tip_text => "Get peptide sequence covering this site",
                                                                link_text => "<a href='$link'>$data->{$prot}{$pos}{$col}</a>" );
         }
+        elsif ($col eq 'InUniprot'  && $data->{$prot}{$pos}{$col} eq 'no') {
+	  $data->{$prot}{$pos}{$col} = '-';
+	}
+        elsif ($col eq 'InNextProt' && $data->{$prot}{$pos}{$col} eq 'no') {
+          $data->{$prot}{$pos}{$col} = '-';
+	}
+
         push @row, $data->{$prot}{$pos}{$col};
       }
       push @rows , [@row];
@@ -1469,6 +1473,7 @@ sub getPTMTableDisplay {
   }
   my $table = $self->encodeSectionTable( header => 1,
                                          align  => [@align],
+					 bkg_interval => 3,
                                          rows_to_show => $args{rows_to_show},
                                          max_rows => $args{max_rows},
                                          rows => \@rows );
