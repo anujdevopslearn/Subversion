@@ -325,11 +325,15 @@ sub processRequest {
 
 	    if ( $charge ) {
 	      push(@{$getSpectrumResult->{proxiSpectrum}->{attributes}}, { accession=>"MS:1000041", name=>"charge state", value=>$charge } );
-	      push(@{$getSpectrumResult->{proxiSpectrum}->{attributes}}, { accession=>"MS:1003061", name=>"spectrum name", value=>"$peptidoform/$charge" } );
+              my $spectrum_name = "$result->{peptidoform}/$charge";
+              if ( $result->{original_peptidoform} ) {
+               $spectrum_name = "$result->{original_peptidoform}/$charge";
+	      }
+	      push(@{$getSpectrumResult->{proxiSpectrum}->{attributes}}, { accession=>"MS:1003061", name=>"spectrum name", value=>$spectrum_name } );
 	      my $pep = Proteomics::Sequence::Peptide->new(sequenceString=>$peptidoform);
 	      my $unmodified_peptide_sequence = $pep->getSequenceString();
 	      push(@{$getSpectrumResult->{proxiSpectrum}->{attributes}}, { accession=>"MS:1000888", name=>"unmodified peptide sequence", value=>$unmodified_peptide_sequence } );
-	      push(@{$getSpectrumResult->{proxiSpectrum}->{attributes}}, { accession=>"MS:1009999", name=>"delta mass peptidoform sequence", value=>$pep->{deltaMassSequenceString} } );
+	      #push(@{$getSpectrumResult->{proxiSpectrum}->{attributes}}, { accession=>"MS:1009999", name=>"delta mass peptidoform sequence", value=>$pep->{deltaMassSequenceString} } );
 	    }
 
             if ( $output_mode ne 'HTML' ) {
@@ -338,7 +342,11 @@ sub processRequest {
             }
 
           } else {
-	    print "ERROR: Unable to read peaks.\n";
+            if ( $output_mode eq 'HTML' ) {
+	      print "ERROR: Unable to read peaks.\n";
+	    } else {
+              writeResponse(response=>$getSpectrumResult, output_mode=>$output_mode);
+	    }
 	    return;
           }
 
@@ -998,11 +1006,11 @@ sub showSpectrumText {
     $spectrum->show(format=>'simple');
 
   } elsif ( $parameters->{SAWB_DisplayMode} eq 'reannotatedDifference' ) {
-    $spectrum->reannotate( ppm => $usePPMTolerance, exhaustive=>0 );
+    $spectrum->reannotate( ppm => $usePPMTolerance, exhaustive=>1 );
     use Clone 'clone';
     my $compSpectrum = clone($spectrum);
     $compSpectrum->setModifiedSequence($parameters->{comp_sequence});
-    $compSpectrum->reannotate( ppm => $usePPMTolerance, exhaustive=>0 );
+    $compSpectrum->reannotate( ppm => $usePPMTolerance, exhaustive=>1 );
     #$spectrum->show(format=>'simple',secondary=>$compSpectrum);
     #$compSpectrum->show(format=>'simple',secondary=>$compSpectrum);
     $spectrum->show(format=>'difference',secondary=>$compSpectrum);
@@ -1143,7 +1151,8 @@ sub get_spectrum
     $scan_number = $1;
   }
   my $result = getSpectrumFromMzmlFile( filePath => "$data_location/$fraction_tag.mzML", scanNumber => $scan_number );
-  if ( $result ) {
+  #print Data::Dumper->Dump([$result])."<BR>\n";
+  if ( $result->{nErrors} == 0 ) {
     $spectrum{mz} = $result->{proxiSpectrum}->{mzs};
     $spectrum{intensities} = $result->{proxiSpectrum}->{intensities};
     $spectrum{n_peaks} = scalar(@{$spectrum{mz}});
@@ -1568,8 +1577,10 @@ sub interpretUSI {
 
   #### Parse the passed USI
   my $usi = Proteomics::Spectra::UniversalSpectrumIdentifier->new( usi=>$usiStr );
+  #print "<PRE>\n";
   my $result = $usi->parse( verbose=>$verbose, debug=>$verbose,  outputDestination=>'STDERR' );
   #print(Data::Dumper->Dump([$result]))."\n";
+  #print "</PRE>\n";
 
   #### If the USI string was not successfully parsed, then just return
   if ( $result->{status} ne 'OK' ) {
@@ -1595,8 +1606,11 @@ sub interpretUSI {
 
   #### If the peptidoform has mass mods in it, then convert it to TPP notation
   if ( $peptidoform =~ /[\[\{\(]/ ) {
+    #print "<PRE>\n";
+    #print "INFO: Peptidoform=$peptidoform\n";
     my $pep = Proteomics::Sequence::Peptide->new(sequenceString=>$peptidoform);
     $peptidoform = $pep->{modifiedTPP4SequenceString};
+    #print "</PRE>\n";
   }
 
 
@@ -1798,6 +1812,7 @@ sub interpretUSI {
     $response->{indexFlag} = $indexFlag;
     $response->{interpretation} = $interpretation;
     $response->{peptidoform} = $peptidoform;
+    $response->{original_peptidoform} = $usi->{peptidoform};
     $response->{charge} = $charge;
   }
 
@@ -1824,7 +1839,7 @@ sub getSpectrumFromMzmlFile {
   my $outputDestination = processParameters( name=>'outputDestination', required=>0, allowUndef=>0, default=>'STDERR', parameters=>\%parameters, caller=>$METHOD, response=>$response );
   print "DEBUG: Entering $CLASS.$METHOD\n" if ( $debug && !$DEBUG );
 
-  $verbose = 0;
+  #$verbose = 1;
   #print("Forcing verbose=1<BR>\n");
 
   #### Process specific parameters
@@ -1962,13 +1977,15 @@ sub getSpectrumFromMzmlFile {
 
     #### Extract and store mass intensity information
     $line =~ /mass\s+(\S+)\s+inten\s+(\S+)/;
-    push(@mz_intensities,[$1,$2]);
+    my $mz = $1 * 1.0;
+    my $intensity = $2 * 1.0;
+    push(@mz_intensities,[$mz, $intensity]);
   }
   close(DTAFILE);
 
   #### If there were no values, print diagnostics and return
-  unless (@mz_intensities) {
-    $response->logEvent( level=>'ERROR', errorCode=>'NoPeaksRead', statusCode=>500, verbose=>$verbose, debug=>$debug, quiet=>$quiet,
+  if ( scalar @mz_intensities == 0 ) {
+    $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'ScanNotFound', statusCode=>404, verbose=>$verbose, debug=>$debug, quiet=>$quiet,
       message=>"No peaks returned from extraction attempt of scan $scanNumber from file '$filePath'");
     return $response;
    }
@@ -1987,7 +2004,7 @@ sub getSpectrumFromMzmlFile {
   $proxiSpectrum->{attributes} = [];
   push(@{$proxiSpectrum->{attributes}}, { accession=>"MS:1008025", name=>"scan number", value=>$scanNumber } );
   push(@{$proxiSpectrum->{attributes}}, { accession=>"MS:1000827", name=>"isolation window target m/z", value=>$observedPrecursorMz } );
-  push(@{$proxiSpectrum->{attributes}}, { accession=>"MS:1000041", name=>"charge state", value=>$charge } ) if ( $charge );
+  #push(@{$proxiSpectrum->{attributes}}, { accession=>"MS:1000041", name=>"charge state", value=>$charge } ) if ( $charge );
 
   my @mzs;
   my @intensities;
@@ -2213,7 +2230,7 @@ sub writeResponse {
     print("Access-Control-Allow-Origin: *\n");
     print("Content-type: application/json\n\n");
     my $http_response = { "status"=> $statusCode, "title"=> $error_response->{errorCode}, "detail"=> $error_response->{fullMessage}, "type"=> "about:blank" };
-    print(encode_json($http_response));
+    print(encode_json($http_response),"\n");
 
   } elsif ( $output_mode eq 'TEXT' ) {
     print("Status: $statusCode $error_response->{errorCode}\n");
