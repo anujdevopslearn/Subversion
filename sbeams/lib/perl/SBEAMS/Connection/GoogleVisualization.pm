@@ -347,12 +347,12 @@ sub drawPTMHisChart {
       $obsl = $data->{$pos}{obsl} || 0;
       $obsml = $data->{$pos}{obsml} || 0;
       $obsll = $data->{$pos}{obsll} || 0;
+      $total = $obshh+$obsmh+ $obsh+$obsm+$obsml+$obsl+$obsll; 
       my $higestval = max ($obshh,$obsmh, $obsh,$obsm,$obsml,$obsl,$obsll);
       if ($max_obs < $higestval){
 				$max_obs = $higestval;
       } 
       $dataTable .= "['$aa',$obsll,'$obsll',$obsml,'$obsml',$obsl,'$obsl',$obsm,'$obsm',$obsh,'$obsh',$obsmh,'$obsmh',$obshh,'$obshh'],";
-      $total = $obshh+$obsmh+ $obsh+$obsm+$obsml+$obsl+$obsll; 
     }else{
       $not_sty .= "$aa";
     }
@@ -481,28 +481,29 @@ sub drawPTMHisChart_Protein {
     my $aa=$aas[$pos];
     if ($aa =~ /[STY]/){
       if (defined $data->{$protein}{$pos}){
-	$dataTable .= "['$aa'";
-	foreach my $c (qw (nP01 nP05 nP19 nP81 nP95 nP99 nP100)){
-	  $dataTable .=",$data->{$protein}{$pos}{$c},'$data->{$protein}{$pos}{$c}'";
-	  if ($max_obs < $data->{$protein}{$pos}{$c} ){ 
-	    $max_obs = $data->{$protein}{$pos}{$c};
-	  } 
-	}
-	$nobs .= "$sep$data->{$protein}{$pos}{nObs}";
-	$peptides .= "$sep'$data->{$protein}{$pos}{peptide}'";
-	$dataTable .= "],\n";
-      } else {
-	$dataTable .= "['$aa',0,'',0,'',0,'',0,'',0,'',0,'',0,''],\n";
-	$nobs .= $sep."0";
-	$peptides .= "$sep''";
+				$dataTable .= "['$aa'";
+				foreach my $c (qw (nP01 nP05 nP19 nP81 nP95 nP99 nP100)){
+					$dataTable .=",$data->{$protein}{$pos}{$c},'$data->{$protein}{$pos}{$c}'";
+					if ($max_obs < $data->{$protein}{$pos}{$c} ){ 
+						$max_obs = $data->{$protein}{$pos}{$c};
+					} 
+				}
+				$nobs .= "$sep$data->{$protein}{$pos}{nObs}";
+				$peptides .= "$sep'$data->{$protein}{$pos}{peptide}'";
+				$dataTable .= "],\n";
+						} else {
+				$dataTable .= "['$aa',0,'',0,'',0,'',0,'',0,'',0,'',0,''],\n";
+				$nobs .= $sep."0";
+				$peptides .= "$sep''";
       }
       $curpos .= "$sep";
       $curpos .=$pos+1 ;
       $sep = ",";
     } else {
-      $dataTable .= "['$aa',0,'',0,'',0,'',0,'',0,'',0,'',0,''],\n";
+       #$dataTable .= "['$aa',0,'',0,'',0,'',0,'',0,'',0,'',0,''],\n"; 
     }
   }
+
   $dataTable =~ s/,$//;
   $dataTable =~ s/\n$//;
   $dataTable .= "]);\n";
@@ -578,7 +579,7 @@ sub drawPTMHisChart_Protein {
             row++;
             y0 = pos.y;
 	  }
-	  var attrs = {x: 50 ,y: 70,
+	  var attrs = {x: 30 ,y: 70,
 	               fill: 'black',
 		       'font-family': 'Arial',
 		       'font-size': 14,

@@ -2241,13 +2241,293 @@ sub print_html_table_to_tsv{
   }
 
 }
+sub display_peptide_sample_category_plotly{
+  my $self = shift;
+  my %args = @_;
+  my $data_ref = $args{data_ref};
+  my $sample_arrayref = $args{sample_arrayref};
+  my $build_id = $args{build_id};
 
+
+  my (@sample_category, @peptide_count,@links, @obs_per_million );
+  my $total_search_spectra;
+  my @n_good_spectra; 
+ foreach my $data (@$data_ref){
+    my ($name,$id,$cnt) = @$data;
+    my ($good_spectra) =0;
+    foreach my $row (@$sample_arrayref){
+      my $n = scalar @$row; 
+      my $sample_cat_id  = $row->[$n-1];
+      if ($sample_cat_id eq $id){
+        $good_spectra +=  $row->[4];
+        $total_search_spectra += $row->[3]; 
+      }
+    }  
+ 
+    push @n_good_spectra, $good_spectra;
+    push @peptide_count, $cnt; 
+    push @sample_category,'<a href="'."https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptides?atlas_build_id=$build_id&sample_category_id=$id&QUERY_NAME=AT_GetPeptides&apply_action=QUERY" .'">'. $name .'</a>';
+  }
+  foreach my $val (@n_good_spectra){
+    push @obs_per_million,  sprintf( "%0.1f",($val/$total_search_spectra) * 1000000 );
+  }
+
+  my $sample_category_str = join("','", @sample_category);
+  my $peptide_count_str = join(",", @peptide_count);  
+  my $obs_per_million_str = join(",", @obs_per_million);
+  my $plot_js = qq~
+			var pepcnt = {
+				y: ['$sample_category_str'],
+				x: [$peptide_count_str],
+        //customdata:['link_str'],
+				name:'#_distinct_peptides',
+			  type: 'bar',	
+        orientation: 'h',
+        opacity: 0.6
+			};
+      var obs = {
+        y: ['$sample_category_str'],
+        x: [$obs_per_million_str],
+        name:'Obs Per Million Spectra',
+        type: 'bar',
+        orientation: 'h',
+        opacity: 0.6,
+        marker: {
+          color: '#003F72'
+        }
+      };
+
+			var layout = {
+        legend:{x: 0.029,y: 1.1,font: { size: 12}},
+			  width: 1100,
+        height:1100,
+				//xaxis:{title:'Number of Distinct Peptides'},
+        margin:{l: 350},
+        hoverlabel:{bgcolor:'white'},
+        barmode: 'overlay' 
+			};
+			var data = [pepcnt, obs];
+			Plotly.newPlot('plot_div3', data,layout);
+
+      /*
+			var plot_element = document.getElementById('plot_div3');
+			plot_element.on('plotly_click', function(data){
+        var point = data.points[0];
+        if (point) {
+            window.open(point.customdata);
+        }
+      })*/
+  ~;
+  my $chart = qq~
+    <script type="text/javascript" src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <TABLE WIDTH=1100>
+       <A NAME='<B>Sample Category</B>'></A><DIV CLASS="hoverabletitle"><B>Peptide Identification by Sample Category</B></DIV>
+       <TR> 
+        <TD><div id="plot_div3" style="width: 100%;"></div><br><br>
+       </TD></TR> 
+    </TABLE>
+		<script type="text/javascript" charset="utf-8">
+      $plot_js
+		</script>
+  ~;
+  return $chart;
+  
+}
+sub displayProt_PTM_plotly{
+   my $self = shift;
+  my %args = @_;
+  my $protein = $args{protein};
+  my $data = $args{data};
+  my $sequence = $args{seq},
+  my $atlas_build_id = $args{atlas_build_id};
+
+  my $dataTable = "var data=[";
+  my $curpos   = "var curpos=[";
+  my $totalObs = "var totalObs=[";
+  my $maxnobs  = 0;
+  my $seqlen = length($sequence);
+
+  $sequence =~ s/\*.*//g;
+  my @aas = split(//, $sequence);
+  my $sep = '';
+  foreach my $pos (0..$#aas){
+    my $aa=$aas[$pos];
+    my $nobs = '';
+    if ($aa =~ /[STY]/){
+      if (defined $data->{$protein}{$pos}){
+        $dataTable .= "['$aa'";
+        foreach my $c (qw (nP<.01 nP<.05 nP<.20 nP.2-.8 nP>.80 nP>.95 nP>.99 no-Choice)){
+          $dataTable .=",$data->{$protein}{$pos}{$c}";
+          if ($data->{$protein}{$pos}{$c} > $maxnobs){
+            $maxnobs = $data->{$protein}{$pos}{$c} ;
+          }
+          $nobs += $data->{$protein}{$pos}{$c};
+        }
+        $dataTable .= "],\n";
+      } else {
+        $dataTable .= "['$aa','','','','','','','',''],\n";
+      }
+    } else {
+       $dataTable .= "['$aa','','','','','','','',''],\n";
+   }
+    $curpos .= "$sep";
+    $curpos .=$pos+1 ;
+    $totalObs .= "$sep";
+    $totalObs .= $nobs;
+    $sep = ",";
+  }
+  $dataTable =~ s/,$//;
+  $dataTable =~ s/\n$//;
+  $dataTable .= "];\n";
+  $curpos   .= "];\n";
+  $totalObs .= "];\n";
+
+  my $trace = "var col1 =  getCol(data, 0);\n";
+  my @colors = ('red','orange','purple','grey','#007eca','skyblue','green','black');
+  my @names = ('<0.01','0.01-0.05','0.05-0.20','0.20-0.80','0.80-0.95','0.95-0.99','0.99-1.00','no-choice');
+  foreach my $i(1..8){
+    my $j=$i+1;
+    my $k=$i-1;
+    $trace .= qq~
+    var col$j = getCol(data, $i);
+    var trace$i = {
+      x:curpos,
+      y:col$j,
+      marker: {color:'$colors[$k]'},
+      type: 'bar',
+      name:'$names[$k]'
+    };
+    ~;
+  }
+
+  my $plot_js = qq~
+    function getCol(matrix, col){
+       var column = [];
+       for(var i=0; i<matrix.length; i++){
+          column.push(matrix[i][col]);
+       }
+       return column;
+    };
+    $dataTable;
+    $curpos;
+    $totalObs;
+		var myDiv = document.getElementById('protPTM_div');
+    $trace
+		var layout = {
+			tickmode:'linear',
+			tdick:50,
+      annotations: [],
+      hovermode:'x unified',
+      barmode:'stack',
+      yaxis:{title:'nObs',rangemode:'tozero'}
+		};
+   
+		for ( var i = 0 ; i < $seqlen; i++ ) {
+      if (totalObs[i] > 0){
+				var result = {
+					x: curpos[i], 
+          y: totalObs[i], 
+					text: '<b>'+totalObs[i]+'</b>',
+					xanchor: 'center',
+					yanchor: 'top',
+          yshift:30,
+					showarrow: false
+				};
+				layout.annotations.push(result);
+     }
+   }
+	 plotdata= [trace1,trace2,trace3,trace4,trace5,trace6,trace7,trace8];
+   Plotly.newPlot(myDiv, plotdata, layout, {scrollZoom: true});
+	 var ticklabels=[];
+	 for (var i in curpos){
+			ticklabels[i]= curpos[i]+ '<br>'+col1[i];
+	 }
+	 myDiv.on('plotly_relayout',function(eventdata){  
+		 //alert(JSON.stringify(eventdata));
+			var xmax=eventdata['xaxis.range[1]'];
+			var xmin=eventdata['xaxis.range[0]'];
+
+			var n = xmin  < 0 ? 0:parseInt(xmin);
+			var m = xmax  > $seqlen ? $seqlen-1 :parseInt(xmax);
+			var ymax=0;
+			var len = data.length;
+			//get max obs
+			var l =0;
+			for (var i =n; i <=m; i++){
+				var o = parseInt(totalObs[i]) || 0;
+				l += o;
+				if(o > ymax){	
+					ymax=o;
+				}    
+			}
+			ymax = ymax + 5;
+			if ( xmax- xmin <= 40){
+			 var update = {
+				 xaxis:{
+				 tickmode:'array',
+					tickvals:curpos,
+					ticktext:ticklabels,
+					tickangle:0,
+					range: [xmin, xmax], 
+				 },
+				 yaxis:{
+					title:'nObs',
+					range:[0,ymax]
+				 }
+			 };
+				Plotly.relayout(myDiv, update);
+			}
+			if ( xmax- xmin > 40){	
+				 if (xmin < 0){
+					 xmin=0;
+				 }
+				 if (xmax> $seqlen){
+					 xmax=$seqlen;
+				 }
+				 var update = {
+					 xaxis:{
+					 tickmode:'linear',
+						 dtick:50,
+						range: [xmin, xmax], 
+					 },
+					 yaxis:{
+						title:'nObs',
+						range:[0,ymax]
+					 }
+				 };
+				 Plotly.relayout(myDiv, update);
+			 }
+			 if (eventdata['xaxis.autorange'] && eventdata['yaxis.autorange'] ){ 
+				 var update = {
+					 xaxis:{
+					 tickmode:'linear',
+					 dtick:50,
+						yaxis:{title:'nObs',rangemode:'tozero'}
+				 }
+				};
+				Plotly.relayout(myDiv, update);
+			 }
+	 });
+  ~;
+
+  my $chart = qq~
+     <!-- Latest compiled and minified plotly.js JavaScript -->
+     <script type="text/javascript" src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+     <div id="protPTM_div" style="width: 100%;"></div>
+    <script type="text/javascript" charset="utf-8">
+      $plot_js
+    </script>
+  ~;
+  return $chart;
+
+}
 sub displayExperiment_contri_plotly{
   my $self = shift;
   my %args = @_;
   my $data_ref = $args{data_ref};
   my $tr = $args{tr};
   my $column_name_ref = $args{column_name_ref};
+  my %cols =();
   my @sample_label = ();
   my (@cumpepx, @cumpepy,@idvpepy,@cumprotx, @cumproty,@idvproty);
   my $pre_cum_n_good_spectra;
@@ -2325,6 +2605,7 @@ sub displayExperiment_contri_plotly{
 				font: {
 					size: 18
 				},
+        legend:{x: 0.029,y: 1.1,font: { size: 12}},
 				xaxis:{title:'Cumulative Number of MS/MS Spectra Identified'},
 				yaxis:{title:'Number of Distinct Peptides'}
 			};
@@ -2363,6 +2644,7 @@ sub displayExperiment_contri_plotly{
         font: {
           size: 18
         },
+        legend:{x: 0.029,y: 1.1,font: { size: 12}},
         xaxis:{title:'Cumulative Number of MS/MS Spectra Identified'},
         yaxis:{title:'Number of Distinct Proteins'}
       };
