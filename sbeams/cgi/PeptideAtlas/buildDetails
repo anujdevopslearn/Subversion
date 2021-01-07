@@ -90,6 +90,8 @@ my $show_image = 0;
 
     # We are not forcing the user into the new build - is that correct?
     my $build_id = $params->{atlas_build_id} || $atlas->getCurrentAtlasBuildID(parameters_ref => $params);
+    my $organism = $atlas->getCurrentAtlasOrganism (parameters_ref => $params);
+
     my $valid_build = 1;
     if ( !grep /^$build_id$/, $atlas->getAccessibleBuilds() ) {
 #      die( "Access to specified build is not allowed" );
@@ -190,7 +192,31 @@ my $show_image = 0;
 				print $plots;
 			}
 		
- 
+    if ($organism =~ /(human|Arabidopsis)/i){ 
+			my $sql = qq~
+				SELECT SC.name as NAME,
+							 SC.ID, 
+				       COUNT (DISTINCT PI.PEPTIDE_ID) AS CNT
+				FROM $TBAT_PEPTIDE_INSTANCE PI
+			  JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB ON ( PI.peptide_instance_id = PISB.peptide_instance_id )
+				JOIN $TBAT_PEPTIDE_INSTANCE_SAMPLE PIS ON ( PIS.PEPTIDE_INSTANCE_ID = PI.PEPTIDE_INSTANCE_ID )
+				JOIN $TBAT_SAMPLE S  ON (PIS.SAMPLE_ID = S.SAMPLE_ID)
+				JOIN $TBAT_SAMPLE_CATEGORY SC ON (S.SAMPLE_CATEGORY_ID = SC.ID) 
+				WHERE 1=1
+				AND PI.ATLAS_BUILD_ID = $build_id 
+				GROUP BY SC.NAME,SC.ID
+        ORDER BY SC.NAME
+			 ~;
+
+			my @result = $sbeams->selectSeveralColumns($sql);
+			my $chart = $atlas->display_peptide_sample_category_plotly(
+					build_id=>$build_id,
+          sample_arrayref=>$sample_arrayref,
+					data_ref=>\@result,
+			);
+
+			print $chart ;
+    }
 	
 			if ( 1 ) {
 				my $map_display = getSampleMapDisplay ( %{$params}, build_id => $build_id );
@@ -460,7 +486,7 @@ sub get_datasetContri_info {
     my ($repository_id, $name,$cnt) =@$row;
     $presence_level_names{$name} =1;
     $unique_prot2dataset_cnt{$repository_id}{$name} = $cnt;
- } 
+  } 
   my @level_names = sort {$a cmp $b} keys %presence_level_names;
   $sql =qq~;
     SELECT LEVEL_NAME AS NAME, PROTEIN_PRESENCE_LEVEL_ID AS ID
@@ -495,11 +521,25 @@ sub get_datasetContri_info {
   my @repository_ids = $sbeams->selectOneColumn($sql);
   my %processed = ();
   foreach my $repository_id (@repository_ids){ 
-  #foreach my $repository_id ( sort {$unique_prot2dataset_cnt{$b}{$level_names[0]} <=> $unique_prot2dataset_cnt{$a}{$level_names[0]}} keys %unique_prot2dataset_cnt){
     next if (not defined $unique_prot2dataset_cnt{$repository_id} && not defined $processed{$repository_id});
     $processed{$repository_id} =1;
     my @row =();
-    push @row , $repository_id;
+    my @ids = split(/[,;]/, $repository_id); 
+    my $repository_id_w_links;
+    foreach my $id(@ids){
+        my $link = '';
+        $id =~ s/\s+//g;
+        if ($id =~ /PXD/){
+          $link = "http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=";
+        }elsif($id =~ /PASS/){
+          $link = "http://www.peptideatlas.org/PASS/";
+        }elsif($id =~ /S\d+/){
+          $link = "https://cptac-data-portal.georgetown.edu/study-summary/";
+        }
+        $repository_id_w_links .= "<a href='$link$id'>$id</a>,";
+    }
+    $repository_id_w_links=~ s/,$//;
+    push @row , $repository_id_w_links; 
     foreach my $level_name (@level_names){
       my $cnt = $unique_prot2dataset_cnt{$repository_id}{$level_name} || '';
       if (defined $unique_prot2dataset_cnt{$repository_id}{$level_name}){
@@ -789,6 +829,58 @@ sub get_build_overview {
   BUILD
 
 #  for my $k ( keys( %$build_info ) ) { print STDERR "$k => $build_info->{$k}\n"; }
+  my $build_name = $build_info->{atlas_build_name};
+  my $phospho_info;
+  if ($build_name =~ /human.*phospho/i){
+    $phospho_info =  $sbeams->selectrow_hashref( <<"  PHOS" );
+  SELECT PS.atlas_build_id, 
+         count(distinct PS.biosequence_id) as '#_neXtProt_(PE=1-4)', 
+         count(offset) as #_observed_phosphorylation_sites, 
+         sum(case when residue = 'S'  then 1 else 0 end) as S_sites,
+         sum(case when residue = 'T'  then 1 else 0 end) as T_sites,
+         sum(case when residue = 'Y'  then 1 else 0 end) as Y_sites
+  FROM $TBAT_PTM_SUMMARY PS JOIN $TBAT_BIOSEQUENCE B
+  ON PS.BIOSEQUENCE_ID = B.BIOSEQUENCE_ID
+  WHERE PS.atlas_build_id = $build_id
+  AND B.dbxref_id = 65
+  --AND B.BIOSEQUENCE_DESC NOT LIKE '%PE=5%'
+  GROUP BY PS.atlas_build_id
+  PHOS
+ 
+		my $sql =qq~ 
+		( SELECT PI.ATLAS_BUILD_ID, 'singly_phosphorylated' as type, count(distinct mp.modified_peptide_sequence) as cnt
+			FROM $TBAT_PEPTIDE_INSTANCE PI
+			JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MP 
+			ON (PI.PEPTIDE_INSTANCE_ID = MP.PEPTIDE_INSTANCE_ID)
+			WHERE PI.ATLAS_BUILD_ID = $build_id 
+			AND (MODIFIED_PEPTIDE_SEQUENCE LIKE '%[STY]_[0-9]%' AND 
+					 MODIFIED_PEPTIDE_SEQUENCE NOT LIKE '%[STY]_[0-9]%[STY]_[0-9]%')
+			GROUP BY PI.ATLAS_BUILD_ID
+		)UNION
+			( SELECT PI.ATLAS_BUILD_ID, 'doubly_phosphorylated' as type, count(distinct mp.modified_peptide_sequence) as cnt
+			FROM $TBAT_PEPTIDE_INSTANCE PI
+			JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MP
+			ON (PI.PEPTIDE_INSTANCE_ID = MP.PEPTIDE_INSTANCE_ID)
+			WHERE PI.ATLAS_BUILD_ID = $build_id
+			AND (MODIFIED_PEPTIDE_SEQUENCE LIKE '%[STY]_[0-9]%[STY]_[0-9]%' 
+					 AND MODIFIED_PEPTIDE_SEQUENCE NOT LIKE '%[STY]_[0-9]%[STY]_[0-9]%[STY]_[0-9]%')
+			GROUP BY PI.ATLAS_BUILD_ID
+		)UNION
+		( SELECT PI.ATLAS_BUILD_ID, 'over_2_phosphorylated' as type , count(distinct mp.modified_peptide_sequence) as cnt
+			FROM $TBAT_PEPTIDE_INSTANCE PI
+			JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MP
+			ON (PI.PEPTIDE_INSTANCE_ID = MP.PEPTIDE_INSTANCE_ID)
+			WHERE PI.ATLAS_BUILD_ID = $build_id
+			AND (MODIFIED_PEPTIDE_SEQUENCE LIKE '%[STY]_[0-9]%[STY]_[0-9]%[STY]_[0-9]%') 
+			GROUP BY PI.ATLAS_BUILD_ID
+	  )
+		~;
+   my @rows = $sbeams->selectSeveralColumns($sql);
+   foreach my $row(@rows){
+     my ($id, $type,$cnt) = @$row;
+     $phospho_info->{$type} = $cnt;
+   }
+  }
 
   my $pep_count = $sbeams->selectrow_hashref( <<"  PEP" );
   SELECT COUNT(*) cnt,  SUM(n_observations) obs
@@ -859,18 +951,6 @@ sub get_build_overview {
 
   my $spc = $sbeams->getGifSpacer(500);
   $build_info->{build_date} =~ s/^([0-9-]+).*$/$1/;
-#  $/mpl_count->{cnt} = sprintf( "% 10i", $smpl_count->{cnt} );
-#  $smpl_count->{cnt} =~ s/ /&nbsp;/g;
-#  $multi_pep_count->{cnt} = sprintf( "% 10i", $multi_pep_count->{cnt} );
-#  $multi_pep_count->{cnt} =~ s/ /&nbsp;/g;
-#  $multi_pep_count->{obs} = sprintf( "% 10i", $multi_pep_count->{obs} );
-# $multi_pep_count->{obs} =~ s/ /&nbsp;/g;
-  
-  
-#  my $deltacnt = $multi_pep_count->{cnt} - $pep_count->{cnt};
-#  my $deltaobs = $multi_pep_count->{obs} - $pep_count->{obs};
-#  $table .= $atlas->encodeSectionItem( key   => 'Deltas ', tr_info => $tr,
-#                                          value => "$deltacnt ( $deltaobs )" ) . "\n";
 
   if ($build_info->{protpro_PSM_FDR_per_expt} <= 0) {
     $build_info->{protpro_PSM_FDR_per_expt} =  $sbeams->makeInactiveText( 'n/a' );
@@ -915,18 +995,31 @@ sub get_build_overview {
      $level =~ s/(\w+)/\u$1/g; 
      $table .= $atlas->encodeSectionItem( key   => "&#8195;$level", tr_info => $tr, value => $prot_count{$key}, align => 'right' ) . "\n";
   }
-#  $table .= $atlas->encodeSectionDblItem( key   => ['Build Date', '# Samples'], tr_info => $tr,
-#                            value => [$build_info->{build_date}, $smpl_count->{cnt}] ) . "\n";
-#  $table .= $atlas->encodeSectionDblItem( key   => ['Total Observations', 'Distinct Peptides'], 
-#                                          tr_info => $tr,
-#                                          value => [$pep_count->{obs}, $pep_count->{cnt}] ) . "\n";
-#  $table .= $atlas->encodeSectionDblItem( key   => ['Total Observations n_obs > 1', 'Distinct Peptides n_obs > 1'], 
-#                                          tr_info => $tr,
-#                                          value => [$multi_pep_count->{obs}, $multi_pep_count->{cnt}] ) . "\n";
+  if ($build_name =~ /human.*phospho/i){
+    $table .= $atlas->encodeSectionItem( key   => 'PhosphoProteome Summary', tr_info => $tr, value => '', align => 'right' ) . "\n";
+		foreach my $key (qw(#_neXtProt_(PE=1-4) #_observed_sites S_sites T_sites Y_sites)){
+			 my $level = $key;
+			 $level =~ s/\_/ /g;
+			 $level =~ s/(\w+)/\u$1/g;
+       my $space = '&#8195;';
+       if ($key =~ /[STY]/){
+         $space ='&#8195;&#8195;';
+       }
+			 $table .= $atlas->encodeSectionItem( key   => "$space$level", tr_info => $tr, value => $phospho_info->{$key}, align => 'right' ) . "\n";
+		}
 
+    $table .= $atlas->encodeSectionItem( key   => "&#8195;# of Phosphorylated Sites in Modified Peptides", tr_info => $tr, value =>'', align => 'right' ) . "\n";
+    foreach my $key (qw (singly_phosphorylated doubly_phosphorylated over_2_phosphorylated)){
+       my $level = $key;
+       $level =~ s/\_/ /g;
+       $level =~ s/(\w+)/\u$1/g;
+       $table .= $atlas->encodeSectionItem( key   => "&#8195;&#8195;$level", tr_info => $tr, value => $phospho_info->{$key}, align => 'right' ) . "\n";
+    }
+
+  } 
+ 
   $table .= "</TABLE>\n";
   return $table;
-
 }
 
 # Peptide build stats
@@ -965,7 +1058,8 @@ sub get_sample_info {
          model_90_error_rate,
          CONVERT(VARCHAR(10), PE.date_created, 126) AS [YYYY-MM-DD],
          A.Pubmed_ID, 
-         S.repository_identifiers
+         S.repository_identifiers,
+         S.sample_category_id
   FROM $TBAT_SEARCH_BATCH_STATISTICS SBS 
   JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
   JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ( ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id )
@@ -1013,6 +1107,8 @@ sub get_sample_info {
 	my %unique_prot2sample_cnt = $sbeams->selectTwoColumnHash($sql);
   # Massage/format some of the columns in the sample info just retrieved
   my @samples;
+  ## rows without last column
+  my @samples2;
   for my $batch ( @sample_info ) {
     $show_image++;
     # if these aren't defined, set to zero
@@ -1064,7 +1160,9 @@ sub get_sample_info {
     }
 
     push @samples, $batch;
-
+    my @tmp = @$batch;
+    pop @tmp; 
+    push @samples2, \@tmp;
   }
 
   my $dag = '<sup>&dagger;</sup>';
@@ -1092,7 +1190,7 @@ sub get_sample_info {
   );
 
 
-  $table .= $atlas->encodeSectionTable( rows => [ $headings_ref, @samples ], 
+  $table .= $atlas->encodeSectionTable( rows => [ $headings_ref, @samples2 ], 
                                         header => 1, 
                                         nowrap => [1..scalar(@headings)], 
                                         table_id => 'sample_contribution',

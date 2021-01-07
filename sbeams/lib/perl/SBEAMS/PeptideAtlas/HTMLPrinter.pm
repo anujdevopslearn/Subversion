@@ -2250,7 +2250,7 @@ sub display_peptide_sample_category_plotly{
 
 
   my (@sample_category, @peptide_count,@links, @obs_per_million );
-  my $total_search_spectra;
+  my $total_observed_spectra;
   my @n_good_spectra; 
  foreach my $data (@$data_ref){
     my ($name,$id,$cnt) = @$data;
@@ -2260,71 +2260,85 @@ sub display_peptide_sample_category_plotly{
       my $sample_cat_id  = $row->[$n-1];
       if ($sample_cat_id eq $id){
         $good_spectra +=  $row->[4];
-        $total_search_spectra += $row->[3]; 
+        $total_observed_spectra += $row->[4]; 
       }
     }  
  
     push @n_good_spectra, $good_spectra;
     push @peptide_count, $cnt; 
-    push @sample_category,'<a href="'."https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptides?atlas_build_id=$build_id&sample_category_id=$id&QUERY_NAME=AT_GetPeptides&apply_action=QUERY" .'">'. $name .'</a>';
+    push @sample_category,'<a href="'."https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptides?atlas_build_id=$build_id&sample_category_id=$id&QUERY_NAME=AT_GetPeptides&apply_action=QUERY" .'">'. $name .'  </a>';
   }
-  foreach my $val (@n_good_spectra){
-    push @obs_per_million,  sprintf( "%0.1f",($val/$total_search_spectra) * 1000000 );
+
+  foreach my $val (@peptide_count){
+    push @obs_per_million,  sprintf( "%0.1f",($val/$total_observed_spectra) * 1000000 );
   }
 
   my $sample_category_str = join("','", @sample_category);
-  my $peptide_count_str = join(",", @peptide_count);  
+  my $n_good_spectra_str = join(",", @n_good_spectra);  
   my $obs_per_million_str = join(",", @obs_per_million);
   my $plot_js = qq~
 			var pepcnt = {
 				y: ['$sample_category_str'],
-				x: [$peptide_count_str],
+				x: [$obs_per_million_str],
         //customdata:['link_str'],
-				name:'#_distinct_peptides',
+				name:'Number Distinct Peptide Per Million Observed Spectra',
 			  type: 'bar',	
         orientation: 'h',
-        opacity: 0.6
+        marker: {color: 'gray'},
+        opacity: 0.8
 			};
       var obs = {
         y: ['$sample_category_str'],
-        x: [$obs_per_million_str],
-        name:'Obs Per Million Spectra',
+        x: [$n_good_spectra_str],
+        name:'# Spectrua ID',
         type: 'bar',
+        marker: {color: 'gray'},
         orientation: 'h',
-        opacity: 0.6,
-        marker: {
-          color: '#003F72'
-        }
+        opacity: 0.8,
       };
 
 			var layout = {
         legend:{x: 0.029,y: 1.1,font: { size: 12}},
 			  width: 1100,
         height:1100,
-				//xaxis:{title:'Number of Distinct Peptides'},
+				title:'Number of Distinct Peptides Per Million Observed Spectra',
         margin:{l: 350},
         hoverlabel:{bgcolor:'white'},
-        barmode: 'overlay' 
 			};
-			var data = [pepcnt, obs];
-			Plotly.newPlot('plot_div3', data,layout);
+			var data1 = [pepcnt];
+			Plotly.newPlot('plot_div3', data1,layout);
+      layout.title = "Total Observed Spectra";
+      var data2 = [obs];
+      Plotly.newPlot('plot_div4', data2,layout);
 
-      /*
-			var plot_element = document.getElementById('plot_div3');
-			plot_element.on('plotly_click', function(data){
-        var point = data.points[0];
-        if (point) {
-            window.open(point.customdata);
-        }
-      })*/
   ~;
   my $chart = qq~
     <script type="text/javascript" src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+	  <script type='text/javascript'>
+			function toggle_plot() {
+        var myplot3 =  document.getElementById('plot_div3');
+        var myplot4 =  document.getElementById('plot_div4');
+        if (myplot3.style.display == '' ){
+           myplot3.style.display = 'none';
+           myplot4.style.display = '';
+          document.getElementById('toggle_button').innerHTML = 'Show Distinct Peptide Per Million Observed Spectra Plot';
+        } else {
+           myplot3.style.display = '';
+           myplot4.style.display = 'none';
+          document.getElementById('toggle_button').innerHTML = 'Show Total Observed Spectra Plot';
+        }
+			}
+		</script>
+
     <TABLE WIDTH=1100>
        <A NAME='<B>Sample Category</B>'></A><DIV CLASS="hoverabletitle"><B>Peptide Identification by Sample Category</B></DIV>
        <TR> 
-        <TD><div id="plot_div3" style="width: 100%;"></div><br><br>
-       </TD></TR> 
+        <TD><button type='button' id='toggle_button' onclick=toggle_plot()>Show Total Observed Spectra Plot</button>
+            &nbsp;<div id="plot_div3" style="width: 100%;"> </div>
+            &nbsp;<div id="plot_div4" style="width: 100%; display:none"></div>
+            <br><br>
+       </TD>
+       </TR> 
     </TABLE>
 		<script type="text/javascript" charset="utf-8">
       $plot_js
@@ -2531,7 +2545,6 @@ sub displayExperiment_contri_plotly{
   my @sample_label = ();
   my (@cumpepx, @cumpepy,@idvpepy,@cumprotx, @cumproty,@idvproty);
   my $pre_cum_n_good_spectra;
-  my %cols =();
   my $idx =0;
   foreach (@$column_name_ref){
     $cols{lc($_)} = $idx;
