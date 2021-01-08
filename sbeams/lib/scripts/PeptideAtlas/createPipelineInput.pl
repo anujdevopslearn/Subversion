@@ -677,9 +677,12 @@ sub protXML_start_element {
     my $protein_name = $attrs{protein_name} || die("No protein_name");
     $self->{protcache}->{indist_prots}->{$protein_name} = 1;
   }
-
-  #### If this is the modification info, then store some attributes
-  ####  TMF 06/23/09: I don't think these attributes ever happen.
+  ## store information for indistinguishable_peptide
+  if ($localname eq 'indistinguishable_peptide') {
+    my $peptide_sequence = $attrs{peptide_sequence} || die("No sequence");
+    $self->{pepcache}->{indistinguishable_peptides}->{peptide_sequence} = $peptide_sequence ;
+    $self->{pepcache}->{indistinguishable_peptides}->{charge} = $attrs{charge};
+  }
   if ($localname eq 'modification_info') {
     if ($attrs{mod_nterm_mass}) {
       $self->{pepcache}->{modifications}->{0} = $attrs{mod_nterm_mass};
@@ -689,14 +692,9 @@ sub protXML_start_element {
       $self->{pepcache}->{modifications}->{$pos} = $attrs{mod_cterm_mass};
     }
   }
-
-
-  #### If this is the mass mod info, then store some attributes
-  ####  TMF 06/23/09: I don't think this tag ever happens.
   if ($localname eq 'mod_aminoacid_mass') {
     $self->{pepcache}->{modifications}->{$attrs{position}} = $attrs{mass};
   }
-
 
   #### If this is a peptide, store some peptide attributes
   ####  TMF 06/23/09: I don't think the attribute charge ever happens here,
@@ -714,8 +712,7 @@ sub protXML_start_element {
     $self->{pepcache}->{n_enzymatic_termini} = $attrs{n_enzymatic_termini};
 
     ### Compute a couple secondary attributes
-    $self->{pepcache}->{apportioned_observations} =
-          $attrs{weight} * $attrs{n_instances};
+    $self->{pepcache}->{apportioned_observations} = $attrs{weight} * $attrs{n_instances};
     $self->{pepcache}->{expected_apportioned_observations} =
           $self->{pepcache}->{apportioned_observations} *
           $attrs{nsp_adjusted_probability};
@@ -745,9 +742,9 @@ sub protXML_start_element {
 	    swiss_prot_href => $swiss_prot_href,
         );
         if ($preferred_protein_name ne $original_protein_name) {
-	  delete($self->{protcache}->{indist_prots}->{$preferred_protein_name});
-	  $self->{protcache}->{indist_prots}->{$original_protein_name} = 1;
-	  $self->{protein_name} = $preferred_protein_name;
+					delete($self->{protcache}->{indist_prots}->{$preferred_protein_name});
+					$self->{protcache}->{indist_prots}->{$original_protein_name} = 1;
+					$self->{protein_name} = $preferred_protein_name;
         }
       } 
 
@@ -761,24 +758,6 @@ sub protXML_start_element {
       $self->{protcache}->{indistinguishables_processed} = 1;
     }
   }
-
-
-  #### If this peptide has an indistinguishable twin, record it
-  ####  TMF 06/23/09: discovered  that, often, indistinguishable_peptides have an embedded
-  ####    mod with charge stored in an attribute. We were leaving the
-  ####    embedded mod but not pre-pending the charge, giving us a
-  ####    partially stripped peptide. The rest of this program expects
-  ####    either stripped or unstripped peptides, so now we prepend the charge.
-
-  if ($localname eq 'indistinguishable_peptide') {
-    my $peptide_sequence = $attrs{peptide_sequence} || die("No sequence");
-    # TMF 06/23/09: prepend the charge.
-    if ($attrs{charge}) {
-      $peptide_sequence = $attrs{charge} . "-" . $peptide_sequence;
-    }
-    $self->{pepcache}->{indistinguishable_peptides}->{$peptide_sequence} = 1;
-  }
-
 
   #### Push information about this element onto the stack
   my $tmp;
@@ -947,6 +926,17 @@ sub protXML_end_element {
   my $get_best_pep_probs = (!$per_expt || !$this_is_master) ;
   my $assign_protids = ($this_is_master || !$have_master);
   my $store_info_for_presence_level = $this_is_master;
+
+  ## store indistinguishable_peptide
+  if ($localname eq 'indistinguishable_peptide'){
+    my $peptide = $self->{pepcache}->{indistinguishable_peptides}->{peptide_sequence};
+    my $c = $self->{pepcache}->{indistinguishable_peptides}->{charge};
+    my $modified_pep = modified_peptide_string($self, $peptide, $c,
+          $self->{pepcache}->{modifications}, 1);
+    $self->{pepcache}->{indistinguishable_peptides}->{$modified_pep} = 1;
+    $self->{pepcache}->{modifications} = {};
+  }
+
 
   #### If this is a peptide, then store its info in a protXML info cache
   ####  Each <peptide> is enclosed within a <protein>.
@@ -2932,7 +2922,8 @@ sub writePepIdentificationListFile {
     chomp $line;
     my @columns = split("\t", $line);
     if($extra_cols_array[$idx]){
-      splice(@columns,$#columns-6,7);
+      #splice(@columns,$#columns-6,7);
+      splice(@columns, 8, $#columns);
       push @columns, split(",", $extra_cols_array[$idx],-1);
     }else{
       print "WARINING: only 7 columns\n";
