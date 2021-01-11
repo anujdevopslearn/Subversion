@@ -648,15 +648,15 @@ sub analyze_library {
 
   my $result = `$exec 2>&1`;
   $log->info( $result );
-  if ( -e "$run_dir/$filebase.QC" ) {
+  if ( -e "$run_dir/$filebase.QC.tsv" ) {
     
-    my $update_libname = `perl -pi -e 's/$libfile/$lib/gm' "$run_dir/$filebase.QC"`;
+    my $update_libname = `perl -pi -e 's/$libfile/$lib/gm' "$run_dir/$filebase.QC.tsv"`;
     $log->info( "QC file found, updated libname from $libfile to $lib: $update_libname\n" );
   } else {
     $log->info( "QC file not found, stopping\n");
     return;
   }
-  open QC, "$run_dir/$filebase.QC";
+  open QC, "$run_dir/$filebase.QC.tsv";
   my $return = '';
   my $format;
   my @data = ( [ qw( Attribute Value Definition ) ] );
@@ -676,7 +676,7 @@ sub analyze_library {
   exec `rm -f $run_dir/$libfile $run_dir/$pfile $run_dir/$sfile`;
 
   if ( $mod_type ) {
-    `rm -f $run_dir/$filebase.QC`;
+    `rm -f $run_dir/$filebase.QC.tsv`;
   } else { # no plots in filter mode
     print_js_status("Finished analysis, plotting results...", 1);
     my $exec = "/regis/sbeams/bin/ionlibrary/DIALib-QC_RPlot.pl $run_dir/$filebase.fullstats $run_dir/$filebase.RT ";
@@ -721,8 +721,8 @@ sub analyze_library {
   </tr>
   ~;
 
-  my %type2download = ( pdf => 'Graphical depiction of library characteristics (PDF)',
-                        QC =>  'Library summary statistics, also depicted in table below (TSV)',
+  my %type2download = ( pdf => 'Graphical depiction of library characteristics (PDF) and Library summary statistics (TSV)',
+                        tsv =>  'Library summary statistics, also depicted in table below (TSV)',
                         mz_corrected => "Input library with m/z values re-computed ($format)",
                         clean => "Input library with problem assays filtered out ($format)",
                         problem => "Problem assays filtered from input library ($format)" );
@@ -742,7 +742,7 @@ sub analyze_library {
       </tr>
     ~;
   }
-  for my $type ( qw( QC mz_corrected clean problem ) ) {
+  for my $type ( qw( QC.tsv mz_corrected clean problem ) ) {
     my $fname = $lib_base . '.' . $type;
     my $path_dir = "$PHYSICAL_BASE_DIR/tmp/PeptideAtlas/AssessDIALibrary/";
     my $rel_path_dir = '/tmp/PeptideAtlas/AssessDIALibrary/';
