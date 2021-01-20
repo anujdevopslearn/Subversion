@@ -54,6 +54,10 @@ $sbeams = SBEAMS::Connection->new();
 $sbeamsPROT = SBEAMS::Proteomics->new();
 $sbeamsPROT->setSBEAMS($sbeams);
 
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
 
 #### Set program name and usage banner
 $PROG_NAME = $FindBin::Script;
@@ -77,6 +81,7 @@ Options:
   --update_timing_info
                       If set, an update of the timing and percent buffer
                       B information will be triggered
+  --update_data_location update data_location in search_batch and atlas_search_batch
   --gradient_program_id=nnn
                       If there is no gradient_program_id already set for
                       this fraction, then set it to this value instead of 1
@@ -151,7 +156,8 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
   "update_timing_info","gradient_program_id:i","column_delay:i",
   "cleanup_archive","delete_search_batch","delete_experiment",
   "delete_fraction:s","force_search_batch","fix_ipi",
-  "interact_fname:s", "experiment_id:s","pepxml_load","experiment_list_file:s"
+  "interact_fname:s", "experiment_id:s","pepxml_load","experiment_list_file:s",
+  "update_data_location", "new_data_location:s",
   )) {
   print "$USAGE";
   exit;
@@ -230,6 +236,7 @@ sub handleRequest {
   my $experiment_id = $OPTIONS{"experiment_id"} || '';
   my $pepxml_load = $OPTIONS{"pepxml_load"} || '';
   my $experiment_list_file =$OPTIONS{"experiment_list_file"};
+  my $update_data_location = $OPTIONS{"update_data_location"} || 0;
 
   $TESTONLY = $OPTIONS{'testonly'} || 0;
   $DATABASE = $DBPREFIX{'Proteomics'};
@@ -284,6 +291,14 @@ sub handleRequest {
 
       }
 
+  }
+
+  if ($update_data_location){
+     if (! $experiment_id){
+        die "ERROR: needs experiment_id to update\n";
+     }
+     updateDataLocation( experiment_id=>$experiment_id );
+     exit;
   }
 
 
@@ -441,7 +456,6 @@ sub handleRequest {
 	}
   	  print "\n";
   	}
-
 
   	#### If user asked for an update_from html, do it
   	if ($update_from_summary_files) {
@@ -1447,8 +1461,65 @@ sub addSearchBatchEntry {
   return $search_batch_id;
 
 }
+###############################################################################
+#update search_batch data_location
+###############################################################################
+sub updateDataLocation{
+  my %args = @_;
+  my $SUB_NAME = 'updateDataLocation';
+  my $experiment_id = $args{experiment_id} || die "ERROR[$SUB_NAME]: experiment_id not passed";
+  ## get search_batch ids 
+  my $sql_query = qq~
+      SELECT PE.experiment_path, SB.search_batch_id, SB.data_location, ASB.atlas_search_batch_id, ASB.data_location
+      FROM $TBPR_PROTEOMICS_EXPERIMENT PE
+      JOIN  $TBPR_SEARCH_BATCH SB ON (PE.EXPERIMENT_ID = SB.EXPERIMENT_ID)
+      LEFT JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ( ASB.PROTEOMICS_SEARCH_BATCH_ID  = SB.SEARCH_BATCH_ID)
+      WHERE PE.experiment_id = '$experiment_id'
+  ~;
+  my @results = $sbeams->selectSeveralColumns ($sql_query);
+  my %rowdata=();
+  foreach my $row(@results){
+    my ($exp_path, $sb_id, $sb_data_location,$asb_id, $asb_data_location)=@$row;
+    #print "$exp_path, $sb_id, $sb_data_location,$asb_id, $asb_data_location\n";
+    if ($exp_path ne $sb_data_location){
+      print "experiment_path=$exp_path != search_batch data_location=$sb_data_location\n";
+      print "set search_batch $sb_id data_location=$exp_path\n\n";
+      $rowdata{data_location} = $exp_path;
+			my $success = $sbeams->insert_update_row(
+					update=>1,
+					table_name=>$TBPR_SEARCH_BATCH,
+					rowdata_ref=>\%rowdata,
+					PK=>'search_batch_id',
+					PK_value=>$sb_id,
+					verbose=>$VERBOSE,
+					testonly=>$TESTONLY,
+			)
+    }else{
+       print "experiment_path=$exp_path == search_batch data_location=$sb_data_location\n";
+       print "no update\n\n";
+    }
+    if ($asb_id && ($exp_path ne $asb_data_location)){
+       print "experiment_path=$exp_path != atlas_search_batch data_location=$asb_data_location\n";
+       print "set atlas_search_batch $asb_id data_location=$exp_path\n\n";
+       $rowdata{data_location} = $exp_path;
+       my $success = $sbeams->insert_update_row(
+          update=>1,
+          table_name=>$TBAT_ATLAS_SEARCH_BATCH,
+          rowdata_ref=>\%rowdata,
+          PK=>'atlas_search_batch_id',
+          PK_value=>$asb_id,
+          verbose=>$VERBOSE,
+          testonly=>$TESTONLY,
+      );
+    }else{
+      print "experiment_path=$exp_path == atlas_search_batch data_location=$asb_data_location\n";
+      print "no update\n\n";
+    }
+  
+  }
 
 
+}
 
 ###############################################################################
 # getMsrunId: Get the msrun_id == fraction_id is it exists
