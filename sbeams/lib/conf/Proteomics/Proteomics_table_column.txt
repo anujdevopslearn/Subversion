@@ -7,24 +7,32 @@ PR_proteomics_experiment	5	experiment_name	Experiment Title	varchar	100	0	N		N		
 PR_proteomics_experiment	6	experiment_tag	Experiment Tag	varchar	30	0	N		N			Y	text	30		Y	Y	Y	Short tag (name) of this experiment.  Treat this like a directory/folder name.  Do not use spaces or non-standard characters.		
 PR_proteomics_experiment	7	experiment_description	Experiment Description	text	16	0	N		N			Y	textarea	6		Y	Y	N	"Description of this experiment, the sample or samples used, and any other relevant information not contained in the project description or in list-box elements in this form"		
 PR_proteomics_experiment	8	experiment_path	Experiment Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	Data path for this experiment (e.g. /data/search/edeutsch/TCells/T_000/human_nci)		
-PR_proteomics_experiment	9	proteases_id	Proteases ID	int	4	0	Y		N	AT_proteases	id	N	optionlist			y	y	N	Proteases	"SELECT id, name FROM $TBAT_PROTEASES order by name"	
+PR_proteomics_experiment	9	protease_id	Protease ID	int	4	0	N		N	AT_proteases	id	N	optionlist			y	y	N	Proteases	"SELECT id, name FROM $TBAT_PROTEASES order by name"	
 PR_proteomics_experiment	10	organism_id	Organism	int	4	0	N		N			Y	optionlist			Y	Y	N	Organism from which the sample used for this experiment was derived	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
-PR_proteomics_experiment	11	experiment_type_id	Experiment Type	int	4	0	N		N	PR_experiment_type	experiment_type_id	Y	optionlist			Y	Y	N	"Type/class of experiment (e.g. d0/d8 ICAT, etc.)"	"SELECT experiment_type_id, experiment_type_name FROM $TBPR_EXPERIMENT_TYPE ORDER BY sort_order,experiment_type_name"	
-PR_proteomics_experiment	12	instrument_id	Instrument	int	4	0	N		N	PR_instrument	instrument_id	Y	optionlist			Y	Y	N	Instrument on which this experiment was performed	"SELECT instrument_id, instrument_name FROM $TBPR_INSTRUMENT ORDER BY sort_order,instrument_name"	
-PR_proteomics_experiment	13	gradient_program_id	Gradient Program	int	4	0	Y		N	PR_gradient_program	gradient_program_id	N	optionlist			Y	Y	N	Gradient Program used for this experiment.  Choose MULTIPLE if different programs were used for different msruns within this experiment.	"SELECT gradient_program_id,gradient_program_name FROM $TBPR_GRADIENT_PROGRAM WHERE record_status != 'D'"	
-PR_proteomics_experiment	14	column_length	Column Length (cm)	real	4	0	Y		N			N	text	10		Y	Y	N	"Packing length of reverse phase beads column in cm used for this experiment (Do not enter the units in the text box, just the number of cm)"		
-PR_proteomics_experiment	15	go_public_date	Go Public Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	text	20		Y	Y	N	Date that this experiment data will go public.  Please use the form 2002-12-31.  Do not enter a date higher than 2030-01-01.		
-PR_proteomics_experiment	16	quant_normalization	D0 / D8 Normalization Factor	real	4	0	Y		N			N	text	10		Y	Y	N	"Optional Normalization factor for d0/d8 quantitation ratio.  This will not be known until some data analysis has already been performed.  If ratios that should be calibrated to 1:1 appear as 1.2:1, enter 1.2 here to adjust."		
-PR_proteomics_experiment	17	pulldown_protein_name	Pulldown Protein Name	varchar	255	0	Y		N			N	text	50		Y	Y	N	"If this is a pulldown experiment, write in the bait protein here.  This will permit one or more experiments to be properly visualized as a network."		
-PR_proteomics_experiment	18	experiment_samples_ids	Experiment Sample IDS	varchar	255	0	Y		N	PR_experiments_samples	experiments_samples_id	N	multilink	4		Y	Y	N	Select all the Samples that were used in this experiment.	"SELECT proteomics_sample_id,  sample_tag FROM $TBPR_PROTEOMICS_SAMPLE  WHERE record_status != 'D' ORDER BY sample_tag"	
-PR_proteomics_experiment	19	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
-PR_proteomics_experiment	20	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-PR_proteomics_experiment	21	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PR_proteomics_experiment	22	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-PR_proteomics_experiment	23	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PR_proteomics_experiment	24	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-PR_proteomics_experiment	25	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-PR_proteomics_experiment	26	record_status	Record Status	char	1	0	N	N	N							N	N				
+PR_proteomics_experiment	11	sample_category_id	Sample Category ID	int	4	0	N		N	AT_sample_category	id	Y	optionlist			Y	Y	N	Sample Category	"SELECT id, name FROM $TBAT_SAMPLE_CATEGORY order by name"	
+PR_proteomics_experiment	12	experiment_type_id	Experiment Type	int	4	0	N		N	PR_experiment_type	experiment_type_id	Y	optionlist			Y	Y	N	"Type/class of experiment (e.g. d0/d8 ICAT, etc.)"	"SELECT experiment_type_id, experiment_type_name FROM $TBPR_EXPERIMENT_TYPE ORDER BY sort_order,experiment_type_name"	
+PR_proteomics_experiment	13	instrument_id	Instrument	int	4	0	N		N	PR_instrument	instrument_id	Y	optionlist			Y	Y	N	Instrument on which this experiment was performed	"SELECT instrument_id, instrument_name FROM $TBPR_INSTRUMENT ORDER BY sort_order,instrument_name"	
+PR_proteomics_experiment	14	fragmentation_type_ids	Fragmentation Type ID	varchar	100	0	N		N			N	multioptionlist	3		Y	Y	N	Comma-separated list of fragmentation_type_ids	"SELECT fragmentation_type_id, fragmentation_type FROM $TBAT_FRAGMENTATION_TYPE"	
+PR_proteomics_experiment	15	gradient_program_id	Gradient Program	int	4	0	Y		N	PR_gradient_program	gradient_program_id	N	optionlist			Y	Y	N	Gradient Program used for this experiment.  Choose MULTIPLE if different programs were used for different msruns within this experiment.	"SELECT gradient_program_id,gradient_program_name FROM $TBPR_GRADIENT_PROGRAM WHERE record_status != 'D'"	
+PR_proteomics_experiment	16	column_length	Column Length (cm)	real	4	0	Y		N			N	text	10		Y	Y	N	"Packing length of reverse phase beads column in cm used for this experiment (Do not enter the units in the text box, just the number of cm)"		
+PR_proteomics_experiment	17	go_public_date	Go Public Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	text	20		Y	Y	N	Date that this experiment data will go public.  Please use the form 2002-12-31.  Do not enter a date higher than 2030-01-01.		
+PR_proteomics_experiment	18	quant_normalization	D0 / D8 Normalization Factor	real	4	0	Y		N			N	text	10		Y	Y	N	"Optional Normalization factor for d0/d8 quantitation ratio.  This will not be known until some data analysis has already been performed.  If ratios that should be calibrated to 1:1 appear as 1.2:1, enter 1.2 here to adjust."		
+PR_proteomics_experiment	19	pulldown_protein_name	Pulldown Protein Name	varchar	255	0	Y		N			N	text	50		Y	Y	N	"If this is a pulldown experiment, write in the bait protein here.  This will permit one or more experiments to be properly visualized as a network."		
+PR_proteomics_experiment	20	experiment_samples_ids	Experiment Sample IDS	varchar	255	0	Y		N	PR_experiments_samples	experiments_samples_id	N	multilink	4		Y	Y	N	Select all the Samples that were used in this experiment.	"SELECT proteomics_sample_id,  sample_tag FROM $TBPR_PROTEOMICS_SAMPLE  WHERE record_status != 'D' ORDER BY sample_tag"	
+PR_proteomics_experiment	21	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
+PR_proteomics_experiment	22	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PR_proteomics_experiment	23	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_proteomics_experiment	24	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+PR_proteomics_experiment	25	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_proteomics_experiment	26	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+PR_proteomics_experiment	27	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+PR_proteomics_experiment	28	record_status	Record Status	char	1	0	N	N	N							N	N				
+PR_proteomics_experiment	28	sample_preparation	Sample preparation	text	16	0	Y		N			N	textarea	2		Y	Y	N			
+PR_proteomics_experiment	30	tissue_cell_type	Tissue/Cell Type	text	16	0	Y		N			N	textarea	1		Y	Y	N			
+PR_proteomics_experiment	31	cell_line	Cell Line	text	16	0	Y		N			N	textarea	1		Y	Y	N			
+PR_proteomics_experiment	32	disease	Disease	text	16	0	Y		N			N	textarea	1		Y	Y	N			
+PR_proteomics_experiment	33	treatment_physiological_state	Treatment/Physiological state	text	16	0	Y		N			N	textarea	2		Y	Y	N			
+PR_proteomics_experiment	34	subcellular_fraction	Subcellular Fraction	varchar	100	0	Y		N			N	text	85		Y	Y	N			
 PR_gradient_program	1	gradient_program_id	Gradient Program ID	int	4	0	N		Y							N	N				pkDEFAULT
 PR_gradient_program	2	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project to which the gradient program belongs	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
 PR_gradient_program	3	gradient_program_name	Program Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Title of this gradient program		
