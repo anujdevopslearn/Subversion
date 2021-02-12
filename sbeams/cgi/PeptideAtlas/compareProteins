@@ -1,9 +1,9 @@
 #!/usr/local/bin/perl
 
 ###############################################################################
-# $Id: $
+# $Id$
 #
-# SBEAMS is Copyright (C) 2000-2008 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -56,7 +56,6 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
   $sbeams->parse_input_parameters( q=>$q, parameters_ref=>\%params );
   $sbeams->processStandardParameters(parameters_ref=>\%params);
 
-  
   ## get project_id to send to HTMLPrinter display
   my $project_id = $sbeams->getCurrent_project_id();
 
@@ -65,7 +64,7 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
   my $tabMenu = $sbeamsMOD->getTabMenu(
     parameters_ref => \%params,
     program_name => 'GetProtein',
-  );
+      );
   $page .= "$tabMenu";
 
 
@@ -79,12 +78,10 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
     $page .= $sbeams->makeErrorText( "Missing required parameter bioseq_id or protein_group_number" );
   }
   $log->debug( "Page done:" .time() );
-    
 
   # Display page
   print $page;
   $sbeamsMOD->display_page_footer();
-
 } # end main
 
 
@@ -94,18 +91,18 @@ sub get_alignment_display {
   # Content scalar to return
   my $curr_bid = $sbeamsMOD->getCurrentAtlasBuildID( parameters_ref => \%args );
 
-	my @select = $sbeamsMOD->GetBuildSelect( set_onchange => 1,
-	                                                 build_id => $curr_bid,
-								                                  form_name => 'compareProteins' );
-	my $clustal_display = $select[1];
+  my @select = $sbeamsMOD->GetBuildSelect( set_onchange => 1,
+					   build_id => $curr_bid,
+					   form_name => 'compareProteins' );
+  my $clustal_display = $select[1];
 
-	$clustal_display .= "<BR><P><FORM METHOD=POST NAME=compareProteins>\n";
-	for my $arg ( keys( %args ) ) {
-		next if $arg =~ /atlas_build_id/;
-		$clustal_display .= "<INPUT TYPE=HIDDEN NAME='$arg' VALUE='$args{$arg}'>\n";
-	}
+  $clustal_display .= "<BR><P><FORM METHOD=POST NAME=compareProteins>\n";
+  for my $arg ( keys( %args ) ) {
+    next if $arg =~ /atlas_build_id/;
+    $clustal_display .= "<INPUT TYPE=HIDDEN NAME='$arg' VALUE='$args{$arg}'>\n";
+  }
 
-	$clustal_display .= "$select[0] </FORM></P>\n";
+  $clustal_display .= "$select[0] </FORM></P>\n";
 
   my $bioseq_clause = '';
   my $bioseq_name_clause = '';
@@ -117,12 +114,12 @@ sub get_alignment_display {
     }
   }
 
-	if ( $args{restore} ) {
+  if ( $args{restore} ) {
     # my $ids = $sbeamsMOD->get_mapped_biosequences( build_id => $curr_bid,
-		#                                       peptide_sequence => $args{pepseq} );
+    #                                       peptide_sequence => $args{pepseq} );
 
-		$args{bioseq_id} = $args{orig_bioseq_id};
-	}
+    $args{bioseq_id} = $args{orig_bioseq_id};
+  }
 
   if ( $args{protein_group_number} ) {
 
@@ -173,9 +170,9 @@ sub get_alignment_display {
       my $prot_info = new SBEAMS::PeptideAtlas::ProtInfo;
       $prot_info->setSBEAMS($sbeams);
       my $swiss_bsids_aref = $prot_info->filter_swiss_prot(
- 	 atlas_build_id => $curr_bid,
-	 protid_aref => \@bioseq_ids,
-       );
+	atlas_build_id => $curr_bid,
+	protid_aref => \@bioseq_ids,
+	  );
       @bioseq_ids = @{$swiss_bsids_aref};
     }
 
@@ -189,11 +186,11 @@ sub get_alignment_display {
 
     my $n_ids = scalar @bioseq_ids;
     if ( $n_ids < 2 ) {
-    # if ( !$args{bioseq_id} ) {
+      # if ( !$args{bioseq_id} ) {
       my $errstr = $sbeams->makeErrorText( "Fewer than 2 proteins to align (build $curr_bid, protein group $args{protein_group_number})");
       return ( "$errstr <BR><BR>  $clustal_display" );
     }
-  $log->debug( "Ran protein group query:" .time() );
+    $log->debug( "Ran protein group query:" .time() );
 
   } elsif ( $args{protein_list_id} && $args{key_accession} ) {
     my $sql = qq~
@@ -209,6 +206,7 @@ sub get_alignment_display {
       AND PL.protein_list_id = $args{protein_list_id}
       AND key_accession = '$args{key_accession}'
     ~;
+
     my $sth = $sbeams->get_statement_handle( $sql );
     my @bioseq_ids;
     while ( my @row = $sth->fetchrow_array() ) {
@@ -218,17 +216,17 @@ sub get_alignment_display {
   }
   $log->debug( "Ran bioseq query:" .time() );
   if ( $args{protein_list} ) {
-		$args{protein_list} =~ s/;/,/g;
-		my $list_ids = $sbeamsMOD->getBioseqIDsFromProteinList( protein_list => $args{protein_list}, build_id => $curr_bid );
-		$args{bioseq_id} = ( !$args{bioseq_id} ) ? $list_ids : 
-		                   ( $list_ids ) ? $args{bioseq_id} . ',' . $list_ids : $args{bioseq_id};
-  $log->debug( "Ran bioseq_id query:" .time() );
-	}
+    $args{protein_list} =~ s/;/,/g;
+    my $list_ids = $sbeamsMOD->getBioseqIDsFromProteinList( protein_list => $args{protein_list}, build_id => $curr_bid );
+    $args{bioseq_id} = ( !$args{bioseq_id} ) ? $list_ids : 
+	( $list_ids ) ? $args{bioseq_id} . ',' . $list_ids : $args{bioseq_id};
+    $log->debug( "Ran bioseq_id query:" .time() );
+  }
 
 
   if ( $args{bioseq_id} ) {
     $bioseq_clause = "AND BS.biosequence_id IN ( $args{bioseq_id} )\n";
-	}
+  }
   my $all_projects = join( ",", $sbeams->getAccessibleProjects() );
 
   return 'Problem with form data: no biosequences found' unless $bioseq_clause;
@@ -236,11 +234,11 @@ sub get_alignment_display {
   # SQL to fetch bioseqs in them.
   my $sql =<<"  END_SQL";
   SELECT DISTINCT biosequence_name,
-									organism_name,
-									'search_key_name',
-									CAST( biosequence_seq AS VARCHAR(4000) ),
-									biosequence_id,
-									LEN( CAST(biosequence_seq AS VARCHAR(4000) ) )
+  organism_name,
+  'search_key_name',
+  CAST( biosequence_seq AS VARCHAR(4000) ),
+  biosequence_id,
+  LEN( CAST(biosequence_seq AS VARCHAR(4000) ) )
   FROM $TBAT_ATLAS_BUILD AB 
 	JOIN $TBAT_BIOSEQUENCE_SET BSS ON AB.biosequence_set_id = BSS.biosequence_set_id
 	JOIN $TBAT_BIOSEQUENCE BS ON BSS.biosequence_set_id = BS.biosequence_set_id
@@ -250,14 +248,14 @@ sub get_alignment_display {
 --	      OR search_key_type = 'Description'
 --				OR search_key_type LIKE '%Symbol' )
   WHERE AB.project_id IN ( $all_projects )
-	$bioseq_clause
+  $bioseq_clause
   $bioseq_name_clause
 --  AND search_key_type = CASE WHEN organism_name = 'human' THEN 'Full Name'
 --                             WHEN organism_name = 'Mouse' THEN 'Full Name'
---														 WHEN organism_name = 'Drosophila' THEN 'Full Name'
---													   WHEN organism_name = 'Yeast' THEN 'Description'
---													   ELSE resource_name
---											  END
+--                             WHEN organism_name = 'Drosophila' THEN 'Full Name'
+--			       WHEN organism_name = 'Yeast' THEN 'Description'
+--			  ELSE resource_name
+--			       END
   ORDER BY LEN(CAST(biosequence_seq AS VARCHAR(4000) ) ) DESC, CAST(biosequence_seq AS VARCHAR(4000)), biosequence_name DESC
 
   END_SQL
@@ -265,28 +263,28 @@ sub get_alignment_display {
   my $sth = $sbeams->get_statement_handle( $sql );
   $log->debug( "got big query stmt handle:" .time() );
 
-	# hash of biosequence_ids -> seq or name
-	my %bioseq_id2seq;
-	my %bioseq_id2name;
+  # hash of biosequence_ids -> seq or name
+  my %bioseq_id2seq;
+  my %bioseq_id2name;
 
   # hash seq <=> accession
-	my %seq2acc;
-	my %acc2seq;
+  my %seq2acc;
+  my %acc2seq;
 
   # Store acc -> bioseq_id
-	my %acc2bioseq_id;
+  my %acc2bioseq_id;
 
 #  # Store organism for each biosequence set
 #	my %bss2org;
 
   # Counter
-	my $cnt = 0;
+  my $cnt = 0;
 
   # array of protein info
-	my @all_proteins;
-	my %coverage;
-	my $fasta = '';
-	my $peptide = $args{pepseq} || 'ZORROFEELTHESTINGOFHISBLADE';
+  my @all_proteins;
+  my %coverage;
+  my $fasta = '';
+  my $peptide = $args{pepseq} || 'ZORROFEELTHESTINGOFHISBLADE';
 
 # 0     biosequence_name,
 # 1     organism_name,
@@ -297,20 +295,20 @@ sub get_alignment_display {
 
 
 # 0 SELECT DISTINCT biosequence_name,
-#	1								organism_name,
-#	2								'search_key_name',
-#	3								CAST( biosequence_seq AS VARCHAR(4000) ),
-#	4								biosequence_id
+#	1	organism_name,
+#	2	'search_key_name',
+#	3	CAST( biosequence_seq AS VARCHAR(4000) ),
+#	4	biosequence_id
   my %seen;
-	my %coverage;
-	my @seqs;
+  my %coverage;
+  my @seqs;
   $log->debug( "loopin:" .time() );
   my %seqtype = ( decoy => 0, fwd => 0 ); 
   while ( my @row = $sth->fetchrow_array() ) {
 
     # clustal W quietly changes ':' to '_' in accessions.  Should we fix here? 
-		my $acc = $row[0];
-		$acc =~ s/:/_/g;
+    my $acc = $row[0];
+    $acc =~ s/:/_/g;
 
     if ( $acc =~ /^DECOY/ ) {
       $seqtype{decoy}++;
@@ -330,26 +328,26 @@ sub get_alignment_display {
 
     next if $seen{$acc};
     $seen{$acc}++;
-		push @seqs, $seq;
+    push @seqs, $seq;
 
-  $log->debug( "Get build coverage " .time() );
-		my $peptide_list = $sbeamsMOD->get_protein_build_coverage( build_id => $curr_bid,
-		                                                    biosequence_ids => $row[4] );
+    $log->debug( "Get build coverage " .time() );
+    my $peptide_list = $sbeamsMOD->get_protein_build_coverage( build_id => $curr_bid,
+							       biosequence_ids => $row[4] );
 
 
-  $log->debug( "Done.  Now get coverage hash " .time() );
-    $coverage{$acc} = $sbeamsMOD->get_coverage_hash(      seq => $seq,         
-                                                     peptides => $peptide_list->{$row[4]} ); 
+    $log->debug( "Done.  Now get coverage hash " .time() );
+    $coverage{$acc} = $sbeamsMOD->get_coverage_hash(seq => $seq,         
+						    peptides => $peptide_list->{$row[4]} ); 
  
-  $log->debug( "Done " .time() );
+    $log->debug( "Done " .time() );
     # Check this out later for dups...
-		$seq2acc{$seq} ||= {};
-		$seq2acc{$seq}->{$acc}++;
+    $seq2acc{$seq} ||= {};
+    $seq2acc{$seq}->{$acc}++;
 
     $bioseq_id2seq{$row[4]} = $seq; 
     $bioseq_id2name{$row[4]} = $acc; 
 
-		$fasta .= ">$acc\n$seq\n";
+    $fasta .= ">$acc\n$seq\n";
 
     $acc2bioseq_id{"$acc"} = $row[4];
     # Clustal W alignment file can only take 30 chars
@@ -358,7 +356,7 @@ sub get_alignment_display {
     $coverage{"$short_acc"} = $coverage{$acc};
     $seq2acc{$seq}->{"$short_acc"}++;
 
-		my $acckeys = join( ',', keys( %acc2bioseq_id ) );
+    my $acckeys = join( ',', keys( %acc2bioseq_id ) );
 
     # Cache first seq for each accession, and push onto display
 #		unless ( $acc2seq{$row[1]} ) {
@@ -369,28 +367,28 @@ sub get_alignment_display {
 
     $cnt++;
 
-	}
-	$log->debug( "Iterated $cnt rows: " .time() );
+  }
+  $log->debug( "Iterated $cnt rows: " .time() );
 
   # weed out duplicates - not quite working yet?
-	my %dup_seqs;
- 	my $dup_char = 'A';
-	for my $seq ( @seqs ) {
+  my %dup_seqs;
+  my $dup_char = 'A';
+  for my $seq ( @seqs ) {
 
-		if ( scalar(keys(%{$seq2acc{"$seq"}})) > 1 ) {
-			my $skip = 0;
- 	    for my $acc ( keys ( %{$seq2acc{"$seq"}} ) ) {
-				if ( $dup_seqs{"$acc"} ) {
-					$skip++;
-					next;
-				}
+    if ( scalar(keys(%{$seq2acc{"$seq"}})) > 1 ) {
+      my $skip = 0;
+      for my $acc ( keys ( %{$seq2acc{"$seq"}} ) ) {
+	if ( $dup_seqs{"$acc"} ) {
+	  $skip++;
+	  next;
+	}
         $dup_seqs{"$acc"} = $dup_char;
       }
       $dup_char++ unless $skip;
     } else {
-			my ( $key ) = keys( %{$seq2acc{"$seq"}} );
+      my ( $key ) = keys( %{$seq2acc{"$seq"}} );
       $dup_seqs{"$key"} = '&nbsp;';
-	  }
+    }
   }
 
 #	  # Calc coverage for this build/protein combination
@@ -414,17 +412,17 @@ sub get_alignment_display {
 
   my $MSF = SBEAMS::BioLink::MSF->new();
 
-	$log->debug( "Run alignment: " .time() );
-	my $acckeys = join( ',', keys( %acc2bioseq_id ) );
+  $log->debug( "Run alignment: " .time() );
+  my $acckeys = join( ',', keys( %acc2bioseq_id ) );
 
   if ( $cnt > 1000 ) {
-		$clustal_display = $sbeams->makeErrorText( "Too many sequences to run alignment, skipping" );
-	} else {
-	  #print "$fasta<br>";
-	  my $clustal = $MSF->runClustalW( sequences => $fasta );
-	  my $nseqs = scalar @{$clustal};
-	  #print "nseqs=$nseqs<br>";
-	  if ( ref $clustal ne 'ARRAY' ) {
+    $clustal_display = $sbeams->makeErrorText( "Too many sequences to run alignment, skipping" );
+  } else {
+    #print "$fasta<br>";
+    my $clustal = $MSF->runClustalW( sequences => $fasta );
+    my $nseqs = scalar @{$clustal};
+    #print "nseqs=$nseqs<br>";
+    if ( ref $clustal ne 'ARRAY' ) {
       my $rerun_link = '';
       if ( $seqtype{decoy} && $seqtype{fwd} ) {
         my $url = $q->self_url();
@@ -433,49 +431,44 @@ sub get_alignment_display {
 &nbsp;        Try re-running clustalW with <A HREF=$url;decoys=yes> only DECOY</A> sequences?<BR>
         ~;
       }
-	    $clustal_display = "<BR>" . $sbeams->makeErrorText( "Error running Clustal: $clustal" );
-	    $clustal_display .= "<BR> $rerun_link";
-	  } else {
-	    $clustal_display .= get_clustal_display( alignments => $clustal, 
-			                                          dup_seqs => \%dup_seqs,
-			                                            pepseq => $peptide,
-																								coverage => \%coverage,
-																  					acc2bioseq_id => \%acc2bioseq_id,
-																						         %args );
-	 	}
-	}
+      $clustal_display = "<BR>" . $sbeams->makeErrorText( "Error running Clustal: $clustal" );
+      $clustal_display .= "<BR> $rerun_link";
+    } else {
+      $clustal_display .= get_clustal_display( alignments => $clustal, 
+					       dup_seqs => \%dup_seqs,
+					       pepseq => $peptide,
+					       coverage => \%coverage,
+					       acc2bioseq_id => \%acc2bioseq_id,
+					       %args );
+    }
+  }
 #	  $log->debug( "CompProtein, fasta is " . length( $fasta ) . ", result is " . length( $clustal_display ) );
-	return $clustal_display;
-
-
+  return $clustal_display;
 }
 
 sub get_clustal_display {
-
 # Passed named args
 # alignments => $clustal,            # ref to array of arrayrefs of acc, seq
 # $build_seqs{$row[3]}->{$row[2]}->{coverage}->{$covered_posn}++;
-	my %args = ( acc_color => '#0090D0',
-	              @_  
-						 );
+  my %args = ( acc_color => '#0090D0', @_ );
 
-	my $display = qq~
+  my $display = qq~
 	<BR><BR>
 
 	<DIV STYLE="width: 1000px; overflow-x: scroll; scrollbar-arrow-color: blue; scrollbar- face-color: #e7e7e7; scrollbar-3dlight-color: #a0a0a0; scrollbar-darkshadow-color: #888888">
 	<FORM METHOD=POST NAME=custom_alignment>
 	<TABLE BORDER=0 CELLPADDNG=3>
 	~;
-	for my $seq ( @{$args{alignments}} ) {
-		my $sequence = $seq->[1];
-		if ( $seq->[0] eq 'consensus'  ) {
-		  $sequence =~ s/ /&nbsp;/g 
-		} else {
-#  		my $posn = $sbeamsMOD->get_site_positions( pattern => $args{pepseq}, seq => $sequence );
-			$sequence = highlight_sites( seq => $sequence, 
+
+  for my $seq ( @{$args{alignments}} ) {
+    my $sequence = $seq->[1];
+    if ( $seq->[0] eq 'consensus'  ) {
+      $sequence =~ s/ /&nbsp;/g 
+    } else {
+      #my $posn = $sbeamsMOD->get_site_positions( pattern => $args{pepseq}, seq => $sequence );
+      $sequence = highlight_sites( seq => $sequence, 
                                    acc => $seq->[0], 
-			                             coverage => $args{coverage}->{$seq->[0]}
-																 );
+				   coverage => $args{coverage}->{$seq->[0]} );
 
 # Commented section does a more direct 'nesting' of SPANs, but the simple method
 # below is sufficicent if assumptions are correct.
@@ -495,45 +488,45 @@ sub get_clustal_display {
 # 	      $sequence =~ s/$args{pepseq}/<\/SPAN><SPAN CLASS=sec_obs_seq_bg_font>$args{pepseq}<\/SPAN>/g;
 #			}
 
-			# Poor man's bait coverage!  Assumes that there are no span junctions in 
+      # Poor man's bait coverage!  Assumes that there are no span junctions in 
       # bait sequence.  This is true if the entire thing is in coverage (or out
-			# of it, but that should not be possible).
-			# TMF 06/14/13: allow multiple bait sequences
-			my @pepseqs = split(",", $args{pepseq});
-			for my $pepseq (@pepseqs) {
-			  $sequence =~ s/${pepseq}/<SPAN CLASS=sec_obs_seq_bg_font>$pepseq<\/SPAN>/g;
-			}
+      # of it, but that should not be possible).
+      # TMF 06/14/13: allow multiple bait sequences
+      my @pepseqs = split(",", $args{pepseq});
+      for my $pepseq (@pepseqs) {
+	$sequence =~ s/${pepseq}/<SPAN CLASS=sec_obs_seq_bg_font>$pepseq<\/SPAN>/g;
+      }
 
-		}
-		my $dup = '';
+    }
+    my $dup = '';
     if ( $args{dup_seqs}->{$seq->[0]} ) {
-			$dup .= "<SUP><BOLD><FONT COLOR=red>$args{dup_seqs}->{$seq->[0]}</FONT></BOLD></SUP>";
-		}
-		my $checkbox = '';
-		unless ( $seq->[0] eq 'consensus' ) {
+      $dup .= "<SUP><BOLD><FONT COLOR=red>$args{dup_seqs}->{$seq->[0]}</FONT></BOLD></SUP>";
+    }
+    my $checkbox = '';
+    unless ( $seq->[0] eq 'consensus' ) {
       if ( !$args{acc2bioseq_id}->{"$seq->[0]"} ) {
         $log->warn( "$seq->[0] has no bioseq_id, can't re-assemble" );
       } else {
-		    $checkbox = "<INPUT ID=bioseq_id TYPE=checkbox CHECKED NAME=bioseq_id VALUE=$args{acc2bioseq_id}->{$seq->[0]}></INPUT>";
+	$checkbox = "<INPUT ID=bioseq_id TYPE=checkbox CHECKED NAME=bioseq_id VALUE=$args{acc2bioseq_id}->{$seq->[0]}></INPUT>";
       }
-		}
+    }
 
-		$display .= qq~
+    $display .= qq~
 		<TR><TD>$checkbox </TD>
-	      <TD ALIGN=right class=sequence_font>$seq->[0]$dup:</TD>
-				<TD NOWRAP=1 class=sequence_font>$sequence</TD>
+	        <TD ALIGN=right class=sequence_font>$seq->[0]$dup:</TD>
+		<TD NOWRAP=1 class=sequence_font>$sequence</TD>
 		</TR>
 		~;
-	}
+  }
 
   my $toggle_checkbox = $sbeams->get_checkbox_toggle( controller_name => 'alignment_chk',
-	                                                        checkbox_name => 'bioseq_id' );
+						      checkbox_name => 'bioseq_id' );
 
   my $toggle_text = $sbeams->makeInfoText( 'Toggle all checkboxes' );
 
   # Add field to allow ad hoc addition of proteins.
   my $text = qq~
-	  You can add an additional protein or proteins
+	You can add an additional protein or proteins
 	to this assembly by inserting their accession
 	numbers here as a semicolon-separated list.
 	~;
@@ -586,7 +579,7 @@ sub get_clustal_display {
   my $self_url = $q->self_url();
   my $short_url = $sbeams->setShortURL( $self_url );
 
-	$display .= qq~
+  $display .= qq~
 	$pHTML
   <TR><TD>$toggle_checkbox</TD><TD ALIGN=left>$toggle_text </TD><TD></TD></TR>
 	</TABLE>\n</DIV>
@@ -612,61 +605,59 @@ sub get_clustal_display {
   Save link to recall current <a href='$CGI_BASE_DIR/shortURL?key=$short_url'>sequence alignment</a>.
 	~;
 
-	return $display;
+  return $display;
 }
 
 sub highlight_sites {
-
 # coverage => \%coverage             # ref to hash of per acc coverage 
 # seq => $sequence                   # sequence to be processed, a la --A--AB-
 # acc => $accession                  # accession of seq to be processed
 
   my %args = @_;
-	my $coverage = $args{coverage};
-#	$log->debug( "seq is there , acc is $args{acc}, and coverage is $coverage->{$args{acc}}" );
+  my $coverage = $args{coverage};
+  #$log->debug( "seq is there , acc is $args{acc}, and coverage is $coverage->{$args{acc}}" );
 
   my @aa = split( '', $args{seq} );
   my $return_seq = '';
   my $cnt = 0;
-	my $in_coverage = 0;
-	my $span_closed = 1;
+  my $in_coverage = 0;
+  my $span_closed = 1;
   for my $aa ( @aa ) {
     if ( $aa eq '-' ) {
-			if ( $in_coverage && !$span_closed ) {
-				$return_seq .= "</span>$aa";
-				$span_closed++;
-			} else {
-				$return_seq .= $aa;
-			}
-		} else { # it is an amino acid
-			if ( $coverage->{$cnt} ) {
-				if ( $in_coverage ) { # already in
-					if ( $span_closed ) {  # Must have been jumping a --- gap
-					  $span_closed = 0;
-				    $return_seq .= "<span class=obs_seq_bg_font>$aa";
-					} else {
-				    $return_seq .= $aa;
-					}
-				} else {
-					$in_coverage++;
-					$span_closed = 0;
-				  $return_seq .= "<span class=obs_seq_bg_font>$aa";
-				}
-			} else { # posn not covered!
-				if ( $in_coverage ) { # were in, close now
-				  $return_seq .= "</span>$aa";
-					$in_coverage = 0;
-					$span_closed++;
-				} else {
-				  $return_seq .= $aa;
-				}
-			}
-		  $cnt++;
-		}
+      if ( $in_coverage && !$span_closed ) {
+	$return_seq .= "</span>$aa";
+	$span_closed++;
+      } else {
+	$return_seq .= $aa;
+      }
+    } else { # it is an amino acid
+      if ( $coverage->{$cnt} ) {
+	if ( $in_coverage ) { # already in
+	  if ( $span_closed ) {  # Must have been jumping a --- gap
+	    $span_closed = 0;
+	    $return_seq .= "<span class=obs_seq_bg_font>$aa";
+	  } else {
+	    $return_seq .= $aa;
+	  }
+	} else {
+	  $in_coverage++;
+	  $span_closed = 0;
+	  $return_seq .= "<span class=obs_seq_bg_font>$aa";
 	}
-	if ( $in_coverage && !$span_closed ) {
-		$return_seq .= '</span>';
+      } else { # posn not covered!
+	if ( $in_coverage ) { # were in, close now
+	  $return_seq .= "</span>$aa";
+	  $in_coverage = 0;
+	  $span_closed++;
+	} else {
+	  $return_seq .= $aa;
 	}
-	return $return_seq;
+      }
+      $cnt++;
+    }
+  }
+  if ( $in_coverage && !$span_closed ) {
+    $return_seq .= '</span>';
+  }
+  return $return_seq;
 }
-
