@@ -1058,7 +1058,7 @@ sub handle_request {
 	my $text = $sbeams->makeInactiveText( 'Compare Proteins' );
   	$compare_link = "<TR><TD COLSPAN=3><DIV TITLE='Cannot run alignment with only one sequence'>$text</DIV></TD></TR>\n";
       } else  {
-  	$compare_link = "<TR><TD COLSPAN=3><A HREF=compareProteins?pepseq=$peptide_sequence[0];bioseq_id=$bioseqs>Compare Proteins</A></TD></TR>\n";
+  	$compare_link = "<tr><td colspan='3'><h2><a title='Align all proteins that this peptide maps to, and graphical view of all detected peptide sequences' href='compareProteins?pepseq=$peptide_sequence[0];bioseq_id=$bioseqs'>&cong; Compare Proteins</a></h2></td></tr>\n";
       }
       $mapHTML .= $compare_link;
 
