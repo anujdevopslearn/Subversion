@@ -7,7 +7,7 @@
 # Description : Prints summary of a given peptide given selection
 #               atlas build, and peptide name or sequence.
 #
-# SBEAMS is Copyright (C) 2000-2016 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -717,50 +717,50 @@ sub handle_request {
       my %protein_map;
       foreach my $row (@rows) {
 
-					my ($pa, $seq, $prob, $n_obs, $n_g_loc, $n_prot_map, 
-							$chr, $s_chr, $e_chr, $str, $b_name, $mw, $pi, 
-							$ns, $nps, $eps, $org, $orig_name,
-							$SSRCalc_relative_hydrophobicity, $protein_sequence, $bioseq_id, @annot ) = @{$row};
-					@pep_annot = @annot unless @pep_annot;
-					$protein_map{$bioseq_id} ||= { name  => $b_name,
-											 id    => $bioseq_id,
-											 seq   => $protein_sequence,
-											 level => 'tbd',
-											 pep_seq => $seq };
-					$peptide_accession[$i] = $pa;
-					$peptide_sequence[$i] = $seq;
-					$best_probability[$i] = $prob;
-					$n_observations[$i] = $n_obs;
-					$n_genome_locations[$i] = $n_g_loc;
-					$n_protein_mappings[$i] = $n_prot_map;
-					$chrom[$i] = $chr;
-					$start_chrom[$i] = $s_chr;
-					$end_chrom[$i] = $e_chr;
-					$strand[$i] = $str;
-					$biosequence_name[$i] = $b_name;
-					$biosequence_name{$b_name}++;
-					$mw[$i] = sprintf( "%0.2f", $mw);
-					$pi[$i] = sprintf( "%0.1f", $pi );
-					$nsamp[$i] = $ns;
-					$nprotsamp[$i] = $nps;
-					$epscore[$i] = $eps;
-					$organism[$i] = $org;
-					$original_name[$i] = $orig_name;
-					$SSRCalc_relative_hydrophobicity[$i] = $SSRCalc_relative_hydrophobicity;
-					#print "sql returns: $n_observations[$i] $sample_tag[$i] <br>";
-					$biosequence_id{$bioseq_id}++;
+	my ($pa, $seq, $prob, $n_obs, $n_g_loc, $n_prot_map, 
+	    $chr, $s_chr, $e_chr, $str, $b_name, $mw, $pi, 
+	    $ns, $nps, $eps, $org, $orig_name,
+	    $SSRCalc_relative_hydrophobicity, $protein_sequence, $bioseq_id, @annot ) = @{$row};
+	@pep_annot = @annot unless @pep_annot;
+	$protein_map{$bioseq_id} ||= { name  => $b_name,
+				       id    => $bioseq_id,
+				       seq   => $protein_sequence,
+				       level => 'tbd',
+				       pep_seq => $seq };
+	$peptide_accession[$i] = $pa;
+	$peptide_sequence[$i] = $seq;
+	$best_probability[$i] = $prob;
+	$n_observations[$i] = $n_obs;
+	$n_genome_locations[$i] = $n_g_loc;
+	$n_protein_mappings[$i] = $n_prot_map;
+	$chrom[$i] = $chr;
+	$start_chrom[$i] = $s_chr;
+	$end_chrom[$i] = $e_chr;
+	$strand[$i] = $str;
+	$biosequence_name[$i] = $b_name;
+	$biosequence_name{$b_name}++;
+	$mw[$i] = sprintf( "%0.2f", $mw);
+	$pi[$i] = sprintf( "%0.1f", $pi );
+	$nsamp[$i] = $ns;
+	$nprotsamp[$i] = $nps;
+	$epscore[$i] = $eps;
+	$organism[$i] = $org;
+	$original_name[$i] = $orig_name;
+	$SSRCalc_relative_hydrophobicity[$i] = $SSRCalc_relative_hydrophobicity;
+	#print "sql returns: $n_observations[$i] $sample_tag[$i] <br>";
+	$biosequence_id{$bioseq_id}++;
 
-					my $key = join( ':::', $chr, $s_chr, $e_chr, $str, $seq );
+	my $key = join( ':::', $chr, $s_chr, $e_chr, $str, $seq );
 
-					# Could just push, thought this was clearer.
-					if ( !$chrom_map{$key} ) {
-						# First time through, point to arrayref
-						$chrom_map{$key} = [$b_name]; 
-					} else {
-						# Subsequent visits push an item onto the list
-						push @{$chrom_map{$key}}, $b_name; 
-					}
-					$i++;
+	# Could just push, thought this was clearer.
+	if ( !$chrom_map{$key} ) {
+	  # First time through, point to arrayref
+	  $chrom_map{$key} = [$b_name]; 
+	} else {
+	  # Subsequent visits push an item onto the list
+	  push @{$chrom_map{$key}}, $b_name; 
+	}
+	$i++;
       }
 
       ##xxxx PRINT RETURN to HTML HERE... 
@@ -887,128 +887,127 @@ sub handle_request {
       my $exon_bp_length_total =0;
       for my $key (sort {$a cmp $b} keys (%chrom_map)  ) {
          
-					my @map = split( ':::', $key );
+	my @map = split( ':::', $key );
 
-					my $current_chrom = $map[0];
-					my $tmp_start = $map[1];
-					my $tmp_end = $map[2];
-					my $tmp_strand = $map[3];
-					my $peptide_sequence = $map[4];
-					# Select Uniprot ident if available (prev. to March 2013, selected 1st ident).
-					my $current_prot_num=0;
-					for (my $i=0; $i < scalar @{ $chrom_map{$key} }; $i++ ) {
-						$current_prot_num = $i;
-						last if ( SBEAMS::PeptideAtlas::ProtInfo::is_uniprot_identifier ( $chrom_map{$key}->[$i] ) );
-					}
-					my $current_prot = $chrom_map{$key}->[$current_prot_num];
-					push @prots, $current_prot;
-							
-					# This indicates an unmapped peptide
-					next unless $current_prot; 
+	my $current_chrom = $map[0];
+	my $tmp_start = $map[1];
+	my $tmp_end = $map[2];
+	my $tmp_strand = $map[3];
+	my $peptide_sequence = $map[4];
+	# Select Uniprot ident if available (prev. to March 2013, selected 1st ident).
+	my $current_prot_num=0;
+	for (my $i=0; $i < scalar @{ $chrom_map{$key} }; $i++ ) {
+	  $current_prot_num = $i;
+	  last if ( SBEAMS::PeptideAtlas::ProtInfo::is_uniprot_identifier ( $chrom_map{$key}->[$i] ) );
+	}
+	my $current_prot = $chrom_map{$key}->[$current_prot_num];
+	push @prots, $current_prot;
 
-
-					## $current_peptide_seq is the entire peptide sequence, even if split over 2 exons
-					my $current_peptide_seq = $peptide_sequence;
-
-					#if ($current_chrom ne $last_chrom) {
-					#  $mapHTML .= "<TR><TD NOWRAP COLSPAN=2><B>Chromosome $current_chrom: </B></TD><TD></TD></TR>\n";
-					#}
-					my $tmp_protein = $current_prot;
-					my $tmp_seq;
-
-					#### get residues on given exons ####
-					my $exon_bp_length = ceil( (abs($tmp_end - $tmp_start) + 1 + $last_seq_used_length%3 )/3.) ;
-					## if the strand is negative, count residues on exon starting from end
-					if ($tmp_strand eq "-") {
-						if ($tmp_protein eq $last_protein) {
-              $exon_bp_length_total += abs($tmp_end - $tmp_start)+1;
-							$tmp_seq = substr($current_peptide_seq, 
-										((length $current_peptide_seq) - floor($last_seq_used_length/3.0) - $exon_bp_length), 
-										((length $current_peptide_seq) - floor($last_seq_used_length/3.0) ) );
-						} else {
-              
-							$tmp_seq = substr($current_peptide_seq, 
-										((length $current_peptide_seq) - $exon_bp_length), 
-										(length $current_peptide_seq) );
-              $exon_bp_length_total = abs($tmp_end - $tmp_start)+1;
-						}
-
-						#### Else from the start
-					} elsif ($tmp_strand eq "+") {
-						if ($tmp_protein eq $last_protein) {
-              $exon_bp_length_total += abs($tmp_end - $tmp_start)+1;
-							$tmp_seq = substr($current_peptide_seq, floor($last_seq_used_length/3.0),$exon_bp_length );
-						} else {
-							$tmp_seq = substr($current_peptide_seq, 0, $exon_bp_length);
-              $exon_bp_length_total = abs($tmp_end - $tmp_start)+1;
-						}
-
-						#### Otherwise, there's no proper mapping, but show information anyway
-					} else {
-						$tmp_seq = $current_peptide_seq;
-					}
+	# This indicates an unmapped peptide
+	next unless $current_prot; 
 
 
-					$last_seq_used_length = $exon_bp_length_total; 
+	## $current_peptide_seq is the entire peptide sequence, even if split over 2 exons
+	my $current_peptide_seq = $peptide_sequence;
 
-					# Set up protein[s] display
-					my $protein_display = makeProteinLink( name  => $tmp_protein, 
-												 build => $parameters{atlas_build_id}); 
+	#if ($current_chrom ne $last_chrom) {
+	#  $mapHTML .= "<TR><TD NOWRAP COLSPAN=2><B>Chromosome $current_chrom: </B></TD><TD></TD></TR>\n";
+	#}
+	my $tmp_protein = $current_prot;
+	my $tmp_seq;
 
-					my $extra = $#{$chrom_map{$key}};
-					if ( $extra ) {
-						my $all = join ', ', @{$chrom_map{$key}};
-						my $all_links;
-						for my $p ( @{$chrom_map{$key}} ) {
-							$all_links .= makeProteinLink( build => $parameters{atlas_build_id},
-										 name  => $p,
-										target => '_prot_info' ) . "<BR>\n"; 
-						}
+	#### get residues on given exons ####
+	my $exon_bp_length = ceil( (abs($tmp_end - $tmp_start) + 1 + $last_seq_used_length%3 )/3.) ;
+	## if the strand is negative, count residues on exon starting from end
+	if ($tmp_strand eq "-") {
+	  if ($tmp_protein eq $last_protein) {
+	    $exon_bp_length_total += abs($tmp_end - $tmp_start)+1;
+	    $tmp_seq = substr($current_peptide_seq, 
+			      ((length $current_peptide_seq) - floor($last_seq_used_length/3.0) - $exon_bp_length), 
+			      ((length $current_peptide_seq) - floor($last_seq_used_length/3.0) ) );
+	  } else {
+	    $tmp_seq = substr($current_peptide_seq, 
+			      ((length $current_peptide_seq) - $exon_bp_length), 
+			      (length $current_peptide_seq) );
+	    $exon_bp_length_total = abs($tmp_end - $tmp_start)+1;
+	  }
 
-						$mapHTML .= $sbeams->getPopupDHTML();
-						my $session_key = $sbeams->getRandomString( num_chars => 20,
-													char_set => ['A'..'Z', 'a'..'z', 0..9] );
+	  #### Else from the start
+	} elsif ($tmp_strand eq "+") {
+	  if ($tmp_protein eq $last_protein) {
+	    $exon_bp_length_total += abs($tmp_end - $tmp_start)+1;
+	    $tmp_seq = substr($current_peptide_seq, floor($last_seq_used_length/3.0),$exon_bp_length );
+	  } else {
+	    $tmp_seq = substr($current_peptide_seq, 0, $exon_bp_length);
+	    $exon_bp_length_total = abs($tmp_end - $tmp_start)+1;
+	  }
 
-						$sbeams->setSessionAttribute( key => $session_key,  value => $all_links );
-
-						my $url = "$CGI_BASE_DIR/help_popup.cgi?title=Alternate%20Mappings;session_key=$session_key;email_link=no";
-						my $more = qq~ &nbsp;&nbsp;[<A onClick=popitup("$url"); CLASS=pseudo_link>$extra more</A>]~;
-						$protein_display = "<DIV TITLE='$all'>$protein_display $more</DIV>";
-					}
+	  #### Otherwise, there's no proper mapping, but show information anyway
+	} else {
+	  $tmp_seq = $current_peptide_seq;
+	}
 
 
-					my $ens_link = '';
-					my $range = '';
-					my $kaviar_link = '';
-					my $links = '';
-					if ( defined $tmp_start && defined $tmp_end && $tmp_end ) {
-						$ens_link = makeGenomeLink( start => $tmp_start,
-											end => $tmp_end,
-											strand => $tmp_strand,
-											chrom => $current_chrom,
-											acc => $current_prot,
-											org => $organism[0] );
+	$last_seq_used_length = $exon_bp_length_total; 
 
-						$range = $tmp_start . '-' . $tmp_end;
-						$kaviar_link = makeKaviarLink( start => $tmp_start,
-									 end => $tmp_end,
-									 strand => $tmp_strand,
-									 chrom => $current_chrom,
-									 acc => $current_prot,
-									 org => $organism[0],
-									 build_id => $parameters{atlas_build_id} );
-						$links = $ens_link if $ens_link;
-						if ( $links && $kaviar_link ) {
-							$links .= ",$kaviar_link";
-						}
-					}
+	# Set up protein[s] display
+	my $protein_display = makeProteinLink( name  => $tmp_protein, 
+					       build => $parameters{atlas_build_id}); 
 
-					$current_chrom ||= $sbeams->makeInactiveText('n/a');
-					$tmp_strand = ( $tmp_strand =~ /\?/ ) ? $sbeams->makeInactiveText('n/a') : "<B>$tmp_strand</B>";
-					push @rows, [ $current_chrom, $protein_display, $tmp_seq, $range, $tmp_strand, $links ] if $tmp_seq;
+	my $extra = $#{$chrom_map{$key}};
+	if ( $extra ) {
+	  my $all = join ', ', @{$chrom_map{$key}};
+	  my $all_links;
+	  for my $p ( @{$chrom_map{$key}} ) {
+	    $all_links .= makeProteinLink( build => $parameters{atlas_build_id},
+					   name  => $p,
+					   target => '_prot_info' ) . "<BR>\n"; 
+	  }
 
-					$last_chrom = $current_chrom;
-					$last_protein = $current_prot;
+	  $mapHTML .= $sbeams->getPopupDHTML();
+	  my $session_key = $sbeams->getRandomString( num_chars => 20,
+						      char_set => ['A'..'Z', 'a'..'z', 0..9] );
+
+	  $sbeams->setSessionAttribute( key => $session_key,  value => $all_links );
+
+	  my $url = "$CGI_BASE_DIR/help_popup.cgi?title=Alternate%20Mappings;session_key=$session_key;email_link=no";
+	  my $more = qq~ &nbsp;&nbsp;[<A onClick=popitup("$url"); CLASS=pseudo_link>$extra more</A>]~;
+	  $protein_display = "<DIV TITLE='$all'>$protein_display $more</DIV>";
+	}
+
+
+	my $ens_link = '';
+	my $range = '';
+	my $kaviar_link = '';
+	my $links = '';
+	if ( defined $tmp_start && defined $tmp_end && $tmp_end ) {
+	  $ens_link = makeGenomeLink( start => $tmp_start,
+				      end => $tmp_end,
+				      strand => $tmp_strand,
+				      chrom => $current_chrom,
+				      acc => $current_prot,
+				      org => $organism[0] );
+
+	  $range = $tmp_start . '-' . $tmp_end;
+	  $kaviar_link = makeKaviarLink( start => $tmp_start,
+					 end => $tmp_end,
+					 strand => $tmp_strand,
+					 chrom => $current_chrom,
+					 acc => $current_prot,
+					 org => $organism[0],
+					 build_id => $parameters{atlas_build_id} );
+	  $links = $ens_link if $ens_link;
+	  if ( $links && $kaviar_link ) {
+	    $links .= ",$kaviar_link";
+	  }
+	}
+
+	$current_chrom ||= $sbeams->makeInactiveText('n/a');
+	$tmp_strand = ( $tmp_strand =~ /\?/ ) ? $sbeams->makeInactiveText('n/a') : "<B>$tmp_strand</B>";
+	push @rows, [ $current_chrom, $protein_display, $tmp_seq, $range, $tmp_strand, $links ] if $tmp_seq;
+
+	$last_chrom = $current_chrom;
+	$last_protein = $current_prot;
 
       } # end for
 
@@ -1447,19 +1446,19 @@ sub handle_request {
 
       my (@ptm_peps,%ptm_score_summary);
       postProcessResultset(
-														rs_params_ref=>\%rs_params,
-														resultset_ref=>$resultset_ref,
-														query_parameters_ref=>\%parameters,
-														column_titles_ref=>\@column_titles,
-														hidden_cols => \%hidden_cols,
-														ptm_score_summary_ref =>\%ptm_score_summary,
-														ptm_peps_ref => \@ptm_peps);
+	rs_params_ref=>\%rs_params,
+	resultset_ref=>$resultset_ref,
+	query_parameters_ref=>\%parameters,
+	column_titles_ref=>\@column_titles,
+	hidden_cols => \%hidden_cols,
+	ptm_score_summary_ref =>\%ptm_score_summary,
+	ptm_peps_ref => \@ptm_peps);
 
       my $spectra_display = $sbeamsMOD->get_individual_spectra_display( 
-																									column_titles_ref=>\@column_titles,
-																									colnameidx_ref => \%colnameidx,
-																									resultset_ref=> $resultset_ref,
-																									hidden_cols_ref=>\%hidden_cols );
+	column_titles_ref=>\@column_titles,
+	colnameidx_ref => \%colnameidx,
+	resultset_ref=> $resultset_ref,
+	hidden_cols_ref=>\%hidden_cols );
 
       my $help_me = get_table_help( 'individual_spectra' );
 
@@ -1553,46 +1552,46 @@ sub handle_request {
 	    var re;
 	    for (var i=0; i < aas.length; i++){
 	      if (aas[i].match(/\\(/g)){ 
-					var aa = aas[i].split('\\(');
-					var prob = parseFloat(aa[1]);
-					if (aas[i].match(/\\[...\\]\\(/g)){ 
-						re =  new RegExp('(\\\\w)(\\\\[...\\\\])\\\\('+aa[1], "g"); 
-						if (prob < 0.01 ){   
-							aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_ll">\$1</span>\$2');
-						} else if (prob >=0.01 && prob < 0.05){
-							aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_ml">\$1</span>\$2'); 
-						} else if (prob >= 0.05 && prob < 0.19 ){
-							aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_l">\$1</span>\$2'); 
-						}else if (prob >= 0.19 && prob < 0.81 ){
-							aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_m">\$1</span>\$2');
-						}else if (prob >= 0.81 && prob < 0.95 ){
-							aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_h">\$1</span>\$2');
-						}else if (prob >= 0.95 && prob < 0.99 ){
-							aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_mh">\$1</span>\$2');
-						}else {
-							aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_hh">\$1</span>\$2'); 
-						}
-					}else{
-						re =  new RegExp('(\\\\w)\\\\('+aa[1], "g");
-						if (prob < 0.01 ){
-							aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_ll">\$1</span>');
-						} else if (prob >=0.01 && prob < 0.05){
-							aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_ml">\$1</span>');
-						} else if (prob >= 0.05 && prob < 0.19 ){
-							aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_l">\$1</span>');
-						}else if (prob >= 0.19 && prob < 0.81 ){
-							aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_m">\$1</span>');
-						}else if (prob >= 0.81 && prob < 0.95 ){
-							aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_h">\$1</span>');
-						}else if (prob >= 0.95 && prob < 0.99 ){
-							aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_mh">\$1</span>');
-						}else {
-							aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_hh">\$1</span>');
-						}
-					}
-				   newInnerHTML += aas[i] ;
-				} else {
-			  	newInnerHTML += aas[i];
+		var aa = aas[i].split('\\(');
+		var prob = parseFloat(aa[1]);
+		if (aas[i].match(/\\[...\\]\\(/g)){ 
+		  re =  new RegExp('(\\\\w)(\\\\[...\\\\])\\\\('+aa[1], "g"); 
+		  if (prob < 0.01 ){   
+		    aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_ll">\$1</span>\$2');
+		  } else if (prob >=0.01 && prob < 0.05){
+		    aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_ml">\$1</span>\$2');
+		  } else if (prob >= 0.05 && prob < 0.19 ){
+		    aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_l">\$1</span>\$2'); 
+		  } else if (prob >= 0.19 && prob < 0.81 ){
+		    aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_m">\$1</span>\$2');
+		  } else if (prob >= 0.81 && prob < 0.95 ){
+		    aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_h">\$1</span>\$2');
+		  } else if (prob >= 0.95 && prob < 0.99 ){
+		    aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_mh">\$1</span>\$2');
+		  } else {
+		    aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_hh">\$1</span>\$2');
+		  }
+		} else {
+		  re =  new RegExp('(\\\\w)\\\\('+aa[1], "g");
+		  if (prob < 0.01 ){
+		    aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_ll">\$1</span>');
+		  } else if (prob >=0.01 && prob < 0.05){
+		    aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_ml">\$1</span>');
+		  } else if (prob >= 0.05 && prob < 0.19 ){
+		    aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_l">\$1</span>');
+		  } else if (prob >= 0.19 && prob < 0.81 ){
+		    aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_m">\$1</span>');
+		  } else if (prob >= 0.81 && prob < 0.95 ){
+		    aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_h">\$1</span>');
+		  } else if (prob >= 0.95 && prob < 0.99 ){
+		    aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_mh">\$1</span>');
+		  } else {
+		    aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_hh">\$1</span>');
+		  }
+		}
+		newInnerHTML += aas[i] ;
+	      } else {
+		newInnerHTML += aas[i];
 	      }
 	    }
 	    re = new RegExp('(\\\\[...\\\\])', "g");  
@@ -1604,8 +1603,6 @@ sub handle_request {
 		END
       }
       $log->debug( "End spectra " . time() );
-
-
 
 
 
@@ -1623,8 +1620,6 @@ sub handle_request {
 	  form_fields => $hidden_form_fields
 	    );
       }
-
-
 
 
 
@@ -1937,64 +1932,64 @@ sub postProcessResultset {
         my @rows = $sbeams->selectSeveralColumns($sql);
         my %site_ptm_info = ();
         if (scalar @rows) {
-					my $first_row = shift @rows;
-					my ($qt5500_transition_group_id,
-										$mzml_filename, $mzml_pathname, $cycle, $precursor_charge,
-							 $precursor_mz, $rt) = @{$first_row};
-								$mzml_pathname .= "/$mzml_filename";
-        
-					my ($q1, $q1_charge2, $q1_charge3, $precursor_neutral_mass);
+	  my $first_row = shift @rows;
+	  my ($qt5500_transition_group_id,
+	      $mzml_filename, $mzml_pathname, $cycle, $precursor_charge,
+	      $precursor_mz, $rt) = @{$first_row};
+	  $mzml_pathname .= "/$mzml_filename";
 
-					# Compute precursor neutral mass for this peptide
-					# (Could also compute theoretical mass from pepseq + mods)
-					my $precursor_charged_mass = $precursor_mz * $precursor_charge;
-					# Subtract mass for each proton added when precursor was charged
-					$precursor_neutral_mass = $precursor_charged_mass -
-						 ($precursor_charge * 1.00727638);
+	  my ($q1, $q1_charge2, $q1_charge3, $precursor_neutral_mass);
 
-					# We must invent the ion because we don't have transition list
-					my $ion = "y1";        ### INVENTED!!!
-					my $ion_charge = '1';    ### INVENTED!!!
-					# remove mods from pepseq
-					my $modified_pepseq = $pep->[$mseq_idx];
-					my $pepseq = $modified_pepseq;
-					$pepseq =~ s/\[.+?\]//g;
-					my $fragmentor = 125;  ### INVENTED!!! but maybe unused.
-					# There are fields for CE & RT in the Spectrum table,
-					# but unfortunately for SRM atlas these values are not loaded.
-					my $ce = $pep->[$ce_idx] ?  $pep->[$ce_idx] : 99;
-					if (! $rt ) {
-						$rt = $pep->[$rt_idx] ?  $pep->[$rt_idx] : 99;
-					}
-					my $delta_rt = 5.00;   ### INVENTED!!! but maybe unused.
+	  # Compute precursor neutral mass for this peptide
+	  # (Could also compute theoretical mass from pepseq + mods)
+	  my $precursor_charged_mass = $precursor_mz * $precursor_charge;
+	  # Subtract mass for each proton added when precursor was charged
+	  $precursor_neutral_mass = $precursor_charged_mass -
+	      ($precursor_charge * 1.00727638);
 
-					$at_least_one_chromatogram = 1;
-					my $chrom_img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/chromatogram.gif' TITLE='View chromatogram for $pep->[$mseq_idx] (+$pep->[$chrg_idx])'>";
-					
-					#print "<p>Charge $precursor_charge Precursor Neutral Mass $precursor_neutral_mass Precursor Charged Mass $precursor_charged_mass<br>\n";
+	  # We must invent the ion because we don't have transition list
+	  my $ion = "y1";        ### INVENTED!!!
+	  my $ion_charge = '1';    ### INVENTED!!!
+	  # remove mods from pepseq
+	  my $modified_pepseq = $pep->[$mseq_idx];
+	  my $pepseq = $modified_pepseq;
+	  $pepseq =~ s/\[.+?\]//g;
+	  my $fragmentor = 125;  ### INVENTED!!! but maybe unused.
+	  # There are fields for CE & RT in the Spectrum table,
+	  # but unfortunately for SRM atlas these values are not loaded.
+	  my $ce = $pep->[$ce_idx] ?  $pep->[$ce_idx] : 99;
+	  if (! $rt ) {
+	    $rt = $pep->[$rt_idx] ?  $pep->[$rt_idx] : 99;
+	  }
+	  my $delta_rt = 5.00;   ### INVENTED!!! but maybe unused.
 
-					$chromatogram_entry =
-						qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowChromatogram?~;
-					$chromatogram_entry .= ""
-				#	."&ion=$ion"  #multiple; different per trace.
-				#	."&ion_charge=$ion_charge"  #multiple
-			  # ."&precursor_charge=$precursor_charge"  #both +2 & +3 will be shown.
-					."&pepseq=$pepseq"
-					."&modified_pepseq=$modified_pepseq"
-				#	."&q1=$q1"  #multiple
-				#	."&q3=$q3"  #multiple
-					."&spectrum_basename=$mzml_basename"
-					."&spectrum_pathname=$mzml_pathname"
-				#	."&ce=$ce"
-			  # ."&rt=$rt"  #multiple
-					."&delta_rt=$delta_rt"
-					."&fragmentor=$fragmentor"
-					."&precursor_neutral_mass=$precursor_neutral_mass";
+	  $at_least_one_chromatogram = 1;
+	  my $chrom_img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/chromatogram.gif' TITLE='View chromatogram for $pep->[$mseq_idx] (+$pep->[$chrg_idx])'>";
 
-					 $chromatogram_entry =
-						qq~$chromatogram_entry" TARGET=blank>$chrom_img</A>~;
+	  #print "<p>Charge $precursor_charge Precursor Neutral Mass $precursor_neutral_mass Precursor Charged Mass $precursor_charged_mass<br>\n";
 
-				} # end if there is info for this pep in the QT5500_transition_group table
+	  $chromatogram_entry =
+	      qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowChromatogram?~;
+	  $chromatogram_entry .= ""
+	      #	."&ion=$ion"  #multiple; different per trace.
+	      #	."&ion_charge=$ion_charge"  #multiple
+	      # ."&precursor_charge=$precursor_charge"  #both +2 & +3 will be shown.
+	      ."&pepseq=$pepseq"
+	      ."&modified_pepseq=$modified_pepseq"
+	      #	."&q1=$q1"  #multiple
+	      #	."&q3=$q3"  #multiple
+	      ."&spectrum_basename=$mzml_basename"
+	      ."&spectrum_pathname=$mzml_pathname"
+	      #	."&ce=$ce"
+	      # ."&rt=$rt"  #multiple
+	      ."&delta_rt=$delta_rt"
+	      ."&fragmentor=$fragmentor"
+	      ."&precursor_neutral_mass=$precursor_neutral_mass";
+
+	  $chromatogram_entry =
+	      qq~$chromatogram_entry" TARGET=blank>$chrom_img</A>~;
+
+	} # end if there is info for this pep in the QT5500_transition_group table
       } # end if Qtrap 5500
 
       $pep->[$prob_idx] = sprintf("%0.3f", $pep->[$prob_idx]) unless $pep->[$prob_idx] == 1;
@@ -2014,135 +2009,135 @@ sub postProcessResultset {
 			my $modified_pepseq = $pep->[$mseq_idx];
 
       my @ptm_pep =();
-			if ($pep->[$ptm_idx]){
-        foreach my $i (0..10){
-          push @ptm_pep, $pep->[$i];
-        }
-				my $ptm_sequence = $pep->[$ptm_idx];
-				my $newseq = '';
-				my %mods = ();
-        my %ptm_score = ();
-				my $pos = -1;
-				my @elms = split(/\]/, $modified_pepseq);
-				foreach my $str (@elms){
-					if ($str =~ /(.*)\[(.*)/){
-					  $pos += length ($1);
-					  $mods{$pos} = $2;
-          }else{
-            $pos += length ($str);
-          }
-				}
+    if ($pep->[$ptm_idx]){
+      foreach my $i (0..10){
+	push @ptm_pep, $pep->[$i];
+      }
+      my $ptm_sequence = $pep->[$ptm_idx];
+      my $newseq = '';
+      my %mods = ();
+      my %ptm_score = ();
+      my $pos = -1;
+      my @elms = split(/\]/, $modified_pepseq);
+      foreach my $str (@elms){
+	if ($str =~ /(.*)\[(.*)/){
+	  $pos += length ($1);
+	  $mods{$pos} = $2;
+	} else {
+	  $pos += length ($str);
+	}
+      }
         
-				@elms = split(/\)/, $ptm_sequence);
-        if (@elms > 1){ $has_ptm_score = 1;}
-					$pos = -1;
-					foreach my $str (@elms){
-						if ($str =~ /(.*)\((.*)/){
-							$pos += length ($1);
-							$ptm_score{$pos} = $2;
-						}else{
-							$pos += length ($str);
-						}
-					}
-          $pos=0;
-          @elms =  split(/(?=[a-zA-Z])/, $ptm_sequence) ;
-          my @melms = split(/(?=[a-zA-Z])/, $modified_pepseq) ;
-          for (my $i=0; $i<=$#elms;$i++){
-            my $pstr = $elms[$i];
-            my $mstr = $melms[$i];
-            if ($pstr =~ /n/){
-              next;
-            }
-            $pstr =~ /([A-Z])/;
-            my $aa = $1;
-            my $score='';
-            if ($aa !~ /[STY]/){
-              $ptm_score_summary_ref->{$pos}{aa} = $aa;
-              foreach my $s (qw(obsll obsml obsl obsm obsh obsmh obshh)){
-								$ptm_score_summary_ref->{$pos}{$s}='';
-              }
-              $pos++;
-              next;
-            }
-            $ptm_score_summary_ref->{$pos}{aa} = $aa;
-            if ($pstr =~ /[STY]\(/){ 
-              $pstr =~ /([\d\.]+)/;
-              $score = $1;
-              if($score >= 0.99 ){
-                $ptm_score_summary_ref->{$pos}{obshh}++;
-              }elsif($score >= 0.95 && $score < 0.99 ){
-                $ptm_score_summary_ref->{$pos}{obsmh}++;
-						  }elsif ($score >= 0.81 && $score < 0.95){
-								 $ptm_score_summary_ref->{$pos}{obsh}++;
-							}elsif($score >= 0.19 && $score < 0.81 ){
-								$ptm_score_summary_ref->{$pos}{obsm}++;
-							}elsif($score >= 0.05 && $score < 0.19){
-								 $ptm_score_summary_ref->{$pos}{obsl}++;
-							}elsif($score >= 0.01 && $score < 0.05){
-								 $ptm_score_summary_ref->{$pos}{obsml}++;
-							}elsif($score < 0.01){
-								$ptm_score_summary_ref->{$pos}{obsll}++;
-							}
-            }
-            $pos++;
-          }
-        my $pepseq = $modified_pepseq;
-        $pepseq =~ s/\[[\d\.]+\]//g;
-        my @aas = split(//, $pepseq);
-        for(my $i=0; $i<=$#aas; $i++){
-          if(defined $mods{$i} && defined $ptm_score{$i}){
-            $newseq .= "$aas[$i]\[$mods{$i}\]($ptm_score{$i})";
-          }elsif(defined $mods{$i} && not defined $ptm_score{$i}){
-            $newseq .= "$aas[$i]\[$mods{$i}\]";
-          }elsif(defined $ptm_score{$i} && not defined $mods{$i}){
-            $newseq .= "$aas[$i]($ptm_score{$i})";
-          }else{
-            $newseq .= $aas[$i];
-          }
-        }
-				$modified_pepseq = $newseq;
-			  if ($modified_pepseq  !~/\(/){
-          $ptm_pep[$mseq_idx] = $sbeamsMOD->formatMassMods($modified_pepseq);
-        }else{
-          $ptm_pep[$mseq_idx] = $modified_pepseq;
-        }
-        $ptm_pep[$frag_idx] = $pep->[$frag_idx];
-        $pep->[$mseq_idx] =~ s/(\([\d\.]+\))//g;
+      @elms = split(/\)/, $ptm_sequence);
+      if (@elms > 1){ $has_ptm_score = 1;}
+      $pos = -1;
+      foreach my $str (@elms){
+	if ($str =~ /(.*)\((.*)/){
+	  $pos += length ($1);
+	  $ptm_score{$pos} = $2;
+	} else {
+	  $pos += length ($str);
+	}
       }
+      $pos=0;
+      @elms =  split(/(?=[a-zA-Z])/, $ptm_sequence) ;
+      my @melms = split(/(?=[a-zA-Z])/, $modified_pepseq) ;
+      for (my $i=0; $i<=$#elms;$i++){
+	my $pstr = $elms[$i];
+	my $mstr = $melms[$i];
+	if ($pstr =~ /n/){
+	  next;
+	}
+	$pstr =~ /([A-Z])/;
+	my $aa = $1;
+	my $score='';
+	if ($aa !~ /[STY]/){
+	  $ptm_score_summary_ref->{$pos}{aa} = $aa;
+	  foreach my $s (qw(obsll obsml obsl obsm obsh obsmh obshh)){
+	    $ptm_score_summary_ref->{$pos}{$s}='';
+	  }
+	  $pos++;
+	  next;
+	}
+	$ptm_score_summary_ref->{$pos}{aa} = $aa;
+	if ($pstr =~ /[STY]\(/){ 
+	  $pstr =~ /([\d\.]+)/;
+	  $score = $1;
+	  if($score >= 0.99 ){
+	    $ptm_score_summary_ref->{$pos}{obshh}++;
+	  } elsif($score >= 0.95 && $score < 0.99 ){
+	    $ptm_score_summary_ref->{$pos}{obsmh}++;
+	  } elsif ($score >= 0.81 && $score < 0.95){
+	    $ptm_score_summary_ref->{$pos}{obsh}++;
+	  } elsif($score >= 0.19 && $score < 0.81 ){
+	    $ptm_score_summary_ref->{$pos}{obsm}++;
+	  } elsif($score >= 0.05 && $score < 0.19){
+	    $ptm_score_summary_ref->{$pos}{obsl}++;
+	  } elsif($score >= 0.01 && $score < 0.05){
+	    $ptm_score_summary_ref->{$pos}{obsml}++;
+	  } elsif($score < 0.01){
+	    $ptm_score_summary_ref->{$pos}{obsll}++;
+	  }
+	}
+	$pos++;
+      }
+      my $pepseq = $modified_pepseq;
+      $pepseq =~ s/\[[\d\.]+\]//g;
+      my @aas = split(//, $pepseq);
+      for(my $i=0; $i<=$#aas; $i++){
+	if(defined $mods{$i} && defined $ptm_score{$i}){
+	  $newseq .= "$aas[$i]\[$mods{$i}\]($ptm_score{$i})";
+	} elsif(defined $mods{$i} && not defined $ptm_score{$i}){
+	  $newseq .= "$aas[$i]\[$mods{$i}\]";
+	} elsif(defined $ptm_score{$i} && not defined $mods{$i}){
+	  $newseq .= "$aas[$i]($ptm_score{$i})";
+	} else {
+	  $newseq .= $aas[$i];
+	}
+      }
+      $modified_pepseq = $newseq;
+      if ($modified_pepseq  !~/\(/){
+	$ptm_pep[$mseq_idx] = $sbeamsMOD->formatMassMods($modified_pepseq);
+      } else {
+	$ptm_pep[$mseq_idx] = $modified_pepseq;
+      }
+      $ptm_pep[$frag_idx] = $pep->[$frag_idx];
+      $pep->[$mseq_idx] =~ s/(\([\d\.]+\))//g;
+    }
     
-      $pep->[$it_idx] = ( $pep->[$it_idx] ) ?  sprintf("%.2f", $pep->[$it_idx]/1000000) : $sbeams->makeInactiveText('n/a'); 
-      $pep->[$tic_idx] = ( $pep->[$tic_idx] ) ?  sprintf("%.2f", $pep->[$tic_idx]/1000000): $sbeams->makeInactiveText('n/a');
-      $pep->[$sn_idx] = ( $pep->[$sn_idx] ) ? sprintf("%.0f", $pep->[$sn_idx]) : $sbeams->makeInactiveText('n/a');
+    $pep->[$it_idx] = ( $pep->[$it_idx] ) ?  sprintf("%.2f", $pep->[$it_idx]/1000000) : $sbeams->makeInactiveText('n/a'); 
+    $pep->[$tic_idx] = ( $pep->[$tic_idx] ) ?  sprintf("%.2f", $pep->[$tic_idx]/1000000): $sbeams->makeInactiveText('n/a');
+    $pep->[$sn_idx] = ( $pep->[$sn_idx] ) ? sprintf("%.0f", $pep->[$sn_idx]) : $sbeams->makeInactiveText('n/a');
 
-      if ($pep->[$ptm_idx]){
-        $ptm_pep[$it_idx] = $pep->[$it_idx];
-        $ptm_pep[$tic_idx] = $pep->[$tic_idx];
-        $ptm_pep[$sn_idx] = $pep->[$sn_idx];
-        push @$ptm_peps_ref, \@ptm_pep;
-      }
+    if ($pep->[$ptm_idx]){
+      $ptm_pep[$it_idx] = $pep->[$it_idx];
+      $ptm_pep[$tic_idx] = $pep->[$tic_idx];
+      $ptm_pep[$sn_idx] = $pep->[$sn_idx];
+      push @$ptm_peps_ref, \@ptm_pep;
+    }
 
-      if ( $has_header_info ) {
-        $pep->[$rt_idx] = ( $pep->[$rt_idx] ) ? sprintf( "%0.1f", $pep->[$rt_idx]/60 ) : $sbeams->makeInactiveText('n/a'); 
-        $pep->[$ce_idx] = ( $pep->[$ce_idx] ) ? sprintf( "%0.1f", $pep->[$ce_idx] ) : $sbeams->makeInactiveText('n/a'); 
-      }
-      $resultset_ref->{data_ref}->[$i] = $pep; 
-    } # end for each pep
+    if ( $has_header_info ) {
+      $pep->[$rt_idx] = ( $pep->[$rt_idx] ) ? sprintf( "%0.1f", $pep->[$rt_idx]/60 ) : $sbeams->makeInactiveText('n/a'); 
+      $pep->[$ce_idx] = ( $pep->[$ce_idx] ) ? sprintf( "%0.1f", $pep->[$ce_idx] ) : $sbeams->makeInactiveText('n/a'); 
+    }
+    $resultset_ref->{data_ref}->[$i] = $pep; 
+ } # end for each pep
      
-    if ($has_ptm_score){
-       sort_ptm_peps(\@$ptm_peps_ref);
-    }
-    $hidden_cols->{"chimera_level"} = 1 if (! $at_least_one_chimera) ; 
-    $hidden_cols->{"chromatogram"} = 1 if ( ! $at_least_one_chromatogram);
-    if ( ! $has_header_info){
-      #$hidden_cols->{'precursor_intensity'} = 1;
-      $hidden_cols->{'scan_time'} =1;
-      $hidden_cols->{'collision_energy'} =1;
-      $hidden_cols->{'avg_prob'} =1;
-    }
+  if ($has_ptm_score){
+    sort_ptm_peps(\@$ptm_peps_ref);
+  }
+  $hidden_cols->{"chimera_level"} = 1 if (! $at_least_one_chimera) ; 
+  $hidden_cols->{"chromatogram"} = 1 if ( ! $at_least_one_chromatogram);
+  if ( ! $has_header_info){
+    #$hidden_cols->{'precursor_intensity'} = 1;
+    $hidden_cols->{'scan_time'} =1;
+    $hidden_cols->{'collision_energy'} =1;
+    $hidden_cols->{'avg_prob'} =1;
+  }
     
-    $hidden_cols->{'ptm_sequence'} = 1;
-    $hidden_cols->{'sal_prob'} = 1;
-    $hidden_cols->{'sample_tag'} = 1;
+  $hidden_cols->{'ptm_sequence'} = 1;
+  $hidden_cols->{'sal_prob'} = 1;
+  $hidden_cols->{'sample_tag'} = 1;
 }
 
 sub get_protein_mapping_widget {
@@ -2211,17 +2206,17 @@ sub get_protein_mapping_widget {
       }
       if ( $cseq =~ /$pep/ ) {
         $isvar = 'no';
-      } else{
-					my $lpep = $pep;
-					my $lcseq = $cseq;
-					$lpep =~ s/I/L/g;
-					$lcseq =~ s/I/L/g;
-					if ( $lcseq =~ /$lpep/ ) {
-						$isvar = 'L/I';
-					} else {
-						#$isvar = 'n/a';
-						$isvar = 'yes';
-					}
+      } else {
+	my $lpep = $pep;
+	my $lcseq = $cseq;
+	$lpep =~ s/I/L/g;
+	$lcseq =~ s/I/L/g;
+	if ( $lcseq =~ /$lpep/ ) {
+	  $isvar = 'L/I';
+	} else {
+	  #$isvar = 'n/a';
+	  $isvar = 'yes';
+	}
       }
     }
     $row[3] = $annot;
