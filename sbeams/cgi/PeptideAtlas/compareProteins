@@ -282,6 +282,9 @@ sub get_alignment_display {
 
   # array of protein info
   my @all_proteins;
+  my %peptide_map;
+  $peptide_map{'peptide_list'} = '';
+  $peptide_map{'protein_list'} = '';
   my %coverage;
   my $fasta = '';
   my $peptide = $args{pepseq} || 'ZORROFEELTHESTINGOFHISBLADE';
@@ -334,6 +337,19 @@ sub get_alignment_display {
     my $peptide_list = $sbeamsMOD->get_protein_build_coverage( build_id => $curr_bid,
 							       biosequence_ids => $row[4] );
 
+    #$clustal_display .= "<br><br>$acc :: <br>";#@{$peptide_list->{$row[4]}}</p>\n";
+    $peptide_map{'protein_list'} .= $acc.' '; # preserves order
+    for my $psq (@{$peptide_list->{$row[4]}}) {
+      if (!$peptide_map{$psq}) {
+	$peptide_map{$psq} = 1;
+	$peptide_map{'peptide_list'} .= $psq.' '; # preserves order
+      }
+      else {
+        $peptide_map{$psq}++;
+      }
+      $peptide_map{"$acc$psq"} = 1;
+      #$clustal_display .= "$psq<br>";
+    }
 
     $log->debug( "Done.  Now get coverage hash " .time() );
     $coverage{$acc} = $sbeamsMOD->get_coverage_hash(seq => $seq,         
@@ -366,7 +382,6 @@ sub get_alignment_display {
 #		}
 
     $cnt++;
-
   }
   $log->debug( "Iterated $cnt rows: " .time() );
 
@@ -390,6 +405,48 @@ sub get_alignment_display {
       $dup_seqs{"$key"} = '&nbsp;';
     }
   }
+
+
+  # peptide map map
+  $clustal_display .= "<br><div class='hoverabletitle'>Peptide Mapping</div>";
+  $clustal_display .= "<div style='width: calc(100vw - 200px); overflow-x: auto; border-right: 1px solid #aaa'>\n";
+  for my $map_prot (split / /, $peptide_map{'protein_list'}) {
+    $clustal_display .= "<span style='display: inline-block; white-space: nowrap; border-top: 1px solid #aaa; background-color: #fff;'>";
+
+    $clustal_display .= "<span class='sequence_font' style='width: 200px; border-right: 1px solid #aaa; display: inline-table; background-color:#f3f1e4; overflow: hidden; text-align: right; white-space: nowrap; position:sticky; left: 0px; z-index:95;'>$map_prot";
+    if ( $dup_seqs{$map_prot} ) {
+      $clustal_display .= "<sup><span style='color:red;'>$dup_seqs{$map_prot}</span></sup>";
+    }
+    $clustal_display .= "&nbsp;</span>&nbsp;";
+
+    my $num_uniq = 0;  # might want this...?
+    for my $map_pep (split / /, $peptide_map{'peptide_list'}) {
+      my $seqlen = length $map_pep;
+
+      $clustal_display .= "<span title='$map_pep' style='width: ${seqlen}px; display: inline-block; ";
+      if ($peptide_map{"$map_prot$map_pep"}) {
+	$clustal_display .= "height: 11px; background-color:";
+        if ($map_pep eq $args{pepseq}) { # bait
+          $clustal_display .= "springgreen;";
+	}
+	elsif ($peptide_map{$map_pep} == 1) { # singly-mapping within this group
+	  $clustal_display .= "#ffad4e;";
+	  $num_uniq++;
+	}
+	else {
+          $clustal_display .= "lightskyblue;";##d3d1c4;";
+	}
+      }
+      else {
+        #$clustal_display .= "";
+      }
+
+      $clustal_display .= "'></span>\n";
+    }
+    $clustal_display .= "</span><br>\n";
+  }
+  $clustal_display .= "</div>\n";
+
 
 #	  # Calc coverage for this build/protein combination
 #    $build_seqs{$row[3]}->{$row[2]}->{coverage} ||= {};
@@ -454,10 +511,10 @@ sub get_clustal_display {
 
   my $display = qq~
 	<BR><BR>
-
-	<DIV STYLE="width: 1000px; overflow-x: scroll; scrollbar-arrow-color: blue; scrollbar- face-color: #e7e7e7; scrollbar-3dlight-color: #a0a0a0; scrollbar-darkshadow-color: #888888">
-	<FORM METHOD=POST NAME=custom_alignment>
-	<TABLE BORDER=0 CELLPADDNG=3>
+        <div class='hoverabletitle'>Sequence Coverage</div>
+	<div style="width: calc(100vw - 200px); overflow-x: auto; border-right: 1px solid #aaa">
+	<form method="POST" name="custom_alignment">
+	<table border="0" cellpaddng="3">
 	~;
 
   for my $seq ( @{$args{alignments}} ) {
@@ -471,7 +528,7 @@ sub get_clustal_display {
 				   coverage => $args{coverage}->{$seq->[0]} );
 
 # Commented section does a more direct 'nesting' of SPANs, but the simple method
-# below is sufficicent if assumptions are correct.
+# below is sufficient if assumptions are correct.
 #      my $pre_posn = '';
 #			if ( $posn->[0] ) {
 #				$pre_posn = $posn->[0] - 1;
@@ -488,34 +545,35 @@ sub get_clustal_display {
 # 	      $sequence =~ s/$args{pepseq}/<\/SPAN><SPAN CLASS=sec_obs_seq_bg_font>$args{pepseq}<\/SPAN>/g;
 #			}
 
-      # Poor man's bait coverage!  Assumes that there are no span junctions in 
+      # Poor person's bait coverage!  Assumes that there are no span junctions in 
       # bait sequence.  This is true if the entire thing is in coverage (or out
       # of it, but that should not be possible).
       # TMF 06/14/13: allow multiple bait sequences
       my @pepseqs = split(",", $args{pepseq});
       for my $pepseq (@pepseqs) {
-	$sequence =~ s/${pepseq}/<SPAN CLASS=sec_obs_seq_bg_font>$pepseq<\/SPAN>/g;
+	$sequence =~ s/${pepseq}/<span class="sec_obs_seq_bg_font">$pepseq<\/span>/g;
       }
 
     }
     my $dup = '';
     if ( $args{dup_seqs}->{$seq->[0]} ) {
-      $dup .= "<SUP><BOLD><FONT COLOR=red>$args{dup_seqs}->{$seq->[0]}</FONT></BOLD></SUP>";
+      $dup .= "<sup><span style='color:red;'>$args{dup_seqs}->{$seq->[0]}</span></sup>";
     }
     my $checkbox = '';
     unless ( $seq->[0] eq 'consensus' ) {
       if ( !$args{acc2bioseq_id}->{"$seq->[0]"} ) {
         $log->warn( "$seq->[0] has no bioseq_id, can't re-assemble" );
       } else {
-	$checkbox = "<INPUT ID=bioseq_id TYPE=checkbox CHECKED NAME=bioseq_id VALUE=$args{acc2bioseq_id}->{$seq->[0]}></INPUT>";
+	$checkbox = "<input id='bioseq_id' type='checkbox' checked name='bioseq_id' value='$args{acc2bioseq_id}->{$seq->[0]}'></input>";
       }
     }
 
     $display .= qq~
-		<TR><TD>$checkbox </TD>
-	        <TD ALIGN=right class=sequence_font>$seq->[0]$dup:</TD>
-		<TD NOWRAP=1 class=sequence_font>$sequence</TD>
-		</TR>
+		<tr>
+                <td style="background-color: #f3f1e4; position:sticky; left: 0px; z-index:95;">$checkbox </td>
+	        <td style="background-color: #f3f1e4; position:sticky; left: 20px; z-index:95; border-right: 1px solid #aaa; text-align: right;" class="sequence_font">$seq->[0]$dup</td>
+		<td nowrap="1" class="sequence_font">$sequence</td>
+		</tr>
 		~;
   }
 
@@ -581,7 +639,7 @@ sub get_clustal_display {
 
   $display .= qq~
 	$pHTML
-  <TR><TD>$toggle_checkbox</TD><TD ALIGN=left>$toggle_text </TD><TD></TD></TR>
+  <tr><td style="position:sticky; left: 0px;">$toggle_checkbox</td><td style="position:sticky; left: 20px; text-align:left">$toggle_text </td><td></td></tr>
 	</TABLE>\n</DIV>
 	<BR>
 
@@ -599,8 +657,9 @@ sub get_clustal_display {
 	</FORM>
 	<BR><BR>
 	<H3> Legend </H3>
-  Sequence highlighted with blue: <SPAN CLASS=obs_seq_bg_font>PEPTIDE</SPAN> denotes peptides observed in specified build.<BR>
-  Sequence highlighted with green: <SPAN CLASS=sec_obs_seq_bg_font>PEPTIDE</SPAN> denotes 'bait' peptide for this set of sequences.<BR>
+  Sequence highlighted with blue: <span class="obs_seq_bg_font">PEPTIDE</span> denotes peptides observed in specified build.<br>
+  Sequence highlighted with green: <span class="sec_obs_seq_bg_font">PEPTIDE</span> denotes 'bait' peptide for this set of sequences.<br>
+  Sequence highlighted with <span style="background:#ffad4e;">orange</span> denotes a uniquely-mapping peptide <b>within this set of sequences</b>.<br>
   <br>
   Save link to recall current <a href='$CGI_BASE_DIR/shortURL?key=$short_url'>sequence alignment</a>.
 	~;
@@ -635,14 +694,14 @@ sub highlight_sites {
 	if ( $in_coverage ) { # already in
 	  if ( $span_closed ) {  # Must have been jumping a --- gap
 	    $span_closed = 0;
-	    $return_seq .= "<span class=obs_seq_bg_font>$aa";
+	    $return_seq .= "<span class='obs_seq_bg_font'>$aa";
 	  } else {
 	    $return_seq .= $aa;
 	  }
 	} else {
 	  $in_coverage++;
 	  $span_closed = 0;
-	  $return_seq .= "<span class=obs_seq_bg_font>$aa";
+	  $return_seq .= "<span class='obs_seq_bg_font'>$aa";
 	}
       } else { # posn not covered!
 	if ( $in_coverage ) { # were in, close now
