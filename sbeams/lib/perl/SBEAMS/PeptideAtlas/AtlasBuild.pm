@@ -406,10 +406,10 @@ sub cntObsFromIdentlist {
 
 sub get_protein_build_coverage {
   my $self = shift;
-	my %args = @_;
-	for my $arg ( qw( build_id biosequence_ids ) ) {
-		die "Missing required param $arg" unless defined $args{$arg};
-	}
+  my %args = @_;
+  for my $arg ( qw( build_id biosequence_ids ) ) {
+    die "Missing required param $arg" unless defined $args{$arg};
+  }
 
   # SQL defined peptides that have been observed for given bioseqs and build 
   my $sql =<<"  ENDSQL";
@@ -430,11 +430,11 @@ sub get_protein_build_coverage {
   ORDER BY matched_biosequence_id
   ENDSQL
   my $sth = $sbeams->get_statement_handle( $sql );
-	my %peps;
+  my %peps;
   while ( my @row = $sth->fetchrow_array() ) {
     $peps{$row[0]} ||= [];
-		push @{$peps{$row[0]}}, $row[1];
-	}
+    push @{$peps{$row[0]}}, $row[1];
+  }
   return \%peps;
 }
 

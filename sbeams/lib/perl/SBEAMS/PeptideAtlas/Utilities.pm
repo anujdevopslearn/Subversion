@@ -1928,12 +1928,12 @@ sub get_html_seq_vars {
   push @global_clustal, $primary_clustal;
 
   my %type2display = ( VARIANT => 'SNP',
-											 CHAIN => 'Chain',
-											 INIT_MET => 'InitMet',
-											 SIGNAL => 'Signal',
-											 PROPEP => 'Propep',
+		       CHAIN => 'Chain',
+		       INIT_MET => 'InitMet',
+		       SIGNAL => 'Signal',
+		       PROPEP => 'Propep',
                        PEPTIDE => 'Chain',
-                      );
+      );
 
   # Removed CONFLICT peptides.
   my @obs;
@@ -1955,20 +1955,20 @@ sub get_html_seq_vars {
         my $alt_aa = $1;
         if ($alt_aa){
           $coverage_coords{$pepname} = $self->get_coverage_hash_db(peptide_coords => \%peptide_coordinate_db,
-                                                                 peptides => $peps,
-                                                                 pos => $entry->{start},
-                                                                 alt => $alt_aa);
+								   peptides => $peps,
+								   pos => $entry->{start},
+								   alt => $alt_aa);
         }else{
           $coverage_coords{$pepname} = $self->get_coverage_hash( seq => $entry->{seq},
-                                                             peptides => $peps,
-                                                             offset => 0,
-                                                           nostrip => 1 );
+								 peptides => $peps,
+								 offset => 0,
+								 nostrip => 1 );
         }
       }else{
         $coverage_coords{$pepname} = $self->get_coverage_hash( seq => $entry->{seq}, 
-																														 peptides => $peps, 
-																														 offset => 0,
-																													 nostrip => 1 );
+							       peptides => $peps, 
+							       offset => 0,
+							       nostrip => 1 );
       }
       my $var_string = '';
       $pepcnt++;

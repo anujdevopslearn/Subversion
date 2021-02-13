@@ -1418,6 +1418,7 @@ sub getDetailedSampleDisplay {
   my $table = $self->encodeSectionTable( header => 1, 
                                          tr_info => $args{tr_info},
                                          align  => [qw(center left right left left left)],
+					 bkg_interval => 3,
                                          nowrap => [qw(4 6)],
                                          rows_to_show => $args{rows_to_show},
                                          max_rows => $args{max_rows},
