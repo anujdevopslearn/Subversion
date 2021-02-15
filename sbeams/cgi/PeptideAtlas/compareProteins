@@ -59,7 +59,7 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
   ## get project_id to send to HTMLPrinter display
   my $project_id = $sbeams->getCurrent_project_id();
 
-  my $page = $sbeams->getGifSpacer( 800 ) . "<BR>\n";
+  my $page = $sbeams->getGifSpacer( 800 ) . "<br>\n";
 
   my $tabMenu = $sbeamsMOD->getTabMenu(
     parameters_ref => \%params,
@@ -96,13 +96,13 @@ sub get_alignment_display {
 					   form_name => 'compareProteins' );
   my $clustal_display = $select[1];
 
-  $clustal_display .= "<BR><P><FORM METHOD=POST NAME=compareProteins>\n";
+  $clustal_display .= "<br><p><form method='post' name='compareProteins'>\n";
   for my $arg ( keys( %args ) ) {
     next if $arg =~ /atlas_build_id/;
-    $clustal_display .= "<INPUT TYPE=HIDDEN NAME='$arg' VALUE='$args{$arg}'>\n";
+    $clustal_display .= "<input type='hidden' name='$arg' value='$args{$arg}'>\n";
   }
 
-  $clustal_display .= "$select[0] </FORM></P>\n";
+  $clustal_display .= "$select[0] </form></p>\n";
 
   my $bioseq_clause = '';
   my $bioseq_name_clause = '';
@@ -188,7 +188,7 @@ sub get_alignment_display {
     if ( $n_ids < 2 ) {
       # if ( !$args{bioseq_id} ) {
       my $errstr = $sbeams->makeErrorText( "Fewer than 2 proteins to align (build $curr_bid, protein group $args{protein_group_number})");
-      return ( "$errstr <BR><BR>  $clustal_display" );
+      return ( "$errstr <br><br>  $clustal_display" );
     }
     $log->debug( "Ran protein group query:" .time() );
 
@@ -222,6 +222,20 @@ sub get_alignment_display {
 	( $list_ids ) ? $args{bioseq_id} . ',' . $list_ids : $args{bioseq_id};
     $log->debug( "Ran bioseq_id query:" .time() );
   }
+
+
+  $clustal_display .= qq~
+<a title="show/hide help" onclick="if(document.getElementById('pageinfo').style.display == 'none') document.getElementById('pageinfo').style.display = ''; else document.getElementById('pageinfo').style.display = 'none';" href="#">Page Info and Legend</a>
+<div id="pageinfo" style="display: none;">
+<p>In the <b>Peptide Mapping</b> section below, peptides for each protein are represented by <span style="background:lightskyblue;">blue</span>, <span style="background:#ffad4e;">orange</span>, and <span style="background:springgreen;">green</span> rectangles as defined in the <b>Legend</b>. Rectangles are proportional to each peptide's length. Peptides for the top protein are displayed in alphabetical order. Additional peptides not mapping to the first protein are added after the first set. Within each block of new peptides, the peptides are in alphabetical-order for that protein.</p>
+<p>Red superscript letters <sup><span style='color:red;'>ABCD...</span></sup> after the protein identifiers denote groups of protein entries that are identical in sequence (All the proteins with <span style='color:red;'>A</span> are identical in sequence, etc.)</p>
+<p>The <b>Sequence Coverage</b> section below, all relevant proteins are aligned with <a target="_new" href="http://www.clustal.org/omega/">Clustal Omega</a> and all detected peptides are displayed in colors. In the <b>consensus</b> (bottom) row, a * indicates identity across all sequences. Other symbols denote varying degrees of similarity. The controls in and below the Sequence Coverage section may be used to adjust the list of proteins displayed.</p>
+  <b>Legend</b><br>
+  Sequence highlighted with blue: <span class="obs_seq_bg_font">PEPTIDE</span> denotes peptides <b>observed</b> in specified build.<br>
+  Sequence highlighted with green: <span class="sec_obs_seq_bg_font">PEPTIDE</span> denotes '<b>bait</b>' peptide for this set of sequences.<br>
+  Sequence highlighted with <span style="background:#ffad4e;">orange</span> denotes a <b>uniquely-mapping</b> peptide <b>within this set of sequences</b>.
+</div>
+        ~;
 
 
   if ( $args{bioseq_id} ) {
@@ -409,15 +423,15 @@ sub get_alignment_display {
 
   # peptide map map
   $clustal_display .= "<br><div class='hoverabletitle'>Peptide Mapping</div>";
-  $clustal_display .= "<div style='width: calc(100vw - 200px); overflow-x: auto; border-right: 1px solid #aaa'>\n";
+  $clustal_display .= "<div style='width: calc(100vw - 180px); overflow-x: auto; border-right: 1px solid #aaa'>\n<table style='border-spacing:0px'>";
   for my $map_prot (split / /, $peptide_map{'protein_list'}) {
-    $clustal_display .= "<span style='display: inline-block; white-space: nowrap; border-top: 1px solid #aaa; background-color: #fff;'>";
+    $clustal_display .= "<tr style='border-top: 1px solid #aaa;'>";
+    $clustal_display .= "<td class='sequence_font' style='border-top: 1px solid #aaa; border-right: 1px solid #aaa; background-color:#f3f1e4; text-align: right; white-space: nowrap; position:sticky; left: 0px; z-index:95;'>$map_prot";
 
-    $clustal_display .= "<span class='sequence_font' style='width: 200px; border-right: 1px solid #aaa; display: inline-table; background-color:#f3f1e4; overflow: hidden; text-align: right; white-space: nowrap; position:sticky; left: 0px; z-index:95;'>$map_prot";
     if ( $dup_seqs{$map_prot} ) {
       $clustal_display .= "<sup><span style='color:red;'>$dup_seqs{$map_prot}</span></sup>";
     }
-    $clustal_display .= "&nbsp;</span>&nbsp;";
+    $clustal_display .= "</td><td style='border-top: 1px solid #aaa; white-space: nowrap;'>";
 
     my $num_uniq = 0;  # might want this...?
     for my $map_pep (split / /, $peptide_map{'peptide_list'}) {
@@ -443,9 +457,9 @@ sub get_alignment_display {
 
       $clustal_display .= "'></span>\n";
     }
-    $clustal_display .= "</span><br>\n";
+    $clustal_display .= "</td></tr>\n";
   }
-  $clustal_display .= "</div>\n";
+  $clustal_display .= "</table></div>\n";
 
 
 #	  # Calc coverage for this build/protein combination
@@ -472,7 +486,7 @@ sub get_alignment_display {
   $log->debug( "Run alignment: " .time() );
   my $acckeys = join( ',', keys( %acc2bioseq_id ) );
 
-  if ( $cnt > 1000 ) {
+  if ( $cnt > 100 ) {
     $clustal_display = $sbeams->makeErrorText( "Too many sequences to run alignment, skipping" );
   } else {
     #print "$fasta<br>";
@@ -484,12 +498,12 @@ sub get_alignment_display {
       if ( $seqtype{decoy} && $seqtype{fwd} ) {
         my $url = $q->self_url();
         $rerun_link = qq~
-&nbsp;        Try re-running clustalW <A HREF=$url;decoys=no>without DECOY </A> sequences?<BR>
-&nbsp;        Try re-running clustalW with <A HREF=$url;decoys=yes> only DECOY</A> sequences?<BR>
+&nbsp;        Try re-running clustalW <a href="$url;decoys=no">without DECOY </a> sequences?<br>
+&nbsp;        Try re-running clustalW with <a href="$url;decoys=yes"> only DECOY</a> sequences?<br>
         ~;
       }
-      $clustal_display = "<BR>" . $sbeams->makeErrorText( "Error running Clustal: $clustal" );
-      $clustal_display .= "<BR> $rerun_link";
+      $clustal_display = "<br>" . $sbeams->makeErrorText( "Error running Clustal: $clustal" );
+      $clustal_display .= "<br> $rerun_link";
     } else {
       $clustal_display .= get_clustal_display( alignments => $clustal, 
 					       dup_seqs => \%dup_seqs,
@@ -510,11 +524,11 @@ sub get_clustal_display {
   my %args = ( acc_color => '#0090D0', @_ );
 
   my $display = qq~
-	<BR><BR>
+	<br><br>
         <div class='hoverabletitle'>Sequence Coverage</div>
-	<div style="width: calc(100vw - 200px); overflow-x: auto; border-right: 1px solid #aaa">
+	<div style="width: calc(100vw - 180px); overflow-x: auto; border-right: 1px solid #aaa">
 	<form method="POST" name="custom_alignment">
-	<table border="0" cellpaddng="3">
+	<table style="border-spacing:1px; border:0;">
 	~;
 
   for my $seq ( @{$args{alignments}} ) {
@@ -570,9 +584,9 @@ sub get_clustal_display {
 
     $display .= qq~
 		<tr>
-                <td style="background-color: #f3f1e4; position:sticky; left: 0px; z-index:95;">$checkbox </td>
-	        <td style="background-color: #f3f1e4; position:sticky; left: 20px; z-index:95; border-right: 1px solid #aaa; text-align: right;" class="sequence_font">$seq->[0]$dup</td>
-		<td nowrap="1" class="sequence_font">$sequence</td>
+                <td style="padding:3px; background-color: #f3f1e4; position:sticky; left: 0px; z-index:95;">$checkbox </td>
+	        <td style="padding:3px; background-color: #f3f1e4; position:sticky; left: 20px; z-index:95; border-right: 1px solid #aaa; text-align: right;" class="sequence_font">$seq->[0]$dup</td>
+		<td style="padding:3px; white-space: nowrap;" class="sequence_font">$sequence</td>
 		</tr>
 		~;
   }
@@ -592,20 +606,20 @@ sub get_clustal_display {
   my $popup = qq~
 	$text
     The following accession types should work:
-  <BR>
-  <BR>
+  <br>
+  <br>
 	<ALIGN = RIGHT>
 	Human      IPI, ENSP
-  <BR>
+  <br>
 	Mouse      IPI, ENSMUS
-  <BR>
+  <br>
 	Yeast      Yxxxxx
-  <BR>
+  <br>
 	Halo       VNG
-  <BR>
+  <br>
 	celegans   wormbase acc.
-  <BR>
-  <BR>
+  <br>
+  <br>
 	</ALIGN>
 
 	  Please note that using more sequences and/or 
@@ -623,16 +637,16 @@ sub get_clustal_display {
   my $url = "$CGI_BASE_DIR/help_popup.cgi?title=BuildProteinList;session_key=$session_key;email_link=no";
 
   my $link =<<"  END_LINK";
-   <SPAN title='$text - click for more...' class="popup">
-   <IMG SRC=$HTML_BASE_DIR/images/greyqmark.gif BORDER=0 ONCLICK="popitup('$url');"></SPAN>
+   <span title='$text - click for more...' class="popup">
+   <img src="$HTML_BASE_DIR/images/greyqmark.gif" border="0" onclick="popitup('$url');"></span>
   END_LINK
 
   # Cache ids to be able to restore!
   my $orig_bioseq_field = '';
   if ( $args{bioseq_id} && !$args{orig_bioseq_id} ) {
-    $orig_bioseq_field = "<INPUT TYPE=HIDDEN NAME=orig_bioseq_id VALUE=$args{bioseq_id}></INPUT>";
+    $orig_bioseq_field = "<input type='hidden' name='orig_bioseq_id' value='$args{bioseq_id}'></input>";
   } else {
-    $orig_bioseq_field = "<INPUT TYPE=HIDDEN NAME=orig_bioseq_id VALUE=$args{orig_bioseq_id}></INPUT>";
+    $orig_bioseq_field = "<input type='hidden' name='orig_bioseq_id' value='$args{orig_bioseq_id}'></input>";
   }
   my $self_url = $q->self_url();
   my $short_url = $sbeams->setShortURL( $self_url );
@@ -640,27 +654,20 @@ sub get_clustal_display {
   $display .= qq~
 	$pHTML
   <tr><td style="position:sticky; left: 0px;">$toggle_checkbox</td><td style="position:sticky; left: 20px; text-align:left">$toggle_text </td><td></td></tr>
-	</TABLE>\n</DIV>
-	<BR>
+	</table>\n</div>
+	<br>
 
-	<TABLE><TR>
-	<TD>Add proteins to list</TD>
-	<TD BGCOLOR='#E0E0E0'>$link</TD>
-	<TD><INPUT TYPE=TEXT NAME=protein_list SIZE=40></TD>
-	</TR></TABLE>
-	<BR>
-	<BR>
-	<INPUT TYPE=HIDDEN NAME=pepseq VALUE=$args{pepseq}>
+	Add proteins to list
+	<span style='background:#e0e0e0; margin:0px 3px; padding:3px;'>$link</span>
+	<input type='text' name='protein_list' size='40'>
+	<br>
+	<br>
+	<input type='hidden' name='pepseq' value='$args{pepseq}'>
   $orig_bioseq_field
-	<INPUT TYPE=SUBMIT VALUE='Align selected sequences'>
-	<INPUT TYPE=SUBMIT VALUE='Restore Original' NAME=restore>
-	</FORM>
-	<BR><BR>
-	<H3> Legend </H3>
-  Sequence highlighted with blue: <span class="obs_seq_bg_font">PEPTIDE</span> denotes peptides observed in specified build.<br>
-  Sequence highlighted with green: <span class="sec_obs_seq_bg_font">PEPTIDE</span> denotes 'bait' peptide for this set of sequences.<br>
-  Sequence highlighted with <span style="background:#ffad4e;">orange</span> denotes a uniquely-mapping peptide <b>within this set of sequences</b>.<br>
-  <br>
+	<input type='submit' value='Align selected sequences'>
+	<input type='submit' value='Restore Original' name='restore'>
+	</form>
+	<br><br>
   Save link to recall current <a href='$CGI_BASE_DIR/shortURL?key=$short_url'>sequence alignment</a>.
 	~;
 
