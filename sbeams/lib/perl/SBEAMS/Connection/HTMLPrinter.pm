@@ -12,7 +12,7 @@ package SBEAMS::Connection::HTMLPrinter;
 #		there are several different contexts under which the a user
 #		can be in, and the header, button bar, etc. vary by context
 #
-# SBEAMS is Copyright (C) 2000-2014 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -302,12 +302,12 @@ my $module_styles =<<"  END_STYLE";
   .right_text { text-align: right }
   .header_text { color: white; text-align: left }
   .topbound_text { vertical-align: top }
-  .clustal_dummy_wrap {width: 900px; overflow-x: scroll; overflow-y:hidden; height: 20px;}
-  .clustal_wrap {width: 900px; overflow-x: scroll; overflow-y:hidden; height: 200px;}
-  .clustal_dummy {width:1000px; height: 20px; }
-  .clustalx {width:1000px; }
-  .clustal {width: 1000px; overflow-x: scroll; scrollbar-arrow-color: blue; scrollbar- face-color: #e7e7e7; scrollbar-3dlight-color: #a0a0a0; scrollbar-darkshadow-color: #888888}
-  .clustal_peptide {width: 1000px; height: 400px; overflow-x: scroll; overflow-y: scroll; scrollbar-arrow-color: blue; scrollbar- face-color: #e7e7e7; scrollbar-3dlight-color: #a0a0a0; scrollbar-darkshadow-color: #888888}
+  .clustal_dummy_wrap {calc(100vw - 200px); overflow-x: scroll; overflow-y:hidden; height: 20px;}
+  .clustal_wrap {calc(100vw - 200px); overflow-x: scroll; overflow-y:hidden; height: 200px;}
+  .clustal_dummy {width:calc(100vw - 200px); height: 20px; }
+  .clustalx { calc(100vw - 200px); }
+  .clustal {calc(100vw - 200px); overflow-x: scroll;}
+  .clustal_peptide {width: calc(100vw - 200px); height: 400px; overflow-x: scroll; overflow-y: scroll;}
   .fade_header { background-image: url($HTML_BASE_DIR/images/fade_orange_header_2.png); background-repeat: no-repeat }
 
   .form_button { background: #ffffff; color: #333; border: 2px solid #333; font-weight: 800; padding: 0px 25px; }
