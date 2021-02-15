@@ -1633,6 +1633,7 @@ sub getSampleDisplay {
                                          nowrap => [qw(1 3)],
                                          rows_to_show => $args{rows_to_show},
                                          max_rows => $args{max_rows},
+					 bkg_interval => 3,
                                          bg_color => $bg_color, 
                                          sortable => $sortable,
                                          rows => \@samples );
@@ -2147,7 +2148,7 @@ sub get_what_is_new {
   push @return , ['Distinct_Peptides', $pep_count{$build_id}, $pep_count{$previous_build_id}];
   push @return , ['Canonical_Proteins', $prot_count{$build_id}, $prot_count{$previous_build_id}];
 
-  my $table = '<table width=600>';
+  my $table = '<table width="600">';
   $table .= $self->encodeSectionHeader(
       LMTABS => 1,
       no_toggle => 1,
@@ -2161,7 +2162,7 @@ sub get_what_is_new {
                                         bg_color => '#EAEAEA',
                                         rows_to_show => 25,
                                         sortable => 1 );
-  $table .= '</TABLE>';
+  $table .= '</table>';
   ## new sample table:
   $sql = qq~
     SELECT SAMPLE_ID
