@@ -6,15 +6,15 @@
 // Peptide sequence and modifications
 // -----------------------------------------------------------------------------
 function Peptide(seq, staticModifications, varModifications, ntermModification, ctermModification, maxNeutralLossCount) {
-	
-	var sequence = seq;
+
+    var sequence = seq;
     if(!sequence) {
         sequence = "";
     }
 
-	var ntermMod = ntermModification;
-	var ctermMod = ctermModification;
-	var staticMods = [];
+    var ntermMod = ntermModification;
+    var ctermMod = ctermModification;
+    var staticMods = [];
     var varMods = [];
     var potentialLosses_custom = {};
     var potentialLosses_lorikeet = {};
@@ -99,10 +99,10 @@ function Peptide(seq, staticModifications, varModifications, ntermModification, 
             // add N-terminal H
             mass = mass + Ion.MASS_H;
             // add C-terminal OH
-            mass = mass + Ion.MASS_O + Ion.MASS_H;
+        mass = mass + Ion.MASS_O + Ion.MASS_H;
 
-            return mass;
-        }
+        return mass;
+    }
 
     this.getPotentialLosses = function _getPotentialLosses(sion)
     {
@@ -178,7 +178,7 @@ function Peptide(seq, staticModifications, varModifications, ntermModification, 
         // Example: {avgLossMass: "97.995", monoLossMass: "97.977", formula: "H3PO4"}
         if(loss && loss.avgLossMass && loss.avgLossMass > 0.0 && loss.monoLossMass && loss.monoLossMass > 0.0)
         {
-            var neutralLoss = new NeutralLoss(loss.avgLossMass, loss.monoLossMass, loss.formula, loss.label);
+            var neutralLoss = new NeutralLoss(loss.monoLossMass, loss.avgLossMass, loss.formula, loss.label);
             potentialLossesAtIndex[index].push(neutralLoss);
             potentialLosses_custom[neutralLoss.label()] = neutralLoss;
         }
@@ -496,15 +496,15 @@ function Peptide(seq, staticModifications, varModifications, ntermModification, 
 // Modification
 //-----------------------------------------------------------------------------
 function Modification(aminoAcid, mass, losses) {
-	this.aa = aminoAcid;
-	this.modMass = mass;
+    this.aa = aminoAcid;
+    this.modMass = mass;
     this.losses = losses;
 }
 
 function VariableModification(pos, mass, aminoAcid, losses) {
-	this.position = parseInt(pos);
-	this.aa = aminoAcid;
-	this.modMass = mass;
+    this.position = parseInt(pos);
+    this.aa = aminoAcid;
+    this.modMass = mass;
     this.losses = losses;
 }
 //-----------------------------------------------------------------------------
