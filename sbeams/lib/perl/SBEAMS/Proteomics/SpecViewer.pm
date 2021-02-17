@@ -7,18 +7,15 @@ package SBEAMS::Proteomics::SpecViewer;
 #
 # Description : Contains utilities to display spectra in the Lorikeet viewer
 #
-# SBEAMS is Copyright (C) 2000-2011 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
 # LICENSE file distributed with this software.
 #
 ###############################################################################
-
-
 use strict;
-use vars qw($sbeams
-           );
+use vars qw($sbeams);
 
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Settings;
@@ -54,64 +51,82 @@ sub convertMods {
     my %supported_modifications = %{$AAmodifications->{supported_modifications}};
 
     my $mass_type = 'monoisotopic';
+    my $nlosses = 1; #default
 
     # Deal with terminal mods first
     my $nterm = 0;
     my $cterm = 0;
 
     if ($sequence =~ s/(n\[\d+\])//) {
-			my $mod = $1;
-			my $mass_diff = $supported_modifications{$mass_type}->{$mod};
-			if (defined($mass_diff)) {
-					$nterm = $mass_diff;
-			} else {
-					print STDERR "ERROR: N-terminal mass modification $mod is not supported yet\n";
-					return(undef);
-			}
+	my $mod = $1;
+	my $mass_diff = $supported_modifications{$mass_type}->{$mod};
+	if (defined($mass_diff)) {
+	    $nterm = $mass_diff;
+	} else {
+	    print STDERR "ERROR: N-terminal mass modification $mod is not supported yet\n";
+	    return(undef);
+	}
     }
 
     if ($sequence =~ s/(c\[\d+\])//) {
-			my $mod = $1;
-			my $mass_diff = $supported_modifications{$mass_type}->{$mod};
-			if (defined($mass_diff)) {
-					$cterm = $mass_diff;
-			} else {
-					print STDERR "ERROR: C-terminal mass modification $mod is not supported yet\n";
-					return(undef);
-			}
+	my $mod = $1;
+	my $mass_diff = $supported_modifications{$mass_type}->{$mod};
+	if (defined($mass_diff)) {
+	    $cterm = $mass_diff;
+	} else {
+	    print STDERR "ERROR: C-terminal mass modification $mod is not supported yet\n";
+	    return(undef);
+	}
     }
 
     # ...and now with the rest
     my $modstring = "[ ";
     while ($sequence =~ /\[/) {
-			my $index = $-[0];
-			if ($sequence =~ /([A-Znc]\[\d+\])/) {
-				my $mod = $1;
-				my $aa = substr($mod,0,1);
-				my $mass_diff = $supported_modifications{$mass_type}->{$mod};
-				if (defined($mass_diff)) {
-					if ($modstring eq "[ "){
-						 $modstring .= "{index: $index, modMass: $mass_diff, aminoAcid: \"$aa\"}";
-					}else{
-						 $modstring .= ", {index: $index, modMass: $mass_diff, aminoAcid: \"$aa\"}";
-					}
-					$sequence =~ s/[A-Z]\[\d+\]/$aa/;
-				} else {
-					print STDERR "ERROR: Mass modification $mod is not supported yet\n";
-					return(undef);
-				}
-			} else {
+	my $index = $-[0];
+	if ($sequence =~ /([A-Znc]\[\d+\])/) {
+	    my $mod = $1;
+	    my $aa = substr($mod,0,1);
+	    my $mass_diff = $supported_modifications{$mass_type}->{$mod};
+	    if (defined($mass_diff)) {
+
+	        my $losses = '';
+		if ($aa eq "M" && ($mass_diff-15.9949 < 0.01)) {  #Ox
+		  if (!$losses) {
+		    $losses = '[ ';
+		  } else {
+		    $losses .= ', ';
+		  }
+		  $losses .= '{ monoLossMass: 63.998285, avgLossMass: 64.11, formula: "CH3SOH" }';
+		  #s.maxNeutralLossCount++;
+		}
+		# add elsif(s) for other losses here, when necessary
+		if ($losses) {
+		  $losses = ", losses: $losses ] ";
+		  $nlosses++;
+		}
+
+		if ($modstring eq "[ "){
+		    $modstring .= "{index: $index, modMass: $mass_diff, aminoAcid: \"$aa\" $losses}";
+		} else {
+		    $modstring .= ", {index: $index, modMass: $mass_diff, aminoAcid: \"$aa\" $losses}";
+		}
+		$sequence =~ s/[A-Z]\[\d+\]/$aa/;
+	    } else {
+		print STDERR "ERROR: Mass modification $mod is not supported yet\n";
+		return(undef);
+	    }
+	} else {
 	    print STDERR "ERROR: Unresolved mass modification in '$sequence'\n";
 	    return(undef);
 	}
     }
-
+    
     #### Fail if imprecise AA's are present
     return(undef) if ($sequence =~ /[BZX]/);
 
     $modstring .= " ]";
 
-    return ($sequence, $modstring, $nterm, $cterm);
+    return ($sequence, $modstring, $nterm, $cterm, $nlosses);
 }
 
 
@@ -125,9 +140,9 @@ sub generateSpectrum {
 
     my $html_id  = $args{'htmlID'} || 'lorikeet';
     my $charge   = $args{'charge'};
-    my $massTolerance   = $args{'massTolerance'} || 0.5;
-    my $peakDetect   = $args{'peakDetect'} || 'false';
-    my $labelReporters   = $args{'labelReporters'} || 'true';
+    my $massTolerance  = $args{'massTolerance'} || 0.5;
+    my $peakDetect     = $args{'peakDetect'} || 'false';
+    my $labelReporters = $args{'labelReporters'} || 'true';
     my $showA    = $args{'a_ions'} || '[0,0,0]';
     my $showB    = $args{'b_ions'} || '[1,1,0]';
     my $showC    = $args{'c_ions'} || '[0,0,0]';
@@ -138,17 +153,17 @@ sub generateSpectrum {
     my $fileName = $args{'name'} || '';
     my $peakDetect = $args{'peakDetect'} || 'true';
     my $modified_sequence = $args{'modified_sequence'};
-    my $precursorMz = $args{'precursor_mass'};
+    my $precursorMz   = $args{'precursor_mass'};
     my $spectrum_aref = $args{'spectrum'};
-		my $selWinLow     =$args{selWinLow} || 0;
-		my $selWinHigh    =$args{selWinHigh} || 0;
-		my $ms1scanLabel  =$args{ms1scanLabel} || '';
-		my $ms1peaks_ref  =$args{ms1peaks};
-    my $jsArrayName = $args{'jsArrayName'} || 'ms2peaks';
+    my $selWinLow     = $args{selWinLow} || 0;
+    my $selWinHigh    = $args{selWinHigh} || 0;
+    my $ms1scanLabel  = $args{ms1scanLabel} || '';
+    my $ms1peaks_ref  = $args{ms1peaks};
+    my $jsArrayName   = $args{'jsArrayName'} || 'ms2peaks';
     my $jsSpectrumDataString = $args{jsSpectrumDataString};
     my $jsArrayName_ms1 = $args{'jsArrayName_ms1'} || 'ms1peaks';
 
-    my ($sequence,$mods, $nmod, $cmod) = &convertMods(modified_sequence => $modified_sequence);
+    my ($sequence,$mods, $nmod, $cmod, $nlosses) = &convertMods(modified_sequence => $modified_sequence);
     my $lorikeet_resources = "$HTML_BASE_DIR/usr/javascript/lorikeet";
 
     my $lorikeet_html = qq%
@@ -195,14 +210,15 @@ sub generateSpectrum {
 				      "peakDetect":$peakDetect,
 				      "labelReporters":$labelReporters,
 				      "variableMods":$mods,
+                                      "maxNeutralLossCount":$nlosses,
 				      "ntermMod":$nmod,
 				      "ctermMod":$cmod,
-              "selWinLow":$selWinLow,
-	      $extraPeakSeries
-              "selWinHigh":$selWinHigh,
-              "ms1scanLabel":"$ms1scanLabel",
-              "ms1peaks":$jsArrayName_ms1,
-              "zoomMs1":"true",
+                                      "selWinLow":$selWinLow,
+                                      $extraPeakSeries
+                                      "selWinHigh":$selWinHigh,
+                                      "ms1scanLabel":"$ms1scanLabel",
+                                      "ms1peaks":$jsArrayName_ms1,
+                                      "zoomMs1":"true",
 				      "peaks":$jsArrayName,
               });
 	});
@@ -222,7 +238,7 @@ sub generateSpectrum {
 
     }
 
-    #### If the Javascript data was already passed as a string from a custom annotater, print that
+    #### If the Javascript data was already passed as a string from a custom annotator, print that
     if ( $jsSpectrumDataString ) {
       $lorikeet_html .= $jsSpectrumDataString;
 
@@ -230,22 +246,22 @@ sub generateSpectrum {
     } else {
       $lorikeet_html .= "var $jsArrayName = [\n";
       for my $ar_ref (@{$spectrum_aref}) {
-				my $mz = $ar_ref->[0];	
-				my $in = $ar_ref->[1];
-				$lorikeet_html .= "[$mz,$in],\n";
+	my $mz = $ar_ref->[0];	
+	my $in = $ar_ref->[1];
+	$lorikeet_html .= "[$mz,$in],\n";
       }
       $lorikeet_html .= "];\n";
     }
     if ($ms1peaks_ref){
-			$lorikeet_html .= "var $jsArrayName_ms1 = [\n";
-			for my $ar_ref (@{$ms1peaks_ref}) {
-					my $mz = $ar_ref->[0];
-					my $in = $ar_ref->[1];
-					$lorikeet_html .= "[$mz,$in],\n";
-			}
-			$lorikeet_html .= "];\n";
-    }else{
-       $lorikeet_html .= "var $jsArrayName_ms1 = [[0.0,0.0]];\n";
+      $lorikeet_html .= "var $jsArrayName_ms1 = [\n";
+      for my $ar_ref (@{$ms1peaks_ref}) {
+	my $mz = $ar_ref->[0];
+	my $in = $ar_ref->[1];
+	$lorikeet_html .= "[$mz,$in],\n";
+      }
+      $lorikeet_html .= "];\n";
+    } else {
+      $lorikeet_html .= "var $jsArrayName_ms1 = [[0.0,0.0]];\n";
     }
     #### Close the Javascript and return the HTML
     $lorikeet_html .= "</script>\n";
