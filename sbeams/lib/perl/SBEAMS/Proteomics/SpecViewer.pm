@@ -115,6 +115,22 @@ sub convertMods {
 		print STDERR "ERROR: Mass modification $mod is not supported yet\n";
 		return(undef);
 	    }
+
+        #### It's not clear this code is actually properly called. Eric made a change
+        # but didn't check it in. Then Luis made many changes and then there was a conflict
+        # and then Eric tried to restore, but it's not clear that this is fully worked out.
+	#### Or with a + in front, it is direct mass delta notation like M[+15.9949]
+	} elsif ($sequence =~ /([A-Znc])\[\+([\d\.]+)\]/) {
+	    my $aa = $1;
+	    my $mass_diff = $2;
+	    if ($modstring eq "[ "){
+		 $modstring .= "{index: $index, modMass: $mass_diff, aminoAcid: \"$aa\"}";
+	    }else{
+		 $modstring .= ", {index: $index, modMass: $mass_diff, aminoAcid: \"$aa\"}";
+	    }
+	    $sequence =~ s/[A-Z]\[\+[\d\.]+\]/$aa/;
+
+	#### Else this kind of mass modification does not fit a pattern that is handled
 	} else {
 	    print STDERR "ERROR: Unresolved mass modification in '$sequence'\n";
 	    return(undef);
