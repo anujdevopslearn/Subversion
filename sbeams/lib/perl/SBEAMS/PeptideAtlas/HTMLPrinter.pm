@@ -1015,6 +1015,7 @@ sub getSamplePlotDisplay {
                                      options => '', # qq~ legend: { position: 'none'}, title: "Number of Observations" ~, 
                                   data_types => [ 'string', 'number' ],
                                     headings => [ 'Sample Name', 'Number of Observations' ],
+                                    chart_div => 'chart1_div',
                                   );
   my $chart_2 = $GV->setDrawBarChart(samples => $args{obs_per_million},
                                      options => '', # qq~ legend: { position: 'none'}, title: "Obs per million spectra" ~,
@@ -2249,20 +2250,27 @@ sub display_peptide_sample_category_plotly{
   my $data_ref = $args{data_ref};
   my $sample_arrayref = $args{sample_arrayref};
   my $build_id = $args{build_id};
+  my $column_name_ref = $args{column_name_ref};
 
-
+  my %cols=();
+  my $idx = 0;
+  foreach (@$column_name_ref){
+    $cols{lc($_)} = $idx;
+    $idx++;
+  }
   my (@sample_category, @peptide_count,@links, @obs_per_million );
   my $total_observed_spectra;
   my @n_good_spectra; 
+
  foreach my $data (@$data_ref){
     my ($name,$id,$cnt) = @$data;
     my ($good_spectra) =0;
     foreach my $row (@$sample_arrayref){
       my $n = scalar @$row; 
-      my $sample_cat_id  = $row->[$n-1];
+      my $sample_cat_id  = $row->[$cols{"sample_category_id"}];
       if ($sample_cat_id eq $id){
-        $good_spectra +=  $row->[4];
-        $total_observed_spectra += $row->[4]; 
+        $good_spectra +=  $row->[$cols{"#_spectra_id'd"}];
+        $total_observed_spectra += $row->[$cols{"#_spectra_id'd"}]; 
       }
     }  
  
@@ -2274,10 +2282,12 @@ sub display_peptide_sample_category_plotly{
   foreach my $val (@peptide_count){
     push @obs_per_million,  sprintf( "%0.1f",($val/$total_observed_spectra) * 1000000 );
   }
-
+  
   my $sample_category_str = join("','", @sample_category);
   my $n_good_spectra_str = join(",", @n_good_spectra);  
   my $obs_per_million_str = join(",", @obs_per_million);
+  my $nc = $#sample_category + 1;
+  my $height = $nc*40 > 1100? 1100:$nc*40; 
   my $plot_js = qq~
 			var pepcnt = {
 				y: ['$sample_category_str'],
@@ -2300,9 +2310,9 @@ sub display_peptide_sample_category_plotly{
       };
 
 			var layout = {
-        legend:{x: 0.029,y: 1.1,font: { size: 12}},
-			  width: 1100,
-        height:1100,
+        legend:{x: 0.029,y: 1.1},
+			  height: $height,
+        width: 1100,  
 				title:'Number of Distinct Peptides Per Million Observed Spectra',
         margin:{l: 350},
         hoverlabel:{bgcolor:'white'},
@@ -2693,16 +2703,17 @@ sub tableHeatMap{
   my $str = qq~
      <script type="text/javascript" src="$CGI_BASE_DIR/../usr/javascript/jquery/jquery.min.js"></script>
      <script type="text/javascript">
-			\$(document).ready(function(){
+      jQuery.noConflict();
+			jQuery(document).ready(function(){
 				// Function to get the Max value in Array
 					Array.max = function( array ){
 							return Math.max.apply( Math, array );
 					};
 
 					// get all values
-					var counts= \$('#$table_id  td:not(:first-child)').map(function() {
-							if (\$(this).text() ){
-								 return parseInt(\$(this).text());
+					var counts= jQuery('#$table_id  td:not(:first-child)').map(function() {
+							if (jQuery(this).text() ){
+								 return parseInt(jQuery(this).text());
 							}else{
 								 return 0;
 							}
@@ -2722,15 +2733,15 @@ sub tableHeatMap{
 					n = 100;
 				
 				// add classes to cells based on nearest 10 value
-				\$('#$table_id  td:not(:first-child)').each(function(){
+				jQuery('#$table_id  td:not(:first-child)').each(function(){
 					
-					var val = parseInt(\$(this).text());
+					var val = parseInt(jQuery(this).text());
 					var pos = parseInt((Math.round((val/max)*100)).toFixed(0));
 					red = parseInt((xr + (( pos * (yr - xr)) / (n-1))).toFixed(0));
 					green = parseInt((xg + (( pos * (yg - xg)) / (n-1))).toFixed(0));
 					blue = parseInt((xb + (( pos * (yb - xb)) / (n-1))).toFixed(0));
 					clr = 'rgb('+red+','+green+','+blue+')';
-					\$(this).css({backgroundColor:clr});
+					jQuery(this).css({backgroundColor:clr});
 				});
 			});
 	 	</script>

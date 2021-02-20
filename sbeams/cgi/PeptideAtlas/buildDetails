@@ -158,7 +158,6 @@ my $show_image = 0;
                                          column_name_ref => $column_name_ref,
                                          filename=>'SampleContribution.tsv'); 
       }else{
-			  ( $chart_div, $header ) = get_draw_chart_function( $sample_arrayref );
 			  $page .= "<BR>$batch_help\n";
 			  $page .= $sample_table;
 			  $page .= "<BR>\n";
@@ -167,7 +166,6 @@ my $show_image = 0;
     
     # Print what we already have, speed up apparent page loading time.
     if (! $section){
-
       $atlas->display_page_header( header_info => $header, project_id => $project_id, onload => 'sortables_init()', sortable => 1 );
 		  print $page;
       $page = "<BR>";
@@ -180,7 +178,7 @@ my $show_image = 0;
 			}
 			print $page;
 
-	#  print STDERR 'showtime ' . time() . "\n";
+    	#  print STDERR 'showtime ' . time() . "\n";
 			# Add peptide stats section
 			# Add graphic
 
@@ -198,7 +196,6 @@ my $show_image = 0;
 							 SC.ID, 
 				       COUNT (DISTINCT PI.PEPTIDE_ID) AS CNT
 				FROM $TBAT_PEPTIDE_INSTANCE PI
-			  JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB ON ( PI.peptide_instance_id = PISB.peptide_instance_id )
 				JOIN $TBAT_PEPTIDE_INSTANCE_SAMPLE PIS ON ( PIS.PEPTIDE_INSTANCE_ID = PI.PEPTIDE_INSTANCE_ID )
 				JOIN $TBAT_SAMPLE S  ON (PIS.SAMPLE_ID = S.SAMPLE_ID)
 				JOIN $TBAT_SAMPLE_CATEGORY SC ON (S.SAMPLE_CATEGORY_ID = SC.ID) 
@@ -212,17 +209,13 @@ my $show_image = 0;
 			my $chart = $atlas->display_peptide_sample_category_plotly(
 					build_id=>$build_id,
           sample_arrayref=>$sample_arrayref,
+          column_name_ref => $column_name_ref,
 					data_ref=>\@result,
 			);
 
 			print $chart ;
     }
-	
-			if ( 1 ) {
-				my $map_display = getSampleMapDisplay ( %{$params}, build_id => $build_id );
-				print $map_display;
-			}
-    
+    ## color "Dataset Specific Protein Identification" table  
     print $atlas->tableHeatMap(table_id => 'datasetContri_info');
     $atlas->display_page_footer();
   }
@@ -302,7 +295,9 @@ sub get_table_help {
 
 
   } elsif ( $name eq 'batch' ) {
-    @entries = ( { key => 'ID', value => 'Database ID for this experiment (search batch) ' },
+    @entries = ( 
+                 { key => 'Dataset ID', value=>'Public repository identifier'},
+                 { key => 'ID', value => 'Database ID for this experiment (search batch) ' },
                  { key => 'Experiment_Name', value => 'Simple name for this experiment. ' },
                  { key => '#_Runs', value=>'The total number of runs for this experiment.'},
                  { key => '#_Spectra_Searched', value => 'The total number of spectra searched in the experiment. ' },
@@ -318,7 +313,6 @@ sub get_table_help {
                  { key => '#_Unique_Prots', value => 'The number of proteins that have peptides observed in the sample only.'},
                  { key => 'Experiment_Date', value => ''},
                  { key => 'Pubmed/DOI', value => ''}, 
-                 { key => 'Other_Repos', value=>''}
         );
     $heading = 'Experiment Overview'; 
     $description = 'These values pertain to individual experiments within the atlas';
@@ -527,16 +521,20 @@ sub get_datasetContri_info {
     my @ids = split(/[,;]/, $repository_id); 
     my $repository_id_w_links;
     foreach my $id(@ids){
-        my $link = '';
-        $id =~ s/\s+//g;
-        if ($id =~ /PXD/){
-          $link = "http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=";
-        }elsif($id =~ /PASS/){
-          $link = "http://www.peptideatlas.org/PASS/";
-        }elsif($id =~ /S\d+/){
-          $link = "https://cptac-data-portal.georgetown.edu/study-summary/";
-        }
-        $repository_id_w_links .= "<a href='$link$id'>$id</a>,";
+			my $link = '';
+			$id =~ s/\s+//g;
+			if ($id =~ /PXD/){
+				$link = "http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=";
+			}elsif($id =~ /PASS/){
+				$link = "http://www.peptideatlas.org/PASS/";
+			}elsif($id =~ /^S\d+/){
+				$link = "https://cptac-data-portal.georgetown.edu/study-summary/";
+			}
+      if ($link){
+		  	$repository_id_w_links .= "<a href='$link$id'>$id</a>,";
+      }else{
+         $repository_id_w_links .= "$id,";
+      }
     }
     $repository_id_w_links=~ s/,$//;
     push @row , $repository_id_w_links; 
@@ -614,202 +612,6 @@ sub get_build_plots {
  
   return $table;
 }
-
-###############################################################################
-# displaySampleMap
-###############################################################################
-sub getSampleMapDisplay {
-#  my $self = shift;
-#  my $sbeams = $self->getSBEAMS();
-  my %args = @_;
-
-  return unless $args{build_id};
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'BD_sample_map',
-                                                  visible => 1,
-                                                  tooltip => 'Show/Hide Section',
-                                                  imglink => 1,
-                                                  sticky  => 1 );
-
-  my $header .= $atlas->encodeSectionHeader( text => 'Experiment Protein Map:',
-      LMTABS => 1,
-      no_toggle => 1,
-      divname => 'experiment_protein_map_div',
-     'link' => $link );
-
-  my $html = '';
-
-  my $top = ( $args{show_all_prots} ) ? 20000 : 200;
-  my $prot_sql = qq~
-	SELECT TOP $top matched_biosequence_id, CAST(biosequence_seq AS VARCHAR(2000)) seq, biosequence_name
-  FROM  $TBAT_PEPTIDE_INSTANCE PI 
-  JOIN $TBAT_PEPTIDE_MAPPING PM ON PM.peptide_instance_id = PI.peptide_instance_id
-  JOIN $TBAT_BIOSEQUENCE B ON PM.matched_biosequence_id = B.biosequence_id
-	WHERE PI.atlas_build_id = $args{build_id}
-	GROUP BY matched_biosequence_id,  CAST(biosequence_seq AS VARCHAR(2000)), biosequence_name
-	ORDER BY SUM(PI.n_observations) DESC 
-	~;
-
-  my $t1 = time;
-  my @prots = $sbeams->selectSeveralColumns($prot_sql);
-  my $t2 = time;
-  my $td = $t2 - $t1;
-  $log->debug( "Top 200 proteins SQL: $td" );
-  my @ordered_prots;
-  my %seen_sequences;
-  my @bioseq_ids;
-  my $cntr;
-  for my $row ( @prots ) {
-      # no dups
-      next if $seen_sequences{$row->[1]};
-      $seen_sequences{$row->[1]}++;
-      $cntr++;
-      push @ordered_prots, $row->[2];
-      push @bioseq_ids, $row->[0];
-      last if scalar( @ordered_prots ) >= 25 && !$args{show_all_prots};
-      $cntr++;
-  }
-  my $bioseq_ids = join( ',', @bioseq_ids );
-  return '' unless $bioseq_ids;
-  
-  my $sql = qq~
-	SELECT biosequence_name, SUM(PISB.n_observations) total_cnts,
-	SB.atlas_search_batch_id, sample_tag 
-  FROM $TBAT_ATLAS_SEARCH_BATCH SB
-  JOIN $TBAT_SAMPLE S ON s.sample_id = SB.sample_id
-  JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB ON PISB.atlas_search_batch_id = SB.atlas_search_batch_id
-  JOIN $TBAT_PEPTIDE_INSTANCE PI ON PI.peptide_instance_id = PISB.peptide_instance_id
-  JOIN $TBAT_PEPTIDE_MAPPING PM ON PM.peptide_instance_id = PI.peptide_instance_id
-  JOIN $TBAT_BIOSEQUENCE B ON B.biosequence_id = PM.matched_biosequence_id
-  JOIN $TBAT_ATLAS_BUILD AB ON ( AB.biosequence_set_id = B.biosequence_set_id AND AB.atlas_build_id = PI.atlas_build_id ) 
-  WHERE AB.atlas_Build_id = $args{build_id}
-	AND biosequence_id IN ( $bioseq_ids )
-	GROUP BY biosequence_name, SB.atlas_search_batch_id, sample_tag
-  ~;
-
-
-  my $t1 = time;
-  my @samples = $sbeams->selectSeveralColumns($sql);
-  my $t2 = time;
-  my $td = $t2 - $t1;
-  $log->debug( "Sum observations SQL: $td" );
-  
-  my %samples;
-  my %proteins;
-  for my $row ( @samples ) {
-      my $key = $row->[3] . '::::' . $row->[2];
-      $samples{$key}++;
-      $proteins{$row->[0]} ||= {};
-      $proteins{$row->[0]}->{$key} += $row->[1];
-  }
-
-  my @prot_order;
-
-  my $array_def = qq~
-  <script type="text/javascript">
-  google.setOnLoadCallback(drawHeatMap);
-  function drawHeatMap() {
-  var data = new google.visualization.DataTable();
-  data.addColumn('string', 'Sample Name');
-  ~;
-
-  my $ie_max = 50;
-  my $ie = ( $ENV{HTTP_USER_AGENT} =~ /MSIE/i ) ? 1 : 0;
-
-  my @peps;
-  my $cnt = 0;
-  my @sample_names = ( 'Protein_Accession' );
-  for my $sa ( sort( keys( %samples ) ) ) {
-      my ( $name, $id ) = split "::::", $sa;
-      push @sample_names, $name;
-      $array_def .= "    data.addColumn('number', '$name');\n";
-      last if $ie && $cnt++ >= $ie_max;
-  }
-  $array_def .= "DEFINE_ROWS_HERE\n";
-  
-  my $content = join( "\t", @sample_names ) . "\n";
-  my $row = 0;
-  my $col = 0;
-  my $max = 0;
-  my %output;
-  if ( $args{show_all_prots} ) {
-      for my $protein ( @ordered_prots ) {
-	  $col = 0;
-	  $array_def .= "    data.setValue( $row, $col, '$protein' );\n";
-	  $col++;
-	  my $colcnt = 0;
-	  my @row = ($protein);
-	  for my $sample ( sort( keys( %samples ) ) ) {
-	      my ( $name, $id ) = split "::::", $sample;
-#        last if $ie && $colcnt++ > $ie_max;
-	      my $cnt = 0;
-	      if ( $proteins{$protein}->{$sample} ) {
-		  #        my $cnt = $proteins{$protein}->{$sample};
-		  $cnt = log( 1+ $proteins{$protein}->{$sample} )/log(10);
-		  $max = ( $cnt > $max ) ? $cnt : $max;
-#          $array_def .= "    data.setValue( $row, $col, $cnt );\n";
-	      }
-	      push @row, $cnt;
-	      $col++;
-	  }
-	  $content .= join( "\t", @row ) . "\n";
-	  $row++;
-      }
-      my $filename = $sbeams->writeSBEAMSTempFile( content => $content );
-      $log->error( "TSVFILE is $filename!" );
-  } else {
-      for my $protein ( @ordered_prots ) {
-	  $col = 0;
-	  $array_def .= "    data.setValue( $row, $col, '$protein' );\n";
-	  $col++;
-	  my $colcnt = 0;
-	  for my $sample ( sort( keys( %samples ) ) ) {
-	      my ( $name, $id ) = split "::::", $sample;
-	      last if $ie && $colcnt++ > $ie_max;
-	      if ( $proteins{$protein}->{$sample} ) {
-		  #        my $cnt = $proteins{$protein}->{$sample};
-		  my $cnt = log( 1+ $proteins{$protein}->{$sample} )/log(10);
-		  $max = ( $cnt > $max ) ? $cnt : $max;
-		  $array_def .= "    data.setValue( $row, $col, $cnt );\n";
-	      }
-	      $col++;
-	  }
-	  $row++;
-      }
-  }
-  $array_def =~ s/DEFINE_ROWS_HERE/data.addRows($row);/;
-  my $num_colors = ( $max > 64 ) ? 64 : $max;
-  my $num_colors = 256;
-  $array_def .= qq~
-  heatmap = new org.systemsbiology.visualization.BioHeatMap(document.getElementById('heatmapContainer'));
-  heatmap.draw(data, {numberOfColors:$num_colors,passThroughBlack:false,startColor:{r:255,g:255,b:255,a:1},endColor:{r:100,g:100,b:100,a:1},emptyDataColor:{r:256,g:256,b:256,a:1}});
-  }
-  </script>
-  ~;
-  
-  my $content = qq~
-  <BR><BR>
-  <TABLE WIDTH=800>
-  $header
-
-  <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/jsapi"></script>
-  <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/ga.js"></script>
-  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/prototype/1.6.1.0/prototype.js"></script>
-  <script type="text/javascript">
-  google.load("visualization", "1", {});
-  </script>
-  <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/main/js/load.js"></script>
-  <script type="text/javascript">
-  systemsbiology.load("visualization", "1.0", {packages:["bioheatmap"]});
-  </script>
-  
-  $array_def
-  <TR $tr><TD> <DIV ID="heatmapContainer"></DIV> </TD></TR>  
-  </TABLE>
-  ~;
-  
-  return $content;
-} # end getSampleMapDisplay
-
 
 # General build info, date, name, organism, specialty, default
 sub get_build_overview {
@@ -1038,28 +840,39 @@ sub get_sample_info {
                                                   tooltip => 'Show/Hide Section',
                                                   imglink => 1,
                                                   sticky  => 1 );
+  #### Define some variables needed to build the query
+  my @column_array = (
+      ["repository_identifiers","S.repository_identifiers","repository_identifiers"],
+      ["sample_id", "S.sample_id","sample_id"],
+      ["sample_tag", "sample_tag", "sample_tag"],
+      ["n_runs","SBS.n_runs", "n_runs"],
+      ["n_searched_spectra", "SBS.n_searched_spectra", "n_searched_spectra"],
+      ["n_good_spectra", "n_good_spectra", "n_good_spectra"],
+      ["per_id", "CASE WHEN SBS.n_searched_spectra > 0 THEN FORMAT((n_good_spectra*1.00)/(SBS.n_searched_spectra/1.00), 'P2') ELSE '' END", "per_id"],
+      ["n_distinct_multiobs_peptides", "n_distinct_multiobs_peptides","n_distinct_multiobs_peptides"],
+      ["n_uniq_contributed_peptides", "n_uniq_contributed_peptides", "n_uniq_contributed_peptides"],
+      ["n_progressive_peptides", "n_progressive_peptides", "n_progressive_peptides"],
+      ["cumulative_n_peptides", "cumulative_n_peptides", "cumulative_n_peptides"],
+      ["n_canonical_proteins", "n_canonical_proteins", "n_canonical_proteins"],
+      ["cumulative_n_proteins", "cumulative_n_proteins", "cumulative_n_proteins"],
+      ["n_unique_prots", "''", "n_unique_prots"],
+      ["date_created", "CONVERT(VARCHAR(10), PE.date_created, 126)", "[YYYY-MM-DD]"],
+      ["pubmed_id", "pubmed_id", "pubmed_id"],
+      ["sample_category_id", "S.sample_category_id", "sample_category_id"],
+    );
+
+  #### Build the columns part of the SQL statement
+  my %colnameidx = ();
+  my @column_titles = ();
+  my $columns_clause = $sbeams->build_SQL_columns_list(
+    column_array_ref=>\@column_array,
+    colnameidx_ref=>\%colnameidx,
+    column_titles_ref=>\@column_titles
+  );
+
 
   my $sql =qq~;
-  SELECT S.sample_id, 
-         sample_tag, 
-         SBS.n_runs, 
-         SBS.n_searched_spectra,
-         n_good_spectra, 
-         CASE 
-           WHEN SBS.n_searched_spectra > 0 THEN FORMAT((n_good_spectra*1.00)/(SBS.n_searched_spectra/1.00), 'P2')
-           ELSE ''
-         END as per_id, 
-         n_distinct_multiobs_peptides,
-         n_uniq_contributed_peptides, 
-         n_progressive_peptides,
-         cumulative_n_peptides, 
-         n_canonical_proteins, 
-         cumulative_n_proteins,
-         model_90_error_rate,
-         CONVERT(VARCHAR(10), PE.date_created, 126) AS [YYYY-MM-DD],
-         A.Pubmed_ID, 
-         S.repository_identifiers,
-         S.sample_category_id
+  select $columns_clause
   FROM $TBAT_SEARCH_BATCH_STATISTICS SBS 
   JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
   JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ( ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id )
@@ -1080,12 +893,11 @@ sub get_sample_info {
   ORDER BY rownum, cumulative_n_peptides, ABSB.atlas_build_search_batch_id ASC
   ~;
 
-
-	my $t1 = time;
+	#my $t1 = time;
   my @sample_info = $sbeams->selectSeveralColumns ( $sql );
-	my $t2 = time;
-	my $td = $t2 - $t1;
-  $log->debug( "build table SQL: $td" );
+	#my $t2 = time;
+	#my $td = $t2 - $t1;
+  #$log->debug( "build table SQL: $td" );
 
   $sql = qq~
    SELECT A.sample_id , count (distinct A.id)
@@ -1112,21 +924,28 @@ sub get_sample_info {
   for my $batch ( @sample_info ) {
     $show_image++;
     # if these aren't defined, set to zero
-    for my $idx ( 7, 8, 9,10,11 ) { $batch->[$idx] ||= 0; }
-    for my $idx ( 12 ) {
-      if (defined $unique_prot2sample_cnt{$batch->[0]}){
-         $batch->[$idx] = $unique_prot2sample_cnt{$batch->[0]};
+    for my $col_name (qw(n_uniq_contributed_peptides 
+                    n_progressive_peptides 
+                    cumulative_n_peptides
+                    n_canonical_proteins
+                    cumulative_n_proteins)){
+        $batch->[$colnameidx{$col_name}] ||=0;
+    }
+    for my $idx ( $colnameidx{'n_unique_prots'}) {
+      if (defined $unique_prot2sample_cnt{$batch->[$colnameidx{sample_id}]}){
+         $batch->[$idx] = $unique_prot2sample_cnt{$batch->[$colnameidx{sample_id}]};
          $batch->[$idx] = $atlas->make_pa_tooltip( tip_text => $batch->[$idx],
-           link_text => "<a href='$CGI_BASE_DIR/PeptideAtlas/GetProteins?atlas_build_id=$build_id&sample_specific_id=$batch->[0]&apply_action=QUERY'>$batch->[$idx]</a>" );
+           link_text => "<a href='$CGI_BASE_DIR/PeptideAtlas/GetProteins?atlas_build_id=$build_id&".
+                        "sample_specific_id=$batch->[$colnameidx{sample_id}]&apply_action=QUERY'>$batch->[$idx]</a>" );
       }else{
         $batch->[$idx] = '';
       }
     }
-    for my $idx (1) {
+    for my $idx ($colnameidx{'sample_tag'}) {
       $batch->[$idx] = $atlas->make_pa_tooltip( tip_text => $batch->[$idx],
           link_text => "<a href='$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=AT_SAMPLE&sample_id=$batch->[0]'>$batch->[$idx]</a>" );
     }
-    for my $idx (14) {
+    for my $idx ($colnameidx{pubmed_id}) {
       next if ( ! $batch->[$idx]);
       my @ids = split(",", $batch->[$idx]);
       $batch->[$idx] ='';
@@ -1139,7 +958,7 @@ sub get_sample_info {
       }
       $batch->[$idx] =~ s/,$//;
     }
-    for my $idx (15) {
+    for my $idx ($colnameidx{'repository_identifiers'}) {
       next if ( ! $batch->[$idx]);
       my @ids = split(/[,;]/, $batch->[$idx]);
       $batch->[$idx] ='';
@@ -1153,7 +972,6 @@ sub get_sample_info {
         }elsif($id =~ /S\d+/){
           $link = "https://cptac-data-portal.georgetown.edu/study-summary/";
         }
-
         $batch->[$idx] .= "<a href='$link$id'>$id</a>,";
       }
       $batch->[$idx] =~ s/,$//;
@@ -1174,6 +992,7 @@ sub get_sample_info {
     push @headings, $row->{key}, $row->{value};
     push @column_names, $row->{key};
   }
+  push @column_names , "sample_category_id";
 #  for my $h ( @headings ) {
 #    $log->info( $h );
 #  }
@@ -1194,7 +1013,7 @@ sub get_sample_info {
                                         header => 1, 
                                         nowrap => [1..scalar(@headings)], 
                                         table_id => 'sample_contribution',
-                                        align => [ qw(center left center center center center center center center center center center center center) ], 
+                                        align => [ qw(left center left center center center center center center center center center center center) ], 
                                         tr_info => $tr,
                                         bg_color => '#EAEAEA',
                                         rows_to_show => 25,
@@ -1218,22 +1037,4 @@ sub get_build_path {
   my $path = $atlas->getAtlasBuildDirectory( atlas_build_id => $args{build_id} );
   $path =~ s/DATA_FILES//;
   return $path;
-}
-
-sub get_draw_chart_function {
-	my $sample_arrayref = shift || return '';
-
-	my @samples;
-	for my $s ( @{$sample_arrayref} ) {
-		push @samples, [ $s->[1], $s->[6], $s->[9] ];
-	}
-	my $GV = SBEAMS::Connection::GoogleVisualization->new();
-  my ( $chart ) = $GV->setDrawBarChart(  samples => \@samples,
-                                    	data_types => [ 'string', 'number', 'number' ],
-                                      	headings => [ 'Sample', 'Distinct peptides (n_obs > 1)', 'Cumulative peptides (n_obs > 1)' ],
-                                      show_table => 0,
-                                 truncate_labels => 24
- 	);
-	my $header = $GV->getHeaderInfo();
-  return ( $chart, $header );
 }
