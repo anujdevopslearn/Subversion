@@ -425,10 +425,6 @@ print " distinct\n";
 
 
   #### Calculate the number of distinct peptides as a function of exp.
-  #### 08/28/09 TMF: count total and multiply observed.
-  ####   Display total (before today, displayed multiply observed)
-  ####   consistent with new build pipeline where FDR threshold
-  ####   lets through only trustable, high prob singletons.
   my $niter = 1;
 
   for (my $iter=0; $iter<$niter; $iter++) {
@@ -439,15 +435,12 @@ print " distinct\n";
       @shuffled_search_batch_ids = @{$result};
     }
 
-    my %total_distinct_peptides_multobs;
     my %total_distinct_peptides_all;
-    my $p_cum_n_new_multobs = 0;
     my $p_cum_n_new_all = 0;
     my $cum_nspec = 0;
 
     print "number of sbid " , scalar  @shuffled_search_batch_ids ,"\n";
     foreach my $search_batch_id ( @shuffled_search_batch_ids ) {
-      my %batch_distinct_peptides_multobs;
       my %batch_distinct_peptides_all;
       my @lines;
       tie @lines, "DB_File", "psbi", O_RDWR|O_CREAT, 0666, $DB_RECNO or die "Cannot open file 'text': $!\n" ;
@@ -459,17 +452,10 @@ print " distinct\n";
         if ( $included_peptides{$peptide->[$seqcol]}){
 					$batch_distinct_peptides_all{$peptide->[$seqcol]}++;
 					$total_distinct_peptides_all{$peptide->[$seqcol]}++;
-					if ($distinct_peptides{$peptide->[$seqcol]}->{count} > 1) {
-						$batch_distinct_peptides_multobs{$peptide->[$seqcol]}++;
-						$total_distinct_peptides_multobs{$peptide->[$seqcol]}++;
-					}
         }
       }
       my $n_goodspec = scalar @lines;
       $cum_nspec += $n_goodspec;
-      my $n_peptides_multobs = scalar(keys(%batch_distinct_peptides_multobs));
-      my $cum_n_new_multobs = scalar(keys(%total_distinct_peptides_multobs));
-      my $n_new_pep_multobs = $cum_n_new_multobs - $p_cum_n_new_multobs;
       my $n_peptides_all = scalar(keys(%batch_distinct_peptides_all));
       my $cum_n_new_all = scalar(keys(%total_distinct_peptides_all));
       my $n_new_pep_all = $cum_n_new_all - $p_cum_n_new_all;
@@ -483,7 +469,6 @@ print " distinct\n";
 	      $cum_nspec, $cum_n_new_all, 'N',
               $n_prots, $n_cum_prots
 	     ;
-      $p_cum_n_new_multobs = $cum_n_new_multobs;
       $p_cum_n_new_all = $cum_n_new_all;
       untie @lines;
     }

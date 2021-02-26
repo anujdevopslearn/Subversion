@@ -236,17 +236,15 @@ sub get_build_stats {
 
   # Fetch peptide counts, hash of hashrefs keyed by asb_id
   # my @keys = qw( atlas_build_search_batch_id n_observations
-  # n_multiobs_observations n_distinct_peptides n_distinct_multiobs_peptides
   # n_searched_spectra, data_location );
   my $build_info = get_peptide_counts( $build_id );
   # Read peptide prophet model info from analysis directory
   my $models = get_models( $analysis_path ); 
-	my $identlist = read_identlist( $data_path );
   my $progressive = get_build_contributions( $analysis_path );
     
   # Fetch search_batch contributions, hash of arrayrefs keyed by asb_id
   # SELECT ASB.atlas_search_batch_id, COUNT(*) num_unique, sample_title, ASB.sample_id
-  my $contributions = get_contributions( $build_id, $identlist);
+  my $contributions = get_contributions( $build_id);
 
   # Loop over builds
   use Data::Dumper;
@@ -363,87 +361,80 @@ sub get_search_batch_map {
 sub get_peptide_counts {
 
   my $build_id = shift;
+  ##get peptide instance that maps to decoy and contam only
+  my $sql = qq~
+     SELECT PI.Peptide_id,  BS.biosequence_name
+     FROM  $TBAT_PEPTIDE_INSTANCE PI
+     JOIN $TBAT_PEPTIDE_MAPPING PM ON (PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID)
+     JOIN $TBAT_BIOSEQUENCE BS ON (PM.MATCHED_BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID)
+     WHERE PI.atlas_build_id = $build_id
+     ORDER BY PI.Peptide_id
+  ~;
+  my @rows =  $sbeams->selectSeveralColumns( $sql );
+  my %pep_exclude = ();
+  my $pre_pep = '';
+  my @proteins = '';
+  foreach my $row (@rows){
+    my ($pep, $prot) = @$row;
+    if ($pre_pep ne '' && $pre_pep ne $pep){
+      if(@proteins == 0){
+        $pep_exclude{$pre_pep} =1;
+      }
+      @proteins = ();
+    }
+    push @proteins , $prot if ($prot !~/(^CONTAM|^DECOY)/);
+    $pre_pep = $pep;
+  }
+  if(@proteins == 0){
+    $pep_exclude{$pre_pep} =1;
+  }
+  my $peptide_id_str = join(",", keys %pep_exclude);
+  print "DECOY and CONTAM peptides exclued: " . scalar keys %pep_exclude;
+  print "\n";
 
-  my $sql =<<"  STATS";
-  SELECT ASB.atlas_search_batch_id, n_searched_spectra,
-  COUNT(PI.n_observations) as total_distinct, SUM(PI.n_observations) as n_obs
-  FROM $TBAT_SAMPLE S
-  JOIN $TBAT_ATLAS_SEARCH_BATCH ASB 
-    ON ASB.sample_id = S.sample_id
-  JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB 
+   $sql =<<"  STATS";
+  SELECT ASB.atlas_search_batch_id, 
+         n_searched_spectra,
+         COUNT(PI.n_observations) as total_distinct, 
+         SUM(PI.n_observations) as total_obs,
+         data_location, 
+         atlas_build_search_batch_id, 
+         n_runs
+  FROM $TBAT_ATLAS_SEARCH_BATCH ASB
+  JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON ( ABSB.atlas_search_batch_id = ASB.atlas_search_batch_id )    
+  JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB
     ON PISB.atlas_search_batch_id = ASB.atlas_search_batch_id
-  JOIN $TBAT_PEPTIDE_INSTANCE PI 
+  JOIN $TBAT_PEPTIDE_INSTANCE PI
     ON PISB.peptide_instance_id = PI.peptide_instance_id
-  WHERE atlas_build_id = $build_id
-  GROUP BY ASB.atlas_search_batch_id, n_searched_spectra
-  ORDER BY ASB.atlas_search_batch_id ASC
+  WHERE PI.atlas_build_id = $build_id
+  AND PI.peptide_id not in ($peptide_id_str)
+  GROUP BY ASB.atlas_search_batch_id, n_runs, n_searched_spectra, data_location,
+           atlas_build_search_batch_id
   STATS
   my @all_cnts = $sbeams->selectSeveralColumns( $sql );
   $log->debug( "Getting peptide counts:\n $sql" );
 
   # Loop and cache 'all' stats
   my %batch_stats;
-  for my $build ( @all_cnts ) {
-    $batch_stats{$build->[0]} = $build;
-  }
-
-  
-  $sql =<<"  STATS";
-  SELECT ASB.atlas_search_batch_id, n_searched_spectra,
-  COUNT(PI.n_observations) as total_distinct, SUM(PI.n_observations) as total_obs, 
-  data_location, atlas_build_search_batch_id, n_runs
-  FROM $TBAT_SAMPLE S
-  JOIN $TBAT_ATLAS_SEARCH_BATCH ASB 
-    ON ASB.sample_id = S.sample_id
-  JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB 
-    ON ( ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id 
-         AND ABSB.sample_id = S.sample_id )
-  JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB 
-    ON PISB.atlas_search_batch_id = ASB.atlas_search_batch_id
-  JOIN $TBAT_PEPTIDE_INSTANCE PI 
-    ON ( PISB.peptide_instance_id = PI.peptide_instance_id
-         AND PI.atlas_build_id = ABSB.atlas_build_id )
-  WHERE PI.atlas_build_id = $build_id
-  AND PI.n_observations > 1
-  GROUP BY ASB.atlas_search_batch_id, n_runs, n_searched_spectra, data_location, 
-           atlas_build_search_batch_id
-  ORDER BY ASB.atlas_search_batch_id ASC
-  STATS
-
-  my @mobs_cnts = $sbeams->selectSeveralColumns( $sql );
-  $log->debug( "Getting multobs peptide counts:\n $sql" );
-
-  my @keys = qw( atlas_build_search_batch_id n_observations n_multiobs_observations n_distinct_peptides n_distinct_multiobs_peptides n_searched_spectra data_location );
-#  print join( "\t", @keys ) . "\n";
-
-  # hash of search batch stats, keyed by batch_id
   my %results;
-
-  # Loop 'multiobs' stats, merge with 'all'
-  for my $build ( @mobs_cnts ) {
-#    print "atlas_build_search_batch is $build->[5]\n";
-    my %batch = ( atlas_build_search_batch_id      => $build->[5],
-                  n_observations                   => $batch_stats{$build->[0]}->[3],
-                  n_multiobs_observations          => $build->[3],
-                  n_distinct_peptides              => $batch_stats{$build->[0]}->[2],
-                  n_distinct_multiobs_peptides     => $build->[2],
+  for my $build ( @all_cnts ) {
+     my %batch = ( 
                   n_searched_spectra               => $build->[1],
+                  n_distinct_peptides              => $build->[2],
+                  n_observations                   => $build->[3],
                   data_location                    => $build->[4],
+                  atlas_build_search_batch_id     => $build->[5],
                   n_runs                           => $build->[6],
                 );
     $results{$build->[0]} = \%batch;
-     
-#  print join( "\t", @batch{@keys} ) . "\n"; $results{$build[1]} = \%batch; 
-   }
-#  print "found " . scalar(keys(%results) ) . " keys \n";
+  }
   return \%results;
 }
 
 sub get_contributions {
   my $build_id = shift;
-  my $identlist = shift || {};
   my $sql =<<"  SMPL";
-  SELECT ASB.atlas_search_batch_id, COUNT(*) num_unique, sample_title, 
+  SELECT ASB.atlas_search_batch_id, COUNT(distinct PI.peptide_instance_id) num_unique, sample_title, 
          ABSB.sample_id, ABSB.atlas_build_search_batch_id
   FROM $TBAT_ATLAS_SEARCH_BATCH ASB
   JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON ( ABSB.atlas_search_batch_id = ASB.atlas_search_batch_id )
@@ -457,10 +448,9 @@ sub get_contributions {
   AND BS.biosequence_name NOT LIKE 'DECOY%'
   AND BS.biosequence_name NOT LIKE 'CONTAM%'
   AND PI.peptide_instance_id IN
-    ( SELECT PI.peptide_instance_id
+    ( SELECT distinct PI.peptide_instance_id
        FROM $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB JOIN $TBAT_PEPTIDE_INSTANCE PI ON PISB.peptide_instance_id = PI.peptide_instance_id
        WHERE atlas_build_id = $build_id
-       AND PI.n_observations > 1
        GROUP BY PI.peptide_instance_id
        HAVING COUNT(*) = 1
    )
@@ -471,20 +461,8 @@ sub get_contributions {
 	$debug_info{get_contrib_sql} = $sql;
 
   my %results;
-  my $multi = $identlist->{multi};
-	unless ( $multi ) {
-    print "Not consulting the identlist!\n";
-	}
-
 
   for my $cnt ( @uniq_cnt ) {
-    if ( $multi && $multi->{$cnt->[0]} ) {
-			if ( $multi->{$cnt->[0]} != $cnt->[1] ) {
-			  $cnt->[1] = $multi->{$cnt->[0]};
-				print STDERR "for $cnt->[4], db n_uniq is $cnt->[1], PA_ident says multi: $multi->{$cnt->[0]} (or singl: $identlist->{singl}->{$cnt->[0]})\n";
-			}
-		}
-
     $results{$cnt->[0]} = { n_uniq_contributed_peptides => $cnt->[1],
                             sample_title => $cnt->[2],
                             sample_id => $cnt->[3],
@@ -496,54 +474,21 @@ sub get_contributions {
 
 }
 
-sub read_identlist {
-	my $data_path = shift;
-
-  my %peptides;
-  my %batches;
-  my $identlist_file = $data_path . '/' . 'PeptideAtlasInput_sorted.PAidentlist';
-  if ( -e $identlist_file ) {
-    open ( IDLIST, $identlist_file ) || return undef;
-    print "FOUND: $identlist_file\n";
-		while ( my $line = <IDLIST> ) {
-			chomp $line;
-			my @fields = split( "\t", $line );
-      $batches{$fields[0]}++;
-      $peptides{$fields[3]} ||= {};
-      $peptides{$fields[3]}->{$fields[0]}++;
-		}
-  } else {
-    print "Missing: $identlist_file\n";
-		return undef;
-	}
-
-#  for my $b ( keys( %batches ) ) { print "$b => $pr2atlas->{$b}\n"; }
-	my %unique = ( multi => {},
-	               singl => {} );
-
-#	for my $sbid ( sort { $1 <=> $b } keys( %batches ) ) {
-	for my $seq ( keys( %peptides ) ) {
-		my @keys = keys( %{$peptides{$seq}} );
-		next if scalar(@keys) > 1;
-
-		$unique{singl}->{$pr2atlas->{$keys[0]}}++;
-		if ( $peptides{$seq}->{$keys[0]} > 1 ) {
-		  $unique{multi}->{$pr2atlas->{$keys[0]}}++;
-		}
-	}
-#	print "finished with unique, got: " . join( ':', keys( %{$unique{multi}} ) ) . "\n";
-	return \%unique;
-}
-
 sub insert_stats {
   my $stats = shift;
+
+  # print "rownum  n_distinct_peptides n_uniq_contributed_peptides cumulative_n_peptides  cumulative_n_proteins\n";
   for my $build_id ( keys %$stats ) {
     my $build = $stats->{$build_id};
     my %rowdata;
+    #for my $k ( qw(rownum  n_distinct_peptides n_uniq_contributed_peptides cumulative_n_peptides  cumulative_n_proteins)){
+    #  print  $build->{$k} . ", " if ($build->{rownum} =~ /^[1234]$/);  
+    #}
+    #print "\n"  if ($build->{rownum} =~ /^[1234]$/);
+
     for my $k ( qw( n_observations atlas_build_search_batch_id 
                     n_runs n_searched_spectra n_uniq_contributed_peptides 
-                    model_90_sensitivity model_90_error_rate 
-                    n_distinct_peptides n_distinct_multiobs_peptides 
+                    n_distinct_peptides
                     n_progressive_peptides n_good_spectra rownum
                     cumulative_n_peptides n_canonical_proteins 
                     cumulative_n_proteins ) ) {
@@ -556,6 +501,7 @@ sub insert_stats {
                      "($rowdata{n_uniq_contributed_peptides} for atlas_search_batch_id=$build_id sample_id=$stats->{$build_id}{sample_id}!\n";
 		  }
     }
+
     my $stats_id = $sbeams->updateOrInsertRow( 
                                        insert => 1,
                                    table_name => $TBAT_SEARCH_BATCH_STATISTICS,
