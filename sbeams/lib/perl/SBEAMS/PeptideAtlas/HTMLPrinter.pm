@@ -2255,7 +2255,7 @@ sub display_peptide_sample_category_plotly{
   my %cols=();
   my $idx = 0;
   foreach (@$column_name_ref){
-    $cols{lc($_)} = $idx;
+    $cols{$_} = $idx;
     $idx++;
   }
   my (@sample_category, @peptide_count,@links, @obs_per_million );
@@ -2269,8 +2269,8 @@ sub display_peptide_sample_category_plotly{
       my $n = scalar @$row; 
       my $sample_cat_id  = $row->[$cols{"sample_category_id"}];
       if ($sample_cat_id eq $id){
-        $good_spectra +=  $row->[$cols{"#_spectra_id'd"}];
-        $total_observed_spectra += $row->[$cols{"#_spectra_id'd"}]; 
+        $good_spectra +=  $row->[$cols{"Spectra ID'd"}];
+        $total_observed_spectra += $row->[$cols{"Spectra ID'd"}]; 
       }
     }  
  
@@ -2559,17 +2559,17 @@ sub displayExperiment_contri_plotly{
   my $pre_cum_n_good_spectra;
   my $idx =0;
   foreach (@$column_name_ref){
-    $cols{lc($_)} = $idx;
+    $cols{$_} = $idx;
     $idx++;
   } 
   $idx=0;
   foreach my $row(@$data_ref){
-    my $n_good_spectra = $row->[$cols{"#_spectra_id'd"}];
-    my $n_distinct_peptides = $row->[$cols{"#_distinct"}];
-    my $cumulative_n_peptides = $row->[$cols{"#_cumulative"}];
-    my $n_canonical_proteins = $row->[$cols{"#_proteins"}];
-    my $cumulative_n_proteins = $row->[$cols{"#_cum_prots"}];
-    my $sample_tag =  $row->[$cols{"experiment_name"}];
+    my $n_good_spectra = $row->[$cols{"Spectra ID'd"}];
+    my $n_distinct_peptides = $row->[$cols{"Distinct Peptides"}];
+    my $cumulative_n_peptides = $row->[$cols{"Cumulative Peptides"}];
+    my $n_canonical_proteins = $row->[$cols{"Distinct Canonical Proteins"}];
+    my $cumulative_n_proteins = $row->[$cols{"Cumulative Canonical Proteins"}];
+    my $sample_tag =  $row->[$cols{"Experiment Name"}];
     $sample_tag =~ s/.*sample_id=\d+\'>//;
     $sample_tag =~ s/<.*//;
     push @sample_label, ($sample_tag,'','');
@@ -2595,6 +2595,8 @@ sub displayExperiment_contri_plotly{
   my $cumproty_str = join(",", @cumproty);
   my $idvproty_str = join(",", @idvproty);
   my $sample_label_str = join("','", @sample_label);
+  my $total_spec = $cumpepx[$#cumpepx];
+  my $width =  $total_spec < 5000000 ? 'width: 1000,' : '';
   my $plot_js = qq~
 			l=['$sample_label_str']
 			var cum = {
@@ -2618,14 +2620,14 @@ sub displayExperiment_contri_plotly{
 				marker: {
 					color: 'rgba(255,0,255,0)',
 				},
-				name:'n_distinct_multiobs_peptides',
+				name:'n_distinct_peptides',
 				hovertext:l,
         hoverinfo:"x+y+text",
 				haveron:"fills"
 			};
 
 			var layout = {
-					width: 1100,
+				$width
 				height: 800,
 				font: {
 					size: 18
@@ -2664,7 +2666,7 @@ sub displayExperiment_contri_plotly{
         haveron:"fills"
       };
       var layout = {
-        width: 1100,
+         $width
         height: 800,
         font: {
           size: 18
@@ -2682,13 +2684,13 @@ sub displayExperiment_contri_plotly{
   my $chart = qq~
      <!-- Latest compiled and minified plotly.js JavaScript -->
      <script type="text/javascript" src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-     <TR $tr><TD><p class=plot_caption><b>Plot below shows the number of peptides contributed by each experiment,</b> and the cumulative number of distinct peptides for the build as of that experiment.</TD></TR> 
-     <TR $tr><TD><div id="plot_div" style="width: 100%;"></div><br></TD></TR>
-     <TR $tr><TD><p class=plot_caption><b>Plot below shows cumulative number of canonical proteins contributed by each experiment.</b>
-     Height of blue bar is number of proteins identified in experiment; 
-     height of red bar is cumulatie number of proteins, 
-     width of the bar (x-axis) shows the number of spectra identified (PSMs) above the threshold, for each experiment.</TD></TR>
-     <TR $tr><TD><div id="plot_div2" style="width: 100%;"></div><br><br></TD></TR>
+     <div><p class=plot_caption><b>Plot below shows the number of peptides contributed by each experiment, and the cumulative number of distinct peptides for the build as of that experiment.</b></div> 
+     <div id="plot_div" WIDTH=80%></div><br></div>
+     <div><p class=plot_caption><b>Plot below shows cumulative number of canonical proteins contributed by each experiment.</b><br>
+     Height of blue bar is the number of proteins identified in experiment; 
+     Height of red bar is the cumulatie number of proteins;<br> 
+     Width of the bar (x-axis) shows the number of spectra identified (PSMs) above the threshold, for each experiment.</div>
+     <div id="plot_div2" WIDTH=80%></div><br><br>
 		<script type="text/javascript" charset="utf-8">
       $plot_js
 		</script>
@@ -2711,30 +2713,24 @@ sub tableHeatMap{
 					};
 
 					// get all values
-					var counts= jQuery('#$table_id  td:not(:first-child)').map(function() {
+					var counts= jQuery('#$table_id  td:first-child+td').map(function() {
 							if (jQuery(this).text() ){
 								 return parseInt(jQuery(this).text());
 							}else{
 								 return 0;
 							}
 					}).get();
-
 				// return max value
 				var max = Array.max(counts);
-				
 				xr = 255;
-					xg = 255;
-					xb = 255;
-				 
-					yr = 243;
-					yg = 32;
-					yb = 117;
-
-					n = 100;
-				
+				xg = 255;
+				xb = 255;
+				yr = 243;
+				yg = 32;
+				yb = 117;
+				n = 100;
 				// add classes to cells based on nearest 10 value
-				jQuery('#$table_id  td:not(:first-child)').each(function(){
-					
+				jQuery('#$table_id  td:first-child + td').each(function(){
 					var val = parseInt(jQuery(this).text());
 					var pos = parseInt((Math.round((val/max)*100)).toFixed(0));
 					red = parseInt((xr + (( pos * (yr - xr)) / (n-1))).toFixed(0));
@@ -2747,6 +2743,50 @@ sub tableHeatMap{
 	 	</script>
   ~;
   return $str;
+}
+
+##################################################################################
+sub plotly_barchart {
+  my $self = shift;
+  my %args = @_;
+  my @data = @{$args{data}};
+  my $divname = $args{divName} || '';
+  my $xtitle = $args{xtitle} || '';
+  my $ytitle = $args{ytitle} || '';
+  my $title = $args{title} || '';
+  my @category = () ;
+  my @cnt = () ;
+  foreach my $row (@data){
+    push @category, $row->[0];
+    push @cnt , $row->[1];
+  }
+  my $category_str = join(",", @category);
+  my $cnt_str = join(",", @cnt);
+  my $plot_js = qq~
+			var data = {
+				x: [$category_str],
+				y: [$cnt_str],
+				name: "$title",
+			  type: 'bar',	
+        marker: {color: 'gray'},
+        opacity: 0.8
+			};
+      var layout = {
+        xaxis:{dtick:5,title:'$xtitle'},
+        yaxis:{title:'$ytitle'}
+ 
+      };
+
+			Plotly.newPlot('$divname', [data], layout);
+  ~;
+  my $chart = qq~
+    <script type="text/javascript" src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+		<script type="text/javascript" charset="utf-8">
+      $plot_js
+		</script>
+
+  ~;
+  return $chart;
 }
 
 
