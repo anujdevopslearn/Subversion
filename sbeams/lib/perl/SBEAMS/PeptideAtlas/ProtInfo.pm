@@ -152,14 +152,14 @@ sub loadBuildProtInfo {
   while ($line = <IDENTFILE>) {
     chomp ($line);
     my ($protein_group_number,
-	$biosequence_name,
-	$probability,
-	$confidence,
+				$biosequence_name,
+				$probability,
+				$confidence,
         $n_observations,
         $n_distinct_peptides,
-	$level_name,
-	$represented_by_biosequence_name,
-	$subsumed_by_biosequence_name,
+				$level_name,
+				$represented_by_biosequence_name,
+				$subsumed_by_biosequence_name,
         $estimated_ng_per_ml,
         $abundance_uncertainty,
         $is_covering,
@@ -205,7 +205,6 @@ sub loadBuildProtInfo {
     }
 
     $level_name =~ s/\s+from.*//;
-
     my $inserted = $self->insertProteinIdentification(
        atlas_build_id => $atlas_build_id,
        biosequence_name => $biosequence_name,
@@ -258,8 +257,8 @@ sub loadBuildProtInfo {
     chomp ($line);
     my ($protein_group_number,
         $reference_biosequence_name,
-	$related_biosequence_name,
-	$relationship_name,
+		$related_biosequence_name,
+		$relationship_name,
 	) = split(",", $line);
 
     # skip UNMAPPED proteins.
@@ -292,11 +291,62 @@ sub loadBuildProtInfo {
 	   " identifiers ignored.\n";
   }
   ## add sample_specific_id to proteins that id in one sample only
-  print "Labeing sample_specific and dataset_specific proteins\n";
+  print "Labeling sample_specific and dataset_specific proteins\n";
   $self->update_protInfo_sampleSpecific ( 
     atlas_build_id => $atlas_build_id
   );
+
+  ## fill biosequence_id_atlas_build_search_batch table
+  print "Mapping biosequence id and atlas_build_search_batch_id\n";
+  $self->insert_biosequence_id_atlas_build_search_batch (
+    atlas_build_id => $atlas_build_id
+  );
+
 } # end loadBuildProtInfo
+############################################
+#insert_biosequence_id_atlas_build_search_batch
+############################################`
+sub insert_biosequence_id_atlas_build_search_batch{ 
+  my $METHOD = 'insert_biosequence_id_atlas_build_search_batch';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+  my $atlas_build_id = $args{atlas_build_id};
+  my $sql = qq~
+    SELECT  DISTINCT BS.BIOSEQUENCE_ID, ABSB.ATLAS_BUILD_SEARCH_BATCH_ID 
+       FROM $TBAT_PEPTIDE_INSTANCE PI
+       JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB ON (PI.peptide_instance_id = PISB.peptide_instance_id)
+       JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON (ABSB.ATLAS_SEARCH_BATCH_ID = PISB.ATLAS_SEARCH_BATCH_ID 
+                                                    AND ABSB.atlas_build_id = $atlas_build_id )
+       JOIN $TBAT_PEPTIDE_MAPPING PM ON ( PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID )
+       JOIN $TBAT_BIOSEQUENCE BS ON ( PM.MATCHED_BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID )
+       WHERE PI.ATLAS_BUILD_ID = $atlas_build_id 
+       AND BS.biosequence_name not like 'DECOY^%'
+       AND BS.biosequence_name not like 'CONTAM%'
+  ~;
+
+  my @rows = $sbeams->selectSeveralColumns($sql);
+	my %result = ();
+	foreach my $row (@rows){
+    my ($biosequence_id , $atlas_build_search_batch_id ) = @$row;
+		my $rowdata= {
+		  biosequence_id => $biosequence_id,
+      atlas_build_search_batch_id =>$atlas_build_search_batch_id	
+		};
+    my $PK = $sbeams->updateOrInsertRow(
+			insert => 1,
+			table_name => $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH,
+			rowdata_ref => $rowdata,
+			PK => 'id',
+			return_PK => 1,
+			verbose=>$VERBOSE,
+			testonly=>$TESTONLY,
+    );
+  }
+ 
+		 
+
+}
+
 
 ############################################
 #update_protInfo_sampleSpecific
@@ -307,37 +357,26 @@ sub update_protInfo_sampleSpecific{
   my %args = @_;
   my $atlas_build_id = $args{atlas_build_id};
   my $sql = qq~
-     SELECT DISTINCT
-           BS.biosequence_id, PI.sample_ids
+     SELECT BS.biosequence_id, PIS.sample_id
      FROM $TBAT_PEPTIDE_INSTANCE PI
-    INNER JOIN $TBAT_PEPTIDE P
-          ON ( PI.PEPTIDE_ID = P.PEPTIDE_ID )
-     LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
-          ON ( PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID )
-    INNER JOIN $TBAT_ATLAS_BUILD AB
-          ON ( PI.ATLAS_BUILD_ID = AB.ATLAS_BUILD_ID )
-     LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
-          ON ( AB.BIOSEQUENCE_SET_ID = BSS.BIOSEQUENCE_SET_ID )
-     LEFT JOIN SBEAMS.DBO.ORGANISM O
-          ON ( BSS.ORGANISM_ID = O.ORGANISM_ID )
-     LEFT JOIN $TBAT_BIOSEQUENCE BS
-          ON ( PM.MATCHED_BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID )
-    LEFT JOIN $TBAT_PEPTIDE_INSTANCE_ANNOTATION PIA
-         ON  PIA.PEPTIDE_INSTANCE_ID = PI.PEPTIDE_INSTANCE_ID
-    LEFT JOIN $TBAT_SPECTRUM_ANNOTATION_LEVEL  SAL
-         ON  SAL.SPECTRUM_ANNOTATION_LEVEL_ID =
-       PIA.spectrum_annotation_level_id
-    AND PIA.RECORD_STATUS != 'D'
-    WHERE 1 = 1
-          AND AB.atlas_build_id IN ( $atlas_build_id )
-          AND BS.BIOSEQUENCE_NAME NOT LIKE 'CONTAM%'
-          AND BS.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
-          AND BS.BIOSEQUENCE_ID NOT IN (
-            SELECT BR.RELATED_BIOSEQUENCE_ID
-             FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR
-             where AB.atlas_build_id IN ($atlas_build_id)
-             AND RELATIONSHIP_TYPE_ID = 2
-            )
+     JOIN  $TBAT_PEPTIDE_INSTANCE_SAMPLE PIS ON (PIS.PEPTIDE_INSTANCE_ID = PI.PEPTIDE_INSTANCE_ID)
+     JOIN $TBAT_PEPTIDE_MAPPING PM ON ( PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID )
+     LEFT JOIN $TBAT_BIOSEQUENCE BS ON ( PM.MATCHED_BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID )
+     WHERE 1 = 1
+		 AND PI.atlas_build_id IN ( $atlas_build_id )
+		 AND BS.BIOSEQUENCE_NAME NOT LIKE 'CONTAM%'
+		 AND BS.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
+		 AND BS.BIOSEQUENCE_ID NOT IN (
+			SELECT BR.RELATED_BIOSEQUENCE_ID
+			 FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR
+			 WHERE RELATIONSHIP_TYPE_ID = 2
+			)
+     AND PI.PEPTIDE_INSTANCE_ID NOT IN (
+            SELECT PIA.PEPTIDE_INSTANCE_ID
+            FROM $TBAT_PEPTIDE_INSTANCE_ANNOTATION PIA
+            JOIN $TBAT_SPECTRUM_ANNOTATION_LEVEL  SAL  ON
+            (SAL.SPECTRUM_ANNOTATION_LEVEL_ID = PIA.spectrum_annotation_level_id AND PIA.RECORD_STATUS != 'D' )
+     WHERE  SAL.SPECTRUM_ANNOTATION_LEVEL_ID in (2,3,4))
   ~;
 
   my @rows = $sbeams->selectSeveralColumns($sql);
@@ -349,9 +388,8 @@ sub update_protInfo_sampleSpecific{
 
 	my %unique =();
 	foreach my $bsid (keys %result){
-		next if(scalar keys %{$result{$bsid}}> 1);
 		my @samples = keys %{$result{$bsid}};
-		next if ($samples[0] =~ /,/);
+		next if(@samples > 1);
 		$unique{$samples[0]}{$bsid} =1;
 	}
   $sql = qq~
@@ -398,28 +436,14 @@ sub update_protInfo_sampleSpecific{
 		where ABSB.atlas_build_id = $atlas_build_id 
   ~;
   my %repository_id =  $sbeams->selectTwoColumnHash($sql);
-  #foreach my $sample_id(keys %repository_id){
-  #  my @identifiers = ();
-    #print "$sample_id $repository_id{$sample_id} ->";
-    #$repository_id{$sample_id} =~ s/[\s+\r]//g;
-    #$repository_id{$sample_id} =~ s/;+/,/g;
-    #foreach my $id(split(/\,/, $repository_id{$sample_id})){
-    #  push @identifiers, $id;
-    #}
-    #$repository_id{$sample_id} = join(",", sort {$a cmp $b} @identifiers);
-    #print " $repository_id{$sample_id} \n";
-  #}
 
 	%unique =();
 	foreach my $bsid (keys %result){
-		foreach my $sample_ids(keys %{$result{$bsid}}){
-			my @samples = split(",", $sample_ids);
-			foreach my $sample_id (@samples){
-				if (defined $repository_id{$sample_id}){
-					$unique{$bsid}{$repository_id{$sample_id}} = 1;
-				}else{
-					$unique{$bsid}{'OTHERS'} =1;
-				}
+		foreach my $sample_id (keys %{$result{$bsid}}){
+			if (defined $repository_id{$sample_id}){
+				$unique{$bsid}{$repository_id{$sample_id}} = 1;
+			}else{
+				$unique{$bsid}{'OTHERS'} =1;
 			}
 		}
     next if (scalar keys %{$unique{$bsid}} > 1);
@@ -464,10 +488,7 @@ sub insertProteinIdentification {
     or die("ERROR[$METHOD]: Parameter protein_group_number not passed");
   my $level_name = $args{level_name}
     or die("ERROR[$METHOD]: Parameter level_name not passed");
-  my $represented_by_biosequence_name =
-          $args{represented_by_biosequence_name}
-    or die("ERROR[$METHOD]: Parameter represented_by_biosequence_name ".
-          "not passed");
+  my $represented_by_biosequence_name = $args{represented_by_biosequence_name};
   my $probability = $args{probability};
   my $confidence = $args{confidence};
   my $n_observations = $args{n_observations};
@@ -480,7 +501,11 @@ sub insertProteinIdentification {
   my $norm_PSMs_per_100K = $args{norm_PSMs_per_100K};
  
   our $counter;
-
+  return 1 if ($level_name =~/rejected/i );
+  if ($represented_by_biosequence_name eq ''){
+      die("ERROR[$METHOD]: biosequence_name=$biosequence_name protein_group_number=$protein_group_number".
+      " Parameter represented_by_biosequence_name not passed");
+  }
   #### Get the biosequence_ids
   my $biosequence_id = $self->get_biosequence_id(
     biosequence_name => $biosequence_name,
@@ -520,6 +545,7 @@ sub insertProteinIdentification {
     }
     return ('');
   } else {
+
     $protein_identification_id = $self->insertProteinIdentificationRecord(
       biosequence_id => $biosequence_id,
       atlas_build_id => $atlas_build_id,

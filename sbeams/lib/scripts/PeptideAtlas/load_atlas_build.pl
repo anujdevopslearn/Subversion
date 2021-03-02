@@ -85,6 +85,7 @@ Options:
   --purge                     Delete child records in atlas build (retains parent atlas record).
   --load                      Build an atlas (cannot currently be used in conjunction with --purge).
   --spectra                   Loads or updates the individual spectra for a build
+  --ptmspectra                Loads or updates the individual ptm spectra for a build
   --prot_info                 Loads or updates protein identifications for a build (with --purge, purges)
   --prot_info_sample_specific add sample specific info to protein_identification table
   --instance_searchbatch_obs           Loads or updates the number of observations per 
@@ -110,7 +111,7 @@ EOU
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
         "testvars","delete", "purge", "load", "check_tables",
         "atlas_build_name:s", "organism_abbrev:s", "default_sample_project_id:s",
-        "list","spectra","prot_info","prot_info_sample_specific", "coordinates","instance_searchbatch_obs",
+        "list","spectra","ptmspectra", "prot_info","prot_info_sample_specific", "coordinates","instance_searchbatch_obs",
         "spectrum_fragmentation_type","peptide_net_ncm",
     )) {
 
@@ -301,6 +302,21 @@ sub handleRequest {
     $spectra->setVERBOSE($VERBOSE);
     $spectra->setTESTONLY($TESTONLY);
     $spectra->loadBuildSpectra(
+      atlas_build_id => $ATLAS_BUILD_ID,
+      atlas_build_directory => $atlas_build_directory,
+      organism_abbrev => $organism_abbrev,
+    );
+  }
+    if ($OPTIONS{"ptmspectra"}) {
+    use SBEAMS::PeptideAtlas::Spectrum;
+    my $spectra = new SBEAMS::PeptideAtlas::Spectrum;
+    my $atlas_build_directory = get_atlas_build_directory(
+      atlas_build_id => $ATLAS_BUILD_ID,
+    );
+    $spectra->setSBEAMS($sbeams);
+    $spectra->setVERBOSE($VERBOSE);
+    $spectra->setTESTONLY($TESTONLY);
+    $spectra->loadBuildPTMSpectra(
       atlas_build_id => $ATLAS_BUILD_ID,
       atlas_build_directory => $atlas_build_directory,
       organism_abbrev => $organism_abbrev,
@@ -697,11 +713,11 @@ sub purgeProteinIdentificationInfo {
       $constraint = "AND nextprot_mapping_id =  $args{'nextprot_mapping_id'} ";
     }
     my $sql = qq~
-	DELETE
-	FROM $table
-	WHERE atlas_build_id = '$atlas_build_id'
-  $constraint
-	~;
+		DELETE
+		FROM $table
+		WHERE atlas_build_id = '$atlas_build_id'
+		$constraint
+		~;
 
     print "Purging protein_identification table ...\n";
 
@@ -717,11 +733,26 @@ sub purgeProteinIdentificationInfo {
 
     $sbeams->executeSQL($sql);
 
+   my $sql = qq~
+    DELETE
+    FROM $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH 
+    WHERE  ID in (
+      SELECT BIABSB.ID 
+      from $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH BIABSB
+      JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
+      ON (BIABSB.ATLAS_BUILD_SEARCH_BATCH_ID = ABSB.ATLAS_BUILD_SEARCH_BATCH_ID)
+      WHERE ABSB.atlas_build_id = $atlas_build_id
+    )
+   ~;
+   print "Purging BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH table ...\n";
+   $sbeams->executeSQL($sql);
+
    print "Purging caching\n";
    $sql = qq~
      DELETE FROM sbeams.dbo.cached_resultset WHERE key_value = $atlas_build_id
    ~;
    $sbeams->executeSQL($sql);
+
 
 
 }

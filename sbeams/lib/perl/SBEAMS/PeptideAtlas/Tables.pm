@@ -90,6 +90,7 @@ use vars qw(@ISA @EXPORT
     $TBAT_FRAGMENTATION_TYPE
 
     $TBAT_SEARCH_BATCH_STATISTICS
+    $TBAT_DATASET_STATISTICS
 
     $TBAT_SPECTRUM_ANNOTATION
     $TBAT_SPECTRUM_ANNOTATION_LEVEL
@@ -108,6 +109,7 @@ use vars qw(@ISA @EXPORT
     $TBAT_PROTEIN_IDENTIFICATION
     $TBAT_PROTEIN_IDENTIFICATION_NEXTPROT
     $TBAT_BIOSEQUENCE_RELATIONSHIP
+    $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH
     $TBAT_BIOSEQUENCE_RELATIONSHIP_NEXTPROT
     $TBAT_UNIPROT_DB
     $TBAT_UNIPROT_DB_ENTRY
@@ -262,6 +264,7 @@ require Exporter;
     $TBAT_SPECTRUM
     $TBAT_SPECTRUM_PEAK
     $TBAT_SEARCH_BATCH_STATISTICS
+    $TBAT_DATASET_STATISTICS
 
     $TBAT_SPECTRUM_ANNOTATION
     $TBAT_SPECTRUM_ANNOTATION_LEVEL
@@ -280,6 +283,7 @@ require Exporter;
     $TBAT_PROTEIN_IDENTIFICATION
     $TBAT_PROTEIN_IDENTIFICATION_NEXTPROT
     $TBAT_BIOSEQUENCE_RELATIONSHIP
+    $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH
     $TBAT_BIOSEQUENCE_RELATIONSHIP_NEXTPROT
     $TBAT_UNIPROT_DB
     $TBAT_UNIPROT_DB_ENTRY
@@ -426,7 +430,7 @@ $TBAT_NIST_SPECTRUM_TYPE             = "${mod}consensus_spectrum_type";
 
 ##$TBAT_SEARCH_BATCH_STATISTICS   = "glycopeptide.dbo.search_batch_statistics";
 $TBAT_SEARCH_BATCH_STATISTICS   = "${mod}search_batch_statistics";
-
+$TBAT_DATASET_STATISTICS        = "${mod}dataset_statistics";
 $TBAT_SPECTRUM_IDENTIFICATION    = "${mod}spectrum_identification";
 $TBAT_SPECTRUM_IDENTIFICATION_CP    = "${mod}spectrum_identification_cp";
 $TBAT_SPECTRUM_PTM_IDENTIFICATION    = "${mod}spectrum_ptm_identification";
@@ -459,6 +463,7 @@ $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE = "${mod}biosequence_relationship_type";
 $TBAT_PROTEIN_IDENTIFICATION        = "${mod}protein_identification";
 $TBAT_PROTEIN_IDENTIFICATION_NEXTPROT = "${mod}protein_identification_nextprot";
 $TBAT_BIOSEQUENCE_RELATIONSHIP      = "${mod}biosequence_relationship";
+$TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH = "${mod}biosequence_id_atlas_build_search_batch";
 $TBAT_BIOSEQUENCE_RELATIONSHIP_NEXTPROT = "${mod}biosequence_relationship_nextprot";
 $TBAT_UNIPROT_DB                    = "${mod}uniprot_db";
 $TBAT_UNIPROT_DB_ENTRY              = "${mod}uniprot_db_entry";
