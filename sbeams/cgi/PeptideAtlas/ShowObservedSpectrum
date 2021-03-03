@@ -59,7 +59,7 @@ $sbeamsMOD->setSBEAMS($sbeams);
 $PROG_NAME="ShowObservedSpectrum";
 my $CLASS = $PROG_NAME;
 my $DEBUG = 0;
-my $VERBOSE = 0;
+my $VERBOSE = 1;
 
 my $output_mode = 'HTML';
 
@@ -1569,7 +1569,7 @@ sub interpretUSI {
   #### There may be some error messages for info messages coming, so switch to PRE mode
   #print "Content-type: text/plain\n\n";
   #print "<PRE>\n";
-  #$debug = 1;
+  $debug = 0;
 
   #### Clean the string a little
   $usiStr =~ s/^\s+//;
@@ -1694,7 +1694,14 @@ sub interpretUSI {
   #### Otherwise we seem to have it, so try to determine its location
   if ( $nRows > 0 ) {
     print "INFO: found $nRows sample(s) matching dataset '$usi->{datasetIdentifier}'<BR>\n" if ( $debug );
+
+    my $foundHere = 0;
+
     foreach my $row ( @rows ) {
+
+      #### If we already found something in a previous iteration, then finish
+      last if ( $foundHere );
+
       my ($sample_id,$sample_accession,$search_batch_id,$is_public,$repository_identifiers,$data_location) = @{$row};
       print("INFO: data_location is $data_location<BR>\n") if ( $debug );
 
@@ -1713,10 +1720,9 @@ sub interpretUSI {
 
       #### Loop over the various places to find it
       my $iLocation = 0;
-      my $foundHere = 0;
       foreach my $location ( @locations ) {
 
-	#### If we already found this one, then 
+	#### If we already found this one, then finish
 	last if ( $foundHere );
 
         #### Try to find the mzML files here
@@ -1733,6 +1739,7 @@ sub interpretUSI {
 	      push(@{$foundFiles},[$iLocation,$foundFile]);
             }
           }
+	  print("INFO: nFoundfiles=$nFoundFiles<BR>") if ( $debug );
         }
         $iLocation++;
       }
@@ -1754,6 +1761,7 @@ sub interpretUSI {
     }
   }
 
+  print("INFO: nFoundfiles=$nFoundFiles<BR>") if ( $debug );
 
   #### If no files were found, this must be a bad MS Run name
   if ( $nFoundFiles == 0 ) {
