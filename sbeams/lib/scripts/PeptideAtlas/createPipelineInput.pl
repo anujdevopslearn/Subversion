@@ -14,147 +14,6 @@
 # LICENSE file distributed with this software.
 #
 ###############################################################################
-#
-# Data structures,  May 1, 2009, TMF
-# 
-# $biosequence_attributes{$biosequence_id}: row from biosequence table
-# 
-# $CONTENT_HANDLER: a container for info gleaned from parser and used in main
-#   my $CONTENT_HANDLER = MyContentHandler->new();
-#   $parser->setContentHandler($CONTENT_HANDLER);
-# 
-#   The next ~100 lines describe contents of $CONTENT_HANDLER:
-# 
-#   ->{counter}
-#   ->{best_prob_per_pep}
-#   ->{search_batch_id}
-#   ->{document_type}               pepXML, protXML, ...
-#   ->{protxml_type}                master or expt
-#   ->{OPTIONS}                     command line options
-#   ->{P_threshold}
-#   ->{FDR_threshold}
-# 
-# Temporary containers used during parsing
-# ----------------------------------------
-# 
-#   ->{object_stack}                 array ref. Holds stuff during parse.
-# 
-# pepXML parsing
-#   ->{pepcache}                    info stored permanently in (d)
-#     ->{spectrum}
-#     ->{charge}                    
-#     ->{peptide}
-#     ->{peptide_prev_aa}
-#     ->{peptide_next_aa}
-#     ->{protein_name}
-#     ->{massdiff}
-#     ->{modifications}            
-#       ->{$pos}
-#     ->{scores}
-#       ->{probability}
-#       ->{$score_type}
-# 
-# protXML parsing
-#   ->{pepcache}                      info stored permanently in (c)
-#     ->{modifications}
-#     ->{peptide}
-#     ->{charge}
-#     ->{initial_probability}
-#     ->{nsp_adjusted_probability}
-#     ->{n_sibling_peptides}
-#     ->{n_instances}
-#     ->{indistinguishable_peptides}
-#       ->{$peptide_sequence}         set to 1 for each indistinguishable seq
-#     ->{weight}
-#     ->{apportioned_observations}             computed from others
-#     ->{expected_apportioned_observations}   computed from others
-# 
-#   ->{protein_group_number}          info stored permanently in (b)
-#   ->{protein_group_probability}
-#   ->{protein_name}
-#   ->{protein_number}
-#   ->{protein_probability}
-# 
-#   ->{protcache}                     protXML start/end element (prot);
-#     ->{indist_prots}                             info moved to groupcache
-#       ->{$protein_name}             set to 1 for each indist_prot name
-#     ->{unique_stripped_peptides}
-#     ->{npeps}
-#     ->{total_number_peptides}
-#     ->{probability}
-#     ->{confidence}
-#     ->{subsuming_protein_entry}
-#     ->{PSM_count}
-#     ->{total_enzymatic_termini}
-# 
-#   ->{groupcache}                    protXML start/end element (group);
-#     ->{proteins}                             info stored permanently in (a)
-#       ->{$protein_name}
-# 	    ->{probability}
-# 	    ->{confidence}
-# 	    ->{unique_stripped_peptides}
-# 	    ->{subsuming_protein_entry}
-#           ->{PSM_count}
-#           ->{npeps}
-#           ->{total_enzymatic_termini}
-# 
-# 
-# Persistant containers
-# ---------------------
-# 
-# d)->{pep_identification_list}      list of array references. each array:
-#      search batch ID, spectrum, pep accession, pepseq, prev aa, next aa,
-# 		   modified pep, charge, proability, massdiff, prot name.
-# 
-#   ->{best_prob_per_pep}
-#     ->{pep_key}
-# 
-# 
-# c)->{ProteinProphet_pep_data}          reset to {} for each expt protPro file.
-#          Used for:
-#            [prob] peptide probabilities
-#            [pid]  peptide protein ID assignment
-#     ->{$pep_key}                      
-#       ->{search_batch_id}              (maybe unused)
-#       ->{charge}                       (maybe unused)
-#       ->{initial_probability}          [prob]
-#       ->{nsp_adjusted_probability}     [prob]
-#       ->{n_sibling_peptides}           [prob]
-#       ->{n_adjusted_observations}      [prob]
-#        ----
-#       ->{protein_name}                 determined by [pid]. Used to write
-#                                             peptide identlist!
-#       ->{protein_probability}          [pid], but used only w/in storePepInfoFromProtXML!
-#       ->{protein_group_probability}    [pid], but used only w/in storePepInfoFromProtXML!
-# 
-# 
-#   ->{ProteinProphet_group_data}     used to determine prot ident list
-# a)  ->{$group_num} 
-#       ->{proteins}
-# 	->{$protein_name}
-# 	  ->{probability}
-# 	  ->{confidence}
-# 	  ->{unique_stripped_peptides}
-#         ->{subsuming_protein_entry}
-#         ->{presence_level}
-#         ->{represented_by}   #highest prob prot in group
-#         ->{PSM_count}
-#         ->{npeps}
-#         ->{total_enzymatic_termini}
-# 
-#   ->{ProteinProphet_prot_data}      used to determine prot ident list
-#     ->{group_hash}
-# b)    ->{$protein_name}             prot_name -> group_num
-#     ->{atlas_prot_list}             
-#       ->{$protid}                   set to 1 if protein is in this atlas
-#     ->{pep_prot_hash}
-#       ->{$pepseq}                   pepseq -> array of protein IDs
-#     ->{preferred_protID_hash}
-#       ->{$protid}                   protXML protID -> preferred protID
-# 
-# End $CONTENT_HANDLER description
-##############################################################################
-
 use strict;
 use POSIX;  #for floor()
 use Getopt::Long;
@@ -178,10 +37,11 @@ use SBEAMS::Connection::Tables;
 #use SBEAMS::Connection::TableInfo;
 
 use SBEAMS::Proteomics::Tables;
+use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::PeptideAtlas::ProtInfo;
 use SBEAMS::PeptideAtlas::SpectralCounting;
-use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Peptide;
 
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
@@ -296,6 +156,7 @@ my $namespace = $OPTIONS{namespaces} || 0;
 my $schema = $OPTIONS{schemas} || 0;
 my $best_probs_from_protxml = $OPTIONS{best_probs_from_protxml} || 0;
 my $splib_filter = $OPTIONS{splib_filter} || 0;
+my $peptide_str = new SBEAMS::PeptideAtlas::Peptide;
 
 my ($second, $minute, $hour, $dayOfMonth, $month, $yearOffset,
   $dayOfWeek, $dayOfYear, $daylightSavings) = localtime();
@@ -519,10 +380,10 @@ sub pepXML_start_element {
   if ($localname eq 'spectrum_query') {
     $self->{pepcache}->{spectrum} = $attrs{spectrum};
     $self->{pepcache}->{charge} = $attrs{assumed_charge};
-    $self->{pepcache}->{precursor_intensity} = $attrs{precursor_intensity};
-    $self->{pepcache}->{total_ion_current} = $attrs{total_ion_current};
-    $self->{pepcache}->{signal_to_noise} = $attrs{signal_to_noise};
-    $self->{pepcache}->{retention_time_sec} = $attrs{retention_time_sec};
+    $self->{pepcache}->{precursor_intensity} = $attrs{precursor_intensity} || '';
+    $self->{pepcache}->{total_ion_current} = $attrs{total_ion_current} || '';
+    $self->{pepcache}->{signal_to_noise} = $attrs{signal_to_noise} || '';
+    $self->{pepcache}->{retention_time_sec} = $attrs{retention_time_sec} || '';
   }
 
   #### If this is the search_hit, then store some attributes
@@ -839,10 +700,11 @@ sub pepXML_end_element {
           }
         }
       }
+      $peptide_sequence =~ s/[\r\n]//g;
 
       my $modified_peptide = modified_peptide_string($self, $peptide_sequence, $charge,
           $self->{pepcache}->{modifications}, $prepend_charge);
-
+      
       my $peptide_accession = &main::getPeptideAccession(
         sequence => $peptide_sequence,
       );
@@ -1439,15 +1301,9 @@ sub main {
       # first before default names, allows caller to determine priority.
       if ($filepath !~ /\.xml/) {
           my @preferred = ( 
-                        'interact-combined.pep.xml',   #iProphet output
+                        'interact-ipro-ptm.pep.xml',   # ptm prophet output
                         'interact-ipro.pep.xml',       #iProphet output
-                        'interact-prob.pep.xml',
-                        'interact-prob.xml',
-                        'interact.pep.xml',
-                        'interact.xml',
-                        'interact-specall.xml',
-                        'interact-spec.xml',
-                        'interact-spec.pep.xml' );
+                         );
 
         $filepath = $sbeamsMOD->findPepXMLFile( preferred_names => \@preferred,
 				                                        search_path => $filepath );
@@ -2442,7 +2298,7 @@ sub main {
 
   } # end unless $APD_only
 
-  unless ($protlist_only) {
+  unless ($protlist_only || ! $APD_only ){ 
 
     #### Open APD format tsv file for writing
     my $output_tsv_file = $OPTIONS{output_file} || 'PeptideAtlasInput.tsv';
@@ -2532,7 +2388,7 @@ sub main {
       #### Needed for the very first row
       unless ($prev_peptide_sequence) {
 				$prev_peptide_sequence = $peptide_sequence;
- $pre_peptide_accesion = $columns[2];
+				$pre_peptide_accesion = $columns[2];
 
       }
 
@@ -2712,7 +2568,7 @@ sub writePepIdentificationListFile {
   tie @extra_cols_array, "DB_File", "text", O_RDWR|O_CREAT, 0640, $DB_RECNO;
   while (my $line = <INFILE>){
     chomp $line;
-    my @columns = split(/\t/,$line);
+    my @columns = split(/\t/,$line, -1);
     my $identification = \@columns; 
     my $charge = $identification->[7];
     my $peptide_sequence = $identification->[3];
@@ -3104,126 +2960,21 @@ sub guess_source_file {
 sub getPeptideAccession {
   my %args = @_;
   my $sequence = $args{'sequence'};
-
-  $sequence =~ /(\w).*/;
-  my $firstAA = $1;
-  #### If we haven't loaded the peptide accessions hash yet, do it now
-  unless (%peptide_accessions) {
-    #my $sql = qq~
-    #   SELECT peptide_sequence,peptide_accession
-    #     FROM $TBAT_PEPTIDE P
-    #~;
-    my $sql = qq~
-       SELECT peptide,peptide_identifier_str
-         FROM $TBAPD_PEPTIDE_IDENTIFIER
-    ~;
-    print "Fetching all peptide accessions...\n";
-    #%peptide_accessions = $sbeams->selectTwoColumnHash($sql);
-    my $cnt = 0;
-    my @rows = $sbeams->selectSeveralColumns($sql);
-    foreach my $row(@rows){
-      my ($peptide, $peptide_identifier_str)= @$row;
-      $peptide=~ /(\w).*/;
-      $peptide_accessions{$1}{$peptide} = $peptide_identifier_str;
-      $cnt++;
-    }
-    #print "  Loaded ".scalar(keys(%peptide_accessions))." peptides.\n";
-    print "  Loaded $cnt peptides\n";
-    #### Just in case the table is empty, put in a bogus hash entry
-    #### to prevent triggering a reload attempt
-    $peptide_accessions{' '} = ' ';
+  $sequence =~ /^(\w).*$/;
+  my $filrstLetter = $1;
+  my $peptide_accession = $peptide_str->getPeptideAccession(seq => $sequence);
+  if ($peptide_accession){
+      return $peptide_accession;
   }
-
-
-  #my $peptide_accession = $peptide_accessions{$sequence};
-  #if ($peptide_accession !~ /PAp/) {
-  #  die("ERROR: peptide_accession is $peptide_accession");
-  #}
-
-  return $peptide_accessions{$firstAA}{$sequence} if ($peptide_accessions{$firstAA}{$sequence});
-
-
-  #### FIXME: The following is code stolen from
-  #### $SBEAMS/lib/script/Proteomics/update_peptide_summary.pl
-  #### This should be unified into one piece of code eventually
-
-  my $peptide = $sequence;
-
-  #### See if we already have an identifier for this peptide
-  my $sql = qq~
-    SELECT peptide_identifier_str
-      FROM $TBAPD_PEPTIDE_IDENTIFIER
-     WHERE peptide = '$peptide'
-  ~;
-  my @peptides = $sbeams->selectOneColumn($sql);
-
-  #### If more than one comes back, this violates UNIQUEness!!
-  if (scalar(@peptides) > 1) {
-    die("ERROR: More than one peptide returned for $sql");
+  if( $peptide_str->{_apd_id_list} && $peptide_str->{_apd_id_list}->{$filrstLetter}{$sequence}){
+    $peptide_accession  = $peptide_str->{_apd_id_list}->{$filrstLetter}{$sequence}; 
+    return $peptide_accession;
   }
-
-  #### If we get exactly one back, then return it
-  if (scalar(@peptides) == 1) {
-    #### Put this new one in the hash for the next lookup
-    $peptide_accessions{$firstAA}{$sequence} = $peptides[0];
-    return $peptides[0];
-  }
-
-
-  #### Else, we need to add it
-  #### Create a hash for the peptide row
-  my %rowdata;
-  $rowdata{peptide} = $peptide;
-  $rowdata{peptide_identifier_str} = 'tmp';
-
-  #### Do the next two statements as a transaction
-  $sbeams->initiate_transaction();
-
-  #### Insert the data into the database
-  my $peptide_identifier_id = $sbeams->insert_update_row(
-    insert=>1,
-    table_name=>$TBAPD_PEPTIDE_IDENTIFIER,
-    rowdata_ref=>\%rowdata,
-    PK=>"peptide_identifier_id",
-    PK_value => 0,
-    return_PK => 1,
-    verbose=>$VERBOSE,
-    testonly=>$TESTONLY,
-  );
-
-  unless ($peptide_identifier_id > 0) {
-    die("Unable to insert modified_peptide for $peptide");
-  }
-
-
-  #### Now that the database furnished the PK value, create
-  #### a string according to our rules and UPDATE the record
-  my $template = "PAp00000000";
-  my $identifier = substr($template,0,length($template) -
-    length($peptide_identifier_id)).$peptide_identifier_id;
-  $rowdata{peptide_identifier_str} = $identifier;
-
-
-  #### UPDATE the record
-  my $result = $sbeams->insert_update_row(
-    update=>1,
-    table_name=>$TBAPD_PEPTIDE_IDENTIFIER,
-    rowdata_ref=>\%rowdata,
-    PK=>"peptide_identifier_id",
-    PK_value =>$peptide_identifier_id ,
-    return_PK => 1,
-    verbose=>$VERBOSE,
-    testonly=>$TESTONLY,
-  );
-
-  #### Commit the INSERT+UPDATE pair
-  $sbeams->commit_transaction();
-
-  #### Put this new one in the hash for the next lookup
-  $peptide_accessions{$firstAA}{$sequence} = $identifier;
-
-  return($identifier);
-
+  #print "new peptide: $sequence\t";
+  $peptide_str->addAPDIdentity (seq => $sequence);
+  $peptide_accession = $peptide_str->{_apd_id_list}->{$filrstLetter}{$sequence};
+  #print "$peptide_accession\n";
+  return $peptide_accession; 
 } # end getPeptideAccession
 
 
@@ -3978,7 +3729,7 @@ sub writePeptideListFile {
   print "\n";
   close(OUTFILE);
 
-  return(1);
+  return;
 
 } # end writePeptideListFile
 
@@ -4003,7 +3754,7 @@ sub writePepIdentificationListTemplateFile {
   my @column_names = qw ( search_batch_id spectrum_query peptide_accession
     peptide_sequence preceding_residue modified_peptide_sequence
     following_residue charge probability massdiff protein_name 
-    precursor_intensity total_ion_current signal_to_noisei retention_time_sec);
+    precursor_intensity total_ion_current signal_to_noise retention_time_sec);
 
   print OUTFILE join("\t",@column_names)."\n";
 
@@ -4422,4 +4173,144 @@ sub later_date {
     return 0;
   }
 }
+__DATA__
+# Data structures,  May 1, 2009, TMF
+# 
+# $biosequence_attributes{$biosequence_id}: row from biosequence table
+# 
+# $CONTENT_HANDLER: a container for info gleaned from parser and used in main
+#   my $CONTENT_HANDLER = MyContentHandler->new();
+#   $parser->setContentHandler($CONTENT_HANDLER);
+# 
+#   The next ~100 lines describe contents of $CONTENT_HANDLER:
+# 
+#   ->{counter}
+#   ->{best_prob_per_pep}
+#   ->{search_batch_id}
+#   ->{document_type}               pepXML, protXML, ...
+#   ->{protxml_type}                master or expt
+#   ->{OPTIONS}                     command line options
+#   ->{P_threshold}
+#   ->{FDR_threshold}
+# 
+# Temporary containers used during parsing
+# ----------------------------------------
+# 
+#   ->{object_stack}                 array ref. Holds stuff during parse.
+# 
+# pepXML parsing
+#   ->{pepcache}                    info stored permanently in (d)
+#     ->{spectrum}
+#     ->{charge}                    
+#     ->{peptide}
+#     ->{peptide_prev_aa}
+#     ->{peptide_next_aa}
+#     ->{protein_name}
+#     ->{massdiff}
+#     ->{modifications}            
+#       ->{$pos}
+#     ->{scores}
+#       ->{probability}
+#       ->{$score_type}
+# 
+# protXML parsing
+#   ->{pepcache}                      info stored permanently in (c)
+#     ->{modifications}
+#     ->{peptide}
+#     ->{charge}
+#     ->{initial_probability}
+#     ->{nsp_adjusted_probability}
+#     ->{n_sibling_peptides}
+#     ->{n_instances}
+#     ->{indistinguishable_peptides}
+#       ->{$peptide_sequence}         set to 1 for each indistinguishable seq
+#     ->{weight}
+#     ->{apportioned_observations}             computed from others
+#     ->{expected_apportioned_observations}   computed from others
+# 
+#   ->{protein_group_number}          info stored permanently in (b)
+#   ->{protein_group_probability}
+#   ->{protein_name}
+#   ->{protein_number}
+#   ->{protein_probability}
+# 
+#   ->{protcache}                     protXML start/end element (prot);
+#     ->{indist_prots}                             info moved to groupcache
+#       ->{$protein_name}             set to 1 for each indist_prot name
+#     ->{unique_stripped_peptides}
+#     ->{npeps}
+#     ->{total_number_peptides}
+#     ->{probability}
+#     ->{confidence}
+#     ->{subsuming_protein_entry}
+#     ->{PSM_count}
+#     ->{total_enzymatic_termini}
+# 
+#   ->{groupcache}                    protXML start/end element (group);
+#     ->{proteins}                             info stored permanently in (a)
+#       ->{$protein_name}
+# 	    ->{probability}
+# 	    ->{confidence}
+# 	    ->{unique_stripped_peptides}
+# 	    ->{subsuming_protein_entry}
+#           ->{PSM_count}
+#           ->{npeps}
+#           ->{total_enzymatic_termini}
+# 
+# 
+# Persistant containers
+# ---------------------
+# 
+# d)->{pep_identification_list}      list of array references. each array:
+#      search batch ID, spectrum, pep accession, pepseq, prev aa, next aa,
+# 		   modified pep, charge, proability, massdiff, prot name.
+# 
+#   ->{best_prob_per_pep}
+#     ->{pep_key}
+# 
+# 
+# c)->{ProteinProphet_pep_data}          reset to {} for each expt protPro file.
+#          Used for:
+#            [prob] peptide probabilities
+#            [pid]  peptide protein ID assignment
+#     ->{$pep_key}                      
+#       ->{search_batch_id}              (maybe unused)
+#       ->{charge}                       (maybe unused)
+#       ->{initial_probability}          [prob]
+#       ->{nsp_adjusted_probability}     [prob]
+#       ->{n_sibling_peptides}           [prob]
+#       ->{n_adjusted_observations}      [prob]
+#        ----
+#       ->{protein_name}                 determined by [pid]. Used to write
+#                                             peptide identlist!
+#       ->{protein_probability}          [pid], but used only w/in storePepInfoFromProtXML!
+#       ->{protein_group_probability}    [pid], but used only w/in storePepInfoFromProtXML!
+# 
+# 
+#   ->{ProteinProphet_group_data}     used to determine prot ident list
+# a)  ->{$group_num} 
+#       ->{proteins}
+# 	->{$protein_name}
+# 	  ->{probability}
+# 	  ->{confidence}
+# 	  ->{unique_stripped_peptides}
+#         ->{subsuming_protein_entry}
+#         ->{presence_level}
+#         ->{represented_by}   #highest prob prot in group
+#         ->{PSM_count}
+#         ->{npeps}
+#         ->{total_enzymatic_termini}
+# 
+#   ->{ProteinProphet_prot_data}      used to determine prot ident list
+#     ->{group_hash}
+# b)    ->{$protein_name}             prot_name -> group_num
+#     ->{atlas_prot_list}             
+#       ->{$protid}                   set to 1 if protein is in this atlas
+#     ->{pep_prot_hash}
+#       ->{$pepseq}                   pepseq -> array of protein IDs
+#     ->{preferred_protID_hash}
+#       ->{$protid}                   protXML protID -> preferred protID
+# 
+# End $CONTENT_HANDLER description
+##############################################################################
 
