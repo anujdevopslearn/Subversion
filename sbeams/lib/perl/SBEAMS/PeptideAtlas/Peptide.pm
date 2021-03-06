@@ -49,7 +49,7 @@ use vars qw($VERBOSE $TESTONLY $sbeams);
 sub new {
     my $this = shift;
     my $class = ref($this) || $this;
-    my $self = @_;
+    my $self = {};
     bless $self, $class;
     return($self);
 } # end new
@@ -80,6 +80,9 @@ sub getPeptideAccession {
 
   return unless $args{seq} && $self->isValidSeq( seq => $args{seq} );
   $sbeams = $self->getSBEAMS();
+  my $sequence  = $args{seq};
+  $sequence =~ /^(\w).*$/;
+  my $firstLetter = $1;
 
   my $sql =<<"  END";
     SELECT peptide_accession
@@ -98,12 +101,12 @@ sub getPeptideAccession {
   }
 
   # current seq not found, try to lookup.
-  unless( $self->{_pa_acc_list}->{$args{seq}} ) {  
-    ( $self->{_pa_acc_list}->{$args{seq}} ) = $sbeams->selectrow_arrayref($sql);
+  unless( $self->{_pa_acc_list}->{$firstLetter}{$args{seq}} ) {  
+    ( $self->{_pa_acc_list}->{$firstLetter}{$args{seq}} ) = $sbeams->selectrow_arrayref($sql);
   }
 
   # Might be null, but we tried!
-  return $self->{_pa_acc_list}->{$args{seq}} 
+  return $self->{_pa_acc_list}->{$firstLetter}{$args{seq}} 
 
 } # End getPeptideAccession
 
@@ -198,17 +201,19 @@ sub cacheAccList {
   my %args = @_;
 
   return if $self->{_pa_acc_list} && !$args{refresh};
-
+  print "\ncache AT_PEPTIDE peptide_sequence peptide_accession ...\n";
   my $sql = <<"  END";
   SELECT peptide_sequence, peptide_accession
   FROM $TBAT_PEPTIDE
   END
+  $sbeams = $self->getSBEAMS();
   my $sth = $sbeams->get_statement_handle( $sql );
   $sth->execute();
 
   my %accessions;
   while ( my @row = $sth->fetchrow_array() ) {
-    $accessions{$row[0]} = $row[1];
+    $row[0] =~ /^(\w).*$/;
+    $accessions{$1}{$row[0]} = $row[1];
   }
   $self->{_pa_acc_list} = \%accessions;
 } # end get_accessions
@@ -257,6 +262,9 @@ sub addNewPeptide {
 
   # return if no sequence specified
   return unless $args{seq} && $self->isValidSeq( seq => $args{seq} );
+  my $sequence  = $args{seq};
+  $sequence =~ /^(\w).*$/;
+  my $firstLetter = $1;
 
   if ( $self->getPeptideId( seq => $args{seq} ) ) {
     # Should we do more here, i.e. update cache?
@@ -265,17 +273,16 @@ sub addNewPeptide {
   }
 
   $sbeams = $self->getSBEAMS();
-
   # fetch and cache identity list if not already done
   unless ( $self->{_apd_id_list} ) {
     $self->cacheIdentityList();
   }
 
-  unless ( $self->{_apd_id_list}->{$args{seq}} ) {
+  unless ( $self->{_apd_id_list}->{$firstLetter}{$args{seq}} ) {
     $self->addAPDIdentity( %args ); # Pass through seq and make_atomic args.
   }
 
-  return unless $self->{_apd_id_list}->{$args{seq}};
+  return unless $self->{_apd_id_list}->{$firstLetter}{$args{seq}};
 
   # We have an APD ID, and peptide is not otherwise in the database.  Calculate
   # peptide attributes and insert
@@ -301,7 +308,7 @@ sub addNewPeptide {
   $rowdata_ref->{SSRCalc_relative_hydrophobicity} = $ssr;
   $rowdata_ref->{peptide_sequence} = $args{seq};
   $rowdata_ref->{peptide_length} = length( $args{seq} );
-  $rowdata_ref->{peptide_accession} = $self->{_apd_id_list}->{$args{seq}};
+  $rowdata_ref->{peptide_accession} = $self->{_apd_id_list}->{$firstLetter}{$args{seq}};
   
   my $peptide_id = $sbeams->updateOrInsertRow(
     insert      => 1,
@@ -337,7 +344,7 @@ sub getSSRCalculator {
 
   use lib '/net/db/src/SSRCalc/ssrcalc';
   use SSRCalculator;
-
+  $ENV{SSRCalc} = "/net/db/src/SSRCalc/ssrcalc";
   my $calculator = new SSRCalculator();
   $calculator->initializeGlobals3();
   $calculator->ReadParmFile3();
@@ -407,6 +414,9 @@ sub addAPDIdentity {
 
   # return if no sequence specified
   return unless $args{seq} && $self->isValidSeq( seq => $args{seq} );
+  my $sequence  = $args{seq};
+  $sequence =~ /^(\w).*$/;
+  my $firstLetter = $1;
 
   # Make atomic if not already handled by calling code
   $args{make_atomic} = 1 if !defined $args{make_atomic};
@@ -418,8 +428,8 @@ sub addAPDIdentity {
   }
 
   # log and return if it is already there
-  if ( $self->{_apd_id_list}->{$args{seq}} ) {
-    $log->warn("Tried to add APD identity for seq $args{seq}, already exists");
+  if ( $self->{_apd_id_list}->{$firstLetter}{$args{seq}} ) {
+    print "WARNING: Tried to add APD identity for seq $args{seq}, already exists\n";
     return; 
   }
 
@@ -467,11 +477,9 @@ sub addAPDIdentity {
   $sbeams->commit_transaction() if $args{make_atomic};
 
   #### Put this new one in the hash for the next lookup
-  $self->{_apd_id_list}->{$args{seq}} = $apd_id;
-
+  #$self->{_apd_id_list}->{$args{seq}} = $apd_id;
+  $self->{_apd_id_list}->{$firstLetter}{$args{seq}} = 'PAp' . sprintf( "%08s", $apd_id );
 } # end addAPDIdentity
-
-
 
 #+
 # Routine to fetch and return entries from the APD protein_identity table
@@ -480,13 +488,13 @@ sub cacheIdentityList {
   my $self = shift;
   my %args = @_;
   
-  $self->{_apd_id_list} = { GSYGSGGSSYGSGGGSYGSGGGGGGHGSYGSGSSSGGYR => 'PAp00000038' };
+  #$self->{_apd_id_list} = { GSYGSGGSSYGSGGGSYGSGGGGGGHGSYGSGSSSGGYR => 'PAp00000038' };
 
   if ( $self->{_apd_id_list} && !$args{refresh} ) {
     return;
   }
   $sbeams = $self->getSBEAMS();
-
+  print "\ncache APD_PEPTIDE_IDENTIFIER ... \n";
   my $sql = <<"  END";
   SELECT peptide, peptide_identifier_str, peptide_identifier_id
   FROM $TBAPD_PEPTIDE_IDENTIFIER
@@ -496,7 +504,8 @@ sub cacheIdentityList {
 
   my %accessions;
   while ( my @row = $sth->fetchrow_array() ) {
-    $accessions{$row[0]} = $row[1];
+    $row[0] =~ /^(\w).*$/;
+    $accessions{$1}{$row[0]} = $row[1];
   }
   $self->{_apd_id_list} = \%accessions;
 
