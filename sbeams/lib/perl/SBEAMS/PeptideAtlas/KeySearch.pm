@@ -179,7 +179,7 @@ sub InsertSearchKeyEntity {
     or die( "ERROR[$METHOD] Unable to find organism ID for $biosequence_set_id" );
 
   my $reference_directory;
-  if ($organism_name =~ /^chick|^Human$|^Mouse$|^COW$|^horse$|^zebrafish$|^pig$|Fission|^honeybee$/i ) {
+  if ($organism_name =~ /^cat$|^chick|^Human$|^Mouse$|^COW$|^horse$|^zebrafish$|^pig$|Fission|^honeybee$|^Arabidopsis$/i ) {
     
     #my $GOA_directory = $args{GOA_directory}
     my $uc_organism_name = uc($organism_name);
@@ -399,11 +399,13 @@ sub buildGoaKeyIndex {
 
   #### Open the provided GOA xrefs file
   my $GOA_file = "$GOA_directory/last-UniProtKB2IPI.map";
-  my $idMapping_file = "$GOA_directory/${organism_name}_idmapping.dat.gz ";
+  my $uc_organism_name = uc($organism_name);
+  my $idMapping_file = `ls $GOA_directory/$uc_organism_name*idmapping.dat.gz `;
+  chomp $idMapping_file;
 
   #### Read the GOA gene_associations file
   my $associations = $self->readGOAAssociations(
-    assocations_file => "$GOA_directory/gene_association.goa_${organism_name}.gz",
+    assocations_file => "$GOA_directory/goa_${organism_name}.gaf.gz",
   );
 
   my $proteinList =  $self->getProteinList(
@@ -432,6 +434,10 @@ sub buildGoaKeyIndex {
      'Definition' => '',
      'Gene name' => '',
      'BEEBASE' => 45,
+     'Araport' => 71, 
+     'eggNOG' => 76,
+     'OrthoDB' => 77,
+     'Araport11' => 71,
    );
 
   while (my $line = <MAP>){
@@ -480,11 +486,15 @@ sub buildGoaKeyIndex {
 		$_= '' for my ($Database,$Accession,$UniProtSP,$UniProtTR);
     $UniProtKB =~ s/.*://;
 		$Accession = $UniProtKB;
-		$Database = 'UniProt';
+		$Database = 'UniProtKB';
+    #Arabidopsis: PA added mapping 
+    if ($UniProtKB =~ /^AT/){
+      $Database = 'Araport11';
+    }
     next if (not defined $proteinList->{$Accession});
  
 		my $protein_alias_master = $Accession;
-		my $protein_alias_master_source = 'UniProtKB';
+		my $protein_alias_master_source = $Database; 
 		#### Build a list of protein links
     my @links;
     if(defined $proteinList->{$UniProtKB}{dbxref_id}){
@@ -493,7 +503,7 @@ sub buildGoaKeyIndex {
        }elsif($proteinList->{$UniProtKB}{dbxref_id} == 54){
          push @{$UniprotList{$UniProtKB}{Trembl}}, $UniProtKB;
        }else{
-         push @{$proteinList->{$UniProtKB}{UniProtKB}}, $UniProtKB;
+          push @{$proteinList->{$UniProtKB}{$Database}}, $UniProtKB;
        }
     }
 
@@ -568,7 +578,7 @@ sub buildGoaKeyIndex {
 		foreach my $link (@links) {
 			my $resource_name = $link->[1];
 			my $resource_type = $link->[0]; 
-      print "$resource_name $resource_type \n";
+      #print "$resource_name $resource_type \n";
 			if(defined $proteinList->{$resource_name}){
 				$proteinList->{$resource_name}{flag} = 1;
 			}else {
