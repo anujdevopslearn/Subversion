@@ -84,13 +84,16 @@ if ($DEBUG) {
 }
 
 my $sql = qq~
- SELECT S.sample_ID, PDR.DATASET_IDENTIFIER, PDR.RELATED_DATABASE_ENTRIES
+ SELECT S.SAMPLE_ID, 
+        PDR.DATASET_IDENTIFIER, 
+        PDR.RELATED_DATABASE_ENTRIES
   FROM $TBAT_PUBLIC_DATA_REPOSITORY PDR
   JOIN $TB_PROJECT P ON (PDR.PROJECT_ID = P.PROJECT_ID)
   JOIN $TBPR_PROTEOMICS_EXPERIMENT E ON (E.PROJECT_ID = P.PROJECT_ID)
   JOIN $TBPR_SEARCH_BATCH SB ON (E.EXPERIMENT_ID = SB.EXPERIMENT_ID)
   JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON (SB.SEARCH_BATCH_ID = ASB.PROTEOMICS_SEARCH_BATCH_ID)
   JOIN $TBAT_SAMPLE S ON (ASB.SAMPLE_ID = S.SAMPLE_ID)
+  WHERE S.record_status = 'N'
 ~;
 
 my @rows = $sbeams->selectSeveralColumns ($sql);
@@ -109,20 +112,28 @@ my %data = ();
 foreach my $row (@rows){
   my ($sid, $id, $rid) = @$row; 
   if($id){
-    $data{$sid}{$id} =1;
+    $id =~ s/\s+//g;
+    next if ($id =~ /^$/);
+    foreach my $s (split(/([,;])/, $id)){
+      next if ($s =~ /^$/);
+      $data{$sid}{$s} =1;
+    }
   }
   if($rid){
-    $data{$sid}{$rid} = 1;
+    $rid =~ s/\s+//g;
+    next if ($rid =~ /^$/);
+    foreach my $s (split(/[,;]/, $rid)){
+      next if ($s =~ /^$/);
+      $data{$sid}{$s} = 1;
+    }
   }
-}
-
-
+}  
 foreach my $sample_id (keys %data){
-  my $repository_identifiers =  join(", ", keys %{$data{$sample_id}});
+  my $repository_identifiers =  join(",", sort {$a cmp $b} keys %{$data{$sample_id}});
   my %rowdata = (
     repository_identifiers => $repository_identifiers
     );
-  
+  print "$sample_id\t$repository_identifiers\n";
   my $success = $sbeams->updateOrInsertRow(
 			 update =>1,
 			 table_name=>$TBAT_SAMPLE,
@@ -135,6 +146,71 @@ foreach my $sample_id (keys %data){
 			);
 }
 
+$sql = qq~
+ SELECT TOP 1 REPOSITORY_IDENTIFIERS 
+  FROM $TBAT_SAMPLE
+  WHERE repository_identifiers like 'PrePX%' 
+  ORDER BY CAST (REPLACE(REPOSITORY_IDENTIFIERS, 'PrePX', '') AS INT) DESC 
+~;
 
+my @ids = $sbeams->selectOneColumn ($sql);
+my $counter = 1;
+if (@ids){
+  $ids[0] =~ /PrePX(\d+)/;
+  $counter = $1;
+  $counter++;
+}
+print "PrePX max counter $counter\n";
+
+$sql =  qq~
+  SELECT distinct S.sample_id , P.project_id, P.name,S.sample_publication_ids, ASB.data_location, S.date_created 
+  FROM $TBAT_SAMPLE S 
+  JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON (ASB.SAMPLE_ID = S.SAMPLE_ID)
+  JOIN $TBPR_SEARCH_BATCH SB ON  (SB.SEARCH_BATCH_ID = ASB.PROTEOMICS_SEARCH_BATCH_ID)  
+  JOIN $TBPR_PROTEOMICS_EXPERIMENT E ON (E.EXPERIMENT_ID = SB.EXPERIMENT_ID)
+  JOIN $TB_PROJECT P ON (E.PROJECT_ID = P.PROJECT_ID)
+  WHERE S.repository_identifiers is null
+  ORDER By S.date_created 
+~;
+
+my %project_repository_identifier = ();
+@rows = $sbeams->selectSeveralColumns ($sql);
+foreach my $row(@rows){
+  my ($sample_id, $project_id,$name,$pub,$loc,$date) = @$row;
+  my $repository_identifiers;
+ 
+  if ($name =~/Human PeptideAtlas 2012-07/i){
+    $loc =~ s/^\///;
+    if ($loc =~ /^([^\/]+\/[^\/]+\/).*$/){
+      $project_id = $1;
+    }else{
+      $project_id = $loc;
+    }
+  }
+
+	if (defined $project_repository_identifier{$project_id}){
+		 $repository_identifiers = $project_repository_identifier{$project_id};
+	}else{
+		$repository_identifiers = 'PrePX' . $counter;
+		$project_repository_identifier{$project_id} = $repository_identifiers;
+    $counter++;
+	}
+	#print "$sample_id\t$project_id\t$repository_identifiers\t$name\t$loc\n"; 
+  my %rowdata = (
+    repository_identifiers => $repository_identifiers
+    );
+  print "$sample_id\t$repository_identifiers\n";
+  my $success = $sbeams->updateOrInsertRow(
+       update =>1,
+       table_name=>$TBAT_SAMPLE,
+       rowdata_ref=>\%rowdata,
+       PK => 'sample_id',
+       PK_value => $sample_id,
+       return_PK => 1,
+       verbose=>$VERBOSE,
+       testonly=>$TEST,
+      );
+
+}
 
  
