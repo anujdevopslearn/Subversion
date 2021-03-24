@@ -1932,6 +1932,130 @@ sub get_atlas_select {
   return $select;
 }
 
+sub get_proteome_coverage_new {
+  my $self = shift;
+  my $build_id = shift; 
+  my $patterns = shift;
+  my @patterns = @$patterns;
+
+  return [] if (! $build_id || ! @patterns);
+  my $sbeams = $self->getSBEAMS();
+  my $sql = '';
+  my $obs_sql = '';
+  my @names = ();
+  my $union = '';
+  foreach my $line (@patterns){
+    my ($org_id, $name, $type, $pat_str)  = split(/,/, $line);
+    my @pats = split(/\|/, $pat_str);
+    my $contraint = '';
+    my $or = '';
+    push @names, $name;
+    if ($type =~ /accession/i){
+       foreach my $pat (@pats){
+         $contraint .= "$or B2.BIOSEQUENCE_NAME LIKE '$pat%' ";
+         $or = 'OR';
+		   } 
+
+    }elsif($type =~ /description/i){
+       foreach my $pat (@pats){
+         $contraint .= "$or B2.BIOSEQUENCE_Desc LIKE '%$pat%' ";
+         $or = 'OR';
+       }
+     }
+		 $sql .= qq~
+			$union
+			 (SELECT COUNT(DISTINCT B2.BIOSEQUENCE_ID) AS CNT,
+				 '$name' AS Name, 
+				 B2.BIOSEQUENCE_SET_ID AS SETID
+				FROM $TBAT_ATLAS_BUILD AB2
+				JOIN $TBAT_BIOSEQUENCE B2 ON B2.BIOSEQUENCE_SET_ID = AB2.BIOSEQUENCE_SET_ID
+				WHERE atlas_build_id = $build_id
+				AND ($contraint) 
+				GROUP BY B2.BIOSEQUENCE_SET_ID 
+			 )
+		 ~;
+		$obs_sql .= qq~
+			 $union
+			(SELECT COUNT(DISTINCT B2.BIOSEQUENCE_ID) AS CNT,
+						 '$name' AS CAT,
+						 B2.BIOSEQUENCE_SET_ID AS SETID
+				FROM $TBAT_BIOSEQUENCE B2
+				JOIN $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH A
+					ON A.BIOSEQUENCE_ID = B2.BIOSEQUENCE_ID
+				JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
+					ON (A.ATLAS_BUILD_SEARCH_BATCH_ID = ABSB.ATLAS_BUILD_SEARCH_BATCH_ID)
+				WHERE ABSB.atlas_build_id = $build_id
+				AND ($contraint)
+				GROUP BY B2.BIOSEQUENCE_SET_ID
+
+			)
+		 ~;
+    $union = 'UNION';
+  }
+
+  $sql = qq~
+  select * 
+  FROM 
+  (
+    $sql
+  ) As A 
+  ~;
+  #$log->error($sql);
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my %entry_cnt = ();
+  while ( my @row = $sth->fetchrow_array() ) {
+    $entry_cnt{$row[1]} = $row[0];
+  }
+  my $obssth = $sbeams->get_statement_handle( $obs_sql );
+  my %obs;
+  while ( my @row = $obssth->fetchrow_array() ) {
+    $obs{$row[1]} = $row[0];
+  }
+  my @headings;
+  my %head_defs = ( Database => 'Name of database, which collectively form the reference database for this build',
+                    N_Prots => 'Total number of entries in subject database',
+                    N_Obs_Prots => 'Number of proteins within the subject database to which at least one observed peptide maps',
+                    Pct_Obs => 'The percentage of the subject proteome covered by one or more observed peptides' );
+
+  for my $head ( qw( Database N_Prots N_Obs_Prots Pct_Obs ) ) {
+    push @headings, $head, $head_defs{$head};
+  }
+  my $headings = $self->make_sort_headings( headings => \@headings, default => 'Database' );
+  my @return = ( $headings );
+
+  for my $name ( @names ) {
+    my $db = $name;
+    my $obs  = $obs{$name} || 0;
+    my $n_entry = $entry_cnt{$name} || 0;
+    my $pct =0;
+    if ( $obs && $n_entry ) {
+        $pct = sprintf( "%0.1f", 100*($obs/$n_entry) );
+    }
+    push @return, [ $db, $n_entry, $obs, $pct ];
+  }
+  return '' if ( @return == 1);
+  my $table = '<table width=600>';
+
+  $table .= $self->encodeSectionHeader(
+      text => 'Proteome Coverage (exhaustive)',
+      no_toggle => 1,
+      LMTABS => 1,
+      width => 600
+  );
+
+  $table .= $self->encodeSectionTable( rows => \@return, 
+                                        header => 1, 
+                                        table_id => 'proteome_cover',
+                                        align => [ qw(left right right right ) ], 
+                                        bg_color => '#EAEAEA',
+                                        rows_to_show => 25,
+                                        sortable => 1 );
+  $table .= '</TABLE>';
+
+  return $table;
+}
+
 sub get_proteome_coverage {
   my $self = shift;
   my $build_id = shift || return [];
@@ -2367,7 +2491,6 @@ sub display_peptide_sample_category_plotly{
 			var layout = {
         legend:{x: 0.029,y: 1.1},
 			  height: $height,
-        width: 1100,  
 				title:'Number of Distinct Peptides Per Million Observed Spectra',
         margin:{l: 350},
         hoverlabel:{bgcolor:'white'},
@@ -2397,16 +2520,16 @@ sub display_peptide_sample_category_plotly{
 			}
 		</script>
 
-    <TABLE WIDTH=1100>
+    <div style="width: 80vw">
        <A NAME='<B>Sample Category</B>'></A><DIV CLASS="hoverabletitle"><B>Peptide Identification by Sample Category</B></DIV>
        <TR> 
         <TD><button type='button' id='toggle_button' onclick=toggle_plot()>Show Total Observed Spectra Plot</button>
-            &nbsp;<div id="plot_div3" style="width: 100%;"> </div>
-            &nbsp;<div id="plot_div4" style="width: 100%; display:none"></div>
+            &nbsp;<div id="plot_div3"> </div>
+            &nbsp;<div id="plot_div4" style="display:none;width: 80vw"></div>
             <br><br>
        </TD>
        </TR> 
-    </TABLE>
+    <div>
 		<script type="text/javascript" charset="utf-8">
       $plot_js
 		</script>
@@ -2594,7 +2717,7 @@ sub displayProt_PTM_plotly{
   my $chart = qq~
      <!-- Latest compiled and minified plotly.js JavaScript -->
      <script type="text/javascript" src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-     <div id="protPTM_div" style="width: 100%;"></div>
+     <div style="width: 80vw"><div id="protPTM_div"></div></div>
     <script type="text/javascript" charset="utf-8">
       $plot_js
     </script>
@@ -2740,7 +2863,7 @@ sub displayExperiment_contri_plotly{
      <!-- Latest compiled and minified plotly.js JavaScript -->
      <script type="text/javascript" src="https://cdn.plot.ly/plotly-latest.min.js"></script>
      <div><p class=plot_caption><b>Plot below shows the number of peptides contributed by each experiment, and the cumulative number of distinct peptides for the build as of that experiment.</b></div> 
-     <div id="plot_div" WIDTH=80%></div><br></div>
+     <div style="width: 80vw"><div id="plot_div"></div><br></div></div>
      <div><p class=plot_caption><b>Plot below shows cumulative number of canonical proteins contributed by each experiment.</b><br>
      Height of blue bar is the number of proteins identified in experiment; 
      Height of red bar is the cumulatie number of proteins;<br> 
