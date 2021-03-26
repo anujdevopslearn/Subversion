@@ -960,12 +960,13 @@ sub ShowHTMLTable {
 
     #### Set table attributes if supplied or use defaults
     if ($table_attrs) {
-	local($_) = $table_attrs;
-	$table_attrs .= ' BORDER=1'      unless /\bBORDER=/i;
-	$table_attrs .= ' CELLPADDING=1' unless /\bCELLPADDING=/i;
-	$table_attrs .= ' CELLSPACING=1' unless /\bCELLSPACING=/i;
+			local($_) = $table_attrs;
+			$table_attrs .= ' BORDER=1'      unless /\bBORDER=/i;
+			$table_attrs .= ' CELLPADDING=1' unless /\bCELLPADDING=/i;
+			$table_attrs .= ' CELLSPACING=1' unless /\bCELLSPACING=/i;
+      $table_attrs .= ' ID="TBL"'   unless /\bID=/i;         #zhi
     } else {
-	$table_attrs = 'BORDER=2 CELLPADDING=1 CELLSPACING=1';
+     	$table_attrs = 'BORDER=2 CELLPADDING=1 CELLSPACING=1';
     }
     out "<TABLE $table_attrs>\n<TR>" ;
 
@@ -1118,7 +1119,7 @@ sub ShowHTMLTable {
 		    $val = &htmltext($val) unless ($no_escape || $embed_html);
 		    $out .= " ALIGN=LEFT";
 		} else {
-		    $out .= " ALIGN=RIGHT";
+		    $out .= " ALIGN=CENTER";
 		}
 
 
