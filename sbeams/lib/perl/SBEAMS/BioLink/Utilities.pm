@@ -68,24 +68,41 @@ sub get_transmembrane_info {
   my $start = 0;
   my $side = '';
   my ($posn, $beg, $end );
-  while ( $string =~ m/[^oi]*[oi]/g ) {
-    next unless $&;
-    my $range = $&;
-    my ($beg, $end);
-    if ( !$side ) {
-      $side = ( $range eq 'i' ) ? 'intracellular' : 'extracellular';
-      $posn = 1;
-    } else {
-      $range =~ m/(\d+)\-(\d+)([io])/g;
-      $beg = $1;
-      $end = $2;
-      push @tminfo, [ $side, $posn, ($beg - 1) ];
-      push @tminfo, ['tm', $beg, $end ];
-      $posn = $end + 1;
-      $side = ( $3 eq 'i' ) ? 'intracellular' : 'extracellular';
+  #Extracellular1-186m187-207Cytoplasmic208-670
+  #m9-29m60-80m97-117m127-147m157-177m182-202m203-223
+  #
+
+  if ($string!~ /\d[oi]$/){
+    while ( $string =~ m/(\D+)(\d+)\-(\d+)/g ) { 
+      my $side = $1;
+      my $beg = $2;
+      my $end = $3;
+      if ($side =~ /^m$/){
+        $side = 'tm';
+      }
+
+      push @tminfo, [$side,$beg,$end];
     }
+  }else{
+		while ( $string =~ m/[^oi]*[oi]/g ) {
+			next unless $&;
+			my $range = $&;
+			my ($beg, $end);
+			if ( !$side ) {
+				$side = ( $range eq 'i' ) ? 'intracellular' : 'extracellular';
+				$posn = 1;
+			} else {
+				$range =~ m/(\d+)\-(\d+)([io])/g;
+				$beg = $1;
+				$end = $2;
+				push @tminfo, [ $side, $posn, ($beg - 1) ];
+				push @tminfo, ['tm', $beg, $end ];
+				$posn = $end + 1;
+				$side = ( $3 eq 'i' ) ? 'intracellular' : 'extracellular';
+			}
+		}
+		push @tminfo, [ $side, $posn, $plen ];
   }
-  push @tminfo, [ $side, $posn, $plen ];
   return \@tminfo;
 }
 
