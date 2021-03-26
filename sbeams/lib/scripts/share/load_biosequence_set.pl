@@ -80,6 +80,7 @@ Options:
                        favored codon frequency values
   --n_transmembrane_regions_file   Full path name of a file from which to load
                        number of transmembrane regions values
+  --tm_sigp_source     uniprot or TMHMM 2.0, SignalP 5.0 or others
   --prot_info_file     Full path name of .tsv file from which to load
                        chromosomal coordinates, genetic loci, and
                        keratin/Ig/is_swiss info
@@ -130,7 +131,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
     "InterProScan_search_results_summary_file:s",
     "COG_search_results_summary_file:s","pI_summary_file:s",
     "gene_annotation","gene_annotation_searchkey",
-    "biosequence_searchkey","reference_directory:s",
+    "biosequence_searchkey","reference_directory:s","tm_sigp_source:s"
   )) {
   print "$USAGE";
   exit;
@@ -235,7 +236,7 @@ sub main {
   }
   if ($module eq 'PeptideAtlas') {
     $work_group = "PeptideAtlas_admin";
-    $DATABASE = $DBPREFIX{$module};
+    $DATABASE =  $DBPREFIX{$module};  
   }
   if ($module eq 'SIGID') {
     $work_group = "SIGID_admin";
@@ -288,6 +289,7 @@ sub handleRequest {
   my $fav_codon_frequency_file = $OPTIONS{"fav_codon_frequency_file"} || '';
   my $n_transmembrane_regions_file =
     $OPTIONS{"n_transmembrane_regions_file"} || '';
+  my $tm_sigp_source =  $OPTIONS{"tm_sigp_source"} || '';
   my $prot_info_file =
     $OPTIONS{"prot_info_file"} || '';
   my $rosetta_lookup_file =
@@ -459,7 +461,8 @@ sub handleRequest {
     $n_transmembrane_regions->{zzzHASH} = -1;
     readNTransmembraneRegionsFile(
       source_file => $n_transmembrane_regions_file,
-      n_transmembrane_regions => $n_transmembrane_regions);
+      n_transmembrane_regions => $n_transmembrane_regions,
+      tm_sigp_source => $tm_sigp_source);
   }
 
   #### If a prot_info_file was specified,
@@ -779,6 +782,7 @@ sub loadBiosequenceSet {
       $rowdata{biosequence_set_id} = $biosequence_set_id;
       $rowdata{biosequence_seq} = $sequence unless ($skip_sequence);
       $rowdata{organism_id} = $organism_id if ($DATABASE eq 'sbeams.dbo.');
+      #print "$sequence\n" if ( $rowdata{biosequence_name} =~ /(ENSP00000488889|ENSP00000430034|ENSP00000475053|ENSP00000474693|ENSP00000430248|ENSP00000431089|ENSP00000488261|ENSP00000488735|ENSP00000428393|ENSP00000488168)/);
 
       $fav_codon_frequency ||= {};
       # Get gene name and accession from descriptor.
@@ -787,20 +791,49 @@ sub loadBiosequenceSet {
                                                     rowdata_ref => \%rowdata,
                                             fav_codon_frequency => $fav_codon_frequency
                                          );
-
       #### A fix especially for the Human PeptideAtlas:
       #### If we've read a prot_info_file and it does NOT say that 
       #### this biosequence is Swiss-Prot, but the dbxref_id is 1
       #### (for Swiss-Prot), change the dbxref_id to that for Uniprot.
       my $biosequence_name = $rowdata{biosequence_name};
       if (defined $prot_info_href->{$biosequence_name}) {
-	if ($rowdata{dbxref_id} == 1) {
-	  if (!$prot_info_href->{$biosequence_name}->{is_swiss}) {
-	    $rowdata{dbxref_id} = '35';   # 35 is the ID for UniProt
-	  }
-	}
+      	if ($rowdata{dbxref_id} == 1 || $rowdata{dbxref_id} == 35) {
+	        if (!$prot_info_href->{$biosequence_name}->{is_swiss}) {
+	          $rowdata{dbxref_id} = '35';   # 35 is the ID for UniProt
+	        }else{
+            $rowdata{dbxref_id} = 1
+          }
+	      }
+      }
+      if ($biosequence_name =~ /^sp/){
+        $rowdata{dbxref_id} = 1
+      }elsif($biosequence_name =~ /^tr/){
+        $rowdata{dbxref_id} = '35'; 
+      }elsif($biosequence_name =~ /^[NXY]P\_/){
+        $rowdata{dbxref_id} = '39';
       }
 
+      if($rowdata{biosequence_desc} =~ /(uniprot completeproteome|UPCP )/i){
+          $rowdata{dbxref_id} = 62
+      }elsif($rowdata{biosequence_desc} =~ /uniprot other/i){
+          $rowdata{dbxref_id} = 63;
+      }elsif($rowdata{biosequence_desc} =~ /(UPSP|SPnotCP|SPnotNP) /i){
+          $rowdata{dbxref_id} = 1;
+      }elsif($rowdata{biosequence_desc} =~ /nP20K /i){
+          $rowdata{dbxref_id} = 65;
+      }elsif($rowdata{biosequence_desc} =~ /nPvarsplic /i){
+          $rowdata{dbxref_id} = 66;
+      }elsif($rowdata{biosequence_desc} =~ /UPTR /i){
+          $rowdata{dbxref_id} = 35;
+      }else{
+        if($biosequence_name =~ /^......$/ || $biosequence_name =~ /^......-\d+$/){
+          $rowdata{dbxref_id} = 1
+        }
+      }
+     
+      if ($biosequence_name =~ /DECOY/){
+        $rowdata{dbxref_id} = '';
+      } 
       #### If we're updating, then try to find the appropriate record
       #### The whole program could be sped up quite a bit by doing a single
       #### select and returning a single hash at the beginning of the program
@@ -825,13 +858,13 @@ sub loadBiosequenceSet {
 
       } else {
         #### Insert the data into the database
-	if ($DEBUG) {
-	  if (defined $rowdata{dbxref_id}) {
-	    print "$rowdata{biosequence_name}: dbxref_id is $rowdata{dbxref_id}\n";
-	  } else {
-	    print "$rowdata{biosequence_name}: \$rowdata{dbxref_id} undefined!\n";
-	  }
-	}
+				if ($DEBUG) {
+					if (defined $rowdata{dbxref_id}) {
+						print "$rowdata{biosequence_name}: dbxref_id is $rowdata{dbxref_id}\n";
+					} else {
+						print "$rowdata{biosequence_name}: \$rowdata{dbxref_id} undefined!\n";
+					}
+				}
         loadBiosequence(insert=>$insert,update=>$update,
           table_name=>"${DATABASE}biosequence",
           rowdata_ref=>\%rowdata,PK=>"biosequence_id",
@@ -1182,12 +1215,12 @@ sub loadBiosequence {
   }
 
   #### If the biosequence_desc bloats beyond 1024, truncate it
-  if (length($rowdata_ref->{biosequence_desc}) > 1024) {
-    print "\nWARNING: truncating description for ".
-      $rowdata_ref->{biosequence_name}." to 1024 characters\n";
-    $rowdata_ref->{biosequence_desc} = substr($rowdata_ref->{biosequence_desc},
-      0,1024);
-  }
+  #if (length($rowdata_ref->{biosequence_desc}) > 1024) {
+  #  print "\nWARNING: truncating description for ".
+  #    $rowdata_ref->{biosequence_name}." to 1024 characters\n";
+  #  $rowdata_ref->{biosequence_desc} = substr($rowdata_ref->{biosequence_desc},
+  #    0,1024);
+  #}
 
 
   #### Remove any attributes that go in property_set
@@ -1364,12 +1397,14 @@ sub loadBiosequence {
         {$rowdata_ref->{biosequence_name}}->{topology}
         if (defined($n_transmembrane_regions->
           {$rowdata_ref->{biosequence_name}}->{topology}));
-
+      if(length($rowdata{transmembrane_topology} )> 1024){
+         $rowdata{transmembrane_topology} =~ s/(.{1024}).*/$1/;
+         $rowdata{transmembrane_topology} =~ s/(.*)-.*/$1/;
+      }
       $rowdata{transmembrane_class} = $n_transmembrane_regions->
         {$rowdata_ref->{biosequence_name}}->{sec_mem_class}
         if (defined($n_transmembrane_regions->
           {$rowdata_ref->{biosequence_name}}->{sec_mem_class}));
-
       if (defined($n_transmembrane_regions->
 	  	  {$rowdata_ref->{biosequence_name}}->{has_signal_peptide})) {
         $rowdata{has_signal_peptide} = $n_transmembrane_regions->
@@ -1381,9 +1416,8 @@ sub loadBiosequence {
         $rowdata{signal_peptide_is_cleaved} = $n_transmembrane_regions->
           {$rowdata_ref->{biosequence_name}}->{signal_peptide_is_cleaved};
       }
+      $rowdata{tm_sigp_source} = $n_transmembrane_regions->{$rowdata_ref->{biosequence_name}}->{tm_sigp_source};
     }
-
-
     #### Insert or update the row
     my $result = $sbeams->insert_update_row(
       insert=>$insert,
@@ -2217,6 +2251,7 @@ sub readNTransmembraneRegionsFile {
    || die "ERROR[$SUB_NAME]: source_file not passed";
   # Don't bother getting the output data struct since it's a global
 
+  my $tm_sigp_source =  $args{'tm_sigp_source'} || '';
 
   unless ( -f $source_file ) {
     $n_transmembrane_regions->{return_status} = 'FAIL';
@@ -2279,20 +2314,23 @@ sub readNTransmembraneRegionsFile {
     if ($columns[5]) {
       $properties{topology} = $columns[5];
     }
-
     #### Extract the signal peptide information
     if ($line =~ /sigP:/) {
-      if ($line =~ /sigP:\s*(\d+)\s([YN])\s([\d\.]+)\s([YN])/) {
-	$properties{signal_peptide_length} = $1;
-	$properties{signal_peptide_is_cleaved} = $2;
-	$properties{has_signal_peptide_probability} = $3;
-	$properties{has_signal_peptide} = $4;
+      if ($line =~ /sigP:\s*(\d+)\s([YN])\s([\d\.]+|NA)\s([YN])/) {
+				$properties{signal_peptide_length} = $1;
+				$properties{signal_peptide_is_cleaved} = $2;
+        my $prob = $3;
+        if ($prob eq 'NA'){
+          $prob = '';
+        }
+				$properties{has_signal_peptide_probability} = $prob;
+				$properties{has_signal_peptide} = $4;
       } else {
-	print "ERROR: Unable to parse signal pepetide data ".
-	  $columns[3]."\n";
+			print "ERROR: Unable to parse signal pepetide data ".
+				$columns[3]."\n";
       }
     }
-
+    $properties{tm_sigp_source} = $tm_sigp_source;
 
     #### If we're also currently have a rosetta lookup, then try to do
     #### a rosetta name lookup
@@ -2306,7 +2344,6 @@ sub readNTransmembraneRegionsFile {
   }
 
   close(TMRFILE);
-
   $n_transmembrane_regions->{return_status} = 'SUCCESS';
   return;
 
