@@ -153,9 +153,16 @@ sub handleRequest {
   $limit
   END
   
-  $sbeams->do( $delsql );
-  print "Deleted information for builds $build_id_str\n";
+  #$sbeams->do( $delsql );
+  #print "Deleted SEARCH_BATCH_STATISTICS information for builds $build_id_str\n";
 
+  $delsql = <<"  END";
+  DELETE FROM $TBAT_DATASET_STATISTICS
+  where atlas_build_id in ( $build_id_str)
+  END
+
+  $sbeams->do( $delsql );
+  print "Deleted DATASET_STATISTICS information for builds $build_id_str\n";
 
   # returns ref to array of build_id/data_path arrayrefs
   my $build_info = get_build_info( \@{$args{build_id}} );
@@ -166,11 +173,13 @@ sub handleRequest {
 	}
 
   for my $builds ( @$build_info ) {
-
-    my $stats = get_build_stats( $builds );
-    insert_stats( $stats );
-
+    #my $stats = get_build_stats( $builds );
+    #insert_stats( $stats );
+    my $stats = get_dataset_statistics ($builds);
+    insert_dataset_stats( $stats );
   }
+  
+
 }
 
 sub update_n_searched {
@@ -518,23 +527,277 @@ sub process_params {
   $sbeams->processStandardParameters( parameters_ref => $params );
   return( $params );
 }
-
-__DATA__
-sub get_protein_info {
-  my $build_id = shift;
-  my @min_cnt = $sbeams->selectrow_array( <<"  MIN" );
-  
-  MIN
-
-
-  my %results;
-  for my $cnt ( @uniq_cnt ) {
-#    print "$cnt->[2] had $cnt->[1]\n";
-    $results{$cnt->[0]} = { n_uniq_contributed_peptides => $cnt->[1],
-                            sample_title => $cnt->[2],
-                            sample_id => $cnt->[3],
-                            atlas_build_search_batch_id => $cnt->[4] };
+sub get_dataset_statistics{
+  my $builds = shift;
+  my $atlas_build_id = $builds->[0];
+  my $data_path = $builds->[1];
+  my $base_path = $CONFIG_SETTING{PeptideAtlas_PIPELINE_DIRECTORY};
+  $data_path = join( '/', $base_path, $data_path );
+	print "update dataset_statistics for buid_id=$atlas_build_id\n";
+  my @stats = ();
+  my $experiment_list = "$data_path/../Experiments.list";
+	my $outfile2="$data_path/experiment_contribution_summary_dataset.out";
+  my @psb_order = ();
+  my %psb_rp_id =();
+	my %summary = ();
+  open (E, "<$experiment_list") or die "cannot find $experiment_list\n";
+  while (my $line = <E>){
+    chomp $line;
+    next if ($line =~ /^#/);
+    next if ($line =~ /^$/);
+    $line =~ /^(\d+)\s.*/;
+    push @psb_order , $1;
   }
-  return \%results;
+
+	my $sql =qq~;
+		SELECT S.SAMPLE_ID, REPOSITORY_IDENTIFIERS, ASB.n_runs, ASB.proteomics_search_batch_id
+		FROM $TBAT_SAMPLE  S
+    JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON (ASB.sample_id = S.sample_id)
+    JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON(ABSB.ATLAS_SEARCH_BATCH_ID = ASB.ATLAS_SEARCH_BATCH_ID)
+    WHERE ABSB.atlas_build_id = $atlas_build_id
+	~;
+  my @results = $sbeams->selectSeveralColumns($sql);
+	my %sample_repository_ids = (); 
+  my %runs = ();
+  foreach my $row(@results){
+    my ($sample_id, $rp_id, $n_runs, $psb_id) = @$row;
+    $rp_id = 'NA' if (! $rp_id || $rp_id eq '');
+    $sample_repository_ids{$sample_id} = $rp_id;
+    $psb_rp_id{$psb_id} = $rp_id;
+    $runs{$rp_id} += $n_runs;
+  }
+	print "getting peptides and proteins\n";
+	$sql = qq~
+		 SELECT PI.Peptide_id,  BS.biosequence_name, PRL.LEVEL_NAME, PIS.sample_id
+		 FROM  $TBAT_PEPTIDE_INSTANCE PI 
+		 JOIN  $TBAT_PEPTIDE_INSTANCE_SAMPLE PIS ON (PIS.PEPTIDE_INSTANCE_ID = PI.PEPTIDE_INSTANCE_ID)
+		 JOIN $TBAT_PEPTIDE_MAPPING PM ON (PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID) 
+		 JOIN $TBAT_BIOSEQUENCE BS ON (PM.MATCHED_BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID)
+		 LEFT JOIN  $TBAT_PROTEIN_IDENTIFICATION PID ON (PID.biosequence_id = PM.MATCHED_BIOSEQUENCE_ID 
+                                                     AND PID.atlas_build_id = $atlas_build_id)
+		 LEFT JOIN  $TBAT_PROTEIN_PRESENCE_LEVEL PRL ON (PID.PRESENCE_LEVEL_ID = PRL.PROTEIN_PRESENCE_LEVEL_ID)
+		 WHERE PI.atlas_build_id = $atlas_build_id
+		 AND BS.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
+		 AND BS.BIOSEQUENCE_NAME NOT LIKE 'CONTAM%'
+     AND PI.PEPTIDE_INSTANCE_ID NOT IN (
+        SELECT PIA.PEPTIDE_INSTANCE_ID 
+		    FROM $TBAT_PEPTIDE_INSTANCE_ANNOTATION PIA 
+			  JOIN $TBAT_SPECTRUM_ANNOTATION_LEVEL  SAL  
+        ON  (SAL.SPECTRUM_ANNOTATION_LEVEL_ID = PIA.spectrum_annotation_level_id
+			  AND PIA.RECORD_STATUS != 'D' )
+	      WHERE SAL.SPECTRUM_ANNOTATION_LEVEL_ID in (2,3,4)
+     )
+  ~;
+
+	
+	my %dataset_prot;
+	# sample_tag sbid ngoodspec      npep n_new_pep cum_nspec cum_n_new is_pub nprot cum_nprot
+	my %peptides = ();
+  my $sth = $sbeams->get_statement_handle( $sql );
+	while (my @row = $sth->fetchrow_array() ) {
+		 my ($pep_id, $bs_name,$protein_level, $sample_id) = @row;
+		 my $id = $sample_repository_ids{$sample_id} || 'NA'; 
+		 $peptides{$id}{$pep_id} =1;
+		 next if ($bs_name eq '');
+		 next if ($bs_name =~ /(decoy|contam)/i);
+     next if (! $protein_level);
+		 next if ($protein_level !~/canonical/i);
+			$dataset_prot{$id}{$bs_name} =1;
+	}
+	my %unique_peptides = ();
+	my %unique_proteins = ();
+	my @ids = keys %peptides;
+	foreach my $id (@ids){
+		my %list = ();
+		foreach my $pep(keys %{$peptides{$id}}){
+			$list{$pep} = 1;
+		}
+		foreach my $id2(@ids){
+			next if ($id2 eq $id);
+			foreach my $pep(keys %{$peptides{$id2}}){
+				if (defined $list{$pep}){
+					 $list{$pep} = 0;
+				}
+			}
+		}
+		my $cnt =0;
+		foreach my $pep (keys %list){
+		 if ( $list{$pep}){
+			 $cnt++;
+		 }
+		}
+		$unique_peptides{$id} = $cnt;
+	}
+
+	foreach my $id (@ids){
+		my %list = ();
+		foreach my $protein(keys %{$dataset_prot{$id}}){
+			$list{$protein} = 1;
+		}
+		foreach my $id2(@ids){
+			next if ($id2 eq $id);
+			foreach my $protein(keys %{$dataset_prot{$id2}}){
+				if (defined $list{$protein}){
+					 $list{$protein} = 0;
+				}
+			}
+		}
+		my $cnt =0;
+		foreach my $protein (keys %list){
+		 if ( $list{$protein}){
+			 $cnt++;
+		 }
+		}
+		$unique_proteins{$id} = $cnt;
+	}
+	print "getting n_spectra\n";
+
+	$sql =qq~
+		select S.repository_identifiers as ID, 
+					 SUM(SBS.n_searched_spectra),
+					 SUM(n_good_spectra)
+		FROM $TBAT_SEARCH_BATCH_STATISTICS SBS
+		JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
+		JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ( ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id )
+		JOIN $TBAT_SAMPLE S ON (S.sample_id = ASB.sample_id)
+		WHERE ABSB.atlas_build_id = $atlas_build_id
+		GROUP BY S.repository_identifiers
+	~;
+  my @rows = $sbeams->selectSeveralColumns($sql);
+  my %spectra_cnt = ();
+  foreach my $row(@rows){
+	  my ($id, $n_searched_spectra, $n_good_spectra) = @$row;
+    $id = 'NA' if (! $id || $id eq '');
+ 	  $spectra_cnt{$id}{n_searched_spectra} = $n_searched_spectra;
+	  $spectra_cnt{$id}{n_good_spectra} = $n_good_spectra;
+  }
+  ## order dataset
+  my %processed=();
+  my @repository_id_order;
+  foreach my $psb_id (@psb_order){
+     my $rp_id = $psb_rp_id{$psb_id};
+     if (not defined $processed{$rp_id}){
+       push @repository_id_order, $rp_id;
+     }
+     $processed{$rp_id} = 1;
+  }
+
+	open (OUTFILE2, ">", $outfile2) or die "can't open $outfile2 ($!)";
+	#print OUTFILE2 "pxd  ngoodspec     cum_nspec n_unique_pep cum_nspec cum_n_new_pep nprot  cum_nprot\n";
+	printf OUTFILE2 ("%9s %9s %9s %9s %9s %9s %9s %9s %9s %9s %s\n", "n_goodspec","cum_nspec",  
+									 "n_new_pept", "n_prog_pep", "cum_n_pep", "n_uniq_contr_pep", 
+									 "n_can_prot", "n_prog_prot", "cum_n_prot",  "n_uniq_contr_can_prots", "dataset");
+
+	#        id n_goodspec cum_nspec n_peptides n_new_pep cum_n_pep n_unique_pep n_prots n_new_prot cum_n_prot n_unique_prots
+	#PXD000136     22419     22419      4569      4569      4569     78  1030  1030 1030    0
+	#PXD000546    120945    143364      8858         0         0    218  1163     0    0    0
+	#
+	my ($cum_nspec, $cum_n_new_pep, $cum_prots);
+	my %processed = ();
+	my $first = 1;
+	my ($cum_n_pep, $cum_n_prot);
+	foreach my $id (@repository_id_order){
+		my $n_goodspec = $spectra_cnt{$id}{n_good_spectra};
+    my $n_searched_spectra = $spectra_cnt{$id}{n_searched_spectra};
+		my $n_peptides = scalar keys %{$peptides{$id}};
+		my $n_prots =  scalar keys %{$dataset_prot{$id}};
+		my $n_unique_pep = $unique_peptides{$id};
+		my $n_unique_prots = $unique_proteins{$id};
+		my ($n_new_pep, $n_new_prot);
+		if ($first){
+			$first =0;
+			$n_new_pep = $n_peptides;
+			$n_new_prot = $n_prots;
+			$cum_nspec = $n_goodspec;
+			$cum_n_pep = $n_peptides;
+			$cum_n_prot = $n_prots;
+		}else{
+			$cum_nspec += $n_goodspec;
+			$n_new_pep = get_cum_new(hash =>\%peptides,
+																		cur_id => $id,
+																		processed => \%processed);
+			$n_new_prot = get_cum_new(hash =>\%dataset_prot,
+																		cur_id => $id,
+																		processed => \%processed);
+			$cum_n_pep +=$n_new_pep;
+			$cum_n_prot += $n_new_prot;
+
+		}
+			printf OUTFILE2 "%10d %10d %10d %10d %8d %15d %11d %11d %11d %10d %s\n",
+				$n_goodspec, $cum_nspec, $n_peptides,$n_new_pep,$cum_n_pep,$n_unique_pep,
+				$n_prots, $n_new_prot,$cum_n_prot,$n_unique_prots,$id;
+	 $processed{$id} =1;
+    push @stats, [$id,$n_goodspec,$n_searched_spectra,$cum_nspec, $n_peptides,$n_new_pep,$cum_n_pep,$n_unique_pep,$n_prots, $n_new_prot,$cum_n_prot,$n_unique_prots, $runs{$id},$atlas_build_id];
+	}
+  return \@stats;
+
 }
 
+##################################################################################'
+sub get_cum_new {
+  my %args = @_;
+  my $hash = $args{hash};
+  my $processed = $args{processed};
+  my $cur_id = $args{cur_id}; ;
+  my %list = ();
+	foreach my $s(keys %{$hash->{$cur_id}}){
+		$list{$s} = 1;
+	}
+  my $cnt = 0;
+  foreach my $id (keys %$processed){
+		foreach my $s(keys %{$hash->{$id}}){
+      #print "##$id $s\n";
+			if (defined $list{$s}){
+				 $list{$s} = 0;
+			}
+		}
+  }
+	$cnt =0;
+	foreach my $s (keys %list){
+	 if ( $list{$s} == 1 ){
+		 $cnt++;
+	 }
+	}
+  return $cnt;
+}
+sub insert_dataset_stats {
+  my $stats = shift;
+  if (@$stats == 1){
+    print "only one dataset for builds. no insertion\n";
+    return;
+  }
+  # print "rownum  n_distinct_peptides n_uniq_contributed_peptides cumulative_n_peptides  cumulative_n_proteins\n";
+  my %cols = (
+			0=>'repository_identifiers',
+			1=>'n_good_spectra',
+			2=>'n_searched_spectra',
+			3=>'cumulative_n_spectra',
+			4=>'n_distinct_peptides',
+			5=>'n_progressive_peptides',
+			6=>'cumulative_n_peptides',
+			7=>'n_uniq_contributed_peptides',
+			8=>'n_canonical_proteins',
+			9=>'n_progressive_proteins',
+			10=>'cumulative_n_proteins',
+			11=>'n_uniq_contributed_proteins',
+			12=>'n_runs',
+			13=>'atlas_build_id',
+   );
+  my $rownum = 1;
+  for my $row ( @$stats ) {
+    die "ERROR: column number < 14" if (@$row < 14);
+    my %rowdata;
+    for my $k (0..13){
+      $rowdata{$cols{$k}} =$row->[$k];
+    }
+    $rowdata{rownum} = $rownum;
+    my $stats_id = $sbeams->updateOrInsertRow( 
+                                       insert => 1,
+                                   table_name => $TBAT_DATASET_STATISTICS,
+                                  rowdata_ref => \%rowdata,
+                                           PK => 'dataset_statistics_id',
+                                    return_PK => 1 );
+   $rownum++;
+  }
+  
+}
