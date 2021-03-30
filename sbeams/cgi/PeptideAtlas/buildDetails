@@ -91,6 +91,7 @@ my $show_image = 0;
     # We are not forcing the user into the new build - is that correct?
     my $build_id = $params->{atlas_build_id} || $atlas->getCurrentAtlasBuildID(parameters_ref => $params);
     my $organism = $atlas->getCurrentAtlasOrganism (parameters_ref => $params);
+    my $organism_id = $atlas->getCurrentAtlasOrganism (parameters_ref => $params, type =>'organism_id');
 
     my $valid_build = 1;
     if ( !grep /^$build_id$/, $atlas->getAccessibleBuilds() ) {
@@ -140,11 +141,32 @@ my $show_image = 0;
 				$page .= "<BR>\n$what_is_new<BR>\n" if($what_is_new);
     }
     if (! $section || $section =~ /ProteomeCoverage/i){
-      my $proteome_cover = fetchResultset(atlas_build_id => $build_id,
+      my $proteome_cover = '';
+      my $proteomeComponentOrder_file = "$PHYSICAL_BASE_DIR/lib/conf/PeptideAtlas/ProteomeComponentOrder.txt";
+      my @patterns =();
+      if (open (O, "<$proteomeComponentOrder_file")){
+         while (my $line = <O>){
+           chomp $line;
+           next if ($line =~ /^#/ ||  $line =~ /^$/);
+           my ($org_id, $str) = split(/,/, $line);
+           if ($org_id == $organism_id){
+              push @patterns,$line;
+           }
+         }
+      }
+       if (@patterns){
+           $proteome_cover = fetchResultset(atlas_build_id => $build_id,
+                                         rs_table => 'buildDetail-ProteomeCoverage',
+                                         params => $params,
+                                         resultset_ref => $resultset_ref,
+                                         module_ref => sub{$atlas->get_proteome_coverage_new( $build_id, \@patterns)});
+       }else{
+           $proteome_cover = fetchResultset(atlas_build_id => $build_id,
                                          rs_table => 'buildDetail-ProteomeCoverage',
                                          params => $params,
                                          resultset_ref => $resultset_ref,
                                          module_ref => sub{$atlas->get_proteome_coverage(@_)});
+       }
       
 			if($proteome_cover){
 				$page .= "<BR>\n$proteome_cover<BR>\n";
@@ -153,7 +175,7 @@ my $show_image = 0;
     my ( $chart_div, $header );
 		my ( $sample_table, $sample_arrayref ,$column_name_ref ) = get_sample_info( $build_id );
 
-    my ($dataset_contri_table) = get_dataset_contri_info($build_id);
+    my ($dataset_contri_table) = get_dataset_contrib_info($build_id);
     if (! $section || $section =~ /SampleContribution/i){
       if ($params->{output_mode} =~ /tsv/i && $section){
         $atlas->print_html_table_to_tsv( data_ref => $sample_arrayref,
@@ -170,9 +192,9 @@ my $show_image = 0;
       $atlas->display_page_header( header_info => $header, project_id => $project_id, onload => 'sortables_init()', sortable => 1 );
 		  print $page;
       $page = "<BR>";
-      $page .= get_datasetContri_info( build_id => $build_id);
+      $page .= get_dataset_protein_info( build_id => $build_id);
       print "$page";
-      $page = get_dataset_protein_info( build_id => $build_id);
+      $page = get_dataset_spec_protein_info( build_id => $build_id);
       print "$page";
 			my $build_path = get_build_path( build_id => $build_id );
 			my $mayu_data_path = "$build_path/analysis/Mayu_out.csv";
@@ -192,9 +214,12 @@ my $show_image = 0;
                                               column_name_ref => $column_name_ref); 
 				print $plots;
 			}
-      $page = get_pepitde_length_distribution(build_id=>$build_id);
-      print $page; 
-		
+      my $charge_length_data_path = "$build_path/analysis/peptide_length-charge_dist.tsv";
+      if (-e $charge_length_data_path){
+				$page = get_peptide_length_charge_distribution(data_path=>$charge_length_data_path);
+        print $page;
+      }
+
      if ($organism =~ /(human|Arabidopsis)/i){ 
 		  	my $sql = qq~
 				SELECT SC.name as NAME,
@@ -209,15 +234,17 @@ my $show_image = 0;
 				GROUP BY SC.NAME,SC.ID
         ORDER BY SC.NAME
 			 ~;
-
+      
 			my @result = $sbeams->selectSeveralColumns($sql);
-			my $chart = $atlas->display_peptide_sample_category_plotly(
-					build_id=>$build_id,
-          sample_arrayref=>$sample_arrayref,
-          column_name_ref => $column_name_ref,
-					data_ref=>\@result,
-			);
-			print $chart ;
+      if (@result > 1){
+				my $chart = $atlas->display_peptide_sample_category_plotly(
+						build_id=>$build_id,
+						sample_arrayref=>$sample_arrayref,
+						column_name_ref => $column_name_ref,
+						data_ref=>\@result,
+				);
+				print $chart ;
+      }
     }
     ## color "Dataset Specific Protein Identification" table  
     print $atlas->tableHeatMap(table_id => 'datasetContri_info');
@@ -448,7 +475,7 @@ center left) ],
   return ($table);
 }
 
-sub get_datasetContri_info {
+sub get_dataset_spec_protein_info {
   my %args = @_;
   my $build_id = $args{build_id};
   my $table = "<table width=800>\n";
@@ -499,10 +526,17 @@ sub get_datasetContri_info {
   my @rows = $sbeams->selectSeveralColumns($sql);
   return '' if (@rows < 1);
   my %unique_prot2dataset_cnt;
+  my $possibly_distinguished = 0; 
   foreach my $row(@rows){
     my ($repository_id, $name,$cnt) =@$row;
     $unique_prot2dataset_cnt{$repository_id}{$name} = $cnt;
+    if ($name =~ /(possibly_distinguished|ntt-subsumed)/i){
+      $possibly_distinguished++;
+    }
   } 
+  ## older builds
+  return '' if ($possibly_distinguished > 0);
+
   my @level_names = ('canonical','indistinguishable representative'  ,'representative'
                      ,'marginally distinguished','weak','insufficient evidence','indistinguishable','subsumed');
   $sql =qq~;
@@ -964,7 +998,7 @@ sub get_sample_info {
          $batch->[$idx] = $unique_canprot2sample_cnt{$batch->[$colnameidx{sample_id}]};
          $batch->[$idx] = $atlas->make_pa_tooltip( tip_text => $batch->[$idx],
            link_text => "<a href='$CGI_BASE_DIR/PeptideAtlas/GetProteins?atlas_build_id=$build_id&presence_level_constraint=1&".
-                        "sample_specific_id=$batch->[$colnameidx{sample_id}]&apply_action=QUERY'>$batch->[$idx]</a>" );
+                        "redundancy_constraint=4&sample_specific_id=$batch->[$colnameidx{sample_id}]&apply_action=QUERY'>$batch->[$idx]</a>" );
       }else{
         $batch->[$idx] = '';
       }
@@ -1054,7 +1088,7 @@ sub get_sample_info {
 
 }
 
-sub get_dataset_contri_info {
+sub get_dataset_contrib_info {
 
   my $build_id = shift;
 
@@ -1200,7 +1234,7 @@ sub get_dataset_protein_info {
     SELECT SAMPLE_ID, REPOSITORY_IDENTIFIERS 
     FROM $TBAT_SAMPLE 
     WHERE REPOSITORY_IDENTIFIERS IS NOT NULL
-    AND CONVERT (VARCHAR (255), REPOSITORY_IDENTIFIERS ) != ''
+    AND REPOSITORY_IDENTIFIERS != ''
   ~;
   my %sample_repository_ids = $sbeams->selectTwoColumnHash($sql);
 
@@ -1249,17 +1283,21 @@ sub get_dataset_protein_info {
   ~;
   my @rows = $sbeams->selectSeveralColumns($sql);
   my %dataset_prot_cnt;
+  my $possibly_distinguished = 0;
   foreach my $row(@rows){
     my ($bs_name,$protein_level, $sample_ids ) =@$row;
     next if ($bs_name =~ /(decoy|contam)/i);
+    if ($protein_level =~ /possibly_distinguished/i){
+       $possibly_distinguished++;
+    }
     foreach my $sample_id(split(",", $sample_ids)){
       next if (not defined $sample_repository_ids{$sample_id});
       $dataset_prot_cnt{$sample_repository_ids{$sample_id}}{$protein_level}{$bs_name} =1;
     }
   }
- 
+  ## older builds, skip
+  return '' if ($possibly_distinguished > 0);
   return '' if (scalar keys %dataset_prot_cnt == 0);
- 
   my $sql =qq~;
     SELECT LEVEL_NAME AS NAME, PROTEIN_PRESENCE_LEVEL_ID AS ID
     FROM $TBAT_PROTEIN_PRESENCE_LEVEL
@@ -1379,11 +1417,22 @@ sub get_build_plots {
   return $table;
 }
 ##################################################################################
-### peptide length distribution 
+### peptide charge and length distribution 
 ##################################################################################
-sub get_pepitde_length_distribution {
+sub get_peptide_length_charge_distribution {
   my %args = @_;
-  my $atlas_build_id = $args{build_id};
+  my $file = $args{data_path};
+  my @charge_rows = ();
+  my @length_rows=();
+  open (IN, "$file") or return '';
+  while (my $line =<IN>){
+    chomp $line;
+    if ($line =~ /^length\t(\d+)\t(\d+)$/){ 
+			push @length_rows, [($1, $2)];
+    }elsif($line =~ /^charge\t(\d+)\t(\d+)$/){
+      push @charge_rows, [($1, $2)];
+    }
+  }
   my $table = "<TABLE WIDTH=800>\n";
   my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'pepitde_length_distribution',
                                                   visible => 1,
@@ -1398,25 +1447,46 @@ sub get_pepitde_length_distribution {
       link => $link,
       width => 920,
   );
-  my $sql = qq~
-	   SELECT LEN(P.PEPTIDE_SEQUENCE) AS LEN, COUNT(P.PEPTIDE_SEQUENCE)  AS CNT
-     FROM $TBAT_PEPTIDE_INSTANCE PI
-     INNER JOIN $TBAT_PEPTIDE P ON ( PI.PEPTIDE_ID = P.PEPTIDE_ID )
-     WHERE 1 = 1
-     AND PI.atlas_build_id IN ( $atlas_build_id )
-     GROUP BY LEN(P.PEPTIDE_SEQUENCE)
-     ORDER BY LEN
-  ~;
-  my @rows = $sbeams->selectSeveralColumns($sql);
-  my $chart = $atlas->plotly_barchart (data =>  \@rows, 
+  my $chart = $atlas->plotly_barchart (data =>  \@length_rows, 
 																			 divName => 'pepitde_length_distribution_div',
 																			 xtitle => 'Peptide Length',
+                                       dtick => 1,
 																			 ytitle=> 'Spectra Count'); 
   $table .= qq~
-     <div id="pepitde_length_distribution_div" style="width: 80%;"> </div>
+    <div style="width: 80vw">
+    <div id="pepitde_length_distribution_div"></div>
     $chart
     </div>
-    </table>
+    </TABLE>
+  ~;
+
+  $table .= "<TABLE WIDTH=800>\n";
+  ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'pepitde_charge_distribution',
+                                                  visible => 1,
+                                                  tooltip => 'show/hide section',
+                                                  imglink => 1,
+                                                  sticky  => 1 );
+
+  $table .= $atlas->encodeSectionHeader(
+      LMTABS => 1,
+      no_toggle => 1,
+      divname => 'pepitde_charge_distribution_div',
+      text => 'Peptide Charge Distribution',
+      link => $link,
+      width => 920,
+  );
+  $chart = $atlas->plotly_barchart (data =>  \@charge_rows,
+                                       divName => 'pepitde_charge_distribution_div',
+                                       xtitle => 'Peptide Charge',
+                                       dtick => 1,
+                                       ytitle=> 'Spectra Count');
+
+   $table .= qq~
+    <div style="width: 50vw">
+    <div id="pepitde_charge_distribution_div"></div>
+    $chart
+    </div>
+    </TABLE>
   ~;
 
   return ($table);
