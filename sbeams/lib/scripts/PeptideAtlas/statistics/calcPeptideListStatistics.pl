@@ -263,6 +263,8 @@ sub main {
   my %canonical_protids;
   my $not_done = 1;
   my $cnt = 0;
+  my %charge_cnt = ();
+  my %length_cnt = ();
   while ($not_done) {
     #### Try to read in the next line;
     if ($line = <INFILE>) {
@@ -282,6 +284,9 @@ sub main {
       $not_done = 0;
       @columns = (-998899,'xx',-1,'zz');
     }
+    $charge_cnt{$columns[7]}++;
+    $length_cnt{length($columns[3])}++;
+
     #### If the this search_batch_id is not known, learn from first record
     $n_spectra++;
     unless ($this_search_batch_id) {
@@ -387,6 +392,22 @@ sub main {
 
   my $n_nonsingleton_distinct_peptides = $n_distinct_peptides-$n_singleton_distinct_peptides;
   print "Non-singleton distinct peptides: $n_nonsingleton_distinct_peptides\n";
+
+  my $outfile = "../analysis/peptide_length-charge_dist.tsv";
+  open (OUT , ">$outfile\n");
+  print "peptide charge cnt:\n";
+  foreach my $c (sort {$a <=> $b} keys %charge_cnt){
+    next if ($c eq '');
+    print OUT "charge\t$c\t$charge_cnt{$c}\n";
+    print "\t$c\t$charge_cnt{$c}\n";
+  }
+  print "peptide length cnt:\n";
+  foreach my $c (sort {$a <=> $b} keys %length_cnt){
+    print OUT "length\t$c\t$length_cnt{$c}\n";
+    print "\t$c\t$length_cnt{$c}\n";
+  }
+  close OUT;
+
 
 	#my $outfile2="experiment_contribution_summary_w_singletons.out";
 	my $outfile2="experiment_contribution_summary.out";
