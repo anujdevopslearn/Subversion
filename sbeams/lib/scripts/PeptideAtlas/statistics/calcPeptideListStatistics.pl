@@ -21,15 +21,28 @@ use strict;
 $| = 1;  #disable output buffering
 use Getopt::Long;
 use FindBin;
-
-#### Set up SBEAMS modules
-use lib "$ENV{SBEAMS}/lib/perl";
-
 use vars qw (
+             $q $sbeams $sbeamsMOD $dbh $current_contact_id $current_username
+             $current_work_group_id $current_work_group_name
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
              $peptide_hash $probcol $protcol $seqcol
             );
 use DB_File ;
+#### Set up SBEAMS modules
+use lib "$ENV{SBEAMS}/lib/perl";
+use SBEAMS::Connection qw($q);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::Proteomics::Tables;
+## Globals
+my $sbeams = new SBEAMS::Connection;
+my $atlas = new SBEAMS::PeptideAtlas;
+$atlas->setSBEAMS($sbeams);
+my %OPTIONS;
+
 
 
 ###############################################################################
@@ -48,15 +61,16 @@ Options:
   --testonly          If set, nothing is actually inserted into the database,
                       but we just go through all the motions.  Use --verbose
                       to see all the SQL statements that would occur
-
   --source_file       Input PAidentlist tsv file with at least 11 columns.
   --prot_file         Input PAprotIdentlist tsv file; needed for prot plot
   --pepmap_file       Input peptide_mapping.tsv file; needed for prot plot
+  --ex_tag_list tag list separated by comma (CONTAM, DECOY and UNMAPPED excluded already) 
+
+
   --P_threshold       Use this threshold for processing instead of
                       using all peptides in the input file
   --search_batch_id   If set, only process this search_batch_id and
                       ignore others
-  --ex_tag_list tag list separated by comma (CONTAM, DECOY and UNMAPPED excluded already) 
  e.g.:  $PROG_NAME --verbose 2 --source YeastInputExperiments.tsv
 
 EOU
@@ -72,7 +86,7 @@ unless ($ARGV[0]){
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
   "source_file:s","prot_file:s","pepmap_file:s",
-  "P_threshold:f","search_batch_id:i","ex_tag_list:s"
+  "P_threshold:f","search_batch_id:i","ex_tag_list:s",
   )) {
   print "$USAGE";
   exit;
@@ -98,14 +112,12 @@ exit;
 # Main part of the script
 ###############################################################################
 sub main {
-
   my $source_file = $OPTIONS{source_file};
   unless ($source_file) {
     print "$USAGE\n";
     print "ERROR: Must supply --source_file\n\n";
     return(0);
   }
-
   unless (-e $source_file) {
     print "ERROR: Source file '$source_file' not found\n\n";
     return(0);
@@ -236,11 +248,7 @@ sub main {
     print "$n_mapped_peps distinct unmodified peptides mapped to canonical protein\n";
   }
 
-  ##### Skip header
-  my $line = <INFILE>;
-  my @header_columns = split(/\t/,$line);
-  #$probcol = 2;
-  #$probcol = 4 if ($header_columns[4] eq 'probability');
+  my $line = '';
   $seqcol = 0;
   my $origseqcol = 3;   #unmodified peptide sequence
   $probcol = 1;
@@ -256,29 +264,24 @@ sub main {
   my $not_done = 1;
   my $cnt = 0;
   while ($not_done) {
-
     #### Try to read in the next line;
     if ($line = <INFILE>) {
       chomp($line);
       @columns = split(/\t/,$line);
-my  $unmodified_pepseq = $columns[$origseqcol];
-
-      print "'$unmodified_pepseq'\n" if ($unmodified_pepseq =~ /TPATAFR/);
+      my  $unmodified_pepseq = $columns[$origseqcol];
       if(not defined $included_peptides{$columns[3]}){ 
         next;
       }
+     
       next if ($columns[$origprobcol] < $P_threshold);
-
       if ($process_search_batch_id) {
-	next unless ($columns[0] == $process_search_batch_id);
+				next unless ($columns[0] == $process_search_batch_id);
       }
-
     #### If it fails, we're done, but still process the last batch
     } else {
       $not_done = 0;
       @columns = (-998899,'xx',-1,'zz');
     }
-
     #### If the this search_batch_id is not known, learn from first record
     $n_spectra++;
     unless ($this_search_batch_id) {
@@ -286,17 +289,13 @@ my  $unmodified_pepseq = $columns[$origseqcol];
       print "Processing search_batch_id=$this_search_batch_id  ";
       $n_experiments++;
     }
-
     #### If the search_batch_id of this peptide is not the same as the last
     #### then finish processing the last peptides of previous search_batch_id
     if ($this_search_batch_id != $columns[0]) {
-
       #### Store all the peptides in a hash
       my @tmp = @search_batch_peptides;
       push(@all_search_batch_ids,$this_search_batch_id);
- 
       $all_peptides{$this_search_batch_id} = join("\n", @tmp); 
-
       #### Get the canonical proteins mapped to by all peptides in this
       #### search batch.
       my %canonical_protids_batch = ();
@@ -306,16 +305,13 @@ my  $unmodified_pepseq = $columns[$origseqcol];
           $canonical_protids{$canonical_protid} = 1;
         }
       }
-
       $n_canonical_prots{$this_search_batch_id} =
             scalar keys %canonical_protids_batch;
       $n_cumulative_canonical_prots{$this_search_batch_id} =
 	    scalar keys %canonical_protids;
       $sample_tags{$this_search_batch_id} = 'xx';
-
       #### Update the summary table of incorrect values with data from
       #### this search_batch
-
       #### Prepare for next search_batch_id
       $this_search_batch_id = $columns[0];
       @search_batch_peptides = ();
@@ -326,7 +322,6 @@ my  $unmodified_pepseq = $columns[$origseqcol];
       	print "Processing search_batch_id=$this_search_batch_id  ";
       	$n_experiments++;
       }
-
     }
 
     #### Put this peptide entry to the arrays
@@ -336,10 +331,8 @@ my  $unmodified_pepseq = $columns[$origseqcol];
       my $prob = $columns[$origprobcol];
       my $one_mapped_protid = $columns[$origprotcol];
       my $tmp = "$unmodified_pepseq,$prob,$one_mapped_protid";
-     print "2: $tmp\n" if ($unmodified_pepseq eq 'TPATAFR');
 
       push(@search_batch_peptides,$tmp);
-      #push(@peptides,$tmp);
       $n_assignments++;
       $distinct_peptides{$unmodified_pepseq}->{count}++;
       if (! $distinct_peptides{$unmodified_pepseq}->{best_probability}) {
@@ -347,29 +340,14 @@ my  $unmodified_pepseq = $columns[$origseqcol];
       } elsif ($prob > $distinct_peptides{$unmodified_pepseq}->{best_probability}) {
         $distinct_peptides{$unmodified_pepseq}->{best_probability} = $prob; 
       }
-
       $search_batch_pepseqs{$unmodified_pepseq} =1;
     }
   }
 
   close(INFILE);
   print "Done reading.\n";
-print scalar keys %distinct_peptides;
-print " distinct\n";
-
-  #### Now build a hash out of all peptides and count the distinct ones
-#  my %distinct_peptides;
-#  foreach my $line (@peptides) {
-#    my @tmp = split(",", $line);
-#    my $peptide = \@tmp;
-#    $distinct_peptides{$peptide->[$seqcol]}->{count}++;
-#    if (! $distinct_peptides{$peptide->[$seqcol]}->{best_probability}) {
-#      $distinct_peptides{$peptide->[$seqcol]}->{best_probability} = $peptide->[$probcol];
-#    } elsif ($peptide->[$probcol] >
-#               $distinct_peptides{$peptide->[$seqcol]}->{best_probability}) {
-#      $distinct_peptides{$peptide->[$seqcol]}->{best_probability} = $peptide->[$probcol];
-#    }
-#  }
+	print scalar keys %distinct_peptides;
+	print " distinct\n";
 
 
   #### If we want to write a revised 2+ton peptide list
@@ -377,7 +355,6 @@ print " distinct\n";
   if ($write_filtered_peptide_list) {
     open(OUTFILT,">out.2tonsequences");
   }
-
 
   #### Count how many singleton peptides there are
   my $n_singleton_distinct_peptides = 0;
@@ -398,12 +375,7 @@ print " distinct\n";
     close(OUTFILT);
   }
 
-
-  #my $n_assignments = scalar(@peptides);
-
   my $n_distinct_peptides = scalar(keys(%distinct_peptides));
-
-
 
   print "Total experiments: $n_experiments\n";
   print "Total assignments above threshold: $n_assignments\n";
@@ -416,25 +388,20 @@ print " distinct\n";
   my $n_nonsingleton_distinct_peptides = $n_distinct_peptides-$n_singleton_distinct_peptides;
   print "Non-singleton distinct peptides: $n_nonsingleton_distinct_peptides\n";
 
-
 	#my $outfile2="experiment_contribution_summary_w_singletons.out";
 	my $outfile2="experiment_contribution_summary.out";
 	open (OUTFILE2, ">", $outfile2) or die "can't open $outfile2 ($!)";
 	print OUTFILE2 "          sample_tag sbid ngoodspec      npep n_new_pep cum_nspec cum_n_new is_pub nprot cum_nprot\n";
 	print OUTFILE2 "-------------------- ---- --------- --------- --------- --------- --------- ------ ----- ---------\n";
 
-
   #### Calculate the number of distinct peptides as a function of exp.
   my $niter = 1;
-
   for (my $iter=0; $iter<$niter; $iter++) {
-
     my @shuffled_search_batch_ids = @all_search_batch_ids;
     if ($iter > 0) {
       my $result = shuffleArray(array_ref=>\@all_search_batch_ids);
       @shuffled_search_batch_ids = @{$result};
     }
-
     my %total_distinct_peptides_all;
     my $p_cum_n_new_all = 0;
     my $cum_nspec = 0;
@@ -445,7 +412,6 @@ print " distinct\n";
       my @lines;
       tie @lines, "DB_File", "psbi", O_RDWR|O_CREAT, 0666, $DB_RECNO or die "Cannot open file 'text': $!\n" ;
       @lines =  split("\n", $all_peptides{$search_batch_id});
-
       foreach my $line ( @lines ) {
         my @tmp = split(",", $line);
         my $peptide = \@tmp;
@@ -477,9 +443,7 @@ print " distinct\n";
   print "$outfile2 written.\n" if $VERBOSE;
   unlink "peptidehash";
   unlink "psbi";
-
   return(1);
-
 }
 
 
@@ -548,42 +512,3 @@ sub shuffleArray {
   return(\@new_array);
 
 }
-
-__DATA__
-
-      #### Get the canonical proteins mapped to by all peptides in this
-      #### search batch.
-      my $sql =<<"      SMPL";
-	SELECT BS.biosequence_name, S.sample_tag
-	FROM $TBAT_ATLAS_SEARCH_BATCH ASB
-	JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON ( ABSB.atlas_search_batch_id = ASB.atlas_search_batch_id )
-        JOIN $TBPR_SEARCH_BATCH PSB ON
-               PSB.search_batch_id = ASB.proteomics_search_batch_id
-	JOIN $TBAT_SAMPLE S ON S.sample_id = ABSB.sample_id
-	JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PIS ON PIS.atlas_search_batch_id = ASB.atlas_search_batch_id
-	JOIN $TBAT_PEPTIDE_INSTANCE PI ON ( PIS.peptide_instance_id = PI.peptide_instance_id AND PI.atlas_build_id = ABSB.atlas_build_id )
-	JOIN $TBAT_PEPTIDE_MAPPING PM ON PI.peptide_instance_id = PM.peptide_instance_id
-	JOIN $TBAT_BIOSEQUENCE BS ON PM.matched_biosequence_id = BS.biosequence_id
-	JOIN $TBAT_PROTEIN_IDENTIFICATION PID on (BS.biosequence_id = PID.biosequence_id AND PID.atlas_build_id = ABSB.atlas_build_id)
-	JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL ON PID.presence_level_id = PPL.protein_presence_level_id
-        JOIN $TBAT_ATLAS_BUILD AB ON AB.atlas_build_id = PI.atlas_build_id
-	WHERE AB.data_path = '$atlas_data_dir'
-	AND PPL.level_name = 'canonical'
-	AND BS.biosequence_name NOT LIKE 'DECOY%'
-	AND PSB.search_batch_id = $this_search_batch_id
-        GROUP BY BS.biosequence_name, S.sample_tag
-      SMPL
-
-      my @rows = $sbeams->selectSeveralColumns($sql);
-      my $sample_tag = $rows[0]->[1];
-      my $n_canonical_proteins_batch = scalar @rows;
-      for (my $i=0;  $i < $n_canonical_proteins_batch; $i++) {
-        # use of uninitialized value in hash element
-        $canonical_protids{$rows[$i]->[0]} = 1;
-      }
-      my $n_cum_canonicals_batch = scalar keys %canonical_protids;
-      $n_canonical_prots{$this_search_batch_id} = $n_canonical_proteins_batch;
-      $n_cumulative_canonical_prots{$this_search_batch_id} = $n_cum_canonicals_batch;
-      $sample_tag = 'xx' if (! $sample_tag );
-      $sample_tags{$this_search_batch_id} = $sample_tag;
-
