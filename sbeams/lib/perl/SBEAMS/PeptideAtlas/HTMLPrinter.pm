@@ -2519,17 +2519,18 @@ sub display_peptide_sample_category_plotly{
         }
 			}
 		</script>
-
-    <div style="width: 80vw">
+     <TABLE>
        <A NAME='<B>Sample Category</B>'></A><DIV CLASS="hoverabletitle"><B>Peptide Identification by Sample Category</B></DIV>
        <TR> 
         <TD><button type='button' id='toggle_button' onclick=toggle_plot()>Show Total Observed Spectra Plot</button>
+           <div style="width: 80vw">
             &nbsp;<div id="plot_div3"> </div>
-            &nbsp;<div id="plot_div4" style="display:none;width: 80vw"></div>
+            &nbsp;<div id="plot_div4" style="display:none;"></div>
             <br><br>
+           <div>
        </TD>
        </TR> 
-    <div>
+    </TABLE>
 		<script type="text/javascript" charset="utf-8">
       $plot_js
 		</script>
@@ -2868,7 +2869,7 @@ sub displayExperiment_contri_plotly{
      Height of blue bar is the number of proteins identified in experiment; 
      Height of red bar is the cumulatie number of proteins;<br> 
      Width of the bar (x-axis) shows the number of spectra identified (PSMs) above the threshold, for each experiment.</div>
-     <div id="plot_div2" WIDTH=80%></div><br><br>
+     <div style="width: 80vw"><div id="plot_div2" ></div></div><br><br>
 		<script type="text/javascript" charset="utf-8">
       $plot_js
 		</script>
@@ -2932,6 +2933,7 @@ sub plotly_barchart {
   my $xtitle = $args{xtitle} || '';
   my $ytitle = $args{ytitle} || '';
   my $title = $args{title} || '';
+  my $dtick = $args{dtick} || 5;
   my @category = () ;
   my @cnt = () ;
   foreach my $row (@data){
@@ -2950,7 +2952,7 @@ sub plotly_barchart {
         opacity: 0.8
 			};
       var layout = {
-        xaxis:{dtick:5,title:'$xtitle'},
+        xaxis:{dtick:$dtick,title:'$xtitle'},
         yaxis:{title:'$ytitle'}
  
       };
