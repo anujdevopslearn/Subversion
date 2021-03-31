@@ -344,7 +344,8 @@ sub get_table_help {
                  { key => 'Added Canonical Proteins', value => 'Order-dependent unique canonical proteins contributed by a given experiment.'},
                  { key => 'Cumulative Canonical Proteins', value => 'Order-dependent cumulative number of canonical proteins contributed to build by this and previous experiments.<br>Counts non-human contaminants, so final tally may be greater than Canonical Proteins count in Build Overview. ' },
                  { key => 'Date Added', value => ''},
-                 { key => 'Pubmed Id or DOI', value => ''}, 
+                 { key => 'Pubmed Id or DOI', value => ''},
+                 { key => 'Instrument_Name', value => ''}, 
         );
     $heading = 'Experiment Overview'; 
     $description = 'These values pertain to individual experiments within the atlas';
@@ -894,6 +895,7 @@ sub get_sample_info {
       ["cumulative_n_proteins", "cumulative_n_proteins", "cumulative_n_proteins"],
       ["date_created", "CONVERT(VARCHAR(10), PE.date_created, 126)", "[YYYY-MM-DD]"],
       ["pubmed_id", "pubmed_id", "pubmed_id"],
+      ["instrument_name","instrument_name","instrument_name"],
       ["sample_category_id", "S.sample_category_id", "sample_category_id"],
     );
 
@@ -925,6 +927,7 @@ sub get_sample_info {
   ) AS A ON (A.SAMPLE_ID = S.SAMPLE_ID) 
   JOIN PROTEOMICS.DBO.SEARCH_BATCH PSB  ON (PSB.SEARCH_BATCH_ID = ASB.PROTEOMICS_SEARCH_BATCH_ID)
   JOIN PROTEOMICS.DBO.PROTEOMICS_EXPERIMENT PE ON (PE.EXPERIMENT_ID = PSB.EXPERIMENT_ID)
+  JOIN PROTEOMICS.DBO.INSTRUMENT I ON (I.INSTRUMENT_ID = PE.INSTRUMENT_ID) 
   WHERE ABSB.atlas_build_id = $build_id
   ORDER BY rownum, cumulative_n_peptides, ABSB.atlas_build_search_batch_id ASC
   ~;
