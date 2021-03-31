@@ -324,26 +324,38 @@ sub insert_biosequence_id_atlas_build_search_batch{
        AND BS.biosequence_name not like 'CONTAM%'
   ~;
 
-  my @rows = $sbeams->selectSeveralColumns($sql);
-	my %result = ();
-	foreach my $row (@rows){
-    my ($biosequence_id , $atlas_build_search_batch_id ) = @$row;
-		my $rowdata= {
-		  biosequence_id => $biosequence_id,
-      atlas_build_search_batch_id =>$atlas_build_search_batch_id	
-		};
-    my $PK = $sbeams->updateOrInsertRow(
-			insert => 1,
-			table_name => $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH,
-			rowdata_ref => $rowdata,
-			PK => 'id',
-			return_PK => 1,
-			verbose=>$VERBOSE,
-			testonly=>$TESTONLY,
-    );
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my $insert_str = '';
+  my $counter=0;
+  my $s="";
+  while( my $row = $sth->fetchrow_arrayref() ) {
+     $insert_str .= "$s(". join(",", @$row) . ")\n";
+     $counter++;
+     if ($counter % 1000 == 0){
+        my $sql = qq~
+          INSERT INTO $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH (biosequence_id, atlas_build_search_batch_id)
+          VALUES
+          $insert_str;
+        ~;
+        my $result = $sbeams->executeSQL($sql);
+        print "$counter ...";
+        $insert_str = '';
+        $s="";
+     }else{
+      $s = ",";
+     }
+
   }
- 
-		 
+  if ($insert_str){
+		my $sql = qq~
+			INSERT INTO $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH (biosequence_id, atlas_build_search_batch_id)
+			VALUES
+			$insert_str;
+		~;
+
+		my $result = $sbeams->executeSQL($sql);
+		print "$counter\n";
+  }
 
 }
 
