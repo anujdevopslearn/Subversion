@@ -1155,7 +1155,11 @@ sub get_dataset_contrib_info {
         }elsif($id =~ /S\d+/){
           $link = "https://cptac-data-portal.georgetown.edu/study-summary/";
         }
-        $batch->[$idx] .= "<a href='$link$id'>$id</a>,";
+        if ($link){
+          $batch->[$idx] .= "<a href='$link$id'>$id</a>,";
+        }else{
+          $batch->[$idx] .=$id;
+        }
       }
       $batch->[$idx] =~ s/,$//;
     }
