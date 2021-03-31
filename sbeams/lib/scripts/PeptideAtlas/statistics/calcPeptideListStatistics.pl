@@ -270,6 +270,8 @@ sub main {
     if ($line = <INFILE>) {
       chomp($line);
       @columns = split(/\t/,$line);
+      $charge_cnt{$columns[7]}++;
+      $length_cnt{length($columns[3])}++;
       my  $unmodified_pepseq = $columns[$origseqcol];
       if(not defined $included_peptides{$columns[3]}){ 
         next;
@@ -284,8 +286,6 @@ sub main {
       $not_done = 0;
       @columns = (-998899,'xx',-1,'zz');
     }
-    $charge_cnt{$columns[7]}++;
-    $length_cnt{length($columns[3])}++;
 
     #### If the this search_batch_id is not known, learn from first record
     $n_spectra++;

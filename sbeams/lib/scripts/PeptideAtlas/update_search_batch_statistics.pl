@@ -153,8 +153,8 @@ sub handleRequest {
   $limit
   END
   
-  #$sbeams->do( $delsql );
-  #print "Deleted SEARCH_BATCH_STATISTICS information for builds $build_id_str\n";
+  $sbeams->do( $delsql );
+  print "Deleted SEARCH_BATCH_STATISTICS information for builds $build_id_str\n";
 
   $delsql = <<"  END";
   DELETE FROM $TBAT_DATASET_STATISTICS
@@ -173,8 +173,8 @@ sub handleRequest {
 	}
 
   for my $builds ( @$build_info ) {
-    #my $stats = get_build_stats( $builds );
-    #insert_stats( $stats );
+    my $stats = get_build_stats( $builds );
+    insert_stats( $stats );
     my $stats = get_dataset_statistics ($builds);
     insert_dataset_stats( $stats );
   }
