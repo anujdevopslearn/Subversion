@@ -1431,6 +1431,9 @@ sub get_peptide_length_charge_distribution {
   my $file = $args{data_path};
   my @charge_rows = ();
   my @length_rows=();
+  my @tlength_rows=();
+  my @distinctPlength_rows = ();
+  my @trypPlength_rows = ();
   open (IN, "$file") or return '';
   while (my $line =<IN>){
     chomp $line;
@@ -1438,8 +1441,15 @@ sub get_peptide_length_charge_distribution {
 			push @length_rows, [($1, $2)];
     }elsif($line =~ /^charge\t(\d+)\t(\d+)$/){
       push @charge_rows, [($1, $2)];
+    }elsif($line =~ /^tlength\t(\d+)\t(\d+)$/){
+      push @tlength_rows, [($1, $2)]; 
+    }elsif($line =~ /^distinctPlength\t(\d+)\t(\d+)$/){
+      push @distinctPlength_rows, [($1, $2)];
+    }elsif($line =~ /^trypPlength\t(\d+)\t(\d+)$/){
+      push @trypPlength_rows, [($1, $2)];
     }
   }
+
   my $table = "<TABLE WIDTH=800>\n";
   my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'pepitde_length_distribution',
                                                   visible => 1,
@@ -1454,15 +1464,39 @@ sub get_peptide_length_charge_distribution {
       link => $link,
       width => 920,
   );
-  my $chart = $atlas->plotly_barchart (data =>  \@length_rows, 
-																			 divName => 'pepitde_length_distribution_div',
+  my @names = ('observed distinct peptides (including semi-tryptic and miscleaved peptides)',
+               'observed distinct tryptic no-missed-cleavages peptides',
+               'theoretical distinct tryptic no-missed-cleavages peptides');
+  my @data = ();
+  push @data, [@distinctPlength_rows];
+  push @data, [@trypPlength_rows];
+  push @data, [@tlength_rows];
+  
+  my $chart = $atlas->plotly_barchart (data => \@data,
+                                       names => \@names, 
+																			 divName => 'length_distribution_div',
 																			 xtitle => 'Peptide Length',
-                                       dtick => 1,
-																			 ytitle=> 'Spectra Count'); 
+																			 ytitle=> 'Frequency'); 
+
+  @data = ();
+  @names = ();
+  push @data, [@length_rows];
+  push @names , '';
+
+  my $chart2 = $atlas->plotly_barchart (data => \@data,
+                                       names => \@names,
+                                       divName => 'length_vs_psm_div',
+                                       xtitle => 'Peptide Length',
+                                       ytitle=> 'Spectra Count');
+
+
+
   $table .= qq~
     <div style="width: 80vw">
-    <div id="pepitde_length_distribution_div"></div>
+    <div id="length_distribution_div"></div>
     $chart
+    <div id="length_vs_psm_div"></div>
+    $chart2
     </div>
     </TABLE>
   ~;
@@ -1482,7 +1516,12 @@ sub get_peptide_length_charge_distribution {
       link => $link,
       width => 920,
   );
-  $chart = $atlas->plotly_barchart (data =>  \@charge_rows,
+  @data = ();
+  @names = ();
+  push @data, [@charge_rows];
+  push @names , 'Charge';
+  $chart = $atlas->plotly_barchart (data =>  \@data,
+                                       names => \@names,
                                        divName => 'pepitde_charge_distribution_div',
                                        xtitle => 'Peptide Charge',
                                        dtick => 1,

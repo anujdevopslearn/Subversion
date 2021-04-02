@@ -2473,9 +2473,9 @@ sub display_peptide_sample_category_plotly{
 				x: [$obs_per_million_str],
         //customdata:['link_str'],
 				name:'Number Distinct Peptide Per Million Observed Spectra',
-			  type: 'bar',	
+			  type: 'bar',
+        marker: {color: '0x5588bb'},	
         orientation: 'h',
-        marker: {color: 'gray'},
         opacity: 0.8
 			};
       var obs = {
@@ -2483,7 +2483,7 @@ sub display_peptide_sample_category_plotly{
         x: [$n_good_spectra_str],
         name:'# Spectrua ID',
         type: 'bar',
-        marker: {color: 'gray'},
+        marker: {color: '0x5588bb'},
         orientation: 'h',
         opacity: 0.8,
       };
@@ -2491,6 +2491,7 @@ sub display_peptide_sample_category_plotly{
 			var layout = {
         legend:{x: 0.029,y: 1.1},
 			  height: $height,
+        font: {size: 16},
 				title:'Number of Distinct Peptides Per Million Observed Spectra',
         margin:{l: 350},
         hoverlabel:{bgcolor:'white'},
@@ -2525,7 +2526,7 @@ sub display_peptide_sample_category_plotly{
         <TD><button type='button' id='toggle_button' onclick=toggle_plot()>Show Total Observed Spectra Plot</button>
            <div style="width: 80vw">
             &nbsp;<div id="plot_div3"> </div>
-            &nbsp;<div id="plot_div4" style="display:none;"></div>
+            &nbsp;<div id="plot_div4" style="display:none; width: 80vw"></div>
             <br><br>
            <div>
        </TD>
@@ -2928,37 +2929,55 @@ sub tableHeatMap{
 sub plotly_barchart {
   my $self = shift;
   my %args = @_;
-  my @data = @{$args{data}};
+  my $all_data = $args{data};
+  my $names = $args{names};
   my $divname = $args{divName} || '';
   my $xtitle = $args{xtitle} || '';
   my $ytitle = $args{ytitle} || '';
   my $title = $args{title} || '';
   my $dtick = $args{dtick} || 5;
-  my @category = () ;
-  my @cnt = () ;
-  foreach my $row (@data){
-    push @category, $row->[0];
-    push @cnt , $row->[1];
-  }
-  my $category_str = join(",", @category);
-  my $cnt_str = join(",", @cnt);
-  my $plot_js = qq~
-			var data = {
-				x: [$category_str],
-				y: [$cnt_str],
-				name: "$title",
-			  type: 'bar',	
-        marker: {color: 'gray'},
-        opacity: 0.8
-			};
-      var layout = {
-        xaxis:{dtick:$dtick,title:'$xtitle'},
-        yaxis:{title:'$ytitle'}
- 
-      };
-
-			Plotly.newPlot('$divname', [data], layout);
-  ~;
+  my $colors = $args{colors} ;
+  
+  my $plot_js = '';
+  my $counter = 0;
+  my @ts = ();
+  foreach my $data (@$all_data){
+		my @category = () ;
+		my @cnt = () ;
+		foreach my $row (@$data){
+			push @category, $row->[0];
+			push @cnt , $row->[1];
+		}
+		my $category_str = join(",", @category);
+		my $cnt_str = join(",", @cnt);
+    my $marker = '';
+    if ($colors && $colors->[$counter]){
+      $marker = "marker: {color: '$colors->[$counter]";
+    }
+		$plot_js .= qq~
+				var t$counter = {
+					x: [$category_str],
+					y: [$cnt_str],
+					name: '$names->[$counter]', 
+					type: 'bar',	
+				  $marker	
+				};
+			~;
+     push @ts, "t$counter";
+     $counter++;
+   }
+   my $ts_str = join(",", @ts);
+   $plot_js .= qq~
+				var data = [$ts_str];
+				var layout = {
+					barmode: 'group',
+          font: {size: 18},
+          legend:{x: 0.02,y: 1.25 ,font: { size: 12}},
+          xaxis: {dtick:$dtick,title: '$xtitle',rangemode:'tozero'},
+          yaxis: {title: '$ytitle'},
+        };
+        Plotly.newPlot('$divname', data, layout);
+   ~;
   my $chart = qq~
     <script type="text/javascript" src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 		<script type="text/javascript" charset="utf-8">

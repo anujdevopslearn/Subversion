@@ -16,7 +16,6 @@
 # LICENSE file distributed with this software.
 #
 ###############################################################################
-
 use strict;
 $| = 1;  #disable output buffering
 use Getopt::Long;
@@ -37,6 +36,14 @@ use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::Proteomics::Tables;
+use SBEAMS::BioLink;
+use SBEAMS::BioLink::Tables;
+my $biolink = SBEAMS::BioLink->new();
+$biolink->setSBEAMS($sbeams);
+use lib( "/regis/sbeams/lib");
+use FAlite;
+
+
 ## Globals
 my $sbeams = new SBEAMS::Connection;
 my $atlas = new SBEAMS::PeptideAtlas;
@@ -71,6 +78,7 @@ Options:
                       using all peptides in the input file
   --search_batch_id   If set, only process this search_batch_id and
                       ignore others
+  --fasta             fasta file to get theoretical peptide length distribution (7-50) 
  e.g.:  $PROG_NAME --verbose 2 --source YeastInputExperiments.tsv
 
 EOU
@@ -87,6 +95,7 @@ unless ($ARGV[0]){
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
   "source_file:s","prot_file:s","pepmap_file:s",
   "P_threshold:f","search_batch_id:i","ex_tag_list:s",
+  "fasta:s"
   )) {
   print "$USAGE";
   exit;
@@ -113,6 +122,7 @@ exit;
 ###############################################################################
 sub main {
   my $source_file = $OPTIONS{source_file};
+  my $fasta_file = $OPTIONS{fasta};
   unless ($source_file) {
     print "$USAGE\n";
     print "ERROR: Must supply --source_file\n\n";
@@ -128,6 +138,11 @@ sub main {
     return(0);
   }
 
+  unless (-e $fasta_file){
+    print "$USAGE\n";
+    print "ERROR: Must supply --fasta\n\n";
+    return(0);
+  }
   my $prot_file = $OPTIONS{prot_file};
   my $pepmap_file = $OPTIONS{pepmap_file};
   my $ex_tag_list = $OPTIONS{ex_tag_list} || '';
@@ -151,6 +166,8 @@ sub main {
   my @search_batch_peptides;
 
   my %distinct_peptides;
+  my %distinct_peptides_tryptic;
+
   my $n_assignments;
   #### Array of search_batch_ids and a hash of all peptides by search_batch_id
   my @all_search_batch_ids;
@@ -265,19 +282,32 @@ sub main {
   my $cnt = 0;
   my %charge_cnt = ();
   my %length_cnt = ();
+  my ($pre, $fol);
   while ($not_done) {
     #### Try to read in the next line;
     if ($line = <INFILE>) {
       chomp($line);
       @columns = split(/\t/,$line);
-      $charge_cnt{$columns[7]}++;
-      $length_cnt{length($columns[3])}++;
-      my  $unmodified_pepseq = $columns[$origseqcol];
       if(not defined $included_peptides{$columns[3]}){ 
         next;
       }
-     
       next if ($columns[$origprobcol] < $P_threshold);
+
+      $charge_cnt{$columns[7]}++;
+      $length_cnt{length($columns[3])}++;
+      $pre = $columns[4];
+      $fol = $columns[6];
+      my  $unmodified_pepseq = $columns[$origseqcol];
+      if ($pre =~ /[KR\-]/ && ($unmodified_pepseq =~ /[KR]$/ || $fol =~ /\-/) ){
+        if ($unmodified_pepseq =~ /[KR]\w/){
+           my $tmp = $unmodified_pepseq;
+           $tmp =~ s/[KR]P//g;
+           $distinct_peptides_tryptic{$unmodified_pepseq}++ if ($tmp !~ /[KR]/);
+        }else{
+           $distinct_peptides_tryptic{$unmodified_pepseq} =1;
+        }
+      } 
+ 
       if ($process_search_batch_id) {
 				next unless ($columns[0] == $process_search_batch_id);
       }
@@ -403,9 +433,50 @@ sub main {
   }
   print "peptide length cnt:\n";
   foreach my $c (sort {$a <=> $b} keys %length_cnt){
+    last if ($c > 50);
     print OUT "length\t$c\t$length_cnt{$c}\n";
     print "\t$c\t$length_cnt{$c}\n";
   }
+  %length_cnt = (); 
+	open(FA, "$fasta_file") || die "Couldn't open file $fasta_file\n";
+	my $fasta = new FAlite(\*FA);
+	my %t_peptide_sequences = ();
+
+	while( my $entry = $fasta->nextEntry() ){
+		my $seq = uc( $entry->seq() );
+    my $def = $entry->def();
+    next if ($def =~ />DECOY/);
+	  my $tryptics = $biolink->do_tryptic_digestion( aa_seq => $seq, min_len => 7, max_len => 50 );	
+	  for my $tryp ( @$tryptics ) {	
+		  $t_peptide_sequences{$tryp} =1;
+    }
+	}
+  %length_cnt = ();
+  foreach my $pep (keys %t_peptide_sequences){
+    $length_cnt{length($pep)}++;
+  }
+  foreach my $c (sort {$a <=> $b} keys %length_cnt){
+    last if ($c > 50);
+    print OUT "tlength\t$c\t$length_cnt{$c}\n";
+  }
+  %length_cnt = ();
+  foreach my $pep (keys %distinct_peptides){
+    $length_cnt{length($pep)}++;
+  } 
+  foreach my $c (sort {$a <=> $b} keys %length_cnt){
+    last if ($c > 50);
+    print OUT "distinctPlength\t$c\t$length_cnt{$c}\n";
+  }
+  %length_cnt = ();
+  foreach my $pep (keys %distinct_peptides_tryptic){
+    $length_cnt{length($pep)}++;
+  }
+  foreach my $c (sort {$a <=> $b} keys %length_cnt){
+    last if ($c > 50);
+    print OUT "trypPlength\t$c\t$length_cnt{$c}\n";
+  }
+  %t_peptide_sequences=();
+  %distinct_peptides_tryptic=();
   close OUT;
 
 
