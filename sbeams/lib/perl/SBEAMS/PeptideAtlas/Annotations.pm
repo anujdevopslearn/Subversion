@@ -524,6 +524,7 @@ sub get_column_defs {
     'non-enriched' => 'Number of PSMs covering this site with no phospho modification anywhere on the peptide, and originating from a non-enriched sample, typically not searched for phospho',
     'InNextProt' => 'PTM site annotated in neXtprot',
     'InUniprot' => 'PTM site annotated in Uniprot',
+    'Start' => 'Start postion in the protein',
     );
 
   if ( $args{labels} ) {

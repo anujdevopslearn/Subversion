@@ -823,7 +823,7 @@ sub handle_request {
         the appropriate one:<BR><BR>
       ~;
       while (my ($key,$value) = each (%biosequences)) {
-	print "$value<BR>";
+				print "<b>$value</b><BR><BR>";
       }
 
     } else {
@@ -1206,11 +1206,12 @@ sub handle_request {
 #    ["peptide_accession","P.peptide_accession","Accession DIV"],
 #
   my $group_by_clause = '';
-  my @labels = ( 'Accession', 'Pre AA', 'Sequence', 'Fol AA', 'ESS', 'NET', 'NMC' ,'Best Prob', 'Best Adj Prob', 'N Obs', 'EOS', 'SSRT', 'N Prot Map', 'N Gen Loc', 'N Experiments', 'Subpep of' );
+  my @labels = ( 'Accession', 'Start', 'Pre AA','Sequence', 'Fol AA', 'ESS', 'NET', 'NMC' ,'Best Prob', 'Best Adj Prob', 'N Obs', 'EOS', 'SSRT', 'N Prot Map', 'N Gen Loc', 'N Experiments', 'Subpep of' );
   push @labels, 'Avg Eval' if $parameters{'ann'};
 
   my @column_array = (
     ["peptide_accession","P.peptide_accession","Accession"],
+    ["start_in_biosequence", "PM.start_in_biosequence", "<SPAN TITLE='Start postion in the protein'>Start</SPAN>"],
     ["preceding_residue","PI.preceding_residue","<SPAN TITLE='Preceding (towards the N terminus) amino acid'>Pre AA</SPAN>"],
     ["peptide_sequence","P.peptide_sequence","<SPAN TITLE='Amino Acid sequence of this peptide'>Sequence</SPAN>"],
     ["following_residue","PI.following_residue","<SPAN TITLE='Following (towards the C terminus) amino acid'>Fol AA</SPAN>"],
@@ -1352,6 +1353,7 @@ sub handle_request {
     my $protein_structure = getProteinStructure(
       biosequence_id => $biosequence_id,
     );
+
     my ( $obs, $peptides, $pep_nobs, $seq2instance, $pep_info ) = getPeptideCount( biosequence => $biosequence,
 										 resultset_ref => $resultset_ref );
     my $peptide_counts = scalar( @$peptides );
@@ -1699,6 +1701,7 @@ sub handle_request {
     $sql = qq~
        SELECT DISTINCT
            P.peptide_accession AS "peptide_accession",
+           PM.start_in_biosequence AS "start",
            COALESCE(PM.peptide_preceding_residue,PI.preceding_residue) As "preceding_residue",
            P.peptide_sequence AS "peptide_sequence",
            COALESCE(PM.peptide_following_residue,PI.following_residue) AS "following_residue",
@@ -1723,12 +1726,13 @@ sub handle_request {
     my @rows = $sbeams->selectSeveralColumns($sql);
     my %peptide_info = ();
     foreach my $row(@rows){
-      my ($peptide_accession,$preceding_residue,$peptide_sequence,$following_residue,
+      my ($peptide_accession,$start,$preceding_residue,$peptide_sequence,$following_residue,
           $highest_n_enzymatic_termini,$lowest_n_missed_cleavages) = @$row;
       push @{$peptide_info{$peptide_accession}{preceding_residue}}, $preceding_residue;
       push @{$peptide_info{$peptide_accession}{following_residue}}, $following_residue;
       $peptide_info{$peptide_accession}{highest_n_enzymatic_termini} = $highest_n_enzymatic_termini;
       $peptide_info{$peptide_accession}{lowest_n_missed_cleavages} = $lowest_n_missed_cleavages;
+      push @{$peptide_info{$peptide_accession}{start}},  $start;
     }
 
     #### Calculate the best peptides to use
@@ -1751,9 +1755,8 @@ sub handle_request {
     for my $row ( sort { $b->[9] <=> $a->[9] } @{$resultset_ref->{data_ref}} ) {
       $pep_cnt++;
       last if $pep_cnt >= $max_peptides;
-      $instance_ids{$row->[16]}++;
+      $instance_ids{$row->[$resultset_ref->{column_hash_ref}->{peptide_instance_id}]}++;
     }
-
     my @pa_accessions;
     my @sample_list;
 
@@ -1768,42 +1771,42 @@ sub handle_request {
       push @pa_accessions, $row->[0];
       my $ntt = 0;
       if ( defined $row->[$ntt_idx] && $row->[$ntt_idx] ne '') {
-	$ntt = $row->[$ntt_idx];
-      } else {
-	if ( $row->[$pre_idx] =~ /[-RK]/ ) {
-	  $ntt++;
-	}
-	if ( $row->[$fol_idx] =~ /[RK]$/ || $row->[3] eq '-' ) {
-	  $ntt++;
-	}
+				$ntt = $row->[$ntt_idx];
+						} else {
+				if ( $row->[$pre_idx] =~ /[-RK]/ ) {
+					$ntt++;
+				}
+				if ( $row->[$fol_idx] =~ /[RK]$/ || $row->[3] eq '-' ) {
+					$ntt++;
+				}
       }
       $row->[$ntt_idx] = $ntt if !defined $row->[$ntt_idx];
 
       my $mc = 0;
       if ( defined $row->[$mc_idx] && $row->[$mc_idx] ne '') {
-	$mc = $row->[$mc_idx];
-      } elsif ( $row->[$seq_idx] =~ /[RK][^P]/ ) {
-	$mc++;
+				$mc = $row->[$mc_idx];
+						} elsif ( $row->[$seq_idx] =~ /[RK][^P]/ ) {
+				$mc++;
       }
       $row->[$mc_idx] = $mc if !defined $row->[$mc_idx];
 
       my $mgl = 0;
       if ( $row->[$ngl_idx] > 1 ) {
-	$mgl++;
+				$mgl++;
       }
 
       push @sample_list, [ $row->[0], $row->[$resultset_ref->{column_hash_ref}{'sample_ids'}] ];
 
       for my $idx ($resultset_ref->{column_hash_ref}{'sample_ids'},
 		   $resultset_ref->{column_hash_ref}{'is_subpeptide_of'} ) {
-	$row->[$idx] =~ s/\s//g;
-	my @samples = split( /,/, $row->[$idx] );
-	if ( $idx == $resultset_ref->{column_hash_ref}{'sample_ids'} ) {
-	  my $cnt = scalar( @samples );
-	  $row->[$idx] = ( $htmlmode ) ? "<A HREF='$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$row->[0]&action=QUERY#samples' TITLE='$row->[$idx]'> $cnt </A>" : $cnt;
-	} else {
-	  $row->[$idx] = scalar( @samples );
-	}
+				$row->[$idx] =~ s/\s//g;
+				my @samples = split( /,/, $row->[$idx] );
+				if ( $idx == $resultset_ref->{column_hash_ref}{'sample_ids'} ) {
+					my $cnt = scalar( @samples );
+					$row->[$idx] = ( $htmlmode ) ? "<A HREF='$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$row->[0]&action=QUERY#samples' TITLE='$row->[$idx]'> $cnt </A>" : $cnt;
+				} else {
+					$row->[$idx] = scalar( @samples );
+				}
       }
 
       my %sample_list = @sample_list;
@@ -1945,7 +1948,6 @@ sub handle_request {
       atlas_build_id => $atlas_build_id,
       biosequence_id => $biosequence_id,
     );
-
     if ( $htmlmode
          && $sbeams->rs_has_data( resultset_ref => $best_peptide_information->{resultset_ref})
          && $parameters->{motif} ne 'glyco' ) {
@@ -2089,6 +2091,7 @@ sub handle_request {
     my $sample_ids = getSampleList( sample_list => \@sample_list );
 
     #$log->debug( "UA is $ENV{HTTP_USER_AGENT}" );
+    #
 
     my $sampleMap = $sbeamsMOD->getSampleMapDisplay( sample_ids => $sample_ids,
 						     instance_ids => \%instance_ids,
