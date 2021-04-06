@@ -569,7 +569,7 @@ sub handle_request {
 
       print "<BR>";
       print "Protein Name: ";
-      print $q->textfield( "protein_name", size=>50, $protein_name);
+      print $q->textfield( -name => "protein_name", -size=>50, -default=>$protein_name );
 
       my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'extra_fields',
 						      visible => 0,
