@@ -331,6 +331,7 @@ sub handle_request {
 
   #### Get the search keyword
   my $protein_name = $parameters{"protein_name"};
+
   if (! $parameters->{caching}){
     my $html_cache_name ='';
 		if ($ENV{REQUEST_URI} =~ /GetProtein$/){
@@ -716,7 +717,6 @@ sub handle_request {
 
   #### If the protein was not found, report the problem
   if ($n_biosequences == 0) {
-
     if ($sbeams->output_mode() eq 'html') {
       print qq~
         This protein identifier was not found in
@@ -755,52 +755,63 @@ sub handle_request {
 					)
 			~;
 			my @rows = $sbeams->selectSeveralColumns ($sql);
-			my %related_names = ();
-      my %ids;
-			foreach my $row(@rows){
-				my ($name, $type, $biosequence_id) = @$row;
-				$related_names{$name} = $type;
-        $ids{$biosequence_id} =1;
-			}
-			my $biosequence_ids = join (",", keys %ids);
-			$sql = qq~
-				 SELECT DISTINCT B1.BIOSEQUENCE_NAME, B2.BIOSEQUENCE_NAME 
-				 FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR 
-				 LEFT JOIN $TBAT_BIOSEQUENCE B1 ON (B1.BIOSEQUENCE_ID = BR.RELATED_BIOSEQUENCE_ID) 
-				 LEFT JOIN $TBAT_BIOSEQUENCE B2 ON (B2.BIOSEQUENCE_ID = BR.REFERENCE_BIOSEQUENCE_ID)
-				 WHERE BR.atlas_build_id = $atlas_build_id
-				 AND (BR.related_biosequence_id in ($biosequence_ids) 
-							OR BR.reference_biosequence_id in ($biosequence_ids))
-				 AND RELATIONSHIP_TYPE_ID = 2
-			~;
-			@rows = $sbeams->selectSeveralColumns ($sql);
-			my %biosequence_identifcal = ();
-			foreach my $row(@rows){
-				my ($name1, $name2) = @$row;
-			  $biosequence_identifcal{$name1}{$name2} =1;
-        foreach my $p (keys %{$biosequence_identifcal{$name2}}){
-          $biosequence_identifcal{$name1}{$p} =1;
-        }
-				$biosequence_identifcal{$name2}{$name1} = 1;
-        foreach my $p (keys %{$biosequence_identifcal{$name1}}){
-          $biosequence_identifcal{$name2}{$p} =1;
-        }
+      if (@rows){
+				my %related_names = ();
+				my %ids;
+				foreach my $row(@rows){
+					my ($name, $type, $biosequence_id) = @$row;
+					$related_names{$name} = $type;
+					$ids{$biosequence_id} =1;
+				}
+				my $biosequence_ids = join (",", keys %ids);
+				$sql = qq~
+					 SELECT DISTINCT B1.BIOSEQUENCE_NAME, B2.BIOSEQUENCE_NAME 
+					 FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR 
+					 LEFT JOIN $TBAT_BIOSEQUENCE B1 ON (B1.BIOSEQUENCE_ID = BR.RELATED_BIOSEQUENCE_ID) 
+					 LEFT JOIN $TBAT_BIOSEQUENCE B2 ON (B2.BIOSEQUENCE_ID = BR.REFERENCE_BIOSEQUENCE_ID)
+					 WHERE BR.atlas_build_id = $atlas_build_id
+					 AND (BR.related_biosequence_id in ($biosequence_ids) 
+								OR BR.reference_biosequence_id in ($biosequence_ids))
+					 AND RELATIONSHIP_TYPE_ID = 2
+				~;
+				@rows = $sbeams->selectSeveralColumns ($sql);
+				my %biosequence_identifcal = ();
+				foreach my $row(@rows){
+					my ($name1, $name2) = @$row;
+					$biosequence_identifcal{$name1}{$name2} =1;
+					foreach my $p (keys %{$biosequence_identifcal{$name2}}){
+						$biosequence_identifcal{$name1}{$p} =1;
+					}
+					$biosequence_identifcal{$name2}{$name1} = 1;
+					foreach my $p (keys %{$biosequence_identifcal{$name1}}){
+						$biosequence_identifcal{$name2}{$p} =1;
+					}
 
-			}
-			print  "<br>Here are some related protein names. Proteins in the same row have an identical sequence.<br><br>" if (keys %related_names); 
-			foreach my $name(keys %related_names){
-         print "<a href='" . "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_build_id\&protein_name=$name\&action=QUERY" .
-                "'>$name</a>";
-         if (defined $biosequence_identifcal{$name}){
-           foreach my $name3(sort {$a cmp $b} keys %{$biosequence_identifcal{$name}}){
-              next if ($name3 eq $name);
-              print ", <a href='" .
-                    "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_build_id\&protein_name=$name3\&action=QUERY" .
-                    "'>$name3</a>";
-           }
-         }
-         print "<br>";
-			}
+				}
+				print  "<br><h4>Here are some related protein names. Proteins in the same row have identical sequences.<br><br>" if (keys %related_names); 
+				foreach my $name(sort {$a cmp $b} keys %related_names){
+					 print "<a href='" . "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_build_id\&protein_name=$name\&action=QUERY" .
+									"'>$name</a>";
+					 if (defined $biosequence_identifcal{$name}){
+						 foreach my $name3(sort {$a cmp $b} keys %{$biosequence_identifcal{$name}}){
+								next if ($name3 eq $name);
+								print ", <a href='" .
+											"$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_build_id\&protein_name=$name3\&action=QUERY" .
+											"'>$name3</a>";
+						 }
+					 }
+					 print "<br><br>";
+				}
+        print "</h4>";
+
+      }else{
+			 $sbeams->reportException(
+						state => 'ERROR',
+						type => 'RECORD NOT FOUND',
+						message => "The protein entered '$protein_name' was not found ".
+							"in the atlas build '$atlas_build_names{$atlas_build_id}'.",
+				);
+      }
     } else {
       $sbeams->reportException(
           state => 'ERROR',
