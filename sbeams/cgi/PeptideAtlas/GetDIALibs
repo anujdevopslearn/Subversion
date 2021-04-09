@@ -1,9 +1,9 @@
 #!/usr/local/bin/perl
 
 ###############################################################################
-# $Id: $
+# $Id$
 #
-# SBEAMS is Copyright (C) 2000-2016 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -70,7 +70,10 @@ my %basespace = ( basespace_params => '' );
 
 
     if ( $params->{mode} eq 'get_public_libsets' ) {
-      print $sbeams->get_http_header();
+      $params->{output_format} ||= 'html';
+      unless ( $params->{output_format} eq 'json' ) {
+	print $sbeams->get_http_header();
+      }
       get_public_libsets();
       exit;
     }
@@ -1423,26 +1426,25 @@ sub get_build_path {
 }
 
 sub get_draw_chart_function {
-	my $sample_arrayref = shift || return '';
+  my $sample_arrayref = shift || return '';
 
-	my @samples;
-	for my $s ( @{$sample_arrayref} ) {
-		push @samples, [ $s->[1], $s->[4], $s->[7] ];
-	}
-	my $GV = SBEAMS::Connection::GoogleVisualization->new();
+  my @samples;
+  for my $s ( @{$sample_arrayref} ) {
+    push @samples, [ $s->[1], $s->[4], $s->[7] ];
+  }
+  my $GV = SBEAMS::Connection::GoogleVisualization->new();
   my ( $chart ) = $GV->setDrawBarChart(  samples => \@samples,
                                     	data_types => [ 'string', 'number', 'number' ],
                                       	headings => [ 'Sample', 'Distinct peptides (n_obs > 1)', 'Cumulative peptides (n_obs > 1)' ],
                                       show_table => 0,
                                  truncate_labels => 24
  	);
-	my $header = $GV->getHeaderInfo();
+  my $header = $GV->getHeaderInfo();
   return ( $chart, $header );
 }
 
 
 sub get_public_libsets {
-
   my $sql = qq~
   SELECT set_tag, instrument_type_name,
   organism_name, px_identifier, contributors, coverage_statement,
@@ -1473,11 +1475,10 @@ sub get_public_libsets {
       $sets{$row[0]}->{lib_cnt} += $row[6];
     } else {
       my $px = ( $row[3] ) ? 
-               ( $row[3] =~ /^PXD/ ) ? "<a href='http://groteomecentral.proteomexchange.org/cgi/GetDataset?ID=$row[3]' target=_px>$row[3]</a>" :
-                                       "<a href='https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/PASS_View?identifier=$row[3]' target=_px>$row[3]</a>" :
-               $sbeams->makeInactiveText( 'na' );
-        
-        $sbeams->makeInactiveText( 'na' );
+               ( $row[3] =~ /^PXD/ ) ? "<a href='http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=$row[3]' target='_px'>$row[3]</a>" :
+                                       "<a href='https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/PASS_View?identifier=$row[3]' target='_px'>$row[3]</a>" :
+				       $sbeams->makeInactiveText( 'na' );
+
       $row[5] =~ s/Proteome Coverage//gi;
       $sets{$row[0]} = { inst => $row[1],
                          lib_cnt => $row[6],
@@ -1487,9 +1488,16 @@ sub get_public_libsets {
                          cont => $row[4] };
     }
   }
-  use JSON;
-  my $json = new JSON;
-  my $jstr = $json->encode( \%sets );
+
+  if ($params->{output_format} eq 'json') {
+    use JSON;
+    my $json = new JSON;
+    my $jstr = $json->utf8->encode(\%sets);
+    print("Access-Control-Allow-Origin: *\n");
+    print("Content-Type: application/json\n\n");
+    print $jstr;
+    return;
+  }
 
 #  my @lib_data = ( [ qw( Library Organism Instrument Contributors Coverage ProteomeExchange NumFiles ) ] );
 #  my @lib_data = ( [ qw( Library Instrument Contributors Coverage ) ] );
