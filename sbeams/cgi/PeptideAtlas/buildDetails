@@ -129,8 +129,11 @@ my $show_image = 0;
     } 
 
     # Add general section 
+    my $n_canonical_protein;
     if (! $section  || $section =~ /overview/i){
-      $page .= get_build_overview ( $build_id );
+      my $build_overview_html;
+      ($n_canonical_protein, $build_overview_html) = get_build_overview ( $build_id );
+      $page .= $build_overview_html;
     }
     if (! $section || $section =~ /what.*new/i){
 				my $what_is_new = fetchResultset(atlas_build_id => $build_id,
@@ -247,8 +250,8 @@ my $show_image = 0;
       }
     }
     ## color "Dataset Specific Protein Identification" table  
-    print $atlas->tableHeatMap(table_id => 'datasetContri_info');
-    print $atlas->tableHeatMap(table_id => 'dataset_protein_info');
+    print $atlas->tableHeatMap(table_id => 'datasetContri_info', total => $n_canonical_protein);
+    print $atlas->tableHeatMap(table_id => 'dataset_protein_info', total=> $n_canonical_protein);
     $atlas->display_page_footer();
   }
 } # end main
@@ -596,7 +599,7 @@ sub get_dataset_spec_protein_info {
            $constraint = "presence_level_constraint=$level_id&redundancy_constraint=4";
         }
          my $str  = $atlas->make_pa_tooltip( tip_text => $cnt,
-           link_text => "<a href='$CGI_BASE_DIR/PeptideAtlas/GetProteins?atlas_build_id=$build_id&dataset_specific_id=$repository_id&$constraint&apply_action=QUERY'>$cnt</a>" );
+           link_text => "<a href='$CGI_BASE_DIR/PeptideAtlas/GetProteins?atlas_build_id=$build_id&biosequence_name_constraint=!DECOY%&dataset_specific_id=$repository_id&$constraint&apply_action=QUERY'>$cnt</a>" );
          push @row , $str;
       }else{
          push @row ,'';
@@ -856,7 +859,7 @@ sub get_build_overview {
   } 
  
   $table .= "</TABLE>\n";
-  return $table;
+  return ($prot_count{canonical},  $table);
 }
 
 # Peptide build stats
@@ -1363,7 +1366,7 @@ sub get_dataset_protein_info {
            $constraint = "presence_level_constraint=$level_id&redundancy_constraint=4";
         }
          my $str  = $atlas->make_pa_tooltip( tip_text => $cnt,
-           link_text => "<a href='$CGI_BASE_DIR/PeptideAtlas/GetProteins?atlas_build_id=$atlas_build_id&dataset_id=$repository_id&$constraint&apply_action=QUERY'>$cnt</a>" );
+           link_text => "<a href='$CGI_BASE_DIR/PeptideAtlas/GetProteins?atlas_build_id=$atlas_build_id&biosequence_name_constraint=!DECOY%&dataset_id=$repository_id&$constraint&apply_action=QUERY'>$cnt</a>" );
          push @row , $str;
       }else{
          push @row ,'';

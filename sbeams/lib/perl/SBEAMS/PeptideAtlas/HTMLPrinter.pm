@@ -2882,6 +2882,7 @@ sub tableHeatMap{
   my $self = shift;
   my %args = @_;
   my $table_id = $args{table_id};
+  my $total = $args{total} || 0;
   my $str = qq~
      <script type="text/javascript" src="$CGI_BASE_DIR/../usr/javascript/jquery/jquery.min.js"></script>
      <script type="text/javascript">
@@ -2906,6 +2907,9 @@ sub tableHeatMap{
 					}).get();
 				// return max value
 				var sum = Array.sum(counts);
+        if ($total > 0){
+           sum = $total;
+        }
 				// add classes to cells based on nearest 10 value
 				jQuery('#$table_id  td:first-child + td').each(function(){
 					var val = parseInt(jQuery(this).text());
