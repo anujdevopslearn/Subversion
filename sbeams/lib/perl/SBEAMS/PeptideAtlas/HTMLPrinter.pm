@@ -1444,7 +1444,7 @@ sub getPTMTableDisplay {
     foreach my $pos (sort {$a <=> $b} keys %{$data->{$prot}}){
       my @row = ();
       push @row, $pos+1; 
-      next if ($data->{$prot}{$pos}{nObs} ==0 );
+      #next if ($data->{$prot}{$pos}{nObs} ==0 );
       foreach my $col (@$cols){
         next if ($col =~ /offset/i);
         if ($col eq 'Residue' && ($data->{$prot}{$pos}{nObs} > 0            ||
@@ -2888,8 +2888,12 @@ sub tableHeatMap{
       jQuery.noConflict();
 			jQuery(document).ready(function(){
 				// Function to get the Max value in Array
-					Array.max = function( array ){
-							return Math.max.apply( Math, array );
+					Array.sum = function( array ){
+            var sum =0;
+						for (let i in array){
+              sum = sum+ array[i];
+            }
+            return sum;
 					};
 
 					// get all values
@@ -2901,23 +2905,14 @@ sub tableHeatMap{
 							}
 					}).get();
 				// return max value
-				var max = Array.max(counts);
-				xr = 255;
-				xg = 255;
-				xb = 255;
-				yr = 243;
-				yg = 32;
-				yb = 117;
-				n = 100;
+				var sum = Array.sum(counts);
 				// add classes to cells based on nearest 10 value
 				jQuery('#$table_id  td:first-child + td').each(function(){
 					var val = parseInt(jQuery(this).text());
-					var pos = parseInt((Math.round((val/max)*100)).toFixed(0));
-					red = parseInt((xr + (( pos * (yr - xr)) / (n-1))).toFixed(0));
-					green = parseInt((xg + (( pos * (yg - xg)) / (n-1))).toFixed(0));
-					blue = parseInt((xb + (( pos * (yb - xb)) / (n-1))).toFixed(0));
-					clr = 'rgb('+red+','+green+','+blue+')';
-					jQuery(this).css({backgroundColor:clr});
+					var pctval = parseInt((Math.round((val/sum)*100)).toFixed(0));
+          var pctval2 = 100 - pctval ;
+					clr = "linear-gradient(to right, #f46d69 " + pctval + "%, #EAEAEA " + pctval + "% " + pctval2 + "%)"; 
+					jQuery(this).css("background-image", clr);
 				});
 			});
 	 	</script>
