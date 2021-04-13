@@ -20,6 +20,7 @@ things related to PeptideAtlas spectra
 ###############################################################################
 
 use strict;
+use Devel::Size  qw(size total_size);
 use DB_File ;
 use Data::Dumper;
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError) ;
@@ -165,20 +166,18 @@ sub loadBuildSpectra {
 
 
   #### Loop through all spectrum identifications and load
+  my $spectrum_identifications;
+  open ($spectrum_identifications, ">spectrum_identifications.txt");
   my @columns;
-  my ($start, $diff, $pre_search_batch_id, $n);
-  $start = [gettimeofday];
-  $n=0;
-  #my $counter = 0;
-
+  my $pre_search_batch_id;
+  my $spec_counter =0;
   while ( my $line = <INFILE>) {
+    $spec_counter++;
     chomp $line;
-    #$counter++;
-    #if ($counter < 273031352){
+    #if ($spec_counter <200000000 ){
     #  next;
     #}
     @columns = split("\t",$line,-1);
-    #print "cols = ".scalar(@columns)."\n";
     unless (scalar(@columns) == $expected_n_columns) {
       #if (($expected_n_columns == 17|| $expected_n_columns == 18) && (scalar(@columns) == 15 || scalar(@columns) == 14)) {
         ## won't happen now. All spectra should has S/N value, then should have 17/18 columns
@@ -186,7 +185,8 @@ sub loadBuildSpectra {
 			#	scalar(@columns)."!=$expected_n_columns) in\n$line\n".
 			#		"This is likely missing ProteinProphet information, which is bad, but we will allow it until this bug is fixed.\n";
       #} 
-      if (scalar(@columns) == 19 || scalar(@columns) == 18) {
+      #18 retention_time_sec
+      if (scalar(@columns) == 19 || scalar(@columns) == 18 || scalar(@columns) == 17) {
 				
       } else {
 				die("ERROR: Unexpected number of columns (".
@@ -250,22 +250,278 @@ sub loadBuildSpectra {
 			 total_ion_current => $total_ion_current,
 			 signal_to_noise => $signal_to_noise,
        retention_time_sec => $retention_time_sec,
-       chimera_level => $chimera_level);
+       chimera_level => $chimera_level, 
+       spectrum_identifications => $spectrum_identifications,
+       );
 
-    $n++;
     if($pre_search_batch_id ne $search_batch_id){
-      $diff = tv_interval ( $start, [gettimeofday]);
-      print "\nsearch_batch_id: $pre_search_batch_id, time per entry: " . $diff/$n ;
-			print "s\n";
-			$start = [gettimeofday];
-      $n=0;
+      print "\nsearch_batch_id: $pre_search_batch_id, $spec_counter records processed\n";
     }
     $pre_search_batch_id = $search_batch_id;
+    #print "$spec_counter... " if ($spec_counter %10000 == 0);
   }
-
+	my $commit_interval = 1000;
+  open (IN, "<spectrum_identifications.txt"); 
+	print  localtime() .": insert spectrum_identifications\n";
+	my $cnt=0;
+	$sbeams->initiate_transaction(); 
+	while (my $line =<IN>){
+    chomp $line;
+		my ($spectrum_id, $modified_peptide_instance_id,$atlas_search_batch_id, $probability, $massdiff) = split(",", $line);
+		my $spectrum_identification_id = $self->insertSpectrumIdentificationRecord(
+			modified_peptide_instance_id => $modified_peptide_instance_id,
+			spectrum_id => $spectrum_id,
+			atlas_search_batch_id => $atlas_search_batch_id,
+			probability => $probability,
+			massdiff => $massdiff,
+		 );
+		 $cnt++;
+		 unless ($cnt % $commit_interval){
+				$sbeams->commit_transaction();
+				print "$cnt... ";
+		 }
+	}
+  $sbeams->commit_transaction();
+  $sbeams->reset_dbh();
+	print localtime() ."\n";
 } # end loadBuildSpectra
 
+###############################################################################
+# loadBuildPTMSpectra -- Loads all spectra for specified build
+###############################################################################
+sub loadBuildPTMSpectra {
+  my $METHOD = 'loadBuildPTMSpectra';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
 
+  #### Process parameters
+  my $atlas_build_id = $args{atlas_build_id}
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+
+  my $atlas_build_directory = $args{atlas_build_directory}
+    or die("ERROR[$METHOD]: Parameter atlas_build_directory not passed");
+
+  my $organism_abbrev = $args{organism_abbrev}
+    or die("ERROR[$METHOD]: Parameter organism_abbrev not passed");
+
+
+  #### We now support two different file types
+  #### First try to find the PAidentlist file
+  my $filetype = 'PAidentlist';
+  my $expected_n_columns = 17;
+  my $peplist_file = "$atlas_build_directory/".
+    "PeptideAtlasInput_concat.PAidentlist";
+
+  #### Else try the older peplist file
+  unless (-e $peplist_file) {
+    print "WARNING: Unable to find PAidentlist file '$peplist_file'\n";
+  }
+
+  #### Find and open the input peplist file
+  unless (open(INFILE,$peplist_file)) {
+    print "ERROR: Unable to open for read file '$peplist_file'\n";
+    return;
+  }
+
+
+  #### Read and verify header if a peplist file
+  if ($filetype eq 'peplist') {
+    my $header = <INFILE>;
+    unless ($header && substr($header,0,10) eq 'search_bat' &&
+	    length($header) == 155) {
+      print "len = ".length($header)."\n";
+      print "ERROR: Unrecognized header in peplist file '$peplist_file'\n";
+      close(INFILE);
+      return;
+    }
+  }
+
+  #### Loop through all spectrum identifications and load
+  my $ptm_spectrum_identifications; 
+  open ($ptm_spectrum_identifications, ">ptm_spectrum_identifications.txt");
+  my @columns;
+  my $pre_search_batch_id;
+  my $spec_counter =0;
+  while ( my $line = <INFILE>) {
+    $spec_counter++;
+    chomp $line;
+    #if ($spec_counter <200000000 ){
+    #  next;
+    #}
+    @columns = split("\t",$line,-1);
+    unless (scalar(@columns) == $expected_n_columns) {
+      if (scalar(@columns) == 19 || scalar(@columns) == 18 || scalar(@columns) == 17) {
+				
+      } else {
+				die("ERROR: Unexpected number of columns (".
+				scalar(@columns)."!=$expected_n_columns) in\n$line");
+      }
+    }
+
+    my ($search_batch_id,$spectrum_name,$peptide_accession,$peptide_sequence,
+        $preceding_residue,$modified_sequence,$following_residue,$charge,
+        $probability,$massdiff,$protein_name,$proteinProphet_probability,
+        $n_proteinProphet_observations,$n_sibling_peptides,
+        $SpectraST_probability, $ptm_sequence,$precursor_intensity,
+        $total_ion_current,$signal_to_noise,$retention_time_sec,$chimera_level);
+    if ($filetype eq 'peplist') {
+      ($search_batch_id,$peptide_sequence,$modified_sequence,$charge,
+        $probability,$protein_name,$spectrum_name) = @columns;
+    } elsif ($filetype eq 'PAidentlist') {
+      ($search_batch_id,
+				$spectrum_name,
+				$peptide_accession,
+				$peptide_sequence,
+				$preceding_residue,
+				$modified_sequence,
+				$following_residue,
+				$charge,
+				$probability,
+				$massdiff,
+				$protein_name,
+				$proteinProphet_probability,
+				$n_proteinProphet_observations,
+				$n_sibling_peptides,
+				$precursor_intensity,
+				$total_ion_current,
+				$signal_to_noise,
+        $retention_time_sec,
+				$chimera_level) = @columns;
+      #### Correction for occasional value '+-0.000000'
+      $massdiff =~ s/\+\-//;
+    } else {
+      die("ERROR: Unexpected filetype '$filetype'");
+    }
+    
+		next if ($modified_sequence =~ /[JUO]/);
+    $ptm_sequence = '';
+    if ($modified_sequence =~ /\(/){
+      $ptm_sequence = $modified_sequence;
+      $modified_sequence =~ s/\([\d\.]+\)//g;
+      $ptm_sequence =~ s/\[[\d\.]+\]//g;
+			#### Get the sample_id for this search_batch_id
+			my $sample_id = $self->get_sample_id(
+				proteomics_search_batch_id => $search_batch_id,
+			);
+
+			#### Get the atlas_search_batch_id for this search_batch_id
+			my $atlas_search_batch_id = $self->get_atlas_search_batch_id(
+				proteomics_search_batch_id => $search_batch_id,
+			);
+
+			#### get spectrum id  
+			my $spectrum_id = $self->get_spectrum_id(
+				sample_id => $sample_id,
+				spectrum_name => $spectrum_name,
+			 atlas_build_id => $atlas_build_id
+			);
+		  if ( ! $spectrum_id){	
+        print "WARNING: no spectrum_id for name=$spectrum_name\n";
+        next;
+      }
+			my $spectrum_identification_id = $self->get_spectrum_identification_id(
+				spectrum_id => $spectrum_id,
+				atlas_search_batch_id => $atlas_search_batch_id,
+				atlas_build_id => $atlas_build_id,
+			);
+
+      if ($spectrum_identification_id){
+				my $ptm_spectrum_identification_id = $self->get_ptm_spectrum_identification_id(
+					spectrum_identification_id => $spectrum_identification_id,
+          atlas_search_batch_id => $atlas_search_batch_id,
+          atlas_build_id => $atlas_build_id,
+ 
+				);
+        if (! $ptm_spectrum_identification_id){
+				  print $ptm_spectrum_identifications "$spectrum_identification_id,$ptm_sequence\n";
+        }
+      }else{
+        print "WARNNING: no spectrum_identification_id for spectrum_id=$spectrum_id, name=$spectrum_name\n";
+      }
+    }
+
+    if($pre_search_batch_id ne $search_batch_id){
+      print "\nsearch_batch_id: $pre_search_batch_id, $spec_counter records processed\n";
+    }
+    $pre_search_batch_id = $search_batch_id;
+    print "$spec_counter... " if ($spec_counter %10000 == 0);
+ 
+  }
+	my $commit_interval = 1000;
+  open (IN, "<ptm_spectrum_identifications.txt"); 
+	print  localtime() .": insert ptm_spectrum_identifications\n";
+	my $cnt=0;
+	$sbeams->initiate_transaction(); 
+	while (my $line =<IN>){
+    chomp $line;
+		my ($spectrum_identification_id, $ptm_sequence) = split(",", $line);
+		my $spectrum_identification_id = $self->insertSpectrumPTMIdentificationRecord(
+		  spectrum_identification_id => $spectrum_identification_id,	
+			ptm_sequence => $ptm_sequence,
+		 );
+		 $cnt++;
+		 unless ($cnt % $commit_interval){
+				$sbeams->commit_transaction();
+				print "$cnt... ";
+		 }
+	}
+  $sbeams->commit_transaction();
+  $sbeams->reset_dbh();
+  print localtime() ."\n";
+
+} # end loadBuildPTMSpectra
+
+###############################################################################
+# insertPTMSpectrumIdentification --
+###############################################################################
+sub insertPTMSpectrumIdentification {
+  my $METHOD = 'insertPTMSpectrumIdentification';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+
+  #### Process parameters
+  my $atlas_build_id = $args{atlas_build_id}
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+  my $search_batch_id = $args{search_batch_id}
+    or die("ERROR[$METHOD]: Parameter search_batch_id not passed");
+  my $modified_sequence = $args{modified_sequence}
+    or die("ERROR[$METHOD]: Parameter modified_sequence not passed");
+  my $ptm_sequence = $args{ptm_sequence} || ''; 
+  my $charge = $args{charge}
+    or die("ERROR[$METHOD]: Parameter charge not passed");
+  my $protein_name = $args{protein_name}
+    or die("ERROR[$METHOD]: Parameter protein_name not passed");
+  my $spectrum_name = $args{spectrum_name}
+    or die("ERROR[$METHOD]: Parameter spectrum_name not passed");
+  my $ptm_spectrum_identifications = $args{ptm_spectrum_identifications};
+
+  return if ($modified_sequence =~ /[JUO]/);
+  #### Get the sample_id for this search_batch_id
+  my $sample_id = $self->get_sample_id(
+    proteomics_search_batch_id => $search_batch_id,
+  );
+
+  #### Get the atlas_search_batch_id for this search_batch_id
+  my $atlas_search_batch_id = $self->get_atlas_search_batch_id(
+    proteomics_search_batch_id => $search_batch_id,
+  );
+
+  #### Check to see if this spectrum is already in the database
+  my $spectrum_id = $self->get_spectrum_id(
+    sample_id => $sample_id,
+    spectrum_name => $spectrum_name,
+   atlas_build_id => $atlas_build_id
+  );
+  #### Check to see if this spectrum_identification is in the database
+  my $spectrum_identification_id = $self->get_spectrum_identification_id(
+    spectrum_id => $spectrum_id,
+    atlas_search_batch_id => $atlas_search_batch_id,
+    atlas_build_id => $atlas_build_id,
+  );
+
+  return $spectrum_identification_id; 
+
+} # end insertPTMSpectrumIdentification
 
 ###############################################################################
 # insertSpectrumIdentification --
@@ -289,6 +545,9 @@ sub insertSpectrumIdentification {
     or die("ERROR[$METHOD]: Parameter protein_name not passed");
   my $spectrum_name = $args{spectrum_name}
     or die("ERROR[$METHOD]: Parameter spectrum_name not passed");
+  #my $ptm_spectrum_identifications = $args{ptm_spectrum_identifications};
+  my $spectrum_identifications = $args{spectrum_identifications};
+
   my $massdiff = $args{massdiff};
   my $chimera_level = $args{chimera_level}; 
   my $probability = $args{probability};
@@ -321,6 +580,7 @@ sub insertSpectrumIdentification {
   my $spectrum_id = $self->get_spectrum_id(
     sample_id => $sample_id,
     spectrum_name => $spectrum_name,
+   atlas_build_id => $atlas_build_id
   );
 
   #### If not, INSERT it
@@ -338,34 +598,20 @@ sub insertSpectrumIdentification {
       signal_to_noise => $signal_to_noise,
       retention_time_sec => $retention_time_sec,
     );
+    $counter++;
+    print "$counter..." if ($counter/1000 == int($counter/1000));
   }
   #### Check to see if this spectrum_identification is in the database
   my $spectrum_identification_id = $self->get_spectrum_identification_id(
-    modified_peptide_instance_id => $modified_peptide_instance_id,
     spectrum_id => $spectrum_id,
     atlas_search_batch_id => $atlas_search_batch_id,
     atlas_build_id => $atlas_build_id,
   );
 
-  $counter++;
-  print "$counter..." if ($counter/100 == int($counter/100));
-  #### If not, INSERT it
+  #### If not, save to array and insert later 
   unless ($spectrum_identification_id) {
-    $spectrum_identification_id = $self->insertSpectrumIdentificationRecord(
-      modified_peptide_instance_id => $modified_peptide_instance_id,
-      spectrum_id => $spectrum_id,
-      atlas_search_batch_id => $atlas_search_batch_id,
-      probability => $probability,
-      massdiff => $massdiff,
-    );
-    if ($ptm_sequence ne ''){
-			my $spectrum_ptm_identification_id = $self->insertSpectrumPTMIdentificationRecord(
-				spectrum_identification_id => $spectrum_identification_id,
-				ptm_sequence => $ptm_sequence,
-			);
-    }
+    print $spectrum_identifications  "$spectrum_id,$modified_peptide_instance_id,$atlas_search_batch_id,$probability,$massdiff\n";
   }
-
 
 } # end insertSpectrumIdentification
 
@@ -412,6 +658,7 @@ sub get_modified_peptide_instance_id {
       $modified_peptide_instance_ids{$row->[2]}{$row->[1]} = $modified_peptide_instance_id;
     }
     print "       $cnt loaded...\n";
+    print "       modified_peptide_instance_ids size: ". total_size(\%modified_peptide_instance_ids)/100000 ."MB\n";
   }
 
 
@@ -525,6 +772,9 @@ sub get_spectrum_id {
     or die("ERROR[$METHOD]: Parameter sample_id not passed");
   my $spectrum_name = $args{spectrum_name}
     or die("ERROR[$METHOD]: Parameter spectrum_name not passed");
+  my $atlas_build_id = $args{atlas_build_id}
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+
 
   #### If we haven't loaded all spectrum_ids into the
   #### cache yet, do so
@@ -536,7 +786,7 @@ sub get_spectrum_id {
     $processed_sample_ids{$sample_id} = 1;
     my $sql = qq~
       SELECT sample_id,spectrum_name,spectrum_id
-        FROM $TBAT_SPECTRUM 
+        FROM $TBAT_SPECTRUM
         WHERE sample_id=$sample_id
     ~;
 
@@ -548,12 +798,10 @@ sub get_spectrum_id {
       $num_ids++;
     }
     #my $num_ids = scalar(keys(%spectrum_ids));
-    print "       $num_ids spectrum IDs loaded for sample_id $sample_id...\n";
-
+    print "       $num_ids spectrum IDs loaded for sample_id $sample_id ...\n";
     #### Put a dummy entry in the hash so load won't trigger twice if
     #### table is empty at this point
     $spectrum_ids{DUMMY} = -1 unless $num_ids;
-
     #### Print out a few entries
     #my $i=0;
     #while (my ($key,$value) = each(%spectrum_ids)) {
@@ -1156,6 +1404,55 @@ sub groom_data_location {
 
 
 ###############################################################################
+# get_ptm_spectrum_identification_id --
+###############################################################################
+sub get_ptm_spectrum_identification_id {
+  my $METHOD = 'get_ptm_spectrum_identification_id';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+
+  #### Process parameters
+  my $spectrum_identification_id = $args{spectrum_identification_id}
+    or die("ERROR[$METHOD]: Parameter spectrum_identification_id not passed");
+  my $atlas_search_batch_id = $args{atlas_search_batch_id}
+    or die("ERROR[$METHOD]: Parameter atlas_search_batch_id not passed");
+  my $atlas_build_id = $args{atlas_build_id}
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+
+  #### If we haven't loaded all spectrum_identification_ids into the
+  #### cache yet, do so
+  our %ptm_spectrum_identification_ids;
+  unless (%ptm_spectrum_identification_ids){
+    print "\n[INFO] Loading all spectrum_identification_ids ...\n";
+    my $sql = qq~
+      SELECT SI.atlas_search_batch_id, SI.SPECTRUM_IDENTIFICATION_id 
+        FROM $TBAT_SPECTRUM_PTM_IDENTIFICATION SPI 
+        JOIN $TBAT_SPECTRUM_IDENTIFICATION SI ON (SI.SPECTRUM_IDENTIFICATION_id = SPI.SPECTRUM_IDENTIFICATION_ID)
+        JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI
+             ON ( SI.modified_peptide_instance_id = MPI.modified_peptide_instance_id )
+        JOIN $TBAT_PEPTIDE_INSTANCE PEPI
+             ON ( MPI.peptide_instance_id = PEPI.peptide_instance_id )
+       WHERE PEPI.atlas_build_id = '$atlas_build_id'
+    ~;
+
+    my $sth = $sbeams->get_statement_handle( $sql );
+    my $n = 0;
+    #### Create a hash out of it
+    while ( my $row = $sth->fetchrow_arrayref() ) {
+      $ptm_spectrum_identification_ids{$row->[0]}{$row->[1]} = 1;
+      $n++;
+    }
+    print "       $n loaded...\n";
+  }
+  #### Lookup and return spectrum_id
+  if ( $ptm_spectrum_identification_ids{$atlas_search_batch_id}{$spectrum_identification_id}){
+    return 1; 
+  };
+
+  return();
+
+} # end get_ptm_spectrum_identification_id
+###############################################################################
 # get_spectrum_identification_id --
 ###############################################################################
 sub get_spectrum_identification_id {
@@ -1164,8 +1461,6 @@ sub get_spectrum_identification_id {
   my %args = @_;
 
   #### Process parameters
-  my $modified_peptide_instance_id = $args{modified_peptide_instance_id}
-    or die("ERROR[$METHOD]:Parameter modified_peptide_instance_id not passed");
   my $spectrum_id = $args{spectrum_id}
     or die("ERROR[$METHOD]: Parameter spectrum_id not passed");
   my $atlas_search_batch_id = $args{atlas_search_batch_id}
@@ -1176,47 +1471,33 @@ sub get_spectrum_identification_id {
   #### If we haven't loaded all spectrum_identification_ids into the
   #### cache yet, do so
   our %spectrum_identification_ids;
-  our %processed_atlas_search_batch_id;
-  unless ($processed_atlas_search_batch_id{$atlas_search_batch_id}) {
-    print "\n[INFO] Loading all spectrum_identification_ids for atlas_search_batch_id $atlas_search_batch_id...\n";
-    $processed_atlas_search_batch_id{$atlas_search_batch_id} = 1;
-    %spectrum_identification_ids = ();
- 
+  unless (%spectrum_identification_ids){
+    print "\n[INFO] Loading all spectrum_identification_ids ...\n";
     my $sql = qq~
-      SELECT SI.modified_peptide_instance_id,SI.spectrum_id,
-             SI.atlas_search_batch_id,SI.spectrum_identification_id
+      SELECT SI.atlas_search_batch_id,SI.spectrum_id, SI.spectrum_identification_id
         FROM $TBAT_SPECTRUM_IDENTIFICATION SI
         JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI
              ON ( SI.modified_peptide_instance_id = MPI.modified_peptide_instance_id )
         JOIN $TBAT_PEPTIDE_INSTANCE PEPI
              ON ( MPI.peptide_instance_id = PEPI.peptide_instance_id )
        WHERE PEPI.atlas_build_id = '$atlas_build_id'
-             AND SI.atlas_search_batch_id = $atlas_search_batch_id
     ~;
 
     my $sth = $sbeams->get_statement_handle( $sql );
     my $n = 0;
     #### Create a hash out of it
     while ( my $row = $sth->fetchrow_arrayref() ) {
-      #my $key = "$row->[0]-$row->[1]-$row->[2]";
-      $spectrum_identification_ids{$row->[2]}{$row->[0]}{$row->[1]} = $row->[3];
+      $spectrum_identification_ids{$row->[0]}{$row->[1]} = $row->[2];
       $n++;
     }
 
     print "       $n loaded...\n";
-
-    #### Put a dummy entry in the hash so load won't trigger twice if
-    #### table is empty at this point
-    $spectrum_identification_ids{DUMMY} = -1;
   }
-
-  #### Lookup and return spectrum_id
-  #my $key = "$modified_peptide_instance_id-$spectrum_id-$atlas_search_batch_id";
-  if ($spectrum_identification_ids{$atlas_search_batch_id}{$modified_peptide_instance_id}{$spectrum_id}) {
-    return($spectrum_identification_ids{$atlas_search_batch_id}{$modified_peptide_instance_id}{$spectrum_id});
+  #### Lookup and return spectrum_identification_id
+  if ( $spectrum_identification_ids{$atlas_search_batch_id}{$spectrum_id}){
+    return $spectrum_identification_ids{$atlas_search_batch_id}{$spectrum_id}; 
   };
 
-  #### Else we don't have it yet
   return();
 
 } # end get_spectrum_identification_id
@@ -1314,7 +1595,7 @@ sub insertSpectrumPTMIdentificationRecord {
 # loadSpectrum_Fragmentation_Type -- Loads all Spectrum_Fragmentation_Type for specified build
 ###############################################################################
 sub loadSpectrum_Fragmentation_Type {
-  my $METHOD = 'loadBuildSpectra';
+  my $METHOD = 'loadSpectrum_Fragmentation_Type';
   my $self = shift || die ("self not passed");
   my %args = @_;
 
