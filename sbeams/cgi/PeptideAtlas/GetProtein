@@ -1644,6 +1644,7 @@ sub handle_request {
     if(@ptm_results){
       my $GV = SBEAMS::Connection::GoogleVisualization->new();
       my %data = ();
+      my $ptm_obs = 0;
       my @columns = ('Protein', 'Offset', 'Residue','nObs', 'One_mod', 'Two_mods', 'Over_two_mods',
 		     'nP<.01', 'nP<.05', 'nP<.20', 'nP.2-.8', 'nP>.80', 'nP>.95', 'nP>.99',
          'no-choice','enriched-with-mod','enriched-but-non-mod','non-enriched',
@@ -1651,14 +1652,19 @@ sub handle_request {
       foreach my $row  (@ptm_results){
 				my @vals = @$row;
 				$vals[1] = $vals[1] -1;
+        $ptm_obs = 1 if ($vals[3] > 0);
+
 				for my $i (2..$#vals){
 					$data{$vals[0]}{$vals[1]}{$columns[$i]} = $vals[$i];
 				}
       }
-      my $ptm_summary_chart = $sbeamsMOD->displayProt_PTM_plotly(data=> \%data,
+      my $ptm_summary_chart = '';
+      if ($ptm_obs){
+         $sbeamsMOD->displayProt_PTM_plotly(data=> \%data,
 							   protein=>$protein_name,
 							   atlas_build_id => $atlas_build_id,
 							   seq=>$biosequence->{biosequence_seq});
+      }
       my $PTM_table_Display = $sbeamsMOD->getPTMTableDisplay( cols => \@columns,
 							      data => \%data,
 							      atlas_build_id => $atlas_build_id,
