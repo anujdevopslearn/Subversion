@@ -97,13 +97,9 @@ sub main {
     allow_anonymous_access=>1,
   ));
 
-
   #### Read in the default input parameters
   my %parameters;
-
   $parameters{uploaded_file_not_saved} = 1;
-  $parameters{current_username} = $current_username;
-
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);
      #$sbeams->printDebuggingInfo($q);
@@ -147,18 +143,25 @@ sub handle_request {
     || die "ref_parameters not passed";
   my %parameters = %{$ref_parameters};
 
-  my ($mapping_id,$atlas_build_id);
-
-  #### Show current user context information
-  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
-
-
   #### Get the HTML to display the tabs
   my $tabMenu = $sbeamsMOD->getTabMenu(
     parameters_ref => \%parameters,
     program_name => $PROG_NAME,
   );
   print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+
+  #### Get the current atlas_build_id based on parameters or session
+  my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
+    parameters_ref => \%parameters,
+  );
+  if (defined($atlas_build_id) && $atlas_build_id < 0) {
+    return;
+  }
+  $parameters{atlas_build_id} = $atlas_build_id;
+
+  #### Show current user context information
+  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
+
 
 
   #### Define some generic variables
@@ -241,16 +244,6 @@ sub handle_request {
 
   #########################################################################
   #### Process all the constraints
-
-  #### If no atlas_build_id was selected, stop here
-  unless ($parameters{atlas_build_id} && $parameters{mapping_id}) {
-    $sbeams->reportException(
-      state => 'ERROR',
-      type => 'INSUFFICIENT CONSTRAINTS',
-      message => 'You must select at least one nextprot mapping date and one Atlas Build',
-    );
-    return;
-  }
 
   #########################################################################
   #### Process all the constraints

@@ -320,6 +320,8 @@ sub handle_request {
     allow_protein_list_login => 1,
     protein_list_sql => $protein_list_sql,
     parameters_ref => \%parameters,
+    display_page_header_footer => 1,
+    PROG_NAME => $PROG_NAME,
       );
   if (defined($atlas_build_id) && $atlas_build_id < 0) {
     return;

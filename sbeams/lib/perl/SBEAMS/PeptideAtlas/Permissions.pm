@@ -24,6 +24,7 @@ use SBEAMS::Connection::Authenticator qw( $q );
 use SBEAMS::Connection::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::Connection::Tables;
+use  SBEAMS::PeptideAtlas;
 
 my $log = SBEAMS::Connection::Log->new();
 
@@ -235,7 +236,8 @@ sub getCurrentAtlasBuildID {
       'PeptideAtlas_atlas_build_id' : 'PeptideAtlas_atlas_build_id_2';
   my $this_atlas_build_id = $primary_build ?
           $atlas_build_id : $atlas_build_id_2;
-
+  my $display_page_header_footer = $args{'display_page_header_footer'} || 0;
+  my $PROG_NAME = $args{'PROG_NAME'} || '';
 
   #### If atlas_build_id was supplied
   if ($this_atlas_build_id) {
@@ -534,7 +536,17 @@ sub getCurrentAtlasBuildID {
       }
 
       my $alt_link = $args{alt_link} || '';
+      my $sbeamsMOD=$self;
       $log->printStack( 'debug' );
+      if ($display_page_header_footer){
+        my %parameters;
+				my $tabMenu = $sbeamsMOD->getTabMenu(
+					parameters_ref => \%parameters,
+					program_name => $PROG_NAME,
+				);
+				$sbeamsMOD->display_page_header(use_tabbed_panes => 1); 
+				print $tabMenu->asHTML();
+      }
       print qq~
         <BR>Sorry, you are not permitted to access atlas_build_id
         '$atlas_build_id' with your current credentials as
@@ -543,6 +555,7 @@ sub getCurrentAtlasBuildID {
         - <A HREF="$reset_link">SELECT</A> a different atlas build to explore<BR><BR>
         -$alt_link
       ~;
+      $sbeamsMOD->display_page_footer(use_tabbed_panes => 1) if ($display_page_header_footer);
       return(-1);
     }
   }
