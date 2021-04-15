@@ -1662,7 +1662,7 @@ sub handle_request {
       }
       my $ptm_summary_chart = '';
       if ($ptm_obs){
-         $sbeamsMOD->displayProt_PTM_plotly(data=> \%data,
+         $ptm_summary_chart= $sbeamsMOD->displayProt_PTM_plotly(data=> \%data,
 							   protein=>$protein_name,
 							   atlas_build_id => $atlas_build_id,
 							   seq=>$biosequence->{biosequence_seq});
