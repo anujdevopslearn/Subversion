@@ -1764,21 +1764,21 @@ sub handle_request {
       my $total = 0;
       my $inst_obs;
       for my $sample ( @samples ) {
-	$inst_obs ||= $sample->[2];
-	if ( $sample->[4] ) {
-	  $sample->[4] = sprintf( "%0.1f",( $sample->[1]/$sample->[4] ) * 1000000 );
-	} else {
-	  $sample->[4] = 'null';
-	}
-	my $title = $sample->[0];
-	$title =~ s/\W//g;
-	push @$n_obs, [ $title, $sample->[1] ];
-	push @$obs_per_million, [ $title, $sample->[4] ];
-	push @$table_samples, $sample->[3];
-	$total += $sample->[1];
+				$inst_obs ||= $sample->[2];
+				if ( $sample->[4] ) {
+					$sample->[4] = sprintf( "%0.1f",( $sample->[1]/$sample->[4] ) * 1000000 );
+				} else {
+					$sample->[4] = 'null';
+				}
+				my $title = $sample->[0];
+				$title =~ s/\W//g;
+				push @$n_obs, [ $title, $sample->[1] ];
+				push @$obs_per_million, [ $title, $sample->[4] ];
+				push @$table_samples, $sample->[3];
+				$total += $sample->[1];
       }
       unless ( $total == $inst_obs ) {
-	$log->error( "mismatch in sample count!!! $total <> $inst_obs " );
+				$log->error( "mismatch in sample count!!! $total <> $inst_obs " );
       }
 
 
@@ -2154,32 +2154,28 @@ sub get_protein_mapping_widget {
           CASE WHEN PPL.level_name IS NULL THEN 'zzzz' ELSE PPL.level_name END as level_name,
           BSRT.relationship_name,
           BS_REF.biosequence_name as "reference_biosequence_name"
-    FROM PeptideAtlas.dbo.biosequence_set BSS
-    INNER JOIN PeptideAtlas.dbo.biosequence BS
+    FROM $TBAT_BIOSEQUENCE_SET BSS
+    INNER JOIN $TBAT_BIOSEQUENCE BS
           ON ( BSS.biosequence_set_id = BS.biosequence_set_id )
-
      LEFT JOIN BioLink.dbo.dbxref DBX
           ON ( BS.dbxref_id = DBX.dbxref_id )
-
-     LEFT JOIN PeptideAtlas.dbo.protein_identification PID
+     LEFT JOIN $TBAT_PROTEIN_IDENTIFICATION PID
           ON ( PID.biosequence_id = BS.biosequence_id )
 	            AND PID.atlas_build_id = $build_id
-
-     LEFT JOIN PeptideAtlas.dbo.protein_presence_level PPL
+     LEFT JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL
           ON ( PPL.protein_presence_level_id = PID.presence_level_id )
-
-     LEFT JOIN PeptideAtlas.dbo.biosequence_relationship BSR
+     LEFT JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BSR
           ON ( BSR.related_biosequence_id = BS.biosequence_id )
           AND BSR.atlas_build_id = $build_id
-
-     LEFT JOIN PeptideAtlas.dbo.biosequence_relationship_type BSRT
+     LEFT JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BSRT
           ON ( BSRT.biosequence_relationship_type_id = BSR.relationship_type_id )
-         LEFT JOIN PeptideAtlas.dbo.biosequence BS_REF
+         LEFT JOIN $TBAT_BIOSEQUENCE BS_REF
               ON ( BS_REF.biosequence_id = BSR.reference_biosequence_id )
        WHERE BS.biosequence_id IN ( $id_str )
        ORDER BY level_name ASC, dbxref_name DESC, BS.biosequence_name ASC
        ~;
 
+  #$sbeams->display_sql(sql=>$sql);
   my $sth = $sbeams->get_statement_handle( $sql );
   my @ordered;
   my %level;
