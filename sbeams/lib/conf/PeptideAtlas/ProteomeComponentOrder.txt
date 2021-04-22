@@ -1,13 +1,13 @@
 #organims_id,database,pattern source,pattern
 9,Araport11,Accession,AT
-9,Uniprot,Description,_ARATH
-9,RefSeq,Accession,[NXY]P_
 9,TAIR10,Accession,TAIR10_
-#9,CONTAM,Accession,CONTAM_
-9,Wurtele,Accession,CONTRIB_Iowa
+9,UniprotKB,Description,_ARATH
+9,RefSeq,Accession,[NXY]P_
 9,LW,Accession,CONTRIB_LW
 9,SIPs,Accession,CONTRIB_SIPs
 9,sORFs,Accession,CONTRIB_sORFs
+#9,CONTAM,Accession,CONTAM_
+9,Iowa,Accession,CONTRIB_Iowa
 
 2,NeXtProt,Description,nP20K
 2,NeXtProt Variants,Description,nPvarsplic
@@ -22,3 +22,13 @@
 2,CONTRIB,Accession,CONTRIB
 2,Microbe,Accession,Microbe
 #2,CONTAM,Accession,CONTAM
+
+#Borrelia
+55,B31,Description,BORBU
+55,JD1,Description,JD1
+55,N40,Description,N40
+55,MM1,Description,MM1
+
+#DeerTick
+84,Uniprot,Description,IXOSC
+84,RefSeq,Accession,XP
