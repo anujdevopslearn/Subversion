@@ -161,7 +161,6 @@ sub main {
   my $n_experiments = 0;
 
   my @peptides;
-  my %search_batch_pepseqs;
   my @correct_peptides;
   my @search_batch_peptides;
 
@@ -173,6 +172,8 @@ sub main {
   my @all_search_batch_ids;
   my %all_peptides;
   my %sample_tags;
+  my %peptide_mapping;
+	my %LongProteotypicPeptides = ();
 
   unlink "psbi";
   unlink "peptidehash";
@@ -182,12 +183,10 @@ sub main {
   #### Hashes containing canonical protein info
   my %canonical_hash;
   my %pepmap_hash;
-  my %n_canonical_prots;
-  my %n_cumulative_canonical_prots;
   my %pepmap_all_hash;
 
   ### First, read prot info if provided
-  my %included_peptides = ();
+  my %included_peptides;
   if (defined $prot_file) {
     # read header and get index of biosequence_name from it
 #protein_group_number,biosequence_name,probability,confidence,n_observations,n_distinct_peptides,level_name,represented_by_biosequence_name,subsumed_by_biosequence_name,estimated_ng_per_ml,abundance_uncertainty,is_covering,group_size
@@ -231,6 +230,13 @@ sub main {
     my $n_canonicals = scalar keys %canonical_hash;
     print "$n_canonicals total distinct canonical protein identifiers found\n";
 
+		open (L, "<LongProteotypicPeptides.txt") or die "cannot open LongProteotypicPeptides.txt file\n";
+		while (my $line = <L>){
+			chomp $line;
+			my ($type, $prot, $peptide_accession) = split("\t", $line);
+			$LongProteotypicPeptides{$prot}{$peptide_accession} = 1;
+		}
+
     #### Make a hash of peptide -> canonical proteins
     #### Make a hash of peptide -> non-decoy, non-contam proteins
     my $n_pep_mappings = 0;
@@ -238,15 +244,18 @@ sub main {
     while ($line = <PEPMAPFILE>) {
       chomp $line;
       # get peptide, protein
-    
-      my ($pep_acc,$unmod_pep_seq, $prot_acc) = split("\t", $line);
+      my ($pep_acc,$unmod_pep_seq, $prot_acc,$start,$end,$pre,$fol) = split("\t", $line);
       next if (! $prot_acc);
       next if ($prot_acc =~ /(^CONTAM|^DECOY)/i);
       if ($ex_tag_list){
          next if ($prot_acc =~ /($ex_tag_list)/);
       }
-      $included_peptides{$unmod_pep_seq} = 1;
+      $included_peptides{$pep_acc} = length($unmod_pep_seq);
 
+      if (defined $LongProteotypicPeptides{$prot_acc}){
+        $peptide_mapping{$pep_acc}{$prot_acc}{start} = $start;
+        $peptide_mapping{$pep_acc}{$prot_acc}{end} = $end;
+      }      
       # if protein is canonical
       if (defined $canonical_hash{$prot_acc}) {
 	# add protein to list hashed to by peptide
@@ -272,14 +281,16 @@ sub main {
   my $origprobcol = 8;   #PeptideProphet peptide probability
   $protcol = 2;
   my $origprotcol = 10;  #accession of a protein mapped to
+  my $origacccol = 2;
+
 
   #### Read in all the peptides for the first experiment and get the
   #### prot info
   my @columns;
   my $n_spectra = 0;
-  my %canonical_protids;
   my $not_done = 1;
   my $cnt = 0;
+  my $pep_acc='';
   my %charge_cnt = ();
   my %length_cnt = ();
   my ($pre, $fol);
@@ -288,13 +299,14 @@ sub main {
     if ($line = <INFILE>) {
       chomp($line);
       @columns = split(/\t/,$line);
-      if(not defined $included_peptides{$columns[3]}){ 
+      if(not defined $included_peptides{$columns[2]}){ 
         next;
       }
       next if ($columns[$origprobcol] < $P_threshold);
 
       $charge_cnt{$columns[7]}++;
       $length_cnt{length($columns[3])}++;
+      $pep_acc = $columns[2];
       $pre = $columns[4];
       $fol = $columns[6];
       my  $unmodified_pepseq = $columns[$origseqcol];
@@ -331,26 +343,12 @@ sub main {
       my @tmp = @search_batch_peptides;
       push(@all_search_batch_ids,$this_search_batch_id);
       $all_peptides{$this_search_batch_id} = join("\n", @tmp); 
-      #### Get the canonical proteins mapped to by all peptides in this
-      #### search batch.
-      my %canonical_protids_batch = ();
-      for my $pep (keys %search_batch_pepseqs) {
-        for my $canonical_protid (@{$pepmap_hash{$pep}}) {
-          $canonical_protids_batch{$canonical_protid} = 1;
-          $canonical_protids{$canonical_protid} = 1;
-        }
-      }
-      $n_canonical_prots{$this_search_batch_id} =
-            scalar keys %canonical_protids_batch;
-      $n_cumulative_canonical_prots{$this_search_batch_id} =
-	    scalar keys %canonical_protids;
       $sample_tags{$this_search_batch_id} = 'xx';
       #### Update the summary table of incorrect values with data from
       #### this search_batch
       #### Prepare for next search_batch_id
       $this_search_batch_id = $columns[0];
       @search_batch_peptides = ();
-      %search_batch_pepseqs = ();
       print "n_spectra=$n_spectra\n";
       #print "$sample_tag n_spectra=$n_spectra n_prots = $n_canonical_proteins_batch ($n_cum_canonicals_batch cumul.)\n";
       unless ($this_search_batch_id == -998899) {
@@ -365,7 +363,8 @@ sub main {
       my $unmodified_pepseq = $columns[$origseqcol];
       my $prob = $columns[$origprobcol];
       my $one_mapped_protid = $columns[$origprotcol];
-      my $tmp = "$unmodified_pepseq,$prob,$one_mapped_protid";
+      my $pep_acc = $columns[$origacccol];
+      my $tmp = "$pep_acc,$prob,$one_mapped_protid";
 
       push(@search_batch_peptides,$tmp);
       $n_assignments++;
@@ -375,7 +374,6 @@ sub main {
       } elsif ($prob > $distinct_peptides{$unmodified_pepseq}->{best_probability}) {
         $distinct_peptides{$unmodified_pepseq}->{best_probability} = $prob; 
       }
-      $search_batch_pepseqs{$unmodified_pepseq} =1;
     }
   }
 
@@ -488,6 +486,9 @@ sub main {
 
   #### Calculate the number of distinct peptides as a function of exp.
   my $niter = 1;
+  my %cum_proteins  = ();
+  open (PROT, ">protein_progression.txt");
+ 
   for (my $iter=0; $iter<$niter; $iter++) {
     my @shuffled_search_batch_ids = @all_search_batch_ids;
     if ($iter > 0) {
@@ -517,20 +518,62 @@ sub main {
       my $n_peptides_all = scalar(keys(%batch_distinct_peptides_all));
       my $cum_n_new_all = scalar(keys(%total_distinct_peptides_all));
       my $n_new_pep_all = $cum_n_new_all - $p_cum_n_new_all;
-      my $n_prots = $n_canonical_prots{$search_batch_id};
-      my $n_cum_prots = $n_cumulative_canonical_prots{$search_batch_id};
       my $sample_tag = $sample_tags{$search_batch_id};
+      
+      my %batch_LongProteotypicPeptides;
+      my %cum_LongProteotypicPeptides;
+      my $n_canonical_prots =0;
+      my $n_cum_canonical_prots = 0;
+
+      foreach my $prot (keys %LongProteotypicPeptides){
+        foreach my $peptide_accession (keys %{$LongProteotypicPeptides{$prot}}){
+          if (defined $batch_distinct_peptides_all{$peptide_accession}){
+            $batch_LongProteotypicPeptides{$prot}{$peptide_accession} = 1; 
+          }
+          if (defined $total_distinct_peptides_all{$peptide_accession}){
+            $cum_LongProteotypicPeptides{$prot}{$peptide_accession} = 1;
+          }         
+
+        }
+      }
+       
+      foreach my $prot (keys %batch_LongProteotypicPeptides){
+        my @peptide_accessions = keys %{$batch_LongProteotypicPeptides{$prot}};
+        next if (@peptide_accessions < 2);
+        my $len = checkExtendedLength(peptide_accessions => \@peptide_accessions,  
+                                      peptide_mapping => \%peptide_mapping,
+                                      all_peptides => \%included_peptides,
+                                      protein => $prot);
+        if ($len >= 18){
+          $n_canonical_prots++;
+        }
+      }
+      
+      foreach my $prot (keys %cum_LongProteotypicPeptides){
+        my @peptide_accessions = keys %{$cum_LongProteotypicPeptides{$prot}};
+        next if (@peptide_accessions < 2);
+        my $len = checkExtendedLength(peptide_accessions => \@peptide_accessions,
+                                      peptide_mapping => \%peptide_mapping,
+                                      all_peptides => \%included_peptides,
+                                      protein => $prot);
+        if ($len >= 18){
+          $n_cum_canonical_prots++;
+          if (not defined $cum_proteins{$prot}){
+             print PROT "$search_batch_id\t$prot\t". join(",", sort {$a cmp $b} @peptide_accessions) ."\n";
+             $cum_proteins{$prot} =1 ;
+          } 
+        }
+      }
+
 
       printf OUTFILE2 "%20.20s %4.0f %9.0f %9.0f %9.0f %9.0f %9.0f %6s %5d %5d\n",
 	      $sample_tag, $search_batch_id,$n_goodspec ,
 	      $n_peptides_all, $n_new_pep_all,
-	      $cum_nspec, $cum_n_new_all, 'N',
-              $n_prots, $n_cum_prots
-	     ;
+	      $cum_nspec, $cum_n_new_all, 'N', $n_canonical_prots, $n_cum_canonical_prots;
+
       $p_cum_n_new_all = $cum_n_new_all;
       untie @lines;
     }
-
   }
   print "$outfile2 written.\n" if $VERBOSE;
   unlink "peptidehash";
@@ -604,3 +647,31 @@ sub shuffleArray {
   return(\@new_array);
 
 }
+
+sub checkExtendedLength{
+  my %args = @_;
+  my $peptide_accessions = $args{peptide_accessions};
+  my $proteinAccession = $args{protein};
+  my $peptide_mapping = $args{peptide_mapping};
+  my $all_peptides = $args{all_peptides};
+  my %coverage = ();
+  my $additional_len = 0;
+  foreach my $accession(@$peptide_accessions){
+    if (not defined $peptide_mapping->{$proteinAccession}{$accession}){
+       #peptide got from non-core protein
+       $additional_len+= $all_peptides->{$accession};
+       next;
+    }
+
+    my $start = $peptide_mapping->{$proteinAccession}{$accession}{start};
+    my $end =  $peptide_mapping->{$proteinAccession}{$accession}{end};
+    my $n = $start;
+    while ($n <=$end){
+      $coverage{$n} = 1;
+      $n++;
+    }
+  }
+  return $additional_len + scalar keys %coverage;
+}
+
+

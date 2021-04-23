@@ -175,7 +175,7 @@ sub handleRequest {
   for my $builds ( @$build_info ) {
     my $stats = get_build_stats( $builds );
     insert_stats( $stats );
-    my $stats = get_dataset_statistics ($builds);
+    $stats = get_dataset_statistics ($builds);
     insert_dataset_stats( $stats );
   }
   
@@ -534,12 +534,17 @@ sub get_dataset_statistics{
   my $base_path = $CONFIG_SETTING{PeptideAtlas_PIPELINE_DIRECTORY};
   $data_path = join( '/', $base_path, $data_path );
 	print "update dataset_statistics for buid_id=$atlas_build_id\n";
+
   my @stats = ();
   my $experiment_list = "$data_path/../Experiments.list";
 	my $outfile2="$data_path/experiment_contribution_summary_dataset.out";
   my @psb_order = ();
   my %psb_rp_id =();
 	my %summary = ();
+  my %LongProteotypicPeptides=();
+  my %peptides = ();
+	my %prot_dataset;
+
   open (E, "<$experiment_list") or die "cannot find $experiment_list\n";
   while (my $line = <E>){
     chomp $line;
@@ -548,73 +553,77 @@ sub get_dataset_statistics{
     $line =~ /^(\d+)\s.*/;
     push @psb_order , $1;
   }
+	open (L, "<$data_path/LongProteotypicPeptides.txt") or die "cannot open $data_path/LongProteotypicPeptides.txt file\n";
+	while (my $line = <L>){
+		chomp $line;
+		my ($type, $prot, $pep_acc) = split("\t", $line);
+    next if ($prot =~ /(CONTAM|DECOY)/);
+		$LongProteotypicPeptides{proteinAccession}{$prot}{$pep_acc} = 1;
+    $LongProteotypicPeptides{peptideAccession}{$pep_acc} = 1;
+	}
+  close L;
 
 	my $sql =qq~;
-		SELECT S.SAMPLE_ID, REPOSITORY_IDENTIFIERS, ASB.n_runs, ASB.proteomics_search_batch_id
+		SELECT ASB.proteomics_search_batch_id, REPOSITORY_IDENTIFIERS, ASB.n_runs
 		FROM $TBAT_SAMPLE  S
     JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON (ASB.sample_id = S.sample_id)
     JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON(ABSB.ATLAS_SEARCH_BATCH_ID = ASB.ATLAS_SEARCH_BATCH_ID)
     WHERE ABSB.atlas_build_id = $atlas_build_id
 	~;
   my @results = $sbeams->selectSeveralColumns($sql);
-	my %sample_repository_ids = (); 
   my %runs = ();
   foreach my $row(@results){
-    my ($sample_id, $rp_id, $n_runs, $psb_id) = @$row;
+    my ($psb_id, $rp_id, $n_runs) = @$row;
     $rp_id = 'NA' if (! $rp_id || $rp_id eq '');
-    $sample_repository_ids{$sample_id} = $rp_id;
     $psb_rp_id{$psb_id} = $rp_id;
     $runs{$rp_id} += $n_runs;
   }
-	print "getting peptides and proteins\n";
-	$sql = qq~
-		 SELECT PI.Peptide_id,  BS.biosequence_name, PRL.LEVEL_NAME, PIS.sample_id
-		 FROM  $TBAT_PEPTIDE_INSTANCE PI 
-		 JOIN  $TBAT_PEPTIDE_INSTANCE_SAMPLE PIS ON (PIS.PEPTIDE_INSTANCE_ID = PI.PEPTIDE_INSTANCE_ID)
-		 JOIN $TBAT_PEPTIDE_MAPPING PM ON (PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID) 
-		 JOIN $TBAT_BIOSEQUENCE BS ON (PM.MATCHED_BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID)
-		 LEFT JOIN  $TBAT_PROTEIN_IDENTIFICATION PID ON (PID.biosequence_id = PM.MATCHED_BIOSEQUENCE_ID 
-                                                     AND PID.atlas_build_id = $atlas_build_id)
-		 LEFT JOIN  $TBAT_PROTEIN_PRESENCE_LEVEL PRL ON (PID.PRESENCE_LEVEL_ID = PRL.PROTEIN_PRESENCE_LEVEL_ID)
-		 WHERE PI.atlas_build_id = $atlas_build_id
-		 AND BS.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
-		 AND BS.BIOSEQUENCE_NAME NOT LIKE 'CONTAM%'
-     AND PI.PEPTIDE_INSTANCE_ID NOT IN (
-        SELECT PIA.PEPTIDE_INSTANCE_ID 
-		    FROM $TBAT_PEPTIDE_INSTANCE_ANNOTATION PIA 
-			  JOIN $TBAT_SPECTRUM_ANNOTATION_LEVEL  SAL  
-        ON  (SAL.SPECTRUM_ANNOTATION_LEVEL_ID = PIA.spectrum_annotation_level_id
-			  AND PIA.RECORD_STATUS != 'D' )
-	      WHERE SAL.SPECTRUM_ANNOTATION_LEVEL_ID in (2,3,4)
-     )
-  ~;
+  print "reading peptde_mapping\n"; 
+  open (MAP, "<$data_path/peptide_mapping.tsv") or die "cannot open $data_path/peptide_mapping.tsv\n";
+  while (my $line =<MAP>){
+		my ($pep_acc,$pep_seq, $prot_acc,$start,$end,$pre,$fol) = split("\t", $line);
+		next if (! $prot_acc);
+		next if ($prot_acc =~ /(^CONTAM|^DECOY|^UNMAP)/i);
+    $peptides{length}{$pep_acc} = length($pep_seq); 
+		if ( defined $LongProteotypicPeptides{proteinAccession}{$prot_acc}){ 
+      $peptides{proteinAccession}{$prot_acc}{$pep_acc}{start} = $start;
+      $peptides{proteinAccession}{$prot_acc}{$pep_acc}{end} = $end;
+		}
+  }  
 
-	
-	my %dataset_prot;
-	# sample_tag sbid ngoodspec      npep n_new_pep cum_nspec cum_n_new is_pub nprot cum_nprot
-	my %peptides = ();
-  my $sth = $sbeams->get_statement_handle( $sql );
-	while (my @row = $sth->fetchrow_array() ) {
-		 my ($pep_id, $bs_name,$protein_level, $sample_id) = @row;
-		 my $id = $sample_repository_ids{$sample_id} || 'NA'; 
-		 $peptides{$id}{$pep_id} =1;
-		 next if ($bs_name eq '');
-		 next if ($bs_name =~ /(decoy|contam)/i);
-     next if (! $protein_level);
-		 next if ($protein_level !~/canonical/i);
-			$dataset_prot{$id}{$bs_name} =1;
-	}
+	print "reading PAidentlist\n";
+  open (IDENT, "<$data_path/PeptideAtlasInput_concat.PAidentlist") or die "cannot open $data_path/PeptideAtlasInput_concat.PAidentlist file\n";
+  while (my $line = <IDENT>){
+    my @tmp = split("\t", $line);
+    my $psb_id = $tmp[0];
+    my $id = $psb_rp_id{$psb_id} || 'NA';
+    my $pep_acc = $tmp[2];
+    ## decoy and contam mapping peptides
+    next if (not defined $peptides{length}{$pep_acc}); 
+    $peptides{datasetID}{$id}{$pep_acc} =1;
+    $peptides{peptideAccession}{$pep_acc}{$id} =1;
+  }
+
+  foreach my $prot_acc (keys %{$LongProteotypicPeptides{proteinAccession}}){
+    foreach my $pep_acc (keys %{$peptides{proteinAccession}{$prot_acc}}){
+      foreach my $datasetID (keys %{$peptides{peptideAccession}{$pep_acc}}){
+         $prot_dataset{$datasetID}{$prot_acc} = 1; 
+      }
+    } 
+  }
+
 	my %unique_peptides = ();
 	my %unique_proteins = ();
-	my @ids = keys %peptides;
+	my @ids = keys %{$peptides{datasetID}};
+
 	foreach my $id (@ids){
 		my %list = ();
-		foreach my $pep(keys %{$peptides{$id}}){
+		foreach my $pep(keys %{$peptides{datasetID}{$id}}){
 			$list{$pep} = 1;
 		}
 		foreach my $id2(@ids){
 			next if ($id2 eq $id);
-			foreach my $pep(keys %{$peptides{$id2}}){
+			foreach my $pep(keys %{$peptides{datasetID}{$id2}}){
 				if (defined $list{$pep}){
 					 $list{$pep} = 0;
 				}
@@ -631,12 +640,12 @@ sub get_dataset_statistics{
 
 	foreach my $id (@ids){
 		my %list = ();
-		foreach my $protein(keys %{$dataset_prot{$id}}){
+		foreach my $protein(keys %{$prot_dataset{$id}}){
 			$list{$protein} = 1;
 		}
 		foreach my $id2(@ids){
 			next if ($id2 eq $id);
-			foreach my $protein(keys %{$dataset_prot{$id2}}){
+			foreach my $protein(keys %{$prot_dataset{$id2}}){
 				if (defined $list{$protein}){
 					 $list{$protein} = 0;
 				}
@@ -650,6 +659,7 @@ sub get_dataset_statistics{
 		}
 		$unique_proteins{$id} = $cnt;
 	}
+
 	print "getting n_spectra\n";
 
 	$sql =qq~
@@ -693,41 +703,46 @@ sub get_dataset_statistics{
 	#PXD000546    120945    143364      8858         0         0    218  1163     0    0    0
 	#
 	my ($cum_nspec, $cum_n_new_pep, $cum_prots);
-	my %processed = ();
+  %processed = ();
 	my $first = 1;
-	my ($cum_n_pep, $cum_n_prot);
+	my ($cum_n_pep, $cum_n_prot, %cum_LongProteotypicPeptides, %cum_canonical_prots);
+  my $cum_prot_pre = 0;
 	foreach my $id (@repository_id_order){
 		my $n_goodspec = $spectra_cnt{$id}{n_good_spectra};
     my $n_searched_spectra = $spectra_cnt{$id}{n_searched_spectra};
-		my $n_peptides = scalar keys %{$peptides{$id}};
-		my $n_prots =  scalar keys %{$dataset_prot{$id}};
+		my $n_peptides = scalar keys %{$peptides{datasetID}{$id}};
+		my $n_prots =  scalar keys %{$prot_dataset{$id}};
 		my $n_unique_pep = $unique_peptides{$id};
 		my $n_unique_prots = $unique_proteins{$id};
-		my ($n_new_pep, $n_new_prot);
+		my ($n_new_pep,$n_new_canonical_prots); 
 		if ($first){
 			$first =0;
 			$n_new_pep = $n_peptides;
-			$n_new_prot = $n_prots;
 			$cum_nspec = $n_goodspec;
 			$cum_n_pep = $n_peptides;
-			$cum_n_prot = $n_prots;
 		}else{
 			$cum_nspec += $n_goodspec;
-			$n_new_pep = get_cum_new(hash =>\%peptides,
-																		cur_id => $id,
-																		processed => \%processed);
-			$n_new_prot = get_cum_new(hash =>\%dataset_prot,
-																		cur_id => $id,
-																		processed => \%processed);
+		  $n_new_pep = get_cum_new(peptides =>\%peptides,
+																	cur_id => $id,
+																	processed => \%processed);
 			$cum_n_pep +=$n_new_pep;
-			$cum_n_prot += $n_new_prot;
+    }
+		my ($n_canonical_prots, $n_cum_canonical_prots) = get_prot_cnt(peptides =>\%peptides,
+																	LongProteotypicPeptides => \%LongProteotypicPeptides,
+																	cum_LongProteotypicPeptides => \%cum_LongProteotypicPeptides,
+																	cum_canonical_prots => \%cum_canonical_prots,
+																	cur_id => $id,
+																	processed => \%processed);
+    $n_new_canonical_prots  = $n_cum_canonical_prots - $cum_prot_pre;	
+    $cum_prot_pre = $n_cum_canonical_prots;
 
-		}
 			printf OUTFILE2 "%10d %10d %10d %10d %8d %15d %11d %11d %11d %10d %s\n",
 				$n_goodspec, $cum_nspec, $n_peptides,$n_new_pep,$cum_n_pep,$n_unique_pep,
-				$n_prots, $n_new_prot,$cum_n_prot,$n_unique_prots,$id;
+        $n_canonical_prots, $n_new_canonical_prots,$n_cum_canonical_prots,$n_unique_prots,$id;
 	 $processed{$id} =1;
-    push @stats, [$id,$n_goodspec,$n_searched_spectra,$cum_nspec, $n_peptides,$n_new_pep,$cum_n_pep,$n_unique_pep,$n_prots, $n_new_prot,$cum_n_prot,$n_unique_prots, $runs{$id},$atlas_build_id];
+    push @stats, [$id,$n_goodspec,$n_searched_spectra,$cum_nspec, $n_peptides,$n_new_pep,$cum_n_pep,$n_unique_pep,
+                  $n_canonical_prots, $n_new_canonical_prots,$n_cum_canonical_prots,
+                  $n_unique_prots, $runs{$id},$atlas_build_id];
 	}
   return \@stats;
 
@@ -736,17 +751,16 @@ sub get_dataset_statistics{
 ##################################################################################'
 sub get_cum_new {
   my %args = @_;
-  my $hash = $args{hash};
+  my $peptides = $args{peptides};
   my $processed = $args{processed};
-  my $cur_id = $args{cur_id}; ;
+  my $cur_id = $args{cur_id}; 
   my %list = ();
-	foreach my $s(keys %{$hash->{$cur_id}}){
+	foreach my $s(keys %{$peptides->{datasetID}{$cur_id}}){
 		$list{$s} = 1;
 	}
   my $cnt = 0;
   foreach my $id (keys %$processed){
-		foreach my $s(keys %{$hash->{$id}}){
-      #print "##$id $s\n";
+		foreach my $s(keys %{$peptides->{datasetID}{$id}}){
 			if (defined $list{$s}){
 				 $list{$s} = 0;
 			}
@@ -760,6 +774,52 @@ sub get_cum_new {
 	}
   return $cnt;
 }
+
+sub get_prot_cnt {
+  my %args = @_;
+  my $peptides = $args{peptides};
+  my $LongProteotypicPeptides = $args{LongProteotypicPeptides};
+  my $cum_LongProteotypicPeptides = $args{cum_LongProteotypicPeptides};
+  my $cum_canonical_prots = $args{cum_canonical_prots};
+  my $processed = $args{processed};
+  my $cur_id = $args{cur_id}; 
+	my %dataset_LongProteotypicPeptides;
+	my $n_canonical_prots =0;
+	my $n_cum_canonical_prots = 0;
+
+	foreach my $prot (keys %{$LongProteotypicPeptides->{proteinAccession}}){
+		foreach my $pep_acc (keys %{$LongProteotypicPeptides->{proteinAccession}{$prot}}){
+			if (defined $peptides->{datasetID}{$cur_id}{$pep_acc}){
+				$dataset_LongProteotypicPeptides{$prot}{$pep_acc} = 1;
+				$cum_LongProteotypicPeptides->{$prot}{$pep_acc} = 1;
+			}
+		}
+	}
+	foreach my $prot (keys %dataset_LongProteotypicPeptides){
+		my @peptide_accessions = keys %{$dataset_LongProteotypicPeptides{$prot}};
+		next if (@peptide_accessions < 2);
+		my $len = checkExtendedLength(peptide_accessions => \@peptide_accessions,
+																	peptides => $peptides,
+																	protein => $prot);
+		if ($len >= 18){
+			$n_canonical_prots++;
+		}
+	}
+
+	foreach my $prot (keys %$cum_LongProteotypicPeptides){
+		my @peptide_accessions = keys %{$cum_LongProteotypicPeptides->{$prot}};
+		next if (@peptide_accessions < 2);
+		my $len = checkExtendedLength(peptide_accessions => \@peptide_accessions,
+																	peptides => $peptides,
+																	protein => $prot);
+		if ($len >= 18){
+			$n_cum_canonical_prots++;
+		}
+  }
+  return ($n_canonical_prots, $n_cum_canonical_prots);
+                                                                                  
+}
+
 sub insert_dataset_stats {
   my $stats = shift;
   if (@$stats == 1){
@@ -800,4 +860,28 @@ sub insert_dataset_stats {
    $rownum++;
   }
   
+}
+
+sub checkExtendedLength{
+  my %args = @_;
+  my $peptide_accessions = $args{peptide_accessions};
+  my $proteinAccession = $args{protein};
+  my $peptides = $args{peptides};
+  my %coverage = ();
+  my $additional_len = 0;
+  foreach my $pep_acc(@$peptide_accessions){
+    ## peptide came from other proteins 
+    if (not defined $peptides->{proteinAccession}{$proteinAccession}{$pep_acc}){
+      $additional_len += $peptides->{length}{$pep_acc};
+      next; 
+    }
+    my $start = $peptides->{proteinAccession}{$proteinAccession}{$pep_acc}{start};
+    my $end =  $peptides->{proteinAccession}{$proteinAccession}{$pep_acc}{end};
+    my $n = $start;
+    while ($n <=$end){
+      $coverage{$n} = 1;
+      $n++;
+    }
+  }
+  return $additional_len + scalar keys %coverage;
 }
