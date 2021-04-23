@@ -2562,7 +2562,7 @@ sub displayProt_PTM_plotly{
     if ($aa =~ /[STY]/){
       if (defined $data->{$protein}{$pos}){
         $dataTable .= "['$aa'";
-        foreach my $c (qw (nP<.01 nP<.05 nP<.20 nP.2-.8 nP>.80 nP>.95 nP>.99 no-Choice)){
+        foreach my $c (qw (nP<.01 nP<.05 nP<.20 nP.2-.8 nP>.80 nP>.95 nP>.99 no-choice)){
           $dataTable .=",$data->{$protein}{$pos}{$c}";
           if ($data->{$protein}{$pos}{$c} > $maxnobs){
             $maxnobs = $data->{$protein}{$pos}{$c} ;
