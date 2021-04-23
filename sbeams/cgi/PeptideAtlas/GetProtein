@@ -4237,7 +4237,7 @@ sub displayExternalLinksSection {
 			$external_links .= qq~
           <tr class="hoverable">
           <td class="key"  nowrap>$title&nbsp;</td>
-          <td class="vlaue">
+          <td class="value">
 					<a href="$prot_links{$source}$biosequence->{biosequence_name}" target="_info">$biosequence->{biosequence_name}</a>
           </td></tr>
 			 ~;
@@ -4250,7 +4250,7 @@ sub displayExternalLinksSection {
       $external_links .= qq~
           <tr class="hoverable">
           <td class="key"  nowrap>$title</td>
-          <td class="vlaue">
+          <td class="value">
           <a href="$gene_links{$source}$gene_name" target="_info">$gene_name</a>
           </td></tr>
        ~;
