@@ -2561,7 +2561,9 @@ sub makeGenomeLink {
     $link = "<A HREF='http://www.genome.jp/kegg-bin/show_genomemap?ORG=hal&CHR=$chr&START_POS=$vc_start&ACCESSION=$args{acc}' TARGET=_ensembl Title='Explore range in KEGG contig viewer'>Contig Viewer </A>";
 #    $link = "<A HREF='http://www.genome.jp/kegg-bin/show_genomemap?ORG=hal&CHR=$chr&START_POS=$vc_start&ACCESSION=$args{acc}' TARGET=_ensembl>" .
 #            "<DIV Title='Explore range in KEGG contig viewer'> $args{start} - $args{end} </DIV> </A>";
-  } else {
+  } elsif ($org =~ /Arabidopsis/i ){
+     $link = "<A HREF='http://plants.ensembl.org/$org/contigview?region=$chr;vc_start=$vc_start;vc_end=$vc_end' TARGET=_ensembl Title='Explore range in Ensembl contig viewer'>Ensembl </A>";
+  }else {
     $link = "<A HREF='http://www.ensembl.org/$org/contigview?region=$chr;vc_start=$vc_start;vc_end=$vc_end' TARGET=_ensembl Title='Explore range in Ensembl contig viewer'>Ensembl </A>";
 #    $link = "<A HREF='http://www.ensembl.org/$org/contigview?region=$chr;vc_start=$vc_start;vc_end=$vc_end' TARGET=_ensembl>" .
 #            "<DIV Title='Explore range in Ensembl contig viewer'> $args{start} - $args{end} </DIV> </A>";
