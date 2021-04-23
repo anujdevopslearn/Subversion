@@ -1946,7 +1946,7 @@ sub get_proteome_coverage_new {
   my $union = '';
   foreach my $line (@patterns){
     my ($org_id, $name, $type, $pat_str)  = split(/,/, $line);
-    my @pats = split(/\|/, $pat_str);
+    my @pats = split(/;/, $pat_str);
     my $contraint = '';
     my $or = '';
     push @names, $name;

@@ -1,7 +1,7 @@
 #organims_id,database,pattern source,pattern
 9,Araport11,Accession,AT
 9,TAIR10,Accession,TAIR10_
-9,UniprotKB,Description,_ARATH
+9,UniprotKB,Description,tr|%ARATH;sp|%ARATH
 9,RefSeq,Accession,[NXY]P_
 9,LW,Accession,CONTRIB_LW
 9,SIPs,Accession,CONTRIB_SIPs
