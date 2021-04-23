@@ -2523,10 +2523,10 @@ sub display_peptide_sample_category_plotly{
      <TABLE>
        <A NAME='<B>Sample Category</B>'></A><DIV CLASS="hoverabletitle"><B>Peptide Identification by Sample Category</B></DIV>
        <TR> 
-        <TD><button type='button' id='toggle_button' onclick=toggle_plot()>Show Total Observed Spectra Plot</button>
+        <TD><button type='button' id='toggle_button' onclick=toggle_plot()>Show Distinct Peptide Per Million Observed Spectra Plot</button>
            <div style="width: 80vw">
-            &nbsp;<div id="plot_div3"> </div>
-            &nbsp;<div id="plot_div4" style="display:none; width: 80vw"></div>
+            &nbsp;<div id="plot_div3" style="display:none; width: 80vw"> </div>
+            &nbsp;<div id="plot_div4"></div>
             <br><br>
            <div>
        </TD>
