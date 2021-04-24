@@ -7,7 +7,7 @@
 # Description : Prints summary of a given protein given selection
 #               atlas build and protein name.
 #
-# SBEAMS is Copyright (C) 2000-2020 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -4216,64 +4216,62 @@ sub displayExternalLinksSection {
 
 
   my $currentOrganism = $current_page->{organism} || $sbeamsMOD->getCurrentAtlasOrganism(parameters_ref=>{});
-  #### Display the link to PPDB
+  #### Display links to Plant resources
   if ($currentOrganism =~ /Arabidopsis/ && $biosequence->{biosequence_name} =~ /^A/ ){
     my %prot_links=( 'POGS' => 'http://pogs.uoregon.edu/#/search/genemodel/',
                      'SUBA' => 'http://suba.live/factsheet.html?id=',
                      'PhosPhAt' => 'http://phosphat.mpimp-golm.mpg.de/app.html?agi=',
                      'PPDB' => 'http://ppdb.tc.cornell.edu/dbsearch/gene.aspx?acc=');
-
     my %prot_link_titles = ( 'POGS' => 'Putative Orthologous Groups DB',
-                     'SUBA' => 'Subcellular Location Database for Arabidopsis Proteins',
-                     'PhosPhAt' => '',
-                     'PPDB' => 'The Plant Proteome Database');
- 
-    my %gene_links = ('TAIR' => 'http://arabidopsis.org/servlets/TairObject?type=locus&name='); 
-    my %gene_link_titles =('TAIR' => 'The Arabidopsis Information Resource');
+			     'SUBA' => 'Subcellular Location Database for Arabidopsis Proteins',
+			     'PhosPhAt' => 'The Arabidopsis Protein Phosphorylation Site Database',
+			     'PPDB' => 'The Plant Proteome Database');
+
+    my %gene_links       = ('TAIR' => 'http://arabidopsis.org/servlets/TairObject?type=locus&name='); 
+    my %gene_link_titles = ('TAIR' => 'The Arabidopsis Information Resource');
 
     foreach my $source(keys %prot_links){
       my $title = $source;
-      $title = "$prot_link_titles{$source} ($source)" if ($prot_link_titles{$source});
-			$external_links .= qq~
+      $title = "$prot_link_titles{$source}" if ($prot_link_titles{$source});
+      $external_links .= qq~
           <tr class="hoverable">
-          <td class="key"  nowrap>$title&nbsp;</td>
+          <td class="key" nowrap>$title&nbsp;</td>
           <td class="value">
-					<a href="$prot_links{$source}$biosequence->{biosequence_name}" target="_info">$biosequence->{biosequence_name}</a>
+	  <b><a href="$prot_links{$source}$biosequence->{biosequence_name}" title="view $biosequence->{biosequence_name} at $source" target="_info">$source</a></b>
           </td></tr>
-			 ~;
+	 ~;
     }
     my $gene_name = $biosequence->{biosequence_name};
     $gene_name =~ s/\..*//;
     foreach my $source(keys %gene_links){
       my $title = $source;
-      $title = "$gene_link_titles{$source} ($source)" if ($gene_link_titles{$source});
+      $title = "$gene_link_titles{$source}" if ($gene_link_titles{$source});
       $external_links .= qq~
           <tr class="hoverable">
-          <td class="key"  nowrap>$title</td>
+          <td class="key" nowrap>$title</td>
           <td class="value">
-          <a href="$gene_links{$source}$gene_name" target="_info">$gene_name</a>
+          <b><a href="$gene_links{$source}$gene_name" title="view $biosequence->{biosequence_name} at $source" target="_info">$source</a></b>
           </td></tr>
        ~;
     }
     my $desc = $biosequence->{biosequence_desc};
-    my ($chr, $start, $end);
     if ($desc =~ /.*(Chr\w+):(\d+)-(\d+)/){
        my $chr = $1;
        my $start = $2;
        my $end = $3;
-			$external_links .= qq~
-      <tr class="hoverable">
-			<td class="key"  nowrap>JBrowser</td>
-			<td><a href="https://jbrowse.arabidopsis.org/index.html?data=Araport11&loc=$chr%3A$start..$end&tracks=TAIR10_genome%2CAraport11_Loci%2CAraport11_gene_models%2CSALK_tDNAs%2CTAIR10_loci&highlight=" target="_info">$biosequence->{biosequence_name}</a>
-			</td></tr>
-			~;
+       $external_links .= qq~
+        <tr class="hoverable">
+	  <td class="key" nowrap>JBrowse at arabidopsis.org</td>
+	  <td class="value"><b><a href="https://jbrowse.arabidopsis.org/index.html?data=Araport11&loc=$chr%3A$start..$end&tracks=TAIR10_genome%2CAraport11_Loci%2CAraport11_gene_models%2CSALK_tDNAs%2CTAIR10_loci&highlight=" title="view $biosequence->{biosequence_name} at JBrowse" target="_info">JBrowse</a></b></td>
+        </tr>
+        ~;
     }
   }
 
-	$external_links .= qq~
+  $external_links .= qq~
   <tr class="hoverable">
-	<td class="key"  nowrap>Google Search</td>
-	<td><a href="https://www.google.com/search?rlz=1C1CHBF_enUS861US861&q=AT5G61150.1&nfpr=1" target="_info">$biosequence->{biosequence_name}</a>
+	<td class="key" nowrap>Google Search</td>
+	<td class="value"><a href="https://www.google.com/search?rlz=1C1CHBF_enUS861US861&q=AT5G61150.1&nfpr=1" target="_info">$biosequence->{biosequence_name}</a>
 	</td></tr>
 	~;
 
@@ -4311,7 +4309,7 @@ sub displayExternalLinksSection {
   if ($uniprotProtein) {
     if ($sbeams->output_mode() eq 'html') {
       $external_links .= $sbeamsMOD->encodeSectionItem(
-        key => 'Protter (Interactive Protein visualization)',
+        key => 'Protter (Interactive protein visualization)',
         tr_info => $tr,
         value => $uniprotProtein,
         value => "<img src=$HTML_BASE_DIR/images/Protter.ico border=0 />" . '&nbsp;' . $uniprotProtein,
