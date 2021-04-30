@@ -2579,9 +2579,7 @@ sub get_clustal_coordinates {
 
 sub get_clustal_display {
   my $self = shift;
-  my %args = ( acc_color => '#0090D0',
-	       @_  
-      );
+  my %args = ( acc_color => '#0090D0', @_ );
 
   my $sbeams = $self->getSBEAMS();
 

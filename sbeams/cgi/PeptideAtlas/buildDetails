@@ -3,7 +3,7 @@
 ###############################################################################
 # $Id$
 #
-# SBEAMS is Copyright (C) 2000-2019 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -473,7 +473,7 @@ center left center left center center center center left center center center
 center left) ], 
 					tr_info => $tr,
 					bg_color => '#eaeaea',
-          table_id => 'mayu_data',
+					table_id => 'mayu_data',
 					sortable => 1 );
   $table .= "\n</table>\n";
   return ($table);
@@ -611,11 +611,11 @@ sub get_dataset_spec_protein_info {
   $table .= $atlas->encodeSectionTable( rows => [ $headings_ref, @records ], 
 					header => 1, 
 					align => [ @align], 
-          width => 'auto', 
-          nowrap => [1..scalar(@headings)],
+					width => 'auto', 
+					nowrap => [1..scalar(@headings)],
 					tr_info => $tr,
-          bg_color => '#EAEAEA',
-          rows_to_show => 25,
+					bg_color => '#EAEAEA',
+					rows_to_show => 25,
 					sortable => 1 );
   $table .= "\n</table>\n";
   return ($table);
@@ -637,7 +637,7 @@ sub get_build_plots {
                                                   sticky  => 1 );
 
   $table .= $atlas->encodeSectionHeader(
-      text => 'Experiment Contribution Plot',
+      text => 'Experiment Contribution Plots',
       span => 4,
       trinfo => "class=hoverable",
       LMTABS => 1,
@@ -1336,19 +1336,19 @@ sub get_dataset_protein_info {
     my @ids = split(/[,;]/, $repository_id); 
     my $repository_id_w_links;
     foreach my $id(@ids){
-			my $link = '';
-			$id =~ s/\s+//g;
-			if ($id =~ /PXD/){
-				$link = "http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=";
-			}elsif($id =~ /PASS/){
-				$link = "http://www.peptideatlas.org/PASS/";
-			}elsif($id =~ /^S\d+/){
-				$link = "https://cptac-data-portal.georgetown.edu/study-summary/";
-			}
+      my $link = '';
+      $id =~ s/\s+//g;
+      if ($id =~ /PXD/){
+	$link = "http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=";
+      }elsif($id =~ /PASS/){
+	$link = "http://www.peptideatlas.org/PASS/";
+      }elsif($id =~ /^S\d+/){
+	$link = "https://cptac-data-portal.georgetown.edu/study-summary/";
+      }
       if ($link){
-		  	$repository_id_w_links .= "<a href='$link$id'>$id</a>,";
+	$repository_id_w_links .= "<a href='$link$id'>$id</a>,";
       }else{
-         $repository_id_w_links .= "$id,";
+	$repository_id_w_links .= "$id,";
       }
     }
     $repository_id_w_links=~ s/,$//;
@@ -1378,11 +1378,11 @@ sub get_dataset_protein_info {
   $table .= $atlas->encodeSectionTable( rows => [ $headings_ref, @records ], 
 					header => 1, 
 					align => [ @align], 
-          width => 'auto', 
-          nowrap => [1..scalar(@headings)],
+					width => 'auto', 
+					nowrap => [1..scalar(@headings)],
 					tr_info => $tr,
-          bg_color => '#EAEAEA',
-          rows_to_show => 25,
+					bg_color => '#EAEAEA',
+					rows_to_show => 25,
 					sortable => 1 );
   $table .= "\n</table>\n";
   return ($table);
@@ -1404,7 +1404,7 @@ sub get_build_plots {
                                                   sticky  => 1 );
 
   $table .= $atlas->encodeSectionHeader(
-      text => 'Experiment Contribution Plot',
+      text => 'Experiment Contribution Plots',
       span => 4,
       trinfo => "class=hoverable",
       LMTABS => 1,
@@ -1477,9 +1477,9 @@ sub get_peptide_length_charge_distribution {
   
   my $chart = $atlas->plotly_barchart (data => \@data,
                                        names => \@names, 
-																			 divName => 'length_distribution_div',
-																			 xtitle => 'Peptide Length',
-																			 ytitle=> 'Frequency'); 
+				       divName => 'length_distribution_div',
+				       xtitle => 'Peptide Length',
+				       ytitle=> 'Frequency'); 
 
   @data = ();
   @names = ();

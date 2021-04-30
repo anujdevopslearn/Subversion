@@ -2783,7 +2783,7 @@ sub displayExperiment_contri_plotly{
 				x: [$cumpepx_str],
 				y: [$cumpepy_str],
 				fill: 'tonexty',
-        fillcolor:'red',
+        fillcolor:'#1f77b4',
         marker: {
                   color: 'rgba(255,0,255,0)',
                 }, 
@@ -2796,7 +2796,7 @@ sub displayExperiment_contri_plotly{
 				x: [$cumpepx_str],
 				y: [$idvpepy_str],
 				fill: 'tonexty',
-        fillcolor:'blue',
+        fillcolor:'#ff7f0e',
 				marker: {
 					color: 'rgba(255,0,255,0)',
 				},
@@ -2823,7 +2823,7 @@ sub displayExperiment_contri_plotly{
         x: [$cumpepx_str],
         y: [$cumproty_str],
         fill: 'tonexty',
-        fillcolor:'red',
+        fillcolor:'#003f72',
         marker: {
                   color: 'rgba(255,0,255,0)',
                 },
@@ -2836,7 +2836,7 @@ sub displayExperiment_contri_plotly{
         x: [$cumpepx_str],
         y: [$idvproty_str],
         fill: 'tonexty',
-        fillcolor:'blue',
+        fillcolor:'#b00',
         marker: {
                   color: 'rgba(255,0,255,0)',
                 },
