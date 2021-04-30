@@ -8,7 +8,7 @@
 # Description : This script authenticates the user, and then
 #               displays the opening access page.
 #
-# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -88,6 +88,11 @@ sub main
 #    $sbeams->printCGIParams($q);
 
 
+    if ($parameters{output_format}) {
+      $sbeams->output_mode($parameters{output_format})
+    }
+
+
     #### Decide what action to take based on information so far
     if ($parameters{action} eq "???") {
 
@@ -95,11 +100,14 @@ sub main
  
     } else {
 
-        $sbeamsMOD->display_page_header(project_id => $project_id);
-
+      if ($sbeams->output_mode() eq 'html') {
+	$sbeamsMOD->display_page_header(project_id => $project_id);
+	handle_request(ref_parameters=>\%parameters);
+	$sbeamsMOD->display_page_footer();
+      }
+      else {
         handle_request(ref_parameters=>\%parameters);
-
-        $sbeamsMOD->display_page_footer();
+      }
 
     }
 
@@ -114,13 +122,13 @@ sub main
 ###############################################################################
 sub handle_request {
 
-    my %args = @_;
+  my %args = @_;
 
-    #### Process the arguments list
-    my $ref_parameters = $args{'ref_parameters'}
-        || die "ref_parameters not passed";
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+  || die "ref_parameters not passed";
 
-    my %parameters = %{$ref_parameters};
+  my %parameters = %{$ref_parameters};
 
 
   #### Get the current atlas_build_id based on parameters or session
@@ -198,11 +206,22 @@ sub handle_request {
       if ($atlas_build->[0] == $atlas_build_id) {
       	$default_build_name = $atlas_build->[1];
       }
-			$atlas_build->[2] = $sbeams->escapeXML( value => $atlas_build->[2] );
+      $atlas_build->[2] = $sbeams->escapeXML( value => $atlas_build->[2] );
     }
 
     #### If the output_mode is HTML, then display the form
-    if ($sbeams->output_mode() eq 'html') {
+
+    if ($parameters{output_format} eq 'json') {
+      use JSON;
+      my $json = new JSON;
+      my $jstr = $json->utf8->encode(\@atlas_builds);
+      print("Access-Control-Allow-Origin: *\n");
+      print("Content-Type: application/json\n\n");
+      print $jstr;
+      return;
+
+    }
+    elsif ($sbeams->output_mode() eq 'html') {
 
         print qq~
         <script LANGUAGE="Javascript">
@@ -221,7 +240,7 @@ sub handle_request {
 	unless ($default_build_name) {
 	  $default_build_name = qq~<FONT COLOR="red"> - NONE - </FONT>~;
 	}
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'atlas_build_select',
+	my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'atlas_build_select',
                                                   visible => 0,
                                                   tooltip => 'Show/Hide Section',
                                                   imglink => 1,
