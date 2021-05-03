@@ -183,7 +183,8 @@ sub handle_request {
              FROM $TBAT_SEARCH_BATCH_STATISTICS SBS JOIN
                   $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB 
                ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
-             WHERE atlas_build_id = AB.atlas_build_id) AS n_distinct
+             WHERE atlas_build_id = AB.atlas_build_id) AS n_distinct,
+            AB.main_build_url
     FROM $TBAT_ATLAS_BUILD AB JOIN $TBAT_BIOSEQUENCE_SET BS
       ON AB.biosequence_set_id = BS.biosequence_set_id
     JOIN $TB_ORGANISM O ON BS.organism_id = O.organism_id
@@ -291,8 +292,8 @@ sub handle_request {
 #    SELECT AB.atlas_build_id, atlas_build_name, atlas_build_description,
 #           default_atlas_build_id, organism_specialized_build, organism_name, n_distinct
 
-    $table->addRow( [ '', 'Build Name', '# distinct', 'Organism', 'is_def', 'Description' ] );
-    $table->setRowAttr(  COLS => [1..6], ROWS => [1], BGCOLOR => '#bbbbbb', ALIGN=>'CENTER' );
+    $table->addRow( [ '', 'Build Name', '# distinct', 'Organism', 'is_def', 'Description', 'Build Home' ] );
+    $table->setRowAttr(  COLS => [1..7], ROWS => [1], BGCOLOR => '#bbbbbb', ALIGN=>'CENTER' );
     $table->setHeaderAttr( BOLD => 1 );
     foreach my $atlas_build ( @atlas_builds ) {
       my @row;
@@ -323,12 +324,16 @@ sub handle_request {
       $row[4] = $atlas_build->[4] || '';
       $row[4] = ( !$atlas_build->[3] ) ? 'N' : ( $row[4] ) ?
                 "<SPAN CLASS=popup_help TITLE='$atlas_build->[4]'>Y</SPAN>" : 'Y';
-
+      if ( $atlas_build->[7] ne '' &&  $atlas_build->[7] =~ /http.*builds\/([^\/]+)/){
+         $row[6] = "<a href='$atlas_build->[7]' target='_blank'>$1</a>";
+      }else{
+         $row[6] = '';
+      }
       $table->addRow( \@row );
       $rows = $table->getRowNum();
-      $table->setRowAttr(  COLS => [1..6], ROWS => [$rows], BGCOLOR => $bgcolor, @trinfo );
+      $table->setRowAttr(  COLS => [1..7], ROWS => [$rows], BGCOLOR => $bgcolor, @trinfo );
     }
-    $table->setColAttr(  COLS => [1..6], ROWS => [1..$rows], NOWRAP => 1 );
+    $table->setColAttr(  COLS => [1..7], ROWS => [1..$rows], NOWRAP => 1 );
     $table->setColAttr(  COLS => [3], ROWS => [1..$rows], ALIGN => 'RIGHT' );
     $table->setColAttr(  COLS => [4,5], ROWS => [1..$rows], ALIGN => 'CENTER' );
 #    $table->setColAttr(  COLS => [3], ROWS => [1..$rows], BGCOLOR => '#eeeeee' );
