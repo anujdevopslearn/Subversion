@@ -3047,7 +3047,7 @@ sub get_dataset_url{
 		next if ($pxd eq '');
 		$dataset_annotation{$pxd} =1;
 	}
-
+  $url='';
 
   foreach my $id(@ids){
     $id =~ s/\s+//g;
