@@ -775,6 +775,9 @@ sub encodeSectionTable {
   }
 
   my @table_attrs = ( 'border' => 0, );
+  if ( $args{width} ) {
+    push @table_attrs, 'WIDTH', $args{width};
+  }
   my $tr_info = $args{tr_info} || 'NOOP=1 ';
   my $tab = SBEAMS::Connection::DataTable->new( @table_attrs,
 						__use_thead => 1,
@@ -822,9 +825,6 @@ sub encodeSectionTable {
 
   return '' unless $args{rows};
   $args{header} ||= 0;
-  if ( $args{width} ) {
-    push @table_attrs, 'WIDTH', $args{width};
-  }
 
   $args{max_rows} ||= 0;
   my $sbeams = $self->getSBEAMS();
@@ -2790,13 +2790,14 @@ sub displayExperiment_contri_plotly{
     $idx++;
   } 
   $idx=0;
+  
   foreach my $row(@$data_ref){
     my $n_good_spectra = $row->[$cols{"Spectra ID'd"}];
     my $n_distinct_peptides = $row->[$cols{"Distinct Peptides"}];
     my $cumulative_n_peptides = $row->[$cols{"Cumulative Peptides"}];
     my $n_canonical_proteins = $row->[$cols{"Distinct Canonical Proteins"}];
     my $cumulative_n_proteins = $row->[$cols{"Cumulative Canonical Proteins"}];
-    my $sample_tag =  $row->[$cols{"Experiment Name"}];
+    my $sample_tag =  $row->[$cols{"Experiment Tag"}];
     $sample_tag =~ s/.*sample_id=\d+\'>//;
     $sample_tag =~ s/<.*//;
     push @sample_label, ($sample_tag,'','');
@@ -3070,6 +3071,43 @@ sub get_dataset_url{
   }
   $url =~ s/,$//;
   return $url;
+}
+
+sub create_table {
+  my $self = shift;
+  my %args = @_;
+  my $data = $args{data} || die "need data\n";
+  my $column_names = $args{column_names} || die "need column_names\n";
+  my $table_name =  $args{table_name} || die "need table name\n";
+  my $table_id =  $args{table_id} || die "need div name\n";
+  my $align = $args{align} || ();
+  my $sortable = $args{sortable} || 0;
+  my $table_width = $args{width} || 800;
+  my $rows_to_show = $args{rows_to_show} || 25;
+  my $nowrap = $args{nowrap} || 1;
+  unshift @$data, $column_names;
+  my $table = $self->encodeSectionTable( rows => $data,
+                              header => 1,
+                              bkg_interval => 3,
+                              set_download => 1,
+                              nowrap => [$nowrap],
+                              table_id => $table_id,
+                              align => [@$align],
+                              width => $table_width ,
+                              rows_to_show => $rows_to_show,
+                              sortable => $sortable );
+
+  my $heading_info = $self->get_table_help(column_titles_ref=> $column_names);
+  my $html = $sbeams->make_toggle_section(
+      neutraltext =>$table_name,
+      sticky => 1,
+      barlink => 1,
+      visible => 1,
+      name => $table_id."_div",
+      content => "<TABLE><TR><TD COLSPAN='5'>$heading_info</TD></TR>$table</TABLE>",
+  );
+
+  return $html;
 }
 
 

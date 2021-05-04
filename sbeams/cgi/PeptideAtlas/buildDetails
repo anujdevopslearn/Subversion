@@ -33,6 +33,7 @@ use SBEAMS::Connection::TabMenu;
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::Utilities;
 
 
 ###############################################################################
@@ -46,6 +47,9 @@ $atlas->setSBEAMS($sbeams);
 # Read input parameters
 my $params = process_params();
 $|++;
+
+our $organism;
+our $organism_id;
 
 my $show_image = 0;
 
@@ -64,8 +68,6 @@ my $show_image = 0;
     my $project_id = $sbeams->getCurrent_project_id();
 
     my $build_help = get_table_help( table => 'build' );
-    my $batch_help = get_table_help( table => 'batch' );
-    my $mayu_help = get_table_help( table => 'mayu' );
     my %resultset = ();
     my $resultset_ref = \%resultset;
     my $section = $params->{section} || '';
@@ -79,7 +81,6 @@ my $show_image = 0;
 #		my $back = $sbeams->getBackForm();
     $page .=<<"    END";
 		$tabMenu
-
     <P>
     <!--This shows some information about the currently selected build.
     <!--You can view the details of other builds by selecting an 
@@ -93,13 +94,13 @@ my $show_image = 0;
     my $build_id = $params->{atlas_build_id} || $atlas->getCurrentAtlasBuildID(parameters_ref => $params);
     if ( !grep /^$build_id$/, $atlas->getAccessibleBuilds() ) {
 #      die( "Access to specified build is not allowed" );
-       $atlas->display_page_header();
+       $atlas->display_page_header(init_tooltip => 1);
        $build_id = $atlas->getCurrentAtlasBuildID(parameters_ref => $params);
 		   $atlas->display_page_footer();
        exit;
     }
-    my $organism = $atlas->getCurrentAtlasOrganism (parameters_ref => $params);
-    my $organism_id = $atlas->getCurrentAtlasOrganism (parameters_ref => $params, type =>'organism_id');
+    $organism = $atlas->getCurrentAtlasOrganism (parameters_ref => $params);
+    $organism_id = $atlas->getCurrentAtlasOrganism (parameters_ref => $params, type =>'organism_id');
     my $valid_build = 1;
 
     if (! $params->{caching} && ! $section){
@@ -176,22 +177,26 @@ my $show_image = 0;
     }
     my ( $chart_div, $header );
 		my ( $sample_table, $sample_arrayref ,$column_name_ref ) = get_sample_info( $build_id );
-
     my ($dataset_contri_table) = get_dataset_contrib_info($build_id);
+
     if (! $section || $section =~ /SampleContribution/i){
       if ($params->{output_mode} =~ /tsv/i && $section){
         $atlas->print_html_table_to_tsv( data_ref => $sample_arrayref,
                                          column_name_ref => $column_name_ref,
                                          filename=>'SampleContribution.tsv'); 
       }else{
-			  $page .= "<BR>$batch_help\n$sample_table\n<BR>\n";
-			  $page .= "$dataset_contri_table\n<BR>\n"; 
+			  $page .= "$sample_table\n";
+			  $page .= "$dataset_contri_table\n"; 
       }
     }
     
     # Print what we already have, speed up apparent page loading time.
     if (! $section){
-      $atlas->display_page_header( header_info => $header, project_id => $project_id, onload => 'sortables_init()', sortable => 1 );
+      $atlas->display_page_header( init_tooltip => 1, 
+                                   header_info => $header, 
+                                   project_id => $project_id, 
+                                   onload => 'sortables_init()', 
+                                   sortable => 1 );
 		  print $page;
       $page = "<BR>";
       $page .= get_dataset_protein_info( build_id => $build_id);
@@ -201,19 +206,17 @@ my $show_image = 0;
 			my $build_path = get_build_path( build_id => $build_id );
 			my $mayu_data_path = "$build_path/analysis/Mayu_out.csv";
 			if ( -e $mayu_data_path ) {
-				$page = "<BR>$mayu_help\n";
-				$page .= get_mayu_info( $mayu_data_path );
+				$page = get_mayu_info( $mayu_data_path );
 			  print $page;
 			}
     	#  print STDERR 'showtime ' . time() . "\n";
 			# Add peptide stats section
 			# Add graphic
-
 			if ( $show_image ) {
-				my $plots = $page = get_build_plots ( build_id => $build_id, 
-                                              chart_div => $chart_div,
-                                              sample_arrayref => $sample_arrayref, 
-                                              column_name_ref => $column_name_ref); 
+				my $plots = get_build_plots ( build_id => $build_id, 
+																			chart_div => $chart_div,
+																			sample_arrayref => $sample_arrayref, 
+																			column_name_ref => $column_name_ref); 
 				print $plots;
 			}
       my $charge_length_data_path = "$build_path/analysis/peptide_length-charge_dist.tsv";
@@ -249,7 +252,7 @@ my $show_image = 0;
       }
     }
     ## color "Dataset Specific Protein Identification" table  
-    print $atlas->tableHeatMap(table_id => 'datasetContri_info', total => $n_canonical_protein);
+    print $atlas->tableHeatMap(table_id => 'get_dataset_spec_protein_info', total => $n_canonical_protein);
     print $atlas->tableHeatMap(table_id => 'dataset_protein_info', total=> $n_canonical_protein);
     $atlas->display_page_footer();
   }
@@ -326,98 +329,7 @@ sub get_table_help {
     $hidetext = 'hide row descriptions';
     $heading = 'Build Overview';
     $description= 'These values pertain to the atlas build as a whole';
-
-
-  } elsif ( $name eq 'batch' ) {
-    @entries = ( 
-                 { key => 'Dataset', value=>'Public repository identifier'},
-                 { key => 'Experiment Name', value => 'Simple name for this experiment. ' },
-                 { key => 'MS Runs', value=>'The total number of runs for this experiment.'},
-                 { key => 'Spectra Searched', value => 'The total number of spectra searched in the experiment. ' },
-                 { key => "Spectra ID'd", value => 'The number of spectra identifed with a probability greater than the atlas threshold ' },
-                 { key => "%Spectra ID'd", value => ''},
-                 { key => 'Distinct Peptides', value => 'The number of distinct peptide sequences in this build that are seen in this experiment. ' },
-                 { key => 'Unique Peptides', value => "The number of distinct peptides that are seen only in this experiment (unique contribution).  This discriminates against smaller experiments, and is less useful in atlas' with a large number of experiments. " },
-                 { key => 'Added Peptides', value => 'Order-dependent unique peptides contributed by a given experiment.  The contribution for each experiment is based on the experiments that have gone before it, so later experiments tend to have a lower progressive contribution. ' },
-                 { key => 'Cumulative Peptides', value => 'Order-dependent cumulative number of unique peptides contributed to build by this and previous experiments. ' },
-                 { key => 'Distinct Canonical Proteins', value => 'The number of canonical (highly distinguishable, non-redundant) protein sequences identified from the peptides in this experiment.' },
-                 { key => 'Unique Canonical Proteins', value => 'The number of canonical proteins that have peptides observed in the sample only.'},
-                 { key => 'Unique All Proteins', value => 'The number of proteins (not limited to canonical protein) that have peptides observed in the sample only.'},
-                 { key => 'Added Canonical Proteins', value => 'Order-dependent unique canonical proteins contributed by a given experiment.'},
-                 { key => 'Cumulative Canonical Proteins', value => 'Order-dependent cumulative number of canonical proteins contributed to build by this and previous experiments.<br>Counts non-human contaminants, so final tally may be greater than Canonical Proteins count in Build Overview. ' },
-                 { key => 'Date Added', value => ''},
-                 { key => 'Pubmed Id or DOI', value => ''},
-                 { key => 'Instrument_Name', value => ''}, 
-        );
-    $heading = 'Experiment Overview'; 
-    $description = 'These values pertain to individual experiments within the atlas';
-
-  }elsif ( $name eq 'dataset' ) {
-    @entries = (
-                 { key => 'Datase', value=>'Public repository identifier'},
-                 { key => 'MS Runs', value=>'The total number of runs for this experiment.'},
-                 { key => 'Spectra Searched', value => 'The total number of spectra searched in the experiment. ' },
-                 { key => "Spectra ID'd", value => 'The number of spectra identifed with a probability greater than the atlas threshold ' },
-                 { key => "%Spectra ID'd", value => ''},
-                 { key => 'Distinct Peptides', value => 'The number of distinct peptide sequences in this build that are seen in this experiment. ' },
-                 { key => 'Unique Peptides', value => "The number of distinct peptides that are seen only in this experiment (unique contribution).  This discriminates against smaller experiments, and is less useful in atlas' with a large number of experiments. " },
-                 { key => 'Added Peptides', value => 'Order-dependent unique peptides contributed by a given experiment.  The contribution for each experiment is based on the experiments that have gone before it, so later experiments tend to have a lower progressive contribution. ' },
-                 { key => 'Cumulative Peptides', value => 'Order-dependent cumulative number of unique peptides contributed to build by this and previous experiments. ' },
-                 { key => 'Distinct Canonical Proteins', value => 'The number of canonical (highly distinguishable, non-redundant) protein sequences identified from the peptides in this experiment.' },
-                 { key => 'Unique Canonical Proteins', value => 'The number of canonical proteins that have peptides observed in the sample only.'},
-                 { key => 'Added Canonical Proteins', value => 'Order-dependent unique canonical proteins contributed by a given experiment.'},
-                 { key => 'Cumulative Canonical Proteins', value => 'Order-dependent cumulative number of canonical proteins contributed to build by this and previous experiments.<br>Counts non-human contaminants, so final tally may be greater than Canonical Proteins count in Build Overview. ' },
-        );
-    $heading = 'Experiment Overview';
-    $description = 'These values pertain to individual experiments within the atlas';
-
-  } elsif ( $name eq 'mayu' ) {
-   @entries = ( { key => 'nr_runs', value => 'Number of MS runs contributing to this build '},
-  
-		{ key => 'nr_files', value => 'Always 1 '},
-  
-		{ key => 'mFDR', value => 'Data in current row applies to all data meting this PSM (spectrum) FDR threshold. '},
-		{ key => 'target_PSM', value => 'Number of non-decoy PSMs at this mFDR (counts peptides mappable to protein reference set only)'},
-  
-		{ key => 'decoy_PSM', value => 'Number of decoy PSMs at this mFDR '},
-  
-		{ key => 'FP_PSM', value => 'Number of false positive PSMs predicted by Mayu for this mFDR. Usually near, but not exactly the same as, the number of decoys. '},
-  
-		{ key => 'TP_PSM', value => 'target_PSM - FP_PSM '},
-  
-		{ key => 'target_pepID', value => 'Number of non-decoy unique peptides at this mFDR (counts peptides mappable to protein reference set only) '},
-  
-		{ key => 'decoy_pepID', value => 'Number of decoy unique peptides at this mFDR '},
-  
-		{ key => 'FP_pepID', value => 'Number of false positive unique peptides predicted by Mayu for this mFDR. Usually near, but not exactly the same as, the number of decoys. '},
-  
-		{ key => 'FP_pepID_stdev', value => ' '},
-  
-		{ key => 'TP_pepID', value => 'target_pepID - FP_pepID '},
-  
-		{ key => 'pepFDR', value => 'Peptide FDR (unique peptides)'},
-  
-		{ key => 'target_protID', value => 'Number of non-decoy protein identifications at this mFDR. Applied to the covering set of proteins -- a set that is close to the smallest necessary to explain all the pepIDs. Includes all canonicals and some possibly_distinguished. '},
-  
-		{ key => 'decoy_protID', value => 'Number of decoy protein identifications at this mFDR. '},
-  
-		{ key => 'FP_protID', value => 'Number of false postiive protein identifications predicted by Mayu for this mFDR.  Usually near, but not exactly the same as, the number of decoys. '},
-  
-		{ key => 'FP_protID_stdev', value => ' '},
-  
-		{ key => 'TP_protID', value => 'target_protID - FP_protID '},
-  
-		{ key => 'protFDR', value => 'Protein FDR. The largest value in this column is the protein FDR for the entire build. '},
-		{ key => 'lFDR1, lFDR5, lFDR10,2 lFDR5', value => 'Local protein FDR, computed over the previous step (i.e. between the previous row in the table and the current row), the previous 5 steps, the previous 10 steps, and the previous 25 steps.<br>Often there are fewer than 25 rows in the table, in which case column lFDR25 is uninformative. '},
-  
-		{ key => 'target_protIDs, decoy_protIDs, etc.', value => 'Same as above, except for singleton proteins (those identified by only one PSM) only. '},
-		{ key => 'target_protIDns, decoy_protIDns, etc.', value => 'Same as above, except for multiply-observed proteins only. '},
-  
-        );
-    $heading = 'Mayu'; 
-    $description = 'Reiter L, Claassen M, et al., Protein identification false discovery rates for very large proteomics data sets generated by tandem mass spectrometry, Mol Cell Proteomics. 2009 Nov;8(11):2405-17 ';
-  }
-
+  } 
 
   return unless @entries;
   return \@entries if $args{mode} eq 'entries_only';
@@ -433,22 +345,6 @@ sub get_table_help {
 } # end get_table_help
 sub get_mayu_info {
   my $mayu_data_path = shift;
-  my $table = "<table width=600>\n";
-
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'mayu_info',
-                                                  visible => 1,
-                                                  tooltip => 'show/hide section',
-                                                  imglink => 1,
-                                                  sticky  => 1 );
-
-  $table .= $atlas->encodeSectionHeader(
-      LMTABS => 1,
-      no_toggle => 1,
-      divname => 'mayu_div',
-      text => 'mayu decoy-based fdr analysis',
-      link => $link,
-      width => 920,
-  );
   open (mayu, $mayu_data_path);
   my $line = <mayu>;
   my @headings = split(",",$line);
@@ -457,44 +353,28 @@ sub get_mayu_info {
     push @sortable, $col, $col;
   }
 
-  my $headings_ref = $atlas->make_sort_headings( headings => \@sortable, default => 'mfdr' );
   my @records = ();
   for $line (<mayu>) {
     chomp ($line);
     my @fields = split(",",$line);
     push @records, \@fields;
   }
-  $table .= $atlas->encodeSectionTable( rows => [ $headings_ref, @records ], 
-					header => 1, 
-					align => [ qw(center center left
+  my @align = qw(center center left
 right center center right right center center left center left center center
 center left center left center center center center left center center center
-center left) ], 
-					tr_info => $tr,
-					bg_color => '#eaeaea',
-					table_id => 'mayu_data',
-					sortable => 1 );
-  $table .= "\n</table>\n";
-  return ($table);
+center left);
+  my $html = $atlas->create_table (data => \@records,
+                          column_names=> \@headings,
+                          table_name => "mayu decoy-based fdr analysis",
+                          table_id => "mayu",
+                          align => \@align,
+                          sortable => 0);
+  return ($html);
 }
 
 sub get_dataset_spec_protein_info {
   my %args = @_;
   my $build_id = $args{build_id};
-  my $table = "<table width=800>\n";
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'datasetContri_info',
-                                                  visible => 1,
-                                                  tooltip => 'show/hide section',
-                                                  imglink => 1,
-                                                  sticky  => 1 );
-  $table .= $atlas->encodeSectionHeader(
-      LMTABS => 1,
-      no_toggle => 1,
-      divname => 'datasetContri_info_div',
-      text => 'Dataset Specific Protein Identification',
-      link => $link,
-      width => 920,
-  );
 
   my $sql = qq~
    SELECT A.repository_id , A.NAME, count (distinct A.ID) as cnt
@@ -560,7 +440,6 @@ sub get_dataset_spec_protein_info {
     push @align, 'center';
   }
   $align[0] = 'left';
-  my $headings_ref = $atlas->make_sort_headings( headings => \@sortable);
   my @records = ();
   foreach my $repository_id (sort {$a cmp $b } keys %unique_prot2dataset_cnt){ 
     my @row =();
@@ -588,18 +467,14 @@ sub get_dataset_spec_protein_info {
     }
     push @records, \@row;
   }
-  $table .="<p class=plot_caption>Table below shows the number of proteins uniquely identified in the dataset</p>";
-  $table .= $atlas->encodeSectionTable( rows => [ $headings_ref, @records ], 
-					header => 1, 
-					align => [ @align], 
-					width => 'auto', 
-					nowrap => [1..scalar(@headings)],
-					tr_info => $tr,
-					bg_color => '#EAEAEA',
-					rows_to_show => 25,
-					sortable => 1 );
-  $table .= "\n</table>\n";
-  return ($table);
+  my $html = $atlas->create_table (data => \@records,
+                          column_names=> \@headings,
+                          table_name => "Dataset Specific Protein Identification",
+                          table_id => "get_dataset_spec_protein_info",
+                          align => \@align,
+                          sortable => 0);
+
+  return $html; 
 }
 
 # less informative sample contribution plot
@@ -623,7 +498,7 @@ sub get_build_plots {
       trinfo => "class=hoverable",
       LMTABS => 1,
       divname => 'experiment_contribution_div',
-      no_toggle => 1,
+      no_toggle => 0,
       link => $link,
   );
 
@@ -634,7 +509,7 @@ sub get_build_plots {
   );
 
   $table .= qq~
-    $chart
+   $chart
     </TABLE>
   ~;
  
@@ -851,36 +726,29 @@ sub get_sample_info {
   # Get a list of accessible project_ids
   my @project_ids = $sbeams->getAccessibleProjects();
   my $project_ids = join( ",", @project_ids ) || '0';
-
-  my $table = "<TABLE WIDTH=800>\n";
-
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'sample_contribution',
-                                                  visible => 1,
-                                                  tooltip => 'Show/Hide Section',
-                                                  imglink => 1,
-                                                  sticky  => 1 );
   #### Define some variables needed to build the query
   my @column_array = (
-      ["repository_identifiers","S.repository_identifiers","repository_identifiers"],
+      ["repository_identifiers","S.repository_identifiers","Dataset"],
       ["sample_id", "S.sample_id","sample_id"],
-      ["sample_tag", "sample_tag", "sample_tag"],
-      ["n_runs","SBS.n_runs", "n_runs"],
-      ["n_searched_spectra", "SBS.n_searched_spectra", "n_searched_spectra"],
-      ["n_good_spectra", "n_good_spectra", "n_good_spectra"],
-      ["per_id", "CASE WHEN SBS.n_searched_spectra > 0 THEN FORMAT((n_good_spectra*1.00)/(SBS.n_searched_spectra/1.00), 'P2') ELSE '' END", "per_id"],
-      ["n_distinct_peptides", "n_distinct_peptides","n_distinct_peptides"],
-      ["n_uniq_contributed_peptides", "n_uniq_contributed_peptides", "n_uniq_contributed_peptides"],
-      ["n_progressive_peptides", "n_progressive_peptides", "n_progressive_peptides"],
-      ["cumulative_n_peptides", "cumulative_n_peptides", "cumulative_n_peptides"],
-      ["n_canonical_proteins", "n_canonical_proteins", "n_canonical_proteins"],
-      ["n_unique_canonical_prots", "''", "n_unique_canonical_prots"],
-      ["n_unique_prots", "''", "n_unique_prots"],
-      ["n_added_canonical_prots", "''", "n_added_canonical_prots"],
-      ["cumulative_n_proteins", "cumulative_n_proteins", "cumulative_n_proteins"],
-      ["date_created", "CONVERT(VARCHAR(10), PE.date_created, 126)", "[YYYY-MM-DD]"],
-      ["pubmed_id", "pubmed_id", "pubmed_id"],
-      ["instrument_name","instrument_name","instrument_name"],
-      ["sample_category_id", "S.sample_category_id", "sample_category_id"],
+      ["sample_tag", "sample_tag", "Experiment Tag"],
+      ["n_runs","SBS.n_runs", "MS Runs"],
+      ["n_searched_spectra", "SBS.n_searched_spectra", "Spectra Searched"],
+      ["n_good_spectra", "n_good_spectra", "Spectra ID'd"],
+      ["per_id", "CASE WHEN SBS.n_searched_spectra > 0 THEN FORMAT((n_good_spectra*1.00)/(SBS.n_searched_spectra/1.00), 'P2') ELSE '' END", "%Spectra ID'd"],
+      ["n_distinct_peptides", "n_distinct_peptides","Distinct Peptides"],
+      ["n_uniq_contributed_peptides", "n_uniq_contributed_peptides", "Unique Peptides"],
+      ["n_progressive_peptides", "n_progressive_peptides", "Added Peptides"],
+      ["cumulative_n_peptides", "cumulative_n_peptides", "Cumulative Peptides"],
+      ["n_canonical_proteins", "n_canonical_proteins", "Distinct Canonical Proteins"],
+      ["n_unique_canonical_prots", "''", "Unique Canonical Proteins"],
+      ["n_unique_prots", "''", "Unique All Proteins"],
+      ["n_added_canonical_prots", "''", "Added Canonical Proteins"],
+      ["cumulative_n_proteins", "cumulative_n_proteins", "Cumulative Canonical Proteins"],
+      ["date_created", "CONVERT(VARCHAR(10), PE.date_created, 126)", "Date Added"],
+      ["pubmed_id", "pubmed_id", "Pubmed Id or DOI"],
+      ["instrument_name","instrument_name","Instrument Name"],
+      ["sample_category", "SC.name", "Sample Catefory"],
+      ["sample_category_id", "S.sample_category_id", "sample_category_id"]
     );
 
   #### Build the columns part of the SQL statement
@@ -891,14 +759,13 @@ sub get_sample_info {
     colnameidx_ref=>\%colnameidx,
     column_titles_ref=>\@column_titles
   );
-
-
   my $sql =qq~;
   select $columns_clause
   FROM $TBAT_SEARCH_BATCH_STATISTICS SBS 
   JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
   JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ( ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id )
   JOIN $TBAT_SAMPLE S ON (S.sample_id = ASB.sample_id)
+  LEFT JOIN $TBAT_SAMPLE_CATEGORY SC ON (S.sample_category_id = SC.id)
   LEFT JOIN (
 		SELECT DISTINCT SAMPLE_ID, 
 		STUFF(
@@ -950,10 +817,16 @@ sub get_sample_info {
   %unique_canprot2sample_cnt = $sbeams->selectTwoColumnHash($sql);
 
   # Massage/format some of the columns in the sample info just retrieved
+  my %hidden_cols = ();
+  if ($organism !~ /(human|Arabidopsis)/i){
+    $hidden_cols{'sample_category'} = 1;
+  }
+  $hidden_cols{'sample_id'} = 1;
   my @samples;
   ## rows without second and last column
   my @samples2;
   my $rownum =0;
+  my @column_names;
   for my $batch ( @sample_info ) {
     $show_image++;
     # if these aren't defined, set to zero
@@ -1012,53 +885,32 @@ sub get_sample_info {
       next if ( ! $batch->[$idx]);
       $batch->[$idx] = $atlas->get_dataset_url($batch->[$idx]);
     }
-    my @tmp = @$batch;
-    splice( @tmp, $colnameidx{'sample_id'}, 1); 
-    push @samples, \@tmp;
-    my @tmp2 = @tmp; 
+    my @row_data;
+    my $idx = 0;
+    foreach my $col (sort {$colnameidx{$a} <=> $colnameidx{$b}} keys %colnameidx){
+      if (not defined $hidden_cols{$col}){
+         $row_data[$idx] = $batch->[$colnameidx{$col}];
+         $idx++;
+         next if ($col eq 'sample_category_id'); 
+         push @column_names, $column_titles[$colnameidx{$col}] if (! $rownum);
+      }
+    }
+    push @samples, \@row_data; 
+    my @tmp2 = @row_data; 
     pop @tmp2;
     push @samples2, \@tmp2;
     $rownum++;
   }
+  my @align = qw(left left center center center center center center center center center center center center center);
+  my $html = $atlas->create_table (data => \@samples2,
+													column_names=> \@column_names,
+                          table_name => "Experiment Contribution",
+													table_id => "exp_contribution",
+													align => \@align,
+													sortable => 0);
 
-  my $dag = '<sup>&dagger;</sup>';
-  
-  my $heading_info = get_table_help( table => 'batch', mode => 'entries_only' );
-  my @headings;
-  my @column_names;
-  for my $row ( @$heading_info ) {
-    push @headings, $row->{key}, $row->{value};
-    push @column_names, $row->{key};
-  }
   push @column_names , "sample_category_id";
-#  for my $h ( @headings ) {
-#    $log->info( $h );
-#  }
-
-  my $headings_ref = $atlas->make_sort_headings( headings => \@headings, default => 'Cumulative Peptides' );
-
-  $table .= $atlas->encodeSectionHeader(
-      LMTABS => 1,
-      no_toggle => 1,
-      text => 'Experiment Contribution',
-      divname => 'experiment_contribution_div',
-      link => $link,
-      width => 920
-  );
-
-
-  $table .= $atlas->encodeSectionTable( rows => [ $headings_ref, @samples2 ], 
-                                        header => 1, 
-                                        nowrap => [1..scalar(@headings)], 
-                                        table_id => 'sample_contribution',
-                                        align => [ qw(left left center center center center center center center center center center center center center) ], 
-                                        tr_info => $tr,
-                                        bg_color => '#EAEAEA',
-                                        rows_to_show => 25,
-                                        sortable => 1 );
-  $table .= '</TABLE>';
-  return ( $table, \@samples, \@column_names);
-
+  return ( $html, \@samples, \@column_names);
 }
 
 sub get_dataset_contrib_info {
@@ -1068,29 +920,21 @@ sub get_dataset_contrib_info {
   # Get a list of accessible project_ids
   my @project_ids = $sbeams->getAccessibleProjects();
   my $project_ids = join( ",", @project_ids ) || '0';
-
-  my $table = "<TABLE WIDTH=800>\n";
-
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'dataset_contribution',
-                                                  visible => 1,
-                                                  tooltip => 'Show/Hide Section',
-                                                  imglink => 1,
-                                                  sticky  => 1 );
   #### Define some variables needed to build the query
   my @column_array = (
-      ["repository_identifiers","repository_identifiers","repository_identifiers"],
-      ["n_runs","n_runs", "n_runs"],
-      ["n_searched_spectra", "n_searched_spectra", "n_searched_spectra"],
-      ["n_good_spectra", "n_good_spectra", "n_good_spectra"],
-      ["per_id", "CASE WHEN n_searched_spectra > 0 THEN FORMAT((n_good_spectra*1.00)/(n_searched_spectra/1.00), 'P2') ELSE '' END", "per_id"],
-      ["n_distinct_peptides", "n_distinct_peptides","n_distinct_peptides"],
-      ["n_uniq_contributed_peptides", "n_uniq_contributed_peptides", "n_uniq_contributed_peptides"],
-      ["n_progressive_peptides", "n_progressive_peptides", "n_progressive_peptides"],
-      ["cumulative_n_peptides", "cumulative_n_peptides", "cumulative_n_peptides"],
-      ["n_canonical_proteins", "n_canonical_proteins", "n_canonical_proteins"],
-      ["n_uniq_contributed_proteins", "n_uniq_contributed_proteins", "n_uniq_contributed_proteins"],
-      ["n_progressive_proteins", "n_progressive_proteins", "n_progressive_proteins"],
-      ["cumulative_n_proteins", "cumulative_n_proteins", "cumulative_n_proteins"]
+      ["repository_identifiers","repository_identifiers","Dataset"],
+      ["n_runs","n_runs", "MS Runs"],
+      ["n_searched_spectra", "n_searched_spectra", "Spectra Searched"],
+      ["n_good_spectra", "n_good_spectra", "Spectra ID'd"],
+      ["per_id", "CASE WHEN n_searched_spectra > 0 THEN FORMAT((n_good_spectra*1.00)/(n_searched_spectra/1.00), 'P2') ELSE '' END", "%Spectra ID'd"],
+      ["n_distinct_peptides", "n_distinct_peptides","Distinct Peptides"],
+      ["n_uniq_contributed_peptides", "n_uniq_contributed_peptides", "Unique Peptides"],
+      ["n_progressive_peptides", "n_progressive_peptides", "Added Peptides"],
+      ["cumulative_n_peptides", "cumulative_n_peptides", "Cumulative Peptides"],
+      ["n_canonical_proteins", "n_canonical_proteins", "Distinct Canonical Proteins"],
+      ["n_uniq_contributed_proteins", "n_uniq_contributed_proteins", "Unique Canonical Proteins"],
+      ["n_progressive_proteins", "n_progressive_proteins", "Added Canonical Proteins"],
+      ["cumulative_n_proteins", "cumulative_n_proteins", "Cumulative Canonical Proteins"]
     );
 
   #### Build the columns part of the SQL statement
@@ -1111,7 +955,6 @@ sub get_dataset_contrib_info {
   my @info = $sbeams->selectSeveralColumns ( $sql );
   return '' if (! @info);
 
-  #$log->debug( "build table SQL: $td" );
   my (@samples);
   for my $batch ( @info ) {
     for my $idx ($colnameidx{'repository_identifiers'}) {
@@ -1120,38 +963,16 @@ sub get_dataset_contrib_info {
     }
     push @samples, $batch;
   }
+  ################################
+  my @align = qw(left center center center center center center center center center center center center center center);
+  my $html = $atlas->create_table (data => \@samples,
+                          column_names=> \@column_titles,
+                          table_name => "Dataset Contribution",
+                          table_id => "datasetContri_info",
+                          align => \@align,
+                          sortable => 0);
 
-  my $dag = '<sup>&dagger;</sup>';
-  my $heading_info = get_table_help( table => 'dataset', mode => 'entries_only' );
-  my @headings;
-  my @column_names;
-  for my $row ( @$heading_info ) {
-    push @headings, $row->{key}, $row->{value};
-    push @column_names, $row->{key};
-  }
-  push @column_names , "sample_category_id";
-  my $headings_ref = $atlas->make_sort_headings( headings => \@headings, default => '#_Cumulative' );
-  $table .= $atlas->encodeSectionHeader(
-      LMTABS => 1,
-      no_toggle => 1,
-      text => 'Dataset Contribution',
-      divname => 'dataset_contribution_div',
-      link => $link,
-      width => 920
-  );
-
-
-  $table .= $atlas->encodeSectionTable( rows => [ $headings_ref, @samples],
-                                        header => 1, 
-                                        nowrap => [1..scalar(@headings)], 
-                                        table_id => 'sample_contribution',
-                                        align => [ qw(left center center center center center center center center center center center center)], 
-                                        tr_info => $tr,
-                                        bg_color => '#EAEAEA',
-                                        rows_to_show => 25,
-                                        sortable => 1 );
-  $table .= '</TABLE>';
-  return ( $table);
+  return $html;
 
 }
 
@@ -1175,20 +996,6 @@ sub get_build_path {
 sub get_dataset_protein_info {
   my %args = @_;
   my $atlas_build_id = $args{build_id};
-  my $table = "<table width=800>\n";
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'dataset_protein_info',
-                                                  visible => 1,
-                                                  tooltip => 'show/hide section',
-                                                  imglink => 1,
-                                                  sticky  => 1 );
-  $table .= $atlas->encodeSectionHeader(
-      LMTABS => 1,
-      no_toggle => 1,
-      divname => 'dataset_protein_info_div',
-      text => 'Dataset Protein Info',
-      link => $link,
-      width => 920,
-  );
   my $sql =qq~;
     SELECT SAMPLE_ID, REPOSITORY_IDENTIFIERS 
     FROM $TBAT_SAMPLE 
@@ -1305,18 +1112,14 @@ sub get_dataset_protein_info {
     }
     push @records, \@row;
   }
-  $table .="<p class=plot_caption>Table below shows the number of proteins observed in the dataset</p>";
-  $table .= $atlas->encodeSectionTable( rows => [ $headings_ref, @records ], 
-					header => 1, 
-					align => [ @align], 
-					width => 'auto', 
-					nowrap => [1..scalar(@headings)],
-					tr_info => $tr,
-					bg_color => '#EAEAEA',
-					rows_to_show => 25,
-					sortable => 1 );
-  $table .= "\n</table>\n";
-  return ($table);
+  my $html = $atlas->create_table (data => \@records,
+                          column_names=> \@headings,
+                          table_name => "Dataset Protein Info",
+                          table_id => "dataset_protein_info",
+                          align => \@align,
+                          sortable => 0);
+
+  return ($html);
 }
 
 # less informative sample contribution plot
@@ -1327,7 +1130,6 @@ sub get_build_plots {
   my $sample_arrayref = $args{sample_arrayref};
   my $column_name_ref = $args{column_name_ref};
   my $table = "<TABLE WIDTH=800>\n";
-
   my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'build_plot',
                                                   visible => 1,
                                                   tooltip => 'Show/Hide Section',
@@ -1350,7 +1152,7 @@ sub get_build_plots {
       column_name_ref => $column_name_ref, 
   );
 
-  $table .= qq~
+ $table .= qq~
     $chart
     </TABLE>
   ~;

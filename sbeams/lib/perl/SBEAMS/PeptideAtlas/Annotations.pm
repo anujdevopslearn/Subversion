@@ -549,14 +549,15 @@ sub get_column_defs {
 			 'Cumulative Canonical Proteins'=> 'Order-dependent cumulative number of canonical proteins contributed to build by this and previous experiments.<br>Counts non-human contaminants, so final tally may be greater than Canonical Proteins count in Build Overview. ' ,
 
 			#batch
-			 'Experiment Tag'=> 'Simple tag for this experiment. ' ,
+			 'Experiment Tag'=> 'Tag for this experiment. ' ,
 			 'Unique All Proteins'=> 'The number of proteins (not limited to canonical protein) that have peptides observed in the sample only.',
 			 'Date Added'=> '',
 			 'Pubmed Id or DOI'=> '',
 			 'Instrument Name'=> '',
 				# mayu
-			 'nr_files'=> 'Always 1 ',
-			 'mFDR'=> 'Data in current row applies to all data meting this PSM (spectrum) FDR threshold. ',
+       'nr_runs' => 'Number of MS runs contributing to this build ',
+			 'nr_files' => 'Always 1 ',
+			 'mFDR' => 'Data in current row applies to all data meting this PSM (spectrum) FDR threshold. ',
 			 'target_PSM'=> 'Number of non-decoy PSMs at this mFDR (counts peptides mappable to protein reference set only)',
 			 'decoy_PSM'=> 'Number of decoy PSMs at this mFDR ',
 			 'FP_PSM'=> 'Number of false positive PSMs predicted by Mayu for this mFDR. Usually near, but not exactly the same as, the number of decoys. ',
@@ -573,9 +574,17 @@ sub get_column_defs {
 			 'FP_protID_stdev'=> ' ',
 			 'TP_protID'=> 'target_protID - FP_protID ',
 			 'protFDR'=> 'Protein FDR. The largest value in this column is the protein FDR for the entire build. ',
-			 'lFDR1' => "Local protein FDR, computed over the previous step (i.e. between the previous row in the table and the current row), the previous 5 steps, the previous 10 steps, and the previous 25 steps.<br>Often there are fewer than 25 rows in the table, in which case column lFDR25 is uninformative. ",
-			 'target_protIDs' => 'Same as above, except for singleton proteins (those identified by only one PSM) only. ',
-			 'target_protIDns' => 'Same as above, except for multiply-observed proteins only. ',
+			 'lFDR_1' => "lFDR1, lFDR5, lFDR10,2 lFDR5: Local protein FDR, computed over the previous step (i.e. between the previous row in the table and the current row), the previous 5 steps, the previous 10 steps, and the previous 25 steps.<br>Often there are fewer than 25 rows in the table, in which case column lFDR25 is uninformative. ",
+			 'target_protIDs' => 'target_protIDs, decoy_protIDs, etc. Same as above, except for singleton proteins (those identified by only one PSM) only. ',
+			 'target_protIDns' => 'target_protIDns, decoy_protIDns etc. Same as above, except for multiply-observed proteins only. ',
+      # protein 
+      'Canonical' => 'Minimally redunant set of proteins required to explain (virtually) all non-decoy peptides observed in build (<a target=_termdefs href="http://www.peptideatlas.org/docs/protein_ident_terms.php">more info</a>)',
+      'Indistinguishable Representative' => 'Indistinguishable representative means that there are peptides that map uniquely to a set of non-canonical proteins, thereby indicating that at least one of the proteins in the set must be present, but it cannot be determined which it is.',
+      'Marginally Distinguished'=>'Marginally distinguished means that this protein has peptides that are shared with a canonical peptide, but it also has a small number of peptides that appear to distinguish it from the canonical identification.',
+      'Representative'=>'Representative means that there are peptides that map uniquely to a set of non-canonical proteins, thereby indicating that at least one of the proteins in the set must be present, but it cannot be determined which it is.',
+      'Insufficient Evidence'=>'Protein has one or more apparently uniquely mapping peptides but none are 9AA or greater',
+      'Weak' => 'Protein has one peptide that is uniquely mapping and at least 9 AA long, but is missing a second peptide that meets HPP guidelines',
+ 
   );
 
   if ( $args{labels} ) {
