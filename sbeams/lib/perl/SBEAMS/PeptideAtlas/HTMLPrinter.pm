@@ -16,6 +16,7 @@ use strict;
 use LWP::UserAgent;
 use HTTP::Request;
 use Data::Dumper;
+use LWP::Simple;
 
 use vars qw($sbeams $current_contact_id $current_username $q
              $current_work_group_id $current_work_group_name
@@ -1363,12 +1364,12 @@ sub getSampleMapDisplayMod {
 ###############################################################################
 # display enhance sample info
 ###############################################################################
-sub getDetailedSampleDisplay {
+sub getPeptideSampleDisplay {
   my $self = shift;
   my $sbeams = $self->getSBEAMS();
   my %args = @_;
   my $SUB_NAME = 'getDetailedSampleDisplay';
-
+  my $rows_to_show = $args{rows_to_show} || 25;
   my $mia = '';
   for my $arg ( qw ( sample_ids build_clause peptide_clause ) ) {
     next if defined $args{$arg};
@@ -1386,7 +1387,7 @@ sub getDetailedSampleDisplay {
   my $sql = qq~
   	SELECT S.sample_id, sample_title, PISB.n_observations,
            instrument_name, CASE WHEN ENZ.name IS NULL THEN 'Trypsin' ELSE ENZ.name END AS Enzyme,
-           PUB.publication_name, PUB.abstract , PUB.uri
+           PUB.publication_name, PUB.abstract , PUB.uri, S.repository_identifiers
 		FROM $TBAT_ATLAS_SEARCH_BATCH SB 
 	  JOIN $TBAT_SAMPLE S ON s.sample_id = SB.sample_id
 	  JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB ON PISB.atlas_search_batch_id = SB.atlas_search_batch_id
@@ -1402,27 +1403,60 @@ sub getDetailedSampleDisplay {
     AND S.record_status != 'D'
     ORDER BY sample_title
   ~;
-
   my @rows = $sbeams->selectSeveralColumns($sql);
+  my $table = $self -> getSampleTableDisplay (data => \@rows,
+                  rows_to_show => $rows_to_show,
+                  type => 'Peptide');
+  return $table;
+}
+
+
+sub getSampleTableDisplay{
+  my $self = shift;
+  my %args = @_;
+  my $data = $args{data};
+  my $type = $args{type};
+  my $rows_to_show = $args{rows_to_show} || 25;
   my @samples = ();
   my $pre_id = '';
-  foreach my $row (@rows){
-     my ($id, $title, $nobs,$ins,$enzyme,$pub_name, $abstract, $link) = @$row;
+  foreach my $row (@$data){
+     my ($id, $title, $nobs,$ins,$enzyme,$pub_name, $abstract, $link, $rp_id) = @$row;
+     $id = "<a href='". "$CGI_BASE_DIR/PeptideAtlas/ManageTable.cgi?TABLE_NAME=AT_SAMPLE&sample_id=" . $id . "' target='_blank'>$id</a>";
+     $rp_id = $self->get_dataset_url ($rp_id);
      if ($pre_id eq $id){next;$pre_id = $id;}  ## keep one publication only
      if ($abstract){
        $pub_name = $self->make_pa_tooltip( tip_text => "Abstract: $abstract", link_text => "<a href='$link'>$pub_name</a>" );
      }
-     push @samples, [$id, $title, $nobs,$ins,$enzyme,$pub_name];
+     if ($type eq 'Peptide'){
+       push @samples, [$id, $rp_id, $title, $nobs,$ins,$enzyme,$pub_name];
+     }else{
+       push @samples, [$id, $rp_id, $title,$ins,$enzyme,$pub_name];
+     }
      $pre_id = $id;
   }
-  unshift @samples,['Experiment ID','Experiment Name','NObs','Instrument','Enzyme','Publication'];
+  my @align=();
+  my @headings;
+  my @cols = ();
+  if ($type eq 'Peptide'){
+    @cols = ('Experiment ID','Dataset','Experiment Name','NObs','Instrument','Enzyme','Publication');
+    @align = qw(center left left center left left);
+  }else{
+    @cols = ('Experiment ID','Dataset','Experiment Name', 'Instrument','Enzyme','Publication');
+    @align = qw(center left left center left left left);
+  }
+  foreach my $col (@cols){
+    push @headings, $col, '';
+  }
+  my $headings = $self->make_sort_headings( headings => \@headings,  default => 'Experiment ID');
+  unshift @samples, ($headings);
   my $table = $self->encodeSectionTable( header => 1, 
                                          tr_info => $args{tr_info},
-                                         align  => [qw(center left right left left left)],
-					 bkg_interval => 3,
+                                         align  => [@align],
+																				 bkg_interval => 3,
                                          nowrap => [qw(4 6)],
-                                         rows_to_show => $args{rows_to_show},
+                                         rows_to_show => $rows_to_show,
                                          max_rows => $args{max_rows},
+                                         sortable => 1,
                                          rows => \@samples );
   return $table;
 }
@@ -1558,16 +1592,17 @@ sub get_individual_spectra_display {
 ###############################################################################
 # displaySamples
 ###############################################################################
-sub getSampleDisplay {
+sub getProteinSampleDisplay {
   my $self = shift;
   my $sbeams = $self->getSBEAMS();
   my %args = @_;
-  my $SUB_NAME = 'getSampleDisplay';
+  my $SUB_NAME = 'getProteinSampleDisplay';
   my $bg_color = $args{bg_color} || '';
   my $sortable = 1;
   if ( $args{sortable} ne ''){
     $sortable = $args{sortable};
   }
+  my $rows_to_show = $args{rows_to_show} || 25;
 
   unless( $args{sample_ids} ) {
     $log->error( "No samples passed to display samples" );
@@ -1576,72 +1611,31 @@ sub getSampleDisplay {
 
   my $in = join( ", ", @{$args{sample_ids}} );
   return unless $in;
-
   my $sql = qq~
-    SELECT S.SAMPLE_ID,S.sample_tag, S.SAMPLE_DESCRIPTION, 
-           PUB.PUBLICATION_NAME, PUB.ABSTRACT , PUB.URI
+    SELECT S.SAMPLE_ID,
+           S.SAMPLE_TITLE, 
+           '' ,
+           INSTRUMENT_NAME, 
+           CASE WHEN ENZ.name IS NULL THEN 'Trypsin' ELSE ENZ.name END AS Enzyme, 
+           PUB.PUBLICATION_NAME, 
+           PUB.ABSTRACT , 
+           PUB.URI, 
+           S.REPOSITORY_IDENTIFIERS
     FROM $TBAT_SAMPLE S
+    LEFT JOIN $TBPR_INSTRUMENT I ON S.instrument_model_id = I.instrument_id
+    LEFT JOIN $TBAT_PROTEASES ENZ ON ENZ.id = S.protease_id
     LEFT JOIN $TBAT_SAMPLE_PUBLICATION SP ON SP.SAMPLE_ID = S.SAMPLE_ID
     LEFT JOIN $TBAT_PUBLICATION PUB ON PUB.PUBLICATION_ID = SP.PUBLICATION_ID
     WHERE S.SAMPLE_ID IN ( $in )
     AND S.RECORD_STATUS != 'D'
     ORDER BY sample_tag ASC
   ~;
-
   my @rows = $sbeams->selectSeveralColumns($sql);
-  my $header = '';
-  if ( $args{link} ) {
-    $header .= $self->encodeSectionHeader( text => 'Observed in Samples:',
-                                          link => $args{link} );
-  } else {
-    $header .= $self->encodeSectionHeader( text => 'Observed in Samples:',);
-  }
-  $header = '' if $args{no_header};
-
-  my $html = '';
-  my $trinfo = $args{tr_info} || '';
-  my $pre_id = '';
-  my @samples = ();
-  foreach my $row (@rows) {
-    my ($sample_id,$sample_title,$sample_description,$pub_name,$abstract,$link ) = @{$row};
-    if ($pre_id eq $sample_id){next;$pre_id = $sample_id;}  ## keep one publication only
-    if ($abstract){
-      $pub_name = $self->make_pa_tooltip( tip_text => "Abstract: $abstract", link_text => "<a href='$link'>$pub_name</a>" );
-    }
-    ## truncate sample desc
-    if(length($sample_description) > 200){
-      $sample_description =~ s/(.{200}).*/$1/;
-    }
-    $sample_title = $self->make_pa_tooltip( tip_text => $sample_description, 
-					    link_text => "<a href='$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=AT_SAMPLE&sample_id=$sample_id'>$sample_title</a>" );
-    push @samples , [$sample_id ,$sample_title, $pub_name];
-    $pre_id = $sample_id;
-  }
-  if ($sortable){
-    my @headings = ();
-    push @headings, 'Experiment ID','';
-    push @headings, 'Experiment Title','';
-    push @headings, 'Publication','';
-    my $headings = $self->make_sort_headings( headings => \@headings, default => 'Experiment ID');
-    unshift @samples, ($headings);
-  } else {
-    unshift @samples, [('Experiment ID', 'Experiment Title', 'Publication')];
-  }
-  my $table = $self->encodeSectionTable( header => 1,
-                                         width => '600',
-                                         tr_info => $args{tr_info},
-                                         align  => [qw(center left left)],
-                                         nowrap => [qw(1 3)],
-                                         rows_to_show => $args{rows_to_show},
-                                         max_rows => $args{max_rows},
-					 bkg_interval => 3,
-                                         bg_color => $bg_color, 
-                                         sortable => $sortable,
-                                         rows => \@samples );
-
-  #return ( wantarray() ) ? ($header, $html) : $header . "\n" . $html;
+  my $table = $self -> getSampleTableDisplay(data => \@rows,
+                               rows_to_show => $rows_to_show, 
+                               type => 'Protein');
   return $table;
-} # end getSampleDisplay
+} # end getProteinSampleDisplay 
 
 sub add_tabletoggle_js {
   my $self = shift;
@@ -1802,8 +1796,61 @@ sub get_table_help_section {
 }
 
 
+sub get_table_help {
+  my $self = shift;
+  my %args = @_;
+  my $column_titles_ref = $args{column_titles_ref};
+  my $colnameidx_ref = $args{colnameidx_ref};
+  my $hidden_cols_ref = $args{hidden_cols_ref};
+  $args{heading} ||= '';
+  $args{description} ||= '';
+  $args{footnote} ||= '';
+  $args{showtext} ||= 'show column descriptions';
+  $args{hidetext} ||= 'hide column descriptions';
 
 
+  my @headings = ();
+  if ($colnameidx_ref && $hidden_cols_ref){ 
+		foreach my $col (sort {$colnameidx_ref->{$a} <=> $colnameidx_ref->{$b}} keys %$colnameidx_ref){
+			 if (not defined $hidden_cols_ref->{$col}){
+				 push @headings, $column_titles_ref->[$colnameidx_ref->{$col}];
+			 }
+		}
+  }else{
+   @headings = @$column_titles_ref;
+  }
+
+  my $headings = $self->get_column_defs( labels => \@headings );
+
+  my $index = "<TABLE class=info_box>\n";
+  for my $entry ( @$headings ) {
+    $index .= $self->encodeSectionItem( %$entry, nowrap_description => 1 );
+  }
+  $index .= "</TABLE>\n";
+
+  my $content =<<"  END";
+  <BR>
+  <span class=section_heading>$args{heading}</span> 
+  <span class=description>$args{description}</span>
+  $index
+  <span class=description>$args{footnote}</span>
+  END
+
+  $sbeams = $self->getSBEAMS();
+  my $section_toggle = $sbeams->make_toggle_section( content => $content,
+                                                     sticky   => 0,
+                                                     visible  => 0,
+                                                     imglink  => 1,
+                                                     showimg  => "/info_small.gif",
+                                                     hideimg  => "/info_small.gif",
+                                                     textlink => 1,
+                                                     name     => $args{name},
+                                                     showtext => $args{showtext},
+                                                     hidetext => $args{hidetext},
+                                          );
+
+  return "$section_toggle<BR>";
+}
 
 ###############################################################################
 ########### vocabHTML
@@ -2367,7 +2414,7 @@ sub get_what_is_new {
                                                  imglink => 1,
                                                   sticky => 1 );
 
-    my $sampleDisplay = $self->getSampleDisplay( sample_ids => \@sample_ids,
+    my $sampleDisplay = $self->getProteinSampleDisplay( sample_ids => \@sample_ids,
                                                           'link' => $link,
                                                      rows_to_show => 5,
                                                          max_rows => 500,
@@ -2985,6 +3032,44 @@ sub plotly_barchart {
 
   ~;
   return $chart;
+}
+
+sub get_dataset_url{
+  my $self = shift;
+  my $repository_ids = shift;
+  my $url ='';
+  my @ids = split(/[,;]/, $repository_ids);
+  my %dataset_annotation = ();
+	my $url = "http://proteomecentral.proteomexchange.org/api/autocomplete/v0.1/datasets";
+	my $content  = get($url);
+	$content =~ s/[\[\]"\s+\n\r]//g;
+	foreach my $pxd (split(",", $content)){
+		next if ($pxd eq '');
+		$dataset_annotation{$pxd} =1;
+	}
+
+
+  foreach my $id(@ids){
+    $id =~ s/\s+//g;
+    if ($id =~ /PXD/){
+      $url = "http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=";
+    }elsif($id =~ /PASS/){
+      $url = "http://www.peptideatlas.org/PASS/";
+    }elsif($id =~ /^S\d+/){
+      $url = "https://cptac-data-portal.georgetown.edu/study-summary/";
+    }
+    if ($url){
+      $url= "<a href='$url$id' target='_blank'>$id</a>";
+      if (defined $dataset_annotation{$id}){
+        $url .= "<a href='http://proteomecentral.proteomexchange.org/devLM/annotation/view.html?dataset_id=$id' target='_blank'>&nbsp;[annot]</a>";
+      }
+      $url .= ",";
+    }else{
+      $url = "$id,";
+    }
+  }
+  $url =~ s/,$//;
+  return $url;
 }
 
 

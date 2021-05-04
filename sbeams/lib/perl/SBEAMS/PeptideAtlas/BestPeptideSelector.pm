@@ -738,20 +738,13 @@ sub getHighlyObservablePeptidesDisplay {
                                               default => 'PSS' )  );
   unshift @data, $peptides;
 
-
-  my $coldefs = $atlas->get_column_defs( labels => \@headings );
-  my $table_help = $atlas->make_table_help( entries => $coldefs,
-					    description => "Theoretical tryptic peptides ranked by combined predictor score (PSS)" );
-
-
+  my $table_help = $atlas->get_table_help( column_titles_ref => \@headings);
   my $align = [qw(center right left left right right right right right right right)];
-
   my $html = $atlas->encodeSectionTable( header => 1, 
 					 tr_info => $args{tr},
 					 align  => $align,
 					 rows => \@data,
 					 rows_to_show => 20,
-					 help_text => $table_help,
 					 max_rows => 500,
 					 nowrap => [1..11],
 					 bkg_interval => 4,
@@ -765,7 +758,7 @@ sub getHighlyObservablePeptidesDisplay {
 					 close_table => 1,
       );
   
-  return "<TABLE>$html\n";
+  return "<TABLE><TR><TD ALIGN=left>$table_help</TD></TR></TABLE><TABLE>$html";
 } # end getHighlyObservablePeptidesDisplay
 
 

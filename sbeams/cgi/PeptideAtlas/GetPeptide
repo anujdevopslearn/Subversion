@@ -1274,7 +1274,7 @@ sub handle_request {
 	}
 
 	#### Add table column headings
-	my $column_headings = ['Modified Sequence', 'Charge', 'Mono Parent m/z', 'Best Prob', '# Obs', '# Siblings', 'Experiment IDs', 'Consensus Spectra' ];
+	my $column_headings = ['Modified Sequence', 'Charge', 'Mono Parent m/z', 'Best Prob', 'N Obs', '# Siblings', 'Experiment IDs', 'Consensus Spectra' ];
 	push @{$column_headings},  '<div title ="Synthetic Peptide Reference Spectra from SRM Atlas">Reference</div>' unless ($sbeams->isGuestUser() || $is_origene);
 	push @{$column_headings},  'CE_range' unless ($sbeams->isGuestUser() || $is_origene || ! $display_ce);
 	push @{$column_headings}, '<div title="Filter applies to Individual Spectra section below">Spectrum Filter</div>';
@@ -1359,8 +1359,8 @@ sub handle_request {
       my @column_titles = ();
       my @column_array = (
 	["modpep", "modified_peptide_sequence", "Modified Sequence"],
-	["chg", "MPI.peptide_charge","Chg"],
-	["sample_id", "SMP.sample_id","Smpl"],
+	["chg", "MPI.peptide_charge","Charge"],
+	["sample_id", "SMP.sample_id","Expt"],
 	["instrument_name", "I.instrument_name","Instr"],
 	["probability", "SI.probability","Prob"],
 	["spectrum_name", "S.spectrum_name","Spectrum Name"],
@@ -1383,7 +1383,6 @@ sub handle_request {
 	colnameidx_ref=>\%colnameidx,
 	column_titles_ref=>\@column_titles
       );
-
 
       my $modSQL = qq~
   SELECT $columns_clause 
@@ -1460,7 +1459,9 @@ sub handle_request {
 	resultset_ref=> $resultset_ref,
 	hidden_cols_ref=>\%hidden_cols );
 
-      my $help_me = get_table_help( 'individual_spectra' );
+      my $help_me = $sbeamsMOD->get_table_help(column_titles_ref=>\@column_titles,
+                                              colnameidx_ref => \%colnameidx,
+                                              hidden_cols_ref=>\%hidden_cols );
 
       $spectraHTML .= "<TR><TD ALIGN=left>$help_me</TD></TR><TR><TD>$spectra_display</TD></TR></TABLE>";
 
@@ -1621,9 +1622,6 @@ sub handle_request {
 	    );
       }
 
-
-
-
       #############################################################################
       #### Validated Transitions Section
       #############################################################################
@@ -1672,7 +1670,7 @@ sub handle_request {
 
 	#### Display table
 	if ($#{$mrm_transitions}) {
-	  my $annot_help = get_table_help( 'annotated_transitions' );
+	  my $annot_help =  $sbeamsMOD->get_table_help(column_titles_ref=>\@labels);
 
 	  print scalar $sbeams->make_toggle_section( neutraltext => 'Annotated Transitions',
 						     sticky => 1,
@@ -1789,7 +1787,7 @@ sub handle_request {
       my $peptide_clause = $peptide_name_clause || $peptide_sequence_clause || '';
       $atlas_build_clause =~ s/AB/PI/g;
 
-      my $tHTML = $sbeamsMOD->getDetailedSampleDisplay( sample_ids => $table_samples,
+      my $tHTML = $sbeamsMOD->getPeptideSampleDisplay( sample_ids => $table_samples,
 							build_clause => $atlas_build_clause,
 							peptide_clause => $peptide_clause,
 							rows_to_show => 10,
@@ -2343,66 +2341,6 @@ sub get_mrm_transitions {
   my @rows = $sbeams->selectSeveralColumns($sql);
   return \@rows;
 }
-
-
-sub get_table_help {
-  my $name = shift;
-  return '' unless $name;
-  my @entries;
-  my $showtext = 'show column descriptions';
-  my $hidetext = 'hide column descriptions';
-  my $heading;
-  my $description;
-## { key => 'Peptide Accession', value => 'Primary key for annotations table.' },
-  if ( $name eq 'annotated_transitions' ) {  
-    @entries = ( 
-                 { key => 'Sequence', value => 'Amino acid sequence of detected pepide, including any mass modifications.' },
-                 { key => 'Charge', value => 'Charge on Q1 (precursor) peptide ion.' },
-                 { key => 'q1_mz', value => 'Mass to charge ratio of precursor peptide ion.' },
-                 { key => 'q3_mz', value => 'Mass to charge ratio of fragment ion.' },
-                 { key => 'Label', value => 'Ion-series designation for fragment ion (Q3).' },
-                 { key => 'Intensity', value => 'Intensity of peak in CID spectrum' },
-                 { key => 'CE', value => 'Collision energy, the kinetic energy conferred to the peptide ion and resulting in peptide fragmentation. (eV)' },
-                 { key => 'RT', value => 'Peptide retention time( in minutes ) in the LC/MS system.' },
-                 { key => 'SSRCalc', value => "Sequence Specific Retention Factor provides a hydrophobicity measure for each peptide using the algorithm of Krohkin et al. Version 3.0 <A HREF=http://hs2.proteome.ca/SSRCalc/SSRCalc.html target=_blank>[more]</A>" },
-                 { key => 'Instr', value => 'Model of mass spectrometer on which transition pair was validated.' },
-                 { key => 'Annotator', value => 'Person/lab who contributed validated transition.' },
-                 { key => 'Quality', value => 'Crude scale of quality for the observation, currently one of Best, OK, and No. ' },
-        );
-                 
-    $heading = 'Annotated Transitions';
-    $description= 'Contributed Q1/Q3 transition pairs for SRM experiments';
-  } elsif ( $name eq 'individual_spectra' ) {
-    @entries = ( 
-                 { key => 'Modified Sequence', value => 'Amino acid sequence of detected pepide, including any mass modifications.' },
-                 { key => 'Chg', value => 'Charge on observed peptide ion.' },
-                 { key => 'Smpl', value => 'Experiment ID from which this spectrum was obtained.' },
-                 { key => 'Instr', value => 'Model of mass spectrometer on which transition pair was validated.' },
-                 { key => 'Prob', value => 'Probability assigned peptide-spectrum match (iProphet).' },
-                 { key => 'Spectrum Name', value => 'Name of spectrum, typically filename.scan.scan' },
-                 { key => 'Avg Eval', value => 'Average manual evaluation score for peptide-spectrum match  (if applicable)' },
-                 { key => 'Fragmentation Type', value => 'Fragmentation method used to generate spectrum.  IT = IonTrap, CID = Collision Induced Dissociation, etc.' },
-                 { key => 'Spectrum', value => 'Link to display of actual spectrum'},
-                 { key => 'Precursor Intensity', value => 'Precursor Intensity in Millions'},
-                 { key => 'TIC', value=>'Total ion current in Millions'},
-                 { key => 'S/N', value=> 'Signal to noise'},
-        );
-                 
-    $heading = 'Individual Spectra';
-    $description= 'Individual spectra supporting the existence of the subject peptide; list can be narrowed to a specific peptide ion in the Modified Peptide table above';
-  }
-
-  return unless @entries;
-  my $help = $sbeamsMOD->get_table_help_section( name => $name,
-                                             description => $description,
-                                             heading => $heading,
-                                             entries => \@entries,
-                                             showtext => $showtext,
-                                             hidetext => $hidetext  );
-  return $help;
-
-} # end get_table_help
-
 
 
 

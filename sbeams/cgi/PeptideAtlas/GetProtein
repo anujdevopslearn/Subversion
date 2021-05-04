@@ -1675,11 +1675,7 @@ sub handle_request {
 							      max_rows => 500);
       shift @columns;
       pop @columns;
-      my $col_defs = $sbeamsMOD->get_column_defs( labels => \@columns );
-      my $ptm_table_help = $sbeamsMOD->make_table_help( entries => $col_defs,
-							description => '');
-
-
+      my $ptm_table_help = $sbeamsMOD->get_table_help(column_titles_ref=>\@columns);
       if ($htmlmode) {
 				my $ptmHTML = "$ptm_summary_chart \n$ptm_table_help<TABLE width='100%'>$PTM_table_Display</TABLE><BR>";
 				print scalar $sbeams->make_toggle_section( neutraltext => 'PTM Summary',
@@ -1697,9 +1693,7 @@ sub handle_request {
     #############################################################################
     #### Observed peptides
     #############################################################################
-    my $col_defs = $sbeamsMOD->get_column_defs( labels => \@labels );
-    my $obs_help = $sbeamsMOD->make_table_help( entries => $col_defs,
-						description => 'Observed peptides mapping to subject protein' );
+    my $obs_help = $sbeamsMOD->get_table_help(column_titles_ref=>\@labels);
 
     print scalar $sbeams->make_toggle_section( neutraltext => "Distinct Observed Peptides ($peptide_counts)",
 					       sticky => 1,
@@ -1946,7 +1940,6 @@ sub handle_request {
     );
 
     if ( $htmlmode && $pabst_display && $parameters->{motif} ne 'glyco'  ) {
-
       print scalar $sbeams->make_toggle_section( neutraltext => 'PABST Peptide Ranking',
 						 sticky => 1,
 						 name => 'getprotein_pabst_static_div',
@@ -1980,7 +1973,6 @@ sub handle_request {
         base_url=>$base_url,
         tr_info => '',
       );
-
       print scalar $sbeams->make_toggle_section( neutraltext => 'Predicted Highly Observable Peptides',
 						 sticky => 1,
 						 name => 'getprotein_highlyobservablelist_div',
@@ -2028,19 +2020,13 @@ sub handle_request {
       }
       my @labels = ( 'Accession', 'Sequence', 'Charge', 'q1_mz', 'q3_mz', 'Label',
 		     'Intensity', 'CE', 'RT', 'SSRT', 'Instr', 'Annotation Set', 'Quality');
-      my $col_defs = $sbeamsMOD->get_column_defs( labels => \@labels );
-#      my $trans_help = get_table_help( 'annotated_transitions' );
-      my $trans_help = $sbeamsMOD->make_table_help( entries => $col_defs,
-                                                description => 'Contributed Q1/Q3 transition pairs for SRM experiments' );
-
       #### Add table column headings
       unshift @$mrm_transitions, \@labels;
-
+      my $trans_help = $sbeamsMOD->get_table_help (column_titles_ref=>\@labels);
       #### Format table
       $transitionsHTML .= $sbeamsMOD->encodeSectionTable( header => 1,
 							  colspan => 1,  #ugh...
 							  set_download => 1,
-							  help_text => $trans_help,
 							  nowrap => [12,13],
 							  bkg_interval => 3,
 							  align  => [qw(left center center right right center right right right right left left left)],
@@ -2048,13 +2034,13 @@ sub handle_request {
       #### Display table
       ## $trans_help ??
       if ($#{$mrm_transitions} && $htmlmode) {
-	print scalar $sbeams->make_toggle_section( neutraltext => 'Annotated Transitions',
+					print scalar $sbeams->make_toggle_section( neutraltext => 'Annotated Transitions',
 						   sticky => 1,
 						   name => 'getprotein_transitions_div',
 						   #ToDo?# tooltip => 'Show/Hide Section',
 						   barlink => 1,
 						   visible => 1,
-						   content => "<TABLE>$transitionsHTML</TABLE>" );
+						   content => "<TABLE><TR><TD COLSPAN='5'>$trans_help</TD></TR>$transitionsHTML</TABLE>" );
       }
 
     }
@@ -2112,7 +2098,21 @@ sub handle_request {
     #$log->debug( "UA is $ENV{HTTP_USER_AGENT}" );
     #
 
-    my $sampleMap = $sbeamsMOD->getSampleMapDisplay( sample_ids => $sample_ids,
+    if ($htmlmode) {
+      my $sampleDisplay = $sbeamsMOD->getProteinSampleDisplay( sample_ids => $sample_ids,
+						      no_header => 1,
+						      rows_to_show => 25,
+						      max_rows => 500,
+						    );
+      print scalar $sbeams->make_toggle_section( neutraltext => 'Observed in Experiments',
+						 sticky => 1,
+						 name => 'getprotein_samplelist_div',
+						 #ToDo?# tooltip => 'Show/Hide Section',
+						 barlink => 1,
+						 visible => 1,
+						 content => "<TABLE>$sampleDisplay</TABLE>" );
+
+      my $sampleMap = $sbeamsMOD->getSampleMapDisplay( sample_ids => $sample_ids,
 						     instance_ids => \%instance_ids,
 						     atlas_build_id => $atlas_build_id,
 						     no_header => 1,
@@ -2120,14 +2120,6 @@ sub handle_request {
 						     second_header => "(Peptides listed by accession, * denotes single genome mapping)"
 						   );
 
-    my $sampleDisplay = $sbeamsMOD->getSampleDisplay( sample_ids => $sample_ids,
-						      no_header => 1,
-						      rows_to_show => 25,
-						      max_rows => 500,
-						    );
-
-
-    if ($htmlmode) {
       print scalar $sbeams->make_toggle_section( neutraltext => 'Experiment Peptide Map',
 						 sticky => 1,
 						 name => 'getprotein_samplemap_div',
@@ -2136,13 +2128,6 @@ sub handle_request {
 						 visible => 1,
 						 content => "<A NAME='samplemap'></A><TABLE>$sampleMap</TABLE>" );
 
-      print scalar $sbeams->make_toggle_section( neutraltext => 'Sample List',
-						 sticky => 1,
-						 name => 'getprotein_samplelist_div',
-						 #ToDo?# tooltip => 'Show/Hide Section',
-						 barlink => 1,
-						 visible => 1,
-						 content => "<TABLE>$sampleDisplay</TABLE>" );
     }
 
 
