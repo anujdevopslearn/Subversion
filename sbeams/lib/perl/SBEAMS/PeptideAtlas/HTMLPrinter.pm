@@ -1400,6 +1400,7 @@ sub getPeptideSampleDisplay {
     $args{build_clause}
     $args{peptide_clause}
     AND S.record_status != 'D'
+    AND SP.record_status != 'D'
     ORDER BY S.sample_id
   ~;
   my @rows = $sbeams->selectSeveralColumns($sql);
@@ -1627,6 +1628,7 @@ sub getProteinSampleDisplay {
     LEFT JOIN $TBAT_PUBLICATION PUB ON PUB.PUBLICATION_ID = SP.PUBLICATION_ID
     WHERE S.SAMPLE_ID IN ( $in )
     AND S.RECORD_STATUS != 'D'
+    AND SP.record_status != 'D'
     ORDER BY sample_ID
   ~;
   my @rows = $sbeams->selectSeveralColumns($sql);
