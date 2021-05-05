@@ -965,7 +965,6 @@ sub encodeSectionTable {
   } else { 
     if ( $args{unified_widgets} ) {
       my $widget = "<tr $tr_info><td align=left>$closelink</td>";
-      $widget .= "<td align=center>$help</td>";
       $widget .= "<td align=right nowrap=1>$rs_link</td>"; 
       $widget .= "</tr>";
       return( $widget . $html ); 
@@ -1401,7 +1400,7 @@ sub getPeptideSampleDisplay {
     $args{build_clause}
     $args{peptide_clause}
     AND S.record_status != 'D'
-    ORDER BY sample_title
+    ORDER BY S.sample_id
   ~;
   my @rows = $sbeams->selectSeveralColumns($sql);
   my $table = $self -> getSampleTableDisplay (data => \@rows,
@@ -1509,7 +1508,7 @@ sub getPTMTableDisplay {
   }
   my $table = $self->encodeSectionTable( header => 1,
                                          align  => [@align],
-					 bkg_interval => 3,
+																				 bkg_interval => 3,
                                          rows_to_show => $args{rows_to_show},
                                          max_rows => $args{max_rows},
                                          rows => \@rows );
@@ -1628,7 +1627,7 @@ sub getProteinSampleDisplay {
     LEFT JOIN $TBAT_PUBLICATION PUB ON PUB.PUBLICATION_ID = SP.PUBLICATION_ID
     WHERE S.SAMPLE_ID IN ( $in )
     AND S.RECORD_STATUS != 'D'
-    ORDER BY sample_tag ASC
+    ORDER BY sample_ID
   ~;
   my @rows = $sbeams->selectSeveralColumns($sql);
   my $table = $self -> getSampleTableDisplay(data => \@rows,
@@ -3085,17 +3084,22 @@ sub create_table {
   my $table_width = $args{width} || 800;
   my $rows_to_show = $args{rows_to_show} || 25;
   my $nowrap = $args{nowrap} || 1;
+  my $download_table = $args{download_table} || 0;
   unshift @$data, $column_names;
-  my $table = $self->encodeSectionTable( rows => $data,
+  my $table = $self->encodeSectionTable(unified_widgets => 1,
+                              rows => $data,
                               header => 1,
                               bkg_interval => 3,
-                              set_download => 1,
+                              set_download => $download_table,
                               nowrap => [$nowrap],
                               table_id => $table_id,
                               align => [@$align],
                               width => $table_width ,
-                              rows_to_show => $rows_to_show,
+                              rows_to_show => $rows_to_show, 
                               sortable => $sortable );
+
+
+
 
   my $heading_info = $self->get_table_help(column_titles_ref=> $column_names);
   my $html = $sbeams->make_toggle_section(
