@@ -907,7 +907,8 @@ sub get_sample_info {
                           table_name => "Experiment Contribution",
 													table_id => "exp_contribution",
 													align => \@align,
-													sortable => 0);
+													sortable => 0,
+                          download_table => 1);
 
   push @column_names , "sample_category_id";
   return ( $html, \@samples, \@column_names);
@@ -970,7 +971,8 @@ sub get_dataset_contrib_info {
                           table_name => "Dataset Contribution",
                           table_id => "datasetContri_info",
                           align => \@align,
-                          sortable => 0);
+                          sortable => 0,
+                          download_table => 1);
 
   return $html;
 
