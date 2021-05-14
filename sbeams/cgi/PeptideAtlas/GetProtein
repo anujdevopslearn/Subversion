@@ -1678,7 +1678,7 @@ sub handle_request {
       my $ptm_table_help = $sbeamsMOD->get_table_help(column_titles_ref=>\@columns);
       if ($htmlmode) {
 				my $ptmHTML = "$ptm_summary_chart \n$ptm_table_help<TABLE width='100%'>$PTM_table_Display</TABLE><BR>";
-				print scalar $sbeams->make_toggle_section( neutraltext => 'PTM Summary',
+				print scalar $sbeams->make_toggle_section( neutraltext => 'Phospho Summary',
 						   sticky => 1,
 						   name => 'getprotein_ptm_summary_div',
 						   #ToDo?# tooltip => 'Show/Hide Section',
@@ -1789,7 +1789,7 @@ sub handle_request {
 				if ( $row->[$pre_idx] =~ /[-RK]/ ) {
 					$ntt++;
 				}
-				if ( $row->[$fol_idx] =~ /[RK]$/ || $row->[3] eq '-' ) {
+				if ( $row->[$fol_idx] =~ /[RK]$/ || $row->[$fol_idx] eq '-' ) {
 					$ntt++;
 				}
       }
@@ -1842,7 +1842,7 @@ sub handle_request {
       if ($sbeams->output_mode() eq 'html') {
 	$annot = "<FONT COLOR=RED><SUP>$annot</SUP></FONT>";
       }
-      $row->[4] = sprintf( "%0.2f", $row->[4] ) . " $annot";
+      $row->[$ntt_idx] = sprintf( "%0.2f", $row->[$ntt_idx] ) . " $annot";
       my $cnt = 0;
     }
 
