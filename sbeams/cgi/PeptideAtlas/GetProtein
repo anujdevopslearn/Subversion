@@ -731,12 +731,12 @@ sub handle_request {
 							&nbsp;&nbsp;<input type="text" name="search_key" value="$protein_name" size="20" maxlength="60"/>
 				<input type="submit" name="apply_action" value="GO" /><BR>
 						~;
-			## looking similar ids
+			## looking for similar ids
 			my $sql = qq~
 					SELECT SKE.RESOURCE_NAME, SKE.RESOURCE_TYPE, BS.BIOSEQUENCE_ID
 					FROM $TBAT_SEARCH_KEY_ENTITY SKE
 					JOIN $TBAT_BIOSEQUENCE BS ON (BS.BIOSEQUENCE_NAME = SKE.SEARCH_KEY_NAME)
-					JOIN $TBAT_ATLAS_BUILD AB ON (AB.BIOSEQUENCE_SET_ID = AB.BIOSEQUENCE_SET_ID
+					JOIN $TBAT_ATLAS_BUILD AB ON (AB.BIOSEQUENCE_SET_ID = BS.BIOSEQUENCE_SET_ID
 																			 AND AB.ATLAS_BUILD_ID = $atlas_build_id) 
 					WHERE SKE.RESOURCE_NAME in (
 						(
@@ -776,6 +776,8 @@ sub handle_request {
 								OR BR.reference_biosequence_id in ($biosequence_ids))
 					 AND RELATIONSHIP_TYPE_ID = 2
 				~;
+         #$sbeams->display_sql(sql=>$sql) ;
+
 				@rows = $sbeams->selectSeveralColumns ($sql);
 				my %biosequence_identifcal = ();
 				foreach my $row(@rows){
@@ -790,7 +792,7 @@ sub handle_request {
 					}
 
 				}
-				print  "<br><h4>Here are some related protein names. Proteins in the same row have identical sequences.<br><br>" if (keys %related_names); 
+				print  "<br><h4>Here are some related protein names in the same build. Proteins in the same row have identical sequences.<br><br>" if (keys %related_names); 
 				foreach my $name(sort {$a cmp $b} keys %related_names){
 					 print "<a href='" . "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_build_id\&protein_name=$name\&action=QUERY" .
 									"'>$name</a>";
