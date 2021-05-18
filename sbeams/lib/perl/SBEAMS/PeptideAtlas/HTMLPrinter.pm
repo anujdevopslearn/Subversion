@@ -1608,7 +1608,6 @@ sub getProteinSampleDisplay {
     $log->error( "No samples passed to display samples" );
     return;
   }
-
   my $in = join( ", ", @{$args{sample_ids}} );
   return unless $in;
   my $sql = qq~
@@ -1625,17 +1624,18 @@ sub getProteinSampleDisplay {
     LEFT JOIN $TBPR_INSTRUMENT I ON S.instrument_model_id = I.instrument_id
     LEFT JOIN $TBAT_PROTEASES ENZ ON ENZ.id = S.protease_id
     LEFT JOIN $TBAT_SAMPLE_PUBLICATION SP ON SP.SAMPLE_ID = S.SAMPLE_ID
-    LEFT JOIN $TBAT_PUBLICATION PUB ON PUB.PUBLICATION_ID = SP.PUBLICATION_ID
+    LEFT JOIN $TBAT_PUBLICATION PUB ON (PUB.PUBLICATION_ID = SP.PUBLICATION_ID 
+                                        AND SP.record_status != 'D')
     WHERE S.SAMPLE_ID IN ( $in )
     AND S.RECORD_STATUS != 'D'
-    AND SP.record_status != 'D'
     ORDER BY sample_ID
   ~;
   my @rows = $sbeams->selectSeveralColumns($sql);
+
   my $table = $self -> getSampleTableDisplay(data => \@rows,
                                rows_to_show => $rows_to_show, 
                                type => 'Protein');
-  return $table;
+  return $table ;
 } # end getProteinSampleDisplay 
 
 sub add_tabletoggle_js {
@@ -2408,22 +2408,19 @@ sub get_what_is_new {
     ) 
   ~;
   my @sample_ids = $sbeams->selectOneColumn($sql);
+ 
   if(@sample_ids){
-    my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_samplemap',
-                                                  visible => 1,
-                                                tooltip => 'Show/Hide Section',
-                                                 imglink => 1,
-                                                  sticky => 1 );
-
     my $sampleDisplay = $self->getProteinSampleDisplay( sample_ids => \@sample_ids,
-                                                          'link' => $link,
-                                                     rows_to_show => 5,
-                                                         max_rows => 500,
-                                                         bg_color  => '#EAEAEA',
-                                                         sortable => 1,
-                                                         tr_info => $tr );
-
-    $table .= "<TABLE width='600'>$sampleDisplay</TABLE>";
+                  no_header => 1,
+                  rows_to_show => 25,
+                  max_rows => 500,
+                );
+    $table .=$sbeams->make_toggle_section( neutraltext => 'New Experiments',
+             sticky => 1,
+             name => 'getnew_samplelist_div',
+             barlink => 1,
+             visible => 1,
+             content => "<TABLE>$sampleDisplay</TABLE>" );
   }
   
   return $table;
