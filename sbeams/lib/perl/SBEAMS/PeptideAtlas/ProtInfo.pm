@@ -152,14 +152,14 @@ sub loadBuildProtInfo {
   while ($line = <IDENTFILE>) {
     chomp ($line);
     my ($protein_group_number,
-				$biosequence_name,
-				$probability,
-				$confidence,
+	$biosequence_name,
+	$probability,
+	$confidence,
         $n_observations,
         $n_distinct_peptides,
-				$level_name,
-				$represented_by_biosequence_name,
-				$subsumed_by_biosequence_name,
+	$level_name,
+	$represented_by_biosequence_name,
+	$subsumed_by_biosequence_name,
         $estimated_ng_per_ml,
         $abundance_uncertainty,
         $is_covering,
@@ -347,14 +347,14 @@ sub insert_biosequence_id_atlas_build_search_batch{
 
   }
   if ($insert_str){
-		my $sql = qq~
-			INSERT INTO $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH (biosequence_id, atlas_build_search_batch_id)
-			VALUES
-			$insert_str;
+    my $sql = qq~
+	INSERT INTO $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH (biosequence_id, atlas_build_search_batch_id)
+	VALUES
+	$insert_str;
 		~;
 
-		my $result = $sbeams->executeSQL($sql);
-		print "$counter\n";
+    my $result = $sbeams->executeSQL($sql);
+    print "$counter\n";
   }
 
 }
@@ -392,18 +392,18 @@ sub update_protInfo_sampleSpecific{
   ~;
 
   my @rows = $sbeams->selectSeveralColumns($sql);
-	my %result = ();
-	foreach my $row (@rows){
-		my ($bsid, $sample_id ) = @$row;
-		$result{$bsid}{$sample_id} =1;
-	}
+  my %result = ();
+  foreach my $row (@rows){
+    my ($bsid, $sample_id ) = @$row;
+    $result{$bsid}{$sample_id} =1;
+  }
 
-	my %unique =();
-	foreach my $bsid (keys %result){
-		my @samples = keys %{$result{$bsid}};
-		next if(@samples > 1);
-		$unique{$samples[0]}{$bsid} =1;
-	}
+  my %unique =();
+  foreach my $bsid (keys %result){
+    my @samples = keys %{$result{$bsid}};
+    next if(@samples > 1);
+    $unique{$samples[0]}{$bsid} =1;
+  }
   $sql = qq~
       SELECT RELATED_BIOSEQUENCE_ID, BIOSEQUENCE_RELATIONSHIP_ID
       FROM $TBAT_BIOSEQUENCE_RELATIONSHIP 
@@ -420,9 +420,9 @@ sub update_protInfo_sampleSpecific{
  
   foreach my $sample_id (keys %unique){
     foreach my $bsid(keys %{$unique{$sample_id}}){
-			my $rowdata= {
-				sample_specific_id => $sample_id,
-			};
+      my $rowdata= {
+	sample_specific_id => $sample_id,
+      };
       if (defined $protein_identification_id{$bsid}){
         update_table( table_name => $TBAT_PROTEIN_IDENTIFICATION,
                       key => 'protein_identification_id',
@@ -449,37 +449,35 @@ sub update_protInfo_sampleSpecific{
   ~;
   my %repository_id =  $sbeams->selectTwoColumnHash($sql);
 
-	%unique =();
-	foreach my $bsid (keys %result){
-		foreach my $sample_id (keys %{$result{$bsid}}){
-			if (defined $repository_id{$sample_id}){
-				$unique{$bsid}{$repository_id{$sample_id}} = 1;
-			}else{
-				$unique{$bsid}{'OTHERS'} =1;
-			}
-		}
+  %unique =();
+  foreach my $bsid (keys %result){
+    foreach my $sample_id (keys %{$result{$bsid}}){
+      if (defined $repository_id{$sample_id}){
+	$unique{$bsid}{$repository_id{$sample_id}} = 1;
+      }else{
+	$unique{$bsid}{'OTHERS'} =1;
+      }
+    }
     next if (scalar keys %{$unique{$bsid}} > 1);
     my $dataset_specific_id = (keys %{$unique{$bsid}})[0];
     #print "$bsid $dataset_specific_id\n";
-		my $rowdata= {
-			dataset_specific_id => $dataset_specific_id 
-		};
-		if (defined $protein_identification_id{$bsid}){
-			update_table( table_name => $TBAT_PROTEIN_IDENTIFICATION,
-										key => 'protein_identification_id',
-										key_value => $protein_identification_id{$bsid},
-										rowdata_ref => $rowdata);
-		}elsif (defined $biosequenc_relateionship_id{$bsid}){
-			update_table( table_name => $TBAT_BIOSEQUENCE_RELATIONSHIP,
-										key => 'BIOSEQUENCE_RELATIONSHIP_ID',
-										key_value => $biosequenc_relateionship_id{$bsid},
-										rowdata_ref => $rowdata);
-		}else{
-			print "no protein identification id for $bsid\n";
-		}
-  }
- 
-		 
+    my $rowdata= {
+      dataset_specific_id => $dataset_specific_id 
+    };
+    if (defined $protein_identification_id{$bsid}){
+      update_table( table_name => $TBAT_PROTEIN_IDENTIFICATION,
+		    key => 'protein_identification_id',
+		    key_value => $protein_identification_id{$bsid},
+		    rowdata_ref => $rowdata);
+    }elsif (defined $biosequenc_relateionship_id{$bsid}){
+      update_table( table_name => $TBAT_BIOSEQUENCE_RELATIONSHIP,
+		    key => 'BIOSEQUENCE_RELATIONSHIP_ID',
+		    key_value => $biosequenc_relateionship_id{$bsid},
+		    rowdata_ref => $rowdata);
+    }else{
+      print "no protein identification id for $bsid\n";
+    }
+  }		 
 
 }
 
@@ -1453,21 +1451,21 @@ sub update_protInfo{
       ## protein rejected if prot_n_peps goes from 1 -> 0
       $presence_level_id = 12 if(! $prot_n_peps);
     }
-		my $rowdata = {n_observations => $pep_n_obs};
-		update_table (table_name => $TBAT_PEPTIDE_INSTANCE,
-										key => 'peptide_instance_id',
-										key_value => $pi_id,
-										rowdata_ref => $rowdata) if (! $peptide_instance_id{$pi_id});
-      
+    my $rowdata = {n_observations => $pep_n_obs};
+    update_table (table_name => $TBAT_PEPTIDE_INSTANCE,
+		  key => 'peptide_instance_id',
+		  key_value => $pi_id,
+		  rowdata_ref => $rowdata) if (! $peptide_instance_id{$pi_id});
+
     $rowdata = {presence_level_id => $presence_level_id};
     ## update protein identification table
     update_table( table_name => $TBAT_PROTEIN_IDENTIFICATION,
-									key => 'PROTEIN_IDENTIFICATION_ID',
-									key_value => $prot_id,
-									rowdata_ref => $rowdata);
+		  key => 'PROTEIN_IDENTIFICATION_ID',
+		  key_value => $prot_id,
+		  rowdata_ref => $rowdata);
     $peptide_instance_id{$pi_id} = 1;
   }
-  print "Purging caching\n";
+  #print "Purging caching\n";
   $sql = qq~
      DELETE FROM sbeams.dbo.cached_resultset 
      WHERE key_field = 'atlas_build_id' 
@@ -1475,9 +1473,8 @@ sub update_protInfo{
            AND query_name like '%GetProteins%'
   ~;
   $sbeams->executeSQL($sql);
-
-
 }
+
 #############################################################################
 ###  Update_protInfo_using_annotation
 #############################################################################
@@ -1532,28 +1529,28 @@ sub update_protInfo_all_annotation {
         my $rowdata = { presence_level_id => $pre_presence_level_id };
         ## update protein identification table
         update_table( table_name => $TBAT_PROTEIN_IDENTIFICATION,
-											key => 'protein_identification_id',
-											key_value => $pre_prot_id,
-											rowdata_ref => $rowdata);
-     }
-     $new_prot_n_peps = $prot_n_peps;
-     $new_prot_n_obs = $prot_n_obs;
-   }
-		$pep_n_obs -= $n_spec_removed;
-		$new_prot_n_obs -= $n_spec_removed;
-		if (! $pep_n_obs ){
-			$new_prot_n_peps--;
-		}
-		## update peptide n_obs 
-		my $rowdata = {n_observations => $pep_n_obs };
-		update_table (table_name => $TBAT_PEPTIDE_INSTANCE,
-									key => 'peptide_instance_id',
-									key_value => $pi_id,
-									rowdata_ref => $rowdata) if (! $peptide_instance_id{$pi_id});
+		      key => 'protein_identification_id',
+		      key_value => $pre_prot_id,
+		      rowdata_ref => $rowdata);
+      }
+      $new_prot_n_peps = $prot_n_peps;
+      $new_prot_n_obs = $prot_n_obs;
+    }
+    $pep_n_obs -= $n_spec_removed;
+    $new_prot_n_obs -= $n_spec_removed;
+    if (! $pep_n_obs ){
+      $new_prot_n_peps--;
+    }
+    ## update peptide n_obs 
+    my $rowdata = {n_observations => $pep_n_obs };
+    update_table (table_name => $TBAT_PEPTIDE_INSTANCE,
+		  key => 'peptide_instance_id',
+		  key_value => $pi_id,
+		  rowdata_ref => $rowdata) if (! $peptide_instance_id{$pi_id});
     $peptide_instance_id{$pi_id} = 1;
-		$pre_prot_id = $prot_id;
-		$pre_prot = $prot;
-		$pre_presence_level_id = $presence_level_id;
+    $pre_prot_id = $prot_id;
+    $pre_prot = $prot;
+    $pre_presence_level_id = $presence_level_id;
   }
   if (! $new_prot_n_peps ){
     $pre_presence_level_id = 12;
@@ -1574,16 +1571,16 @@ sub update_table {
   my $key = $args{key};
   my $table_name = $args{table_name};
 
-	my $PK = $sbeams->updateOrInsertRow(
-			update => 1,
-			table_name => $table_name, 
-			rowdata_ref => $rowdata_ref,
-			PK => $key, 
-			PK_value => $key_value,
-			return_PK => 1,
-			verbose=>$VERBOSE,
-			testonly=>$TESTONLY,
-	);
+  my $PK = $sbeams->updateOrInsertRow(
+    update => 1,
+    table_name => $table_name, 
+    rowdata_ref => $rowdata_ref,
+    PK => $key, 
+    PK_value => $key_value,
+    return_PK => 1,
+    verbose=>$VERBOSE,
+    testonly=>$TESTONLY,
+      );
 }
 =head1 BUGS
 
