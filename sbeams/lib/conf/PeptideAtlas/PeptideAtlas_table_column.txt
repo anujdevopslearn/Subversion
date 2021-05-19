@@ -9,14 +9,15 @@ AT_atlas_build	7	data_path	Data Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	Path 
 AT_atlas_build	8	is_trypsin_build	Do most of samples use trypsin?	char	1	0	Y		N				optionlist			Y	Y	N	Indicates whether most of datasets use trypsin	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 AT_atlas_build	9	build_date	Build Date	datetime	8	0	N	CURRENT_TIMESTAMP	N			Y	text	20		Y	Y	N	Date that this PeptideAtlas build was started		
 AT_atlas_build	10	atlas_build_description	Atlas Build Description	text	16	0	Y		N			N	textarea	10		Y	Y	N	Full description of this PeptideAtlas build		
-AT_atlas_build	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-AT_atlas_build	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_atlas_build	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_atlas_build	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_atlas_build	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_atlas_build	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_atlas_build	17	record_status	Record Status	char	1	0	N	N	N							N	N				
-AT_atlas_build	18	protpro_PSM_FDR_per_expt	PSM FDR Cutoff Applied Per Experiment	real	4	0	Y		N			Y	text	10		Y	Y	N	PSM FDR threshold used for build		
+AT_atlas_build	11	main_build_url	Main Build URL	varchar	255	0	N		N			N	text	50		Y	Y	N	Landing page for the build		
+AT_atlas_build	12	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_atlas_build	13	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_atlas_build	14	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_atlas_build	15	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_atlas_build	16	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_atlas_build	17	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_atlas_build	18	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_atlas_build	19	protpro_PSM_FDR_per_expt	PSM FDR Cutoff Applied Per Experiment	real	4	0	Y		N			Y	text	10		Y	Y	N	PSM FDR threshold used for build		
 AT_default_atlas_build	1	default_atlas_build_id	Default Atlas Build ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_default_atlas_build	2	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	Y	Organism for which this default applies.  Leave empty for overall default	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 AT_default_atlas_build	3	organism_specialized_build	Organism Specialized Build	varchar	50	0	Y		N			N	text	40		Y	Y	Y	"If not NULL, a specialized build within this organism, e.g. Human Plasma"		
@@ -833,7 +834,7 @@ AT_pabst_transition_instance	8	collision_energy	Collision Energy	float	8	0	Y		N	
 AT_pabst_transition_instance	9	is_predicted	Is Predicted	char	1	0	Y		N			N									
 AT_instrument_type	1	instrument_type_id	instrument_type_id	int	4	0	N		Y			N						Y			pkDEFAULT
 AT_instrument_type	2	instrument_type_name	instrument_type_name	varchar	255	0	N		N			N	text	24		Y	Y	N			
-AT_instrument_type	3	instrument_type_description	instrument_type_description	varchar	255	0	Y		N			N	text	24		Y	Y	N			
+AT_instrument_type	3	instrument_type_comment	instrument_type_comment	varchar	255	0	Y		N			N	textarea	10		Y	Y	N			
 AT_instrument_type	4	is_source_instrument	is_source_instrument	char	1	0	Y		N			N	optionlist			Y	Y	N	Is this a source instrument type	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 AT_instrument_type	5	is_target_instrument	is_target_instrument	char	1	0	Y		N			N	optionlist			Y	Y	N	Is this a target instrument type	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 AT_instrument_type	6	sort_order	sort_order	int	4	0	Y		N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
@@ -1240,8 +1241,8 @@ AT_GetAtlasVariants	10	category	Category									Y	text	10		Y	Y	N	"Category of S
 AT_GetAtlasVariants	11	original_peptide_sequence	Original Peptide Sequence									N	text	40		Y	Y	N	Original peptide sequence(s)		
 AT_GetAtlasVariants	12	variant_peptide_sequence	Variant Peptide Sequence									N	text	40		Y	Y	N	Variant peptide sequence(s)		
 AT_NeXtProt_Mapping	1	id	NextProt Mapping ID	int	4	0	N		Y							N	N				pkDEFAULT
-AT_NeXtProt_Mapping	2	atlas_build_id	Atlas Build	int	4	0	N		N			Y	optionlist			Y	Y	N	source Atlas build	"select atlas_build_id, atlas_build_name  from $TBAT_ATLAS_BUILD where atlas_build_name like 'Human [0-9]%' and atlas_build_id >= 433"	
-AT_NeXtProt_Mapping	3	nextprot_release_date	NextProt Release Date	datetime	8	0	N	CURRENT_TIMESTAMP	N			Y	text	20		Y	Y	N	NextProt Release Date		
+AT_NeXtProt_Mapping	2	atlas_build_id	Atlas Build	int	4	0	N		N			Y	optionlist			Y	Y	N	source Atlas build	"select distinct NM.atlas_build_id , A.atlas_build_name FROM $TBAT_NEXTPROT_MAPPING NM  join $TBAT_ATLAS_BUILD A on(A.atlas_build_id = NM.atlas_build_id)  order by A.atlas_build_name desc"	
+AT_NeXtProt_Mapping	3	nextprot_release_date	NextProt Release Date	datetime	8	0	N	CURRENT_TIMESTAMP	N			N	text	20		Y	Y	N	NextProt Release Date		
 AT_NeXtProt_Mapping	4	pa_mapping_date	Mapping Date	datetime	8	0	N	CURRENT_TIMESTAMP	N			Y	text	20		Y	Y	N	Mapping Date		
 AT_NeXtProt_Mapping	5	is_public	Is the build publicly available?	char	1	0	Y		N			Y	optionlist			Y	Y	N	Indicates whether the build is public	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 AT_NeXtProt_Mapping	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
@@ -1284,13 +1285,20 @@ AT_domain_list_resource	2	protein_list_id	Protein List ID	int	4	0	N		N	domain_pr
 AT_domain_list_resource	3	type	Type	varchar	255	0	N		N	 	 	N	text			Y	Y	N	 	 	
 AT_domain_list_resource	4	name	Name	varchar	255	0	N		N	 	 	N	file			Y	Y	N	 	 	
 AT_domain_list_resource	5	Description	Description	varchar	255	0	Y		N		 	Y	textarea	5		Y	Y	N	 	 	
-												Y									
-												Y									
-												Y									
-												Y									
-												Y									
-																					
-																					
-												Y									
-												Y									
-												N									
+AT_GetGeneChromosomeMapping	2	mapping_id	Mapping Date									Y	optionlist	4	refreshDocument()	Y	Y	N	Select desired mapping date	"if ($parameters{current_username} = 'guest')  SELECT ID, convert (char (10), PA_MAPPING_DATE,20) as mapping_time FROM $TBAT_NEXTPROT_MAPPING where atlas_build_id = $parameters{atlas_build_id} and is_public ='Y' ORDER BY ID DESC else  SELECT ID, convert (char (10), PA_MAPPING_DATE,20) as mapping_time FROM $TBAT_NEXTPROT_MAPPING where atlas_build_id = $parameters{atlas_build_id}  ORDER BY ID DESC"	
+AT_GetGeneChromosomeMapping	1	atlas_build_id	Atlas Build									Y	optionlist	4	refreshDocument()	Y	Y	N	Select desired Atlas Build to include in query.	"select distinct NM.atlas_build_id , A.atlas_build_name FROM $TBAT_NEXTPROT_MAPPING NM  join $TBAT_ATLAS_BUILD A on(A.atlas_build_id = NM.atlas_build_id) JOIN $TBAT_BIOSEQUENCE_SET BS ON (A.BIOSEQUENCE_SET_ID = BS.BIOSEQUENCE_SET_ID) where   BS.organism_id != 2  order by A.atlas_build_name desc"	
+AT_GetGeneChromosomeMapping	3	gene_accession_constraint	Gene Accession Constraint									N	text	40		Y	Y	N	Constraint for the Gene Accession		
+AT_GetGeneChromosomeMapping	4	upload_file	Upload File Of Gene Accession	varchar	255	0	Y		N			N	file	40		Y	Y	N	"Path to file with list of Gene Accession, one per line, to be uploaded via the web interface (NOTE: if genes are not found, search defaults to printing all genes of the selected Atlas build)"		
+AT_GetGeneChromosomeMapping	5	gene_symbol_constraint	Gene Symbol Constraint									N	text	40		Y	Y	N	Constraint for the  Gene Symbol 		
+AT_GetGeneChromosomeMapping	6	ensembl_gene_name_constraint	Ensembl Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the Ensembl Gene Name. 		
+AT_GetGeneChromosomeMapping	7	refseq_name_constraint	RefSeq Protein Name Constraint									N	text	40		Y	Y	N	Constraint for the RefSeq Protein Name. 		
+AT_GetGeneChromosomeMapping	8	uniprot_name_constraint	Uniprot Protein Name Constraint									N	text	40		Y	Y	N	Constraint for the Uniprot Protein Name. 		
+AT_GetGeneChromosomeMapping	9	biosequence_desc_constraint	Description Constraint									N	text	40		Y	N	N	Constraint for the Protein description		
+AT_GetGeneChromosomeMapping	10	n_chromosomal_loc	Number of  Chromosomal Location Constraint									N	text	10		Y	N	N	"Constraint for the number of chromosomal locations for this gene.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
+AT_GetGeneChromosomeMapping	11	n_observations_constraint	Number of Observations Constraint									N	text	10		Y	Y	N	"Constraint for the number of distinct peptides observed in PeptideAtals for each gene.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
+AT_GetGeneChromosomeMapping	12	chromosome	Chromosome									N	optionlist	4		Y	Y	N	Constrain to gene mapping to a particular chromosome	"select distinct '0' + Chromosome,  Chromosome from $TBAT_NEXTPROT_CHROMOSOME_MAPPING WHERE nextprot_mapping_id = $parameters{mapping_id} order by Chromosome"	
+AT_GetGeneChromosomeMapping	13	start_in_chromosome	Start Position in Chromosome	int	4	0	N		N			N	text	20		Y	Y	N	Constrain to proteins whose genes start at a particular region of the chromosome		
+AT_GetGeneChromosomeMapping	14	end_in_chromosome	End Position in Chromosome	int	4	0	N		N			N	text	20		Y	Y	N	Constrain to proteins whose genes end at a particular region of the chromosome		
+AT_GetGeneChromosomeMapping	15	protein_evidence_level_constraint	Protein Evidence Level Constraint									N	multioptionlist	4		Y	Y	N	Constraint for the Protein Evidence Level.  	"select '3','PE=3 Homology' union select '4','PE=4 Predicted' union select '1','PE=1 Protein level' union select '2','PE=2 Transcript level' union select '5','PE=5 Uncertain'"	
+AT_GetGeneChromosomeMapping	16	peptideatlas_category_constraint	PeptideAtlas Category									N	multioptionlist	4		Y	Y	N	"<a href=""http://www.peptideatlas.org/docs/protein_ident_terms.php"">Protein Identification Terminology</a>"	"select   protein_presence_level_id , level_name from $TBAT_PROTEIN_PRESENCE_LEVEL ORDER BY LEVEL_NAME"	
+AT_GetGeneChromosomeMapping	17	redundancy_constraint	No Redundancy									N	checkbox	0		Y	Y	N	remove redundant nextprot accession entries		
