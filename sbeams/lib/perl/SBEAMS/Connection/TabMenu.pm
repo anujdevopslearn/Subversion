@@ -362,10 +362,179 @@ sub asHTML {
   my $this = shift;
 
   if ($this->{isDropDown}) {
-      return $this->asMenuCSSHTML(); # note: this is the only way to render drop-down menus at the moment
+      return $this->asMenuCSSHTML2021(); # note: this is the only way to render drop-down menus at the moment
   } else {
-      return $this->asCSSHTML();
+      return $this->asCSSHTML2021();
   }
+
+}
+
+
+#+
+# 2021 Rendering method for drop-down menus, returns CSS derived menu look 'n feel.
+#-
+sub asMenuCSSHTML2021 {
+  my $this = shift;
+  $this->{extra_width} = 499 if !defined $this->{extra_width};
+
+  my $spc = "&nbsp;";
+
+  # we will use this later
+  my $tabmenu;
+
+  my $table = "<div style='background:#d3d1c4;display:inline-block;width:100%;'>\n";
+
+  my @tabs = @{$this->{_tabs}};
+  my $dtab ||= $this->getActiveTab();
+
+  for( my $i = 1; $i <= $#tabs; $i++ ) {
+    my $color = ( $dtab == $i ) ? $this->{activeColor} : $this->{inactiveColor};
+    my $htext =  ( $tabs[$i]->{helptext} ) ? "TITLE='$tabs[$i]->{helptext}'" : '';
+    my $class = (  $dtab == $i ) ? 'atab' : '';
+
+    if (exists $this->{_items}->{$tabs[$i]->{label}}) {
+	my @items = @{$this->{_items}->{$tabs[$i]->{label}}};
+
+	if ($dtab == $i) {
+	    $table .= "<span class='tabmenuset $class' align='right' $htext> $tabs[$i]->{label} </span>\n";
+
+	    $tabmenu = SBEAMS::Connection::TabMenu->
+		new( cgi => $this->{cgi},
+		     activeColor => 'ffffff',
+		     inactiveColor   => 'f3f1e4',
+		     hoverColor => '22eceb',
+		     atextColor => '5e6a71', # black
+		     itextColor => '5e6a71', # black
+		     htextColor => '000', # black
+		     paramName => '_subtab', # uses this as cgi param
+		     )
+		if !$tabmenu;
+
+	    for my $item (@items) {
+		$tabmenu->addTab(
+				 label => $item->{label},
+				 helptext => $item->{helptext},
+				 URL => $item->{url}
+				 );
+	    }
+
+	} else {
+
+	    $table .= "<span onmouseover=\"showmenu('ddmenu$i')\" onmouseout=\"hidemenu('ddmenu$i')\" class='tabmenuset $class' id='ddtitle$i' $htext> $tabs[$i]->{label}";
+	    $table .= "<span class='ddmenus' id='ddmenu$i'>\n";
+
+	    for my $item (@items) {
+		my $mhtext =  ( $item->{helptext} ) ? "title='$item->{helptext}'" : '';
+		$table .= "<a class='ddmenu' $mhtext href='$item->{url}' >$item->{label} </a>\n";
+	    }
+	    $table .= "</span>\n</span>\n";
+	}
+
+    } else {
+	$table .= "<a class='tabmenuset $class' align='right' href='$tabs[$i]->{url}' $htext> $tabs[$i]->{label} </a>\n";
+    }
+
+  }
+
+  $table .= "</div>\n";
+
+  if ($tabmenu) {
+      $tabmenu->setCurrentTab( currtab => $this->{_currentSubTab} );
+      $table .= "<div class='ddmenu' style='background:#$this->{activeColor};border-bottom:1px solid #$this->{atextColor};display:inline-block;padding-left:70px;width:calc(100% - 70px);'>".$tabmenu->asHTML()."</div>\n";
+  }
+
+
+  return ( <<"  END" );
+  <!-- Begin TabDDMenu --> 
+    <!-- CSS definitions -->
+    <style type="text/css">
+    .tabmenuset {
+		margin: 0px;
+	        list-style:none;
+		white-space: nowrap;
+                padding:0;
+		float:left;
+		display:block;
+		color:#5e6a71;
+		text-decoration:none;
+		padding:6px 10px;
+		font-weight:bold;
+              	background:#$this->{inactiveColor};
+		margin: 0px;
+		border-right:1px solid #$this->{activeColor};
+                }
+
+    .tabmenuset:hover {
+	       background:#$this->{hoverColor};
+	       color:#$this->{htextColor};
+               cursor: pointer;
+	   }
+
+    .tabmenuset.atab {
+              background:#$this->{activeColor};
+              color:#333333;
+	      border-bottom:#$this->{activeColor};;
+	  }
+
+    .tabmenuset a:hover,
+    .tabmenuset A.atab:hover {
+              background:#$this->{hoverColor};
+              color:#$this->{htextColor};
+    }
+
+    span.ddmenu, a.ddmenu{
+              background:#$this->{activeColor};
+              border-left: 4px solid #$this->{activeColor};
+	      white-space: nowrap;
+	      text-decoration:none;
+	    display:block;
+	    color:#$this->{atextColor};
+	      padding:4px 6px;
+	      font-weight:bold;
+	      z-index:10;
+	  }
+
+    a.ddmenu:hover {
+      border-left: 4px solid #b00;
+    }
+
+    span.ddmenus {
+        min-width:170px;
+	background:#$this->{activeColor};
+	border: 1px solid #aaaaaa;
+	border-collapse: collapse;
+	visibility:hidden;
+	position:absolute;
+      display:inline-block;
+	margin-top:1.5em;
+	z-index:5;
+	box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+      }
+
+    </style>
+
+    <SCRIPT LANGUAGE=JavaScript>
+    function showmenu(elmnt){
+      document.getElementById(elmnt).style.visibility="visible";
+      var telmnt = elmnt.replace("menu", "title");
+      if (document.getElementById(telmnt)) {
+        document.getElementById(telmnt).style.backgroundColor = '#$this->{inactiveColor};';
+        document.getElementById(elmnt).style.left = document.getElementById(telmnt).getBoundingClientRect().left - 1;
+      }
+    }
+
+    function hidemenu(elmnt){
+      document.getElementById(elmnt).style.visibility="hidden";
+      var telmnt = elmnt.replace("menu", "title");
+      if (document.getElementById(telmnt))
+	  document.getElementById(telmnt).style.backgroundColor = '';
+    }
+    </SCRIPT>
+
+    $table
+    
+  <!-- End TabMenu -->
+  END
 
 }
 
@@ -537,6 +706,95 @@ sub asMenuCSSHTML {
 }
 
 
+
+#+
+# Rendering method, returns CSS derived menu look 'n feel.
+#-
+sub asCSSHTML2021 {
+  my $this = shift;
+
+  # Get table for rendering stuff...
+  $this->getTable();
+
+  my @tabs = @{$this->{_tabs}};
+  my @row;
+  my $dtab ||= $this->getActiveTab();
+
+  my $list = "<div id='menuset'>\n";
+
+  for( my $i = 1; $i <= $#tabs; $i++ ) {
+    my $spc = "&nbsp;";
+    my $color = ( $dtab == $i ) ? $this->{activeColor} : $this->{inactiveColor};
+    my $htext =  ( $tabs[$i]->{helptext} ) ? "title='$tabs[$i]->{helptext}'" : '';
+    my $class = (  $dtab == $i ) ? 'class=atab' : '';
+    $list .= "<a $class href='$tabs[$i]->{url}' $htext> $tabs[$i]->{label} </A>"
+  }
+  $list .= "</div>\n";
+
+  return ( <<"  END" );
+  <!-- Begin TabMenu --> 
+    <!-- CSS definitions -->
+    <style type="text/css">
+    #menuset {
+             position:relative;
+	           float:left;
+	           width:100%;
+	           padding:0 0 0 0;
+	           margin: 0px;
+	           list-style:none;
+	           line-height:1.75em;
+             }
+   
+    #menuset LI {
+                float:left;
+	        margin: 0px;
+	        padding:0;
+                }
+
+    #menuset A {
+	        padding:0;
+                float:left;
+                display:block;
+              	color:#$this->{atextColor};
+              	text-decoration:none;
+                padding:0.25em 1em;
+              	font-weight:bold;
+              	background:#$this->{inactiveColor};
+              	margin: 0px;
+              	border-left:1.25px solid #FFFFFF;
+              	border-top:1.25px solid #FFFFFF;
+              	border-right:1.25px solid #AAAAAA;
+                }
+
+    #menuset A:hover {
+	    background:#$this->{hoverColor};
+            color:#$this->{htextColor};
+    }
+    #menuset A:active,
+    #menuset A.atab:link,
+    #menuset A.atab:visited {
+	    background:#$this->{activeColor};
+     	    color:#$this->{atextColor};
+            position: relative;
+            top: 1px;
+            border-left: 1px solid;
+            border-right: 1px solid;
+            border-top: 1px solid;
+    }
+    #menuset A.atab:hover {
+	    background:#$this->{hoverColor};
+            color:#$this->{htextColor};
+    }
+    </style>
+
+  $list
+    
+  <!-- End TabMenu -->
+  END
+}
+
+
+
 #+
 # Rendering method, returns CSS derived menu look 'n feel.
 #-
@@ -632,6 +890,9 @@ sub asCSSHTML {
   END
 #return "$this->{_table}";
 }
+
+
+
 
 sub setRule {
   my $this = shift;

@@ -20,7 +20,6 @@ package SBEAMS::Connection::HTMLPrinter;
 #
 ###############################################################################
 
-
 use strict;
 use vars qw($current_contact_id $current_username $q
              $current_work_group_id $current_work_group_name
@@ -240,15 +239,15 @@ my $module_styles =<<"  END_STYLE";
   .sortheader th   { font-weight: bold; padding: 5px 12px; }
   .info_box { background: #F0F0F0; border: #000 1px solid; padding: 4px; width: 80%; color: #444444 }
   .small_super_text { vertical-align: super; font-size: ${FONT_SIZE_SM}pt }
-  .clear_info_box { border: #000 1px solid; padding: 4px; width: 100%; color: #444444 }
-  .nowrap_clear_info_box { border: #000 1px solid; padding: 4px; width: 100%; white-space: nowrap; color: #444444 }
+  .clear_info_box { border: #000 1px solid; padding: 4px; width: 90%; color: #444444; margin-left:15px; }
+  .nowrap_clear_info_box { border: #000 1px solid; padding: 4px; width: 99%; white-space: nowrap; color: #444444 }
   .clear_warning_box { border: #F03 1px solid; padding: 4px; width: 80%; color: #444444 }
-  .popup_help { cursor: Help; color:#444444; background-color: #E0E0E0 }
+  .popup_help { cursor: Help; color:#444444; }
   .gaggle-data { display: none }
   .bold_text { font-weight: bold; white-space: nowrap }
   .nowrap_text { white-space: nowrap }
   a.dataheader { font-weight: bold; text-decoration:none; }
-  a.dataheader:hover { color:b00; }
+  a.dataheader:hover { color: #ff5f00; }
   .dataheader { font-weight: bold; color:white }
 
   /* Style info below organized by originating module
@@ -295,19 +294,19 @@ my $module_styles =<<"  END_STYLE";
   .description { font-family: Helvetica, Arial, sans-serif; color:#333333; font-size: 9pt; font-style: italic;  }
   .help_key {  font-family: Helvetica, Arial, sans-serif; font-size: 9pt; font-weight: Bold; }
   .help_val {  font-family: Helvetica, Arial, sans-serif; font-size: 9pt; }
-  .plot_caption {  font-family: Helvetica, Arial, sans-serif; font-size: 12pt; }
+  .plot_caption {  font-size: 12pt; margin-left:15px; }
 
   .left_text { text-align: left }
   .center_text { text-align: center }
   .right_text { text-align: right }
   .header_text { color: white; text-align: left }
   .topbound_text { vertical-align: top }
-  .clustal_dummy_wrap {calc(100vw - 200px); overflow-x: scroll; overflow-y:hidden; height: 20px;}
-  .clustal_wrap {calc(100vw - 200px); overflow-x: scroll; overflow-y:hidden; height: 200px;}
-  .clustal_dummy {width:calc(100vw - 200px); height: 20px; }
-  .clustalx { calc(100vw - 200px); }
-  .clustal {calc(100vw - 200px); overflow-x: scroll;}
-  .clustal_peptide {width: calc(100vw - 200px); height: 400px; overflow-x: scroll; overflow-y: scroll;}
+  .clustal_dummy_wrap {calc(100vw - 50px); overflow-x: scroll; overflow-y:hidden; height: 20px;}
+  .clustal_wrap {calc(100vw - 50px); overflow-x: scroll; overflow-y:hidden; height: 200px;}
+  .clustal_dummy {width:calc(100vw - 50px); height: 20px; }
+  .clustalx { calc(100vw - 50px); }
+  .clustal {calc(100vw - 50px); overflow-x: scroll;}
+  .clustal_peptide {width: calc(100vw - 50px); height: 400px; overflow-x: scroll; overflow-y: scroll;}
   .fade_header { background-image: url($HTML_BASE_DIR/images/fade_orange_header_2.png); background-repeat: no-repeat }
 
   .form_button { background: #ffffff; color: #333; border: 2px solid #333; font-weight: 800; padding: 0px 25px; }
@@ -358,14 +357,14 @@ table.freeze_table { table-layout: fixed; width: 1000px; *margin-left: -100px;/*
   .white_text_head {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: white; CURSOR: help;}
   
   div.visible { display: inline; white-space: nowrap;         }
-  div.visilink { color: blue; display: inline; white-space: nowrap;         }
+  div.visilink { display: inline; white-space: nowrap;         }
   div.hidden { display: none; }
   span.visible { display: inline; white-space: nowrap;         }
   span.hidden { display: none; }
   table.tbl_visible { display: table; }
   table.tbl_hidden { display: none; }
   tr.tbl_visible { display: table-row; }
-  .hoverabletitle { cursor:pointer; margin-top: 8px; background:#f3f1e4; color:#555; font-size:large; font-weight:bold; border-top:1px solid #b00; border-left:15px solid #b00; padding:0.5em}
+  .hoverabletitle { cursor:pointer; margin-top: 8px; background:#f3f1e4; color:#5e6a71; font-size:large; font-weight:bold; border-top:1px solid #b00; border-left:15px solid #b00; padding:0.5em; position:relative; z-index:2}
   .hoverabletitle:hover { box-shadow:0 3px 5px 3px #aaa;}
   tr.hoverable:hover td { background:#ffad4e; }
   td.key   { border-bottom:1px solid #ddd; background:#d3d1c4;}
@@ -1468,7 +1467,7 @@ sub make_toggle_section {
   }
   $neuttext = $args{neutraltext} if $args{neutraltext};
   for my $i ( $hidetext, $showtext ) {
-    $i = "<FONT COLOR=blue> $i </FONT>";
+    #$i = "<FONT COLOR=blue> $i </FONT>";
   }
 
 
@@ -1614,16 +1613,15 @@ sub make_toggle_section {
   }
 
   if ( $args{barlink} ) {
-
     my $toggle =  q~ONCLICK="toggle_content('${args{name}}')~;
 #    my $toggle =  qq~ONCLICK="toggle_content('${args{name}}')>$imghtml"~;
 #    $toggle = '>' if $args{no_toggle};
 
-    $linkhtml = qq~$anchor<DIV CLASS="hoverabletitle" ONCLICK="toggle_content('${args{name}}')">$imghtml $texthtml $neuttext</DIV>~;
+    $linkhtml = qq~$anchor<div class="hoverabletitle" onclick="toggle_content('${args{name}}')">$imghtml $texthtml $neuttext</div>~;
 
   }
   else {
-    $linkhtml = qq~<A ONCLICK="toggle_content('${args{name}}')">$imghtml $texthtml</A> $neuttext~;
+    $linkhtml = qq~<a href='#' onclick="toggle_content('${args{name}}');return false;">$imghtml $texthtml</a> $neuttext~;
   }
 
 
@@ -1690,7 +1688,7 @@ sub make_table_toggle {
     $neuttext = $args{neutraltext} if $args{neutraltext};
   }
   for my $i ( $hidetext, $showtext ) {
-    $i = "<FONT COLOR=blue> $i </FONT>";
+    $i = "<span class='pa-textlink'> $i </span>";
   }
 
   # Default visiblity is hidden
@@ -1804,7 +1802,7 @@ sub make_table_toggle {
   my $texthtml = '';
   if ( $args{textlink} ) {
     if ( $args{plaintext} ) {
-      $texthtml = "<DIV ID=${hideclass}hidetext CLASS=$hideclass>$hidetext</SPAN><SPAN CLASS=$showclass ID=${showclass}showtext>$showtext</SPAN>";
+      $texthtml = "<SPAN ID=${hideclass}hidetext CLASS=$hideclass>$hidetext</SPAN><SPAN CLASS=$showclass ID=${showclass}showtext>$showtext</SPAN>";
     } else {
       $texthtml = "<TD $tbl_html CLASS=$hideclass>$hidetext</TD><TD $tbl_html CLASS=$showclass>$showtext</TD>";
     }
@@ -1816,12 +1814,12 @@ sub make_table_toggle {
   my $linkhtml = '';
   if ( $texthtml ) {
     if ( !$args{plaintext} ) {
-       $linkhtml = qq~<A ONCLICK="toggle_tbl('${args{name}}');"><TABLE><TR><TD>$imghtml</TD>$texthtml </TR></TABLE></A> $neuttext~; 
+       $linkhtml = qq~<a onclick="toggle_tbl('${args{name}}');"><table style='display:inline-block;cursor:pointer;'><tr><td>$imghtml</td>$texthtml </tr></table></a> $neuttext~; 
     } else {
-       $linkhtml = qq~<A ONCLICK="toggle_tbl('${args{name}}');">$texthtml</A> $neuttext~;
+       $linkhtml = qq~<a onclick="toggle_tbl('${args{name}}');">$texthtml</a> $neuttext~;
     }
   } else {
-    $linkhtml = qq~<A ONCLICK="toggle_tbl('${args{name}}');">$imghtml</A> ~;
+    $linkhtml = qq~<a onclick="toggle_tbl('${args{name}}');">$imghtml</a> ~;
   }
 
   $linkhtml = $js_css . $linkhtml;
@@ -1875,6 +1873,19 @@ sub truncateStringWithMouseover {
   }
   return qq~<SPAN $class TITLE="$string">$shorty</SPAN>~;
 }
+
+
+#+
+# Given input string will return comma-formatted number 
+#-
+sub commifyNumber {
+  my $self = shift;
+  my $text = reverse shift;
+  $text =~ s/(\d\d\d)(?=\d)(?!\d*\.)/$1,/g;
+  return scalar reverse $text;
+}
+
+
 #+
 # Returns array of HTML form buttons
 #

@@ -8,14 +8,13 @@ package SBEAMS::Connection::DBInterface;
 # Description : This is part of the SBEAMS::Connection module which handles
 #               general communication with the database.
 #
-# SBEAMS is Copyright (C) 2000-2016 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
 # LICENSE file distributed with this software.
 #
 ###############################################################################
-
 
 use strict;
 use vars qw(@ERRORS $dbh $sth $q $resultset_ref $rs_params_ref
@@ -33,7 +32,6 @@ use Time::HiRes qw( usleep ualarm gettimeofday tv_interval );
 
 use GD::Graph::bars;
 use GD::Graph::xypoints;
-
 
 
 #use Data::ShowTableTest;
@@ -2872,11 +2870,12 @@ sub displayResultSet {
       my %row_color_scheme;
       $row_color_scheme_ref->{header_background} = '#0000A0';
       $row_color_scheme{change_n_rows} = 3;
-      my @row_color_list = ("#E0E0E0","#C0D0C0");
+      #was: my @row_color_list = ("#E0E0E0","#C0D0C0");
+      my @row_color_list = ("#f3f1e4","#d3d1c4");
       $row_color_scheme{color_list} = \@row_color_list;
       $row_color_scheme_ref = \%row_color_scheme;
     }
-    $row_color_scheme_ref->{header_background} = '#003F72'
+    $row_color_scheme_ref->{header_background} = '#002664' #was: 003F72'
       unless ($row_color_scheme_ref->{header_background});
 
 
@@ -3525,10 +3524,7 @@ sub displayResultSetControls {
     my $BR = "\n";
     if ($self->output_mode() eq 'html') {
       $BR = "<BR>\n";
-      print qq~
-      <TABLE WIDTH="100%" BORDER="0"><TR><TD>
-      <FORM METHOD="POST">
-      ~;
+      print '<FORM METHOD="POST">';
     }
 
 
@@ -3761,10 +3757,7 @@ sub displayResultSetControls {
     $self->displayTimingInfo();
 
     #### Finish the form
-    print qq~
-      </FORM>
-      </TD></TR></TABLE>
-    ~;
+    print "</FORM>\n";
 
 
     #### Print out some debugging information about the returned resultset:

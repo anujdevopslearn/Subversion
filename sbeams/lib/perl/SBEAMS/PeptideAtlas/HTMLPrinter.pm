@@ -136,7 +136,7 @@ sub displayInternalResearcherPageHeader {
   use HTTP::Request;
   my $ua = LWP::UserAgent->new();
   my $skinLink = 'http://www.peptideatlas.org';
-  my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/.index.dbbrowse.php" ) );
+  my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/.index.dbbrowse2021.php" ) );
   my @page = split( "\n", $response->content() );
   my $skin = '';
   my $cnt=0;
@@ -166,7 +166,7 @@ sub displayInternalResearcherPageHeader {
 # displayGuestPageHeader
 ###############################################################################
 sub displayGuestPageHeader {
- 	my $self = shift;
+  my $self = shift;
   my %args = @_;
 
   my $navigation_bar = $args{'navigation_bar'} || "YES";
@@ -184,30 +184,30 @@ sub displayGuestPageHeader {
   $doctype = '' unless $args{show_doctype}; 
 
 
-	my $sbeams = $self->getSBEAMS();
+  my $sbeams = $self->getSBEAMS();
   my $message = $sbeams->get_page_message( q => $q );
- 	$current_username ||= $sbeams->getCurrent_username();
+  $current_username ||= $sbeams->getCurrent_username();
 
 
-	my $cswitcher = '';
-	if ( -e "$PHYSICAL_BASE_DIR/lib/perl/SBEAMS/PeptideAtlas/ContextWidget.pm" ) {
-		require SBEAMS::PeptideAtlas::ContextWidget;
-		my $cwidget = SBEAMS::PeptideAtlas::ContextWidget->new();
-		$cswitcher = $cwidget->getContextSwitcher( username => $current_username,
-		                                           cookie_path => $HTML_BASE_DIR );
-	} else {
-		$log->debug(  "$PHYSICAL_BASE_DIR/lib/perl/SBEAMS/PeptideAtlas/ContextWidget.pm doesn't exist" ) 
-	}
+  my $cswitcher = '';
+  if ( -e "$PHYSICAL_BASE_DIR/lib/perl/SBEAMS/PeptideAtlas/ContextWidget.pm" ) {
+    require SBEAMS::PeptideAtlas::ContextWidget;
+    my $cwidget = SBEAMS::PeptideAtlas::ContextWidget->new();
+    $cswitcher = $cwidget->getContextSwitcher( username => $current_username,
+					       cookie_path => $HTML_BASE_DIR );
+  } else {
+    $log->debug(  "$PHYSICAL_BASE_DIR/lib/perl/SBEAMS/PeptideAtlas/ContextWidget.pm doesn't exist" ) 
+  }
 
 
   # Use http_header from main SBEAMS object
   my $http_header = $sbeams->get_http_header();
 
-  my $js =  "<SCRIPT LANGUAGE=javascript SRC=\"/sbeams/usr/javascript/sorttable.js\"></SCRIPT>";
+  my $js = "<script language='javascript' src='/sbeams/usr/javascript/sorttable.js'></script>";
 
 
   my $ua = LWP::UserAgent->new();
-  my $skinLink = $args{uri} || 'http://www.peptideatlas.org/.index.dbbrowse.php';
+  my $skinLink = $args{uri} || 'http://www.peptideatlas.org/.index.dbbrowse2021.php';
   my $resource = $sbeams->getSessionAttribute( key => 'PA_resource' ) || '';
   if ( $resource eq 'SRMAtlas' ) {
     $skinLink = 'http://www.srmatlas.org/.index.dbbrowse.php';
@@ -217,13 +217,13 @@ sub displayGuestPageHeader {
   }
   my $response = $ua->request( HTTP::Request->new( GET => "$skinLink" ) );
   my @page = split( "\n", $response->content() );
-	if ( $args{show_doctype} ) {
+  if ( $args{show_doctype} ) {
     my $first = shift @page;
-		if ( $first !~ /doctype/i ) {
-		  unshift @page, $first;
-		}
-		unshift @page, $doctype;
-	}
+    if ( $first !~ /doctype/i ) {
+      unshift @page, $first;
+    }
+    unshift @page, $doctype;
+  }
 
   my $skin = '';
   my $cnt=0;
@@ -262,7 +262,7 @@ sub displayGuestPageHeader {
   }
  
   $self->{'_external_footer'} = join("\n", '<!--SBEAMS_PAGE_OK-->', @page[$cnt..$#page]);
-  $skin =~ s#/images/#/sbeams/images/#gm;
+  $skin =~ s#/images/#/sbeams/images/#gm unless $skinLink =~ /2021/;
   $self->{'_external_footer'} =~ s#/images/#/sbeams/images/#gm;
   #$skin =~ s#/images/#/dev2/sbeams/images/#gm;
   
@@ -289,7 +289,7 @@ sub displayGuestPageHeader {
 
   $self->printJavascriptFunctions();
   print $message;
-  }
+}
 
 
 
@@ -587,7 +587,7 @@ sub encodeFullSectionList {
                key_width => 20,
                @_
              );
-  
+
   # Default to BOLD
   unless ( $args{header_text} && $args{list_items} ) {
     $log->error( "Required parameters not supplied" );
@@ -598,10 +598,10 @@ sub encodeFullSectionList {
   my $buffer;
   my $sbeams = $self->getSBEAMS();
   if ( $sbeams->output_mode() =~ /html/i ) {
-    $buffer = "<table width=$args{width}>\n";
+    $buffer = "<table style='min-width:$args{width};margin-left:15px;'>\n";
     $buffer .= $self->encodeSectionHeader( %args, text => $args{header_text} );
     for my $item ( @{$args{list_items}} ) {
-      $buffer .= $self->encodeSectionItem( key => $item->{key}, value => $item->{value}, key_width => $args{key_width} . "%" ) . "\n";
+      $buffer .= $self->encodeSectionItem( key => $item->{key}, value => $item->{value}, tr_info => 'class="hoverable"', key_width => $args{key_width} . "%" ) . "\n";
     } 
     $buffer .= "</table>\n";
 
@@ -902,7 +902,7 @@ sub encodeSectionTable {
   my $closelink;
   if ( $args{rows_to_show} && $args{rows_to_show} < $tot - 1 ) {
     $closelink = $self->add_tabletoggle_js(); 
-    $closelink .= "\n<FONT COLOR=BLUE><A HREF=#null ONCLICK=toggle_em('$prefix');return><SPAN ID='${prefix}_text' NAME='${prefix}_text' >[Show more rows]</A></FONT>";
+    $closelink .= "\n<a href='#' onclick='toggle_em(\"$prefix\");return false;'><span id='${prefix}_text' name='${prefix}_text' >[Show more rows]</a>";
   }
 
 #  # if no wrapping desired...
@@ -926,6 +926,10 @@ sub encodeSectionTable {
       $tab->setColAttr( ROWS => [2..$tot], COLS => [$i + 1], ALIGN => $args{align}->[$i] );
     }
   }
+  if ( $args{has_key} ) {
+      $tab->setColAttr( ROWS => [2..$tot], COLS => [1], CLASS => 'key' );
+  }
+
 #  $tab->addRow( [$closelink] );
   if ( $args{table_only} ) {
     return "$tab";
@@ -1211,8 +1215,17 @@ sub getBuildSelector {
                                         -labels => \%id2build,
                                         -default => $build_id,
                                         -onChange => 'switchAtlasBuild()' );
+
+  my $style = '';
+  if ($args{inline}) {
+    $style .= 'display:inline;';
+  }
+  if ($style) {
+    $style = "style='$style'";
+  }
+
   my $selector_widget = qq~
-    <form name=build_form id=build_form>
+    <form $style name="build_form" id="build_form">
     $build_selector
     </form>
     <script LANGUAGE="Javascript">
@@ -1452,7 +1465,7 @@ sub getSampleTableDisplay{
   my $table = $self->encodeSectionTable( header => 1, 
                                          tr_info => $args{tr_info},
                                          align  => [@align],
-																				 bkg_interval => 3,
+					 bkg_interval => 3,
                                          nowrap => [qw(4 6)],
                                          rows_to_show => $rows_to_show,
                                          max_rows => $args{max_rows},
@@ -1509,7 +1522,7 @@ sub getPTMTableDisplay {
   }
   my $table = $self->encodeSectionTable( header => 1,
                                          align  => [@align],
-																				 bkg_interval => 3,
+					 bkg_interval => 3,
                                          rows_to_show => $args{rows_to_show},
                                          max_rows => $args{max_rows},
                                          rows => \@rows );
@@ -1564,7 +1577,7 @@ sub get_individual_spectra_display {
     #push @{$resultset_ref->{column_list_ref}}, 'num_prot_mappings';
     #push @{$resultset_ref->{types_list_ref}}, 'int';
 
-  my $align = [qw(left center left left center left center center center left left left)];
+  my $align = [qw(left center right left left center center center center left left left)];
 
   my $html = $self->encodeSectionTable( header => 1,
 					unified_widgets => 1,
@@ -1608,6 +1621,7 @@ sub getProteinSampleDisplay {
     $log->error( "No samples passed to display samples" );
     return;
   }
+
   my $in = join( ", ", @{$args{sample_ids}} );
   return unless $in;
   my $sql = qq~
@@ -1624,18 +1638,17 @@ sub getProteinSampleDisplay {
     LEFT JOIN $TBPR_INSTRUMENT I ON S.instrument_model_id = I.instrument_id
     LEFT JOIN $TBAT_PROTEASES ENZ ON ENZ.id = S.protease_id
     LEFT JOIN $TBAT_SAMPLE_PUBLICATION SP ON SP.SAMPLE_ID = S.SAMPLE_ID
-    LEFT JOIN $TBAT_PUBLICATION PUB ON (PUB.PUBLICATION_ID = SP.PUBLICATION_ID 
+    LEFT JOIN $TBAT_PUBLICATION PUB ON (PUB.PUBLICATION_ID = SP.PUBLICATION_ID
                                         AND SP.record_status != 'D')
     WHERE S.SAMPLE_ID IN ( $in )
     AND S.RECORD_STATUS != 'D'
     ORDER BY sample_ID
   ~;
   my @rows = $sbeams->selectSeveralColumns($sql);
-
   my $table = $self -> getSampleTableDisplay(data => \@rows,
                                rows_to_show => $rows_to_show, 
                                type => 'Protein');
-  return $table ;
+  return $table;
 } # end getProteinSampleDisplay 
 
 sub add_tabletoggle_js {
@@ -1812,11 +1825,11 @@ sub get_table_help {
 
   my @headings = ();
   if ($colnameidx_ref && $hidden_cols_ref){ 
-		foreach my $col (sort {$colnameidx_ref->{$a} <=> $colnameidx_ref->{$b}} keys %$colnameidx_ref){
-			 if (not defined $hidden_cols_ref->{$col}){
-				 push @headings, $column_titles_ref->[$colnameidx_ref->{$col}];
-			 }
-		}
+    foreach my $col (sort {$colnameidx_ref->{$a} <=> $colnameidx_ref->{$b}} keys %$colnameidx_ref){
+      if (not defined $hidden_cols_ref->{$col}){
+	push @headings, $column_titles_ref->[$colnameidx_ref->{$col}];
+      }
+    }
   }else{
    @headings = @$column_titles_ref;
   }
@@ -1999,10 +2012,10 @@ sub get_proteome_coverage_new {
     my $or = '';
     push @names, $name;
     if ($type =~ /accession/i){
-       foreach my $pat (@pats){
-         $contraint .= "$or B2.BIOSEQUENCE_NAME LIKE '$pat%' ";
-         $or = 'OR';
-		   } 
+      foreach my $pat (@pats){
+	$contraint .= "$or B2.BIOSEQUENCE_NAME LIKE '$pat%' ";
+	$or = 'OR';
+      } 
 
     }elsif($type =~ /description/i){
        foreach my $pat (@pats){
@@ -2010,34 +2023,33 @@ sub get_proteome_coverage_new {
          $or = 'OR';
        }
      }
-		 $sql .= qq~
-			$union
-			 (SELECT COUNT(DISTINCT B2.BIOSEQUENCE_ID) AS CNT,
-				 '$name' AS Name, 
+    $sql .= qq~
+	$union
+	 (SELECT COUNT(DISTINCT B2.BIOSEQUENCE_ID) AS CNT,
+		 '$name' AS Name, 
+		 B2.BIOSEQUENCE_SET_ID AS SETID
+		FROM $TBAT_ATLAS_BUILD AB2
+		JOIN $TBAT_BIOSEQUENCE B2 ON B2.BIOSEQUENCE_SET_ID = AB2.BIOSEQUENCE_SET_ID
+		WHERE atlas_build_id = $build_id
+		AND ($contraint) 
+		GROUP BY B2.BIOSEQUENCE_SET_ID 
+	 )
+	 ~;
+    $obs_sql .= qq~
+	 $union
+	(SELECT COUNT(DISTINCT B2.BIOSEQUENCE_ID) AS CNT,
+				 '$name' AS CAT,
 				 B2.BIOSEQUENCE_SET_ID AS SETID
-				FROM $TBAT_ATLAS_BUILD AB2
-				JOIN $TBAT_BIOSEQUENCE B2 ON B2.BIOSEQUENCE_SET_ID = AB2.BIOSEQUENCE_SET_ID
-				WHERE atlas_build_id = $build_id
-				AND ($contraint) 
-				GROUP BY B2.BIOSEQUENCE_SET_ID 
-			 )
-		 ~;
-		$obs_sql .= qq~
-			 $union
-			(SELECT COUNT(DISTINCT B2.BIOSEQUENCE_ID) AS CNT,
-						 '$name' AS CAT,
-						 B2.BIOSEQUENCE_SET_ID AS SETID
-				FROM $TBAT_BIOSEQUENCE B2
-				JOIN $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH A
-					ON A.BIOSEQUENCE_ID = B2.BIOSEQUENCE_ID
-				JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
-					ON (A.ATLAS_BUILD_SEARCH_BATCH_ID = ABSB.ATLAS_BUILD_SEARCH_BATCH_ID)
-				WHERE ABSB.atlas_build_id = $build_id
-				AND ($contraint)
-				GROUP BY B2.BIOSEQUENCE_SET_ID
-
-			)
-		 ~;
+		FROM $TBAT_BIOSEQUENCE B2
+		JOIN $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH A
+			ON A.BIOSEQUENCE_ID = B2.BIOSEQUENCE_ID
+		JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
+			ON (A.ATLAS_BUILD_SEARCH_BATCH_ID = ABSB.ATLAS_BUILD_SEARCH_BATCH_ID)
+		WHERE ABSB.atlas_build_id = $build_id
+		AND ($contraint)
+		GROUP BY B2.BIOSEQUENCE_SET_ID
+	)
+	 ~;
     $union = 'UNION';
   }
 
@@ -2083,23 +2095,22 @@ sub get_proteome_coverage_new {
     push @return, [ $db, $n_entry, $obs, $pct ];
   }
   return '' if ( @return == 1);
-  my $table = '<table width=600>';
+  my $table = '<table>';
 
   $table .= $self->encodeSectionHeader(
       text => 'Proteome Coverage (exhaustive)',
       no_toggle => 1,
-      LMTABS => 1,
-      width => 600
+      LMTABS => 1
   );
 
   $table .= $self->encodeSectionTable( rows => \@return, 
-                                        header => 1, 
-                                        table_id => 'proteome_cover',
-                                        align => [ qw(left right right right ) ], 
-                                        bg_color => '#EAEAEA',
-                                        rows_to_show => 25,
-                                        sortable => 1 );
-  $table .= '</TABLE>';
+				       header => 1, 
+				       table_id => 'proteome_cover',
+				       align => [ qw(left right right right ) ],
+				       has_key => 1,
+				       rows_to_show => 25,
+				       sortable => 1 );
+  $table .= '</table>';
 
   return $table;
 }
@@ -2266,23 +2277,22 @@ sub get_proteome_coverage {
     push @return, [ $db, $row->[0], $obs, $pct ];
   }
   return '' if ( @return == 1);
-  my $table = '<table width=600>';
+  my $table = '<table>';
 
   $table .= $self->encodeSectionHeader(
       text => 'Proteome Coverage (exhaustive)',
       no_toggle => 1,
-      LMTABS => 1,
-      width => 600
+      LMTABS => 1
   );
 
   $table .= $self->encodeSectionTable( rows => \@return, 
-                                        header => 1, 
-                                        table_id => 'proteome_cover',
-                                        align => [ qw(left right right right ) ], 
-                                        bg_color => '#EAEAEA',
-                                        rows_to_show => 25,
-                                        sortable => 1 );
-  $table .= '</TABLE>';
+				       header => 1, 
+				       table_id => 'proteome_cover',
+				       align => [ qw(left right right right ) ], 
+				       rows_to_show => 25,
+				       has_key => 1,
+				       sortable => 1 );
+  $table .= '</table>';
 
   return $table;
 }
@@ -2376,20 +2386,21 @@ sub get_what_is_new {
   push @return , ['Distinct_Peptides', $pep_count{$build_id}, $pep_count{$previous_build_id}];
   push @return , ['Canonical_Proteins', $prot_count{$build_id}, $prot_count{$previous_build_id}];
 
-  my $table = '<table width="600">';
+  my $table = '<table>';
   $table .= $self->encodeSectionHeader(
       LMTABS => 1,
       no_toggle => 1,
-      text => "What&#39s new",
+      text => "What&#39s New",
   );
 
   $table .= $self->encodeSectionTable( rows => \@return,
-                                        header => 1,
-                                        table_id => 'what_is_new',
-                                        align => [ qw(left right right right ) ],
-                                        bg_color => '#EAEAEA',
-                                        rows_to_show => 25,
-                                        sortable => 1 );
+				       header => 1,
+				       table_id => 'what_is_new',
+				       align => [ qw(left right right right ) ],
+				       bg_color => '#f3f1e4', #EAEAEA',
+				       has_key => 1,
+				       rows_to_show => 25,
+				       sortable => 1 );
   $table .= '</table>';
   ## new sample table:
   $sql = qq~
@@ -2408,23 +2419,22 @@ sub get_what_is_new {
     ) 
   ~;
   my @sample_ids = $sbeams->selectOneColumn($sql);
- 
   if(@sample_ids){
     my $sampleDisplay = $self->getProteinSampleDisplay( sample_ids => \@sample_ids,
-                  no_header => 1,
-                  rows_to_show => 25,
-                  max_rows => 500,
-                );
+							no_header => 1,
+							rows_to_show => 25,
+                                                        #bg_color  =>  '#f3f1e4', #EAEAEA'
+                                                        #sortable => 1,
+							max_rows => 500);
     $table .=$sbeams->make_toggle_section( neutraltext => 'New Experiments',
-             sticky => 1,
-             name => 'getnew_samplelist_div',
-             barlink => 1,
-             visible => 1,
-             content => "<TABLE>$sampleDisplay</TABLE>" );
+					   sticky => 1,
+					   name => 'getnew_samplelist_div',
+					   barlink => 1,
+					   visible => 1,
+					   content => "<table>$sampleDisplay</table>" );
   }
   
   return $table;
-
 }
 
 sub get_scroll_table {
@@ -2910,16 +2920,16 @@ sub displayExperiment_contri_plotly{
   my $chart = qq~
      <!-- Latest compiled and minified plotly.js JavaScript -->
      <script type="text/javascript" src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-     <div><p class=plot_caption><b>Plot below shows the number of peptides contributed by each experiment, and the cumulative number of distinct peptides for the build as of that experiment.</b></div> 
-     <div style="width: 80vw"><div id="plot_div"></div><br></div></div>
-     <div><p class=plot_caption><b>Plot below shows cumulative number of canonical proteins contributed by each experiment.</b><br>
-     Height of blue bar is the number of proteins identified in experiment; 
-     Height of red bar is the cumulatie number of proteins;<br> 
-     Width of the bar (x-axis) shows the number of spectra identified (PSMs) above the threshold, for each experiment.</div>
+     <p class="plot_caption"><b>Plot below shows the number of peptides contributed by each experiment</b>, and the cumulative number of distinct peptides for the build as of that experiment.</p> 
+     <div style="width: 80vw"><div id="plot_div"></div><br></div>
+     <p class="plot_caption"><b>Plot below shows cumulative number of canonical proteins contributed by each experiment.</b><br>
+     Height of red bar is the number of proteins identified in experiment; 
+     height of blue bar is the cumulative number of proteins;<br> 
+     width of the bar (x-axis) shows the number of spectra identified (PSMs), above the threshold, for each experiment.</p>
      <div style="width: 80vw"><div id="plot_div2" ></div></div><br><br>
-		<script type="text/javascript" charset="utf-8">
+	<script type="text/javascript" charset="utf-8">
       $plot_js
-		</script>
+	</script>
   ~;
   return $chart;
   
@@ -2933,39 +2943,39 @@ sub tableHeatMap{
      <script type="text/javascript" src="$CGI_BASE_DIR/../usr/javascript/jquery/jquery.min.js"></script>
      <script type="text/javascript">
       jQuery.noConflict();
-			jQuery(document).ready(function(){
-				// Function to get the Max value in Array
-					Array.sum = function( array ){
+      jQuery(document).ready(function(){
+	  // Function to get the Max value in Array
+	  Array.sum = function( array ){
             var sum =0;
-						for (let i in array){
+	    for (let i in array){
               sum = sum+ array[i];
             }
             return sum;
-					};
+	  };
 
-					// get all values
-					var counts= jQuery('#$table_id  td:first-child+td').map(function() {
-							if (jQuery(this).text() ){
-								 return parseInt(jQuery(this).text());
-							}else{
-								 return 0;
-							}
-					}).get();
-				// return max value
-				var sum = Array.sum(counts);
+	  // get all values
+	  var counts= jQuery('#$table_id  td:first-child+td').map(function() {
+	    if (jQuery(this).text() ){
+	      return parseInt(jQuery(this).text());
+	    }else{
+	      return 0;
+	    }
+	}).get();
+	// return max value
+	  var sum = Array.sum(counts);
         if ($total > 0){
            sum = $total;
         }
-				// add classes to cells based on nearest 10 value
-				jQuery('#$table_id  td:first-child + td').each(function(){
-					var val = parseInt(jQuery(this).text());
-					var pctval = parseInt((Math.round((val/sum)*100)).toFixed(0));
-          var pctval2 = 100 - pctval ;
-					clr = "linear-gradient(to right, #f46d69 " + pctval + "%, #EAEAEA " + pctval + "% " + pctval2 + "%)"; 
-					jQuery(this).css("background-image", clr);
-				});
-			});
-	 	</script>
+	// add classes to cells based on nearest 10 value
+	jQuery('#$table_id  td:first-child + td').each(function(){
+		var val = parseInt(jQuery(this).text());
+		var pctval = parseInt((Math.round((val/sum)*100)).toFixed(0));
+                var pctval2 = 100 - pctval ;
+		clr = "linear-gradient(to right, #f46d69 " + pctval + "%, #ffffff00 " + pctval + "% " + pctval2 + "%)"; 
+		jQuery(this).css("background-image", clr);
+	     });
+	});
+	</script>
   ~;
   return $str;
 }
@@ -3060,7 +3070,7 @@ sub get_dataset_url{
     if ($url){
       $url= "<a href='$url$id' target='_blank'>$id</a>";
       if (defined $dataset_annotation{$id}){
-        $url .= "<a href='http://proteomecentral.proteomexchange.org/devLM/annotation/view.html?dataset_id=$id' target='_blank'>&nbsp;[annot]</a>";
+        $url .= "<a href='http://www.peptideatlas.org/datasets/annotation.php?dataset_id=$id' target='_blank'>&nbsp;[annot]</a>";
       }
       $url .= ",";
     }else{
@@ -3096,9 +3106,6 @@ sub create_table {
                               width => $table_width ,
                               rows_to_show => $rows_to_show, 
                               sortable => $sortable );
-
-
-
 
   my $heading_info = $self->get_table_help(column_titles_ref=> $column_names);
   my $html = $sbeams->make_toggle_section(

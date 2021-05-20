@@ -1832,7 +1832,7 @@ sub get_html_seq_vars {
   my $tselect = '';
   if( $args{digest_type} && $div_txt{$args{digest_type}} ){
     $display_div = $div_txt{$args{digest_type}};
-    $display_div =~ s/display:none/display:block/g;
+    $display_div =~ s/display:none/display:block;margin-left:15px;/g;
     if (length($seq) > 2700){
       $display_div =~ s/ID=$args{digest_type}/ID=seq_display CLASS='clustal_peptide'/;
     }else{
@@ -1981,13 +1981,13 @@ sub get_html_seq_vars {
 #						push @{$sorted{$key}}, { $skey => $coverage_coords{$key}->{$skey} };
 #					}
 #				}
-				my $skey = $entry->{start} - 1;
-				if ( $coverage_coords{$pepname}->{$skey} ) {
-					push @obs, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info}, 'seen' ];
-					$obs_snps{$pepname} = $entry;
-				} else {
-					push @unobs, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info}, 'notseen' ];
-				}
+	my $skey = $entry->{start} - 1;
+	if ( $coverage_coords{$pepname}->{$skey} ) {
+	  push @obs, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info}, 'seen' ];
+	  $obs_snps{$pepname} = $entry;
+	} else {
+	  push @unobs, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info}, 'notseen' ];
+	}
       } else {
         push @{$return{variant_list}}, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info} ];
       }
@@ -2609,12 +2609,12 @@ sub get_clustal_display {
 
     if ( $seq->[0] ) {
       if ($seq->[0] eq 'Primary'){
-	$style2= "style ='position: sticky; top: ${px}px;left: 0px;z-index:99;background:#f3f1e4'";
-	$style = "style ='position: sticky; top: ${px}px;z-index:9;background:#f3f1e4'";
+	$style2= "style ='position: sticky; top: ${px}px;left: 0px;z-index:6;background:#f3f1e4'";
+	$style = "style ='position: sticky; top: ${px}px;z-index:3;background:#f3f1e4'";
 	$px += 15;
       }
       else {
-	$style2= "style ='position: sticky; left: 0px;z-index:90;background:#f3f1e4'";
+	$style2= "style ='position: sticky; left: 0px;z-index:4;background:#f3f1e4'";
       }
       $table_rows .= qq~
       <TR >
@@ -2625,8 +2625,8 @@ sub get_clustal_display {
       $style = '';
       $style2= '';
     } else {
-      $style2= "style ='position: sticky; top: ${px}px;left: 0px;z-index:99;background:#f3f1e4'";
-      $style = "style ='position: sticky; top: ${px}px;left: 0px;z-index:95;background:#f3f1e4'";
+      $style2= "style ='position: sticky; top: ${px}px;left: 0px;z-index:6;background:#f3f1e4'";
+      $style = "style ='position: sticky; top: ${px}px;left: 0px;z-index:5;background:#f3f1e4'";
       $px += 15;
       $table_rows .= qq~
       <TR>
@@ -3763,7 +3763,7 @@ sub fetchResultHTMLTable{
   my $self = shift;
   my %args = @_;
   my $table_name = $args{'table_name'} || die "parameter table_name missing";
-  my $key_value = $args{key_value} || die "parameer key_value missing";
+  my $key_value = $args{key_value} || die "parameter key_value missing";
   my $sbeams = $self->getSBEAMS();
 
   $resultset_ref = $args{'resultset_ref'};
@@ -3790,15 +3790,15 @@ sub fetchResultHTMLTable{
       if ($status){
         $resultset_ref->{from_cache}++;
         $resultset_ref->{cache_descriptor} = $cache_descriptor;
-        return;	
+        return;
       } else {
-				my $clear_cache_sql = qq~
-							DELETE FROM $TB_CACHED_RESULTSET WHERE table_name = '$table_name' and key_value = '$key_value' 
-							~;
-				$sbeams->do( $clear_cache_sql );
-				$log->info( "Cleaned up problem cache" );
-				$self->fetchResultHTMLTable( %args, use_caching => 0 );
-				return;
+	my $clear_cache_sql = qq~
+		     DELETE FROM $TB_CACHED_RESULTSET WHERE table_name = '$table_name' and key_value = '$key_value' 
+			~;
+	$sbeams->do( $clear_cache_sql );
+	$log->info( "Cleaned up problem cache" );
+	$self->fetchResultHTMLTable( %args, use_caching => 0 );
+	return;
       }
     }
   }

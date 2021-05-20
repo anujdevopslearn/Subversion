@@ -246,9 +246,9 @@ sub getTabMenu
         new( %args,
              cgi => $q,
              activeColor => 'f3f1e4',
-             inactiveColor   => 'c6c1b8',
-             hoverColor => 'f3f1e4',
-             atextColor => '000000', # black
+             inactiveColor   => 'd3d1c4',
+             hoverColor => '22eceb',
+             atextColor => '5e6a71', # black
              itextColor => 'ff0000', # red
              isDropDown => '1',
              # paramName => 'mytabname', # uses this as cgi param
@@ -328,7 +328,7 @@ sub getTabMenu
 			   helptext => 'Multi-constraint browsing of PeptideAtlas Proteins',
 			   url => "$CGI_BASE_DIR/PeptideAtlas/GetProteins"
 			   );
-		$tabmenu->addMenuItem( tablabel => 'Queries',
+    $tabmenu->addMenuItem( tablabel => 'Queries',
 			 label => 'Browse neXtProt Proteins',
 			 helptext => 'Browsing neXtProt Proteins Chromosome mapping and PeptideAtlas observabiligy',
 			 url => "$CGI_BASE_DIR/PeptideAtlas/GetNextProtChromMapping"
