@@ -390,7 +390,7 @@ while ( my $line = <INFILE>) {
 
   # Time to process...
   if ( $ion_key ne $curr_key ) {
-    print_extrema_list( $ion_cache{$curr_key} ) if $options{verbose};
+    print_extrema_list( $ion_cache{$curr_key} ) ;#if $options{verbose};
     undef $ion_cache{$curr_key};
     $curr_key = $ion_key;
   }
@@ -399,7 +399,7 @@ while ( my $line = <INFILE>) {
   $curr_q1 = $q1;
   $curr_q3 = $q3;
 }
-print_extrema_list( $ion_cache{$curr_key} ) if $options{verbose};
+print_extrema_list( $ion_cache{$curr_key} ) ;# if $options{verbose};
 close INFILE;
 
 
