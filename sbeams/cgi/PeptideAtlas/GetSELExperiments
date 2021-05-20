@@ -323,9 +323,10 @@ sub handle_request {
 		  </style>
 
 		  <script type="text/javascript">
-							  var browseAttributes = {
-							  sample: '',
-							  }
+		  document.title = 'PASSEL Experiment Repository';
+		  var browseAttributes = {
+			  sample: '',
+		  }
 		  </script>
 
 		  </head>
@@ -334,9 +335,9 @@ sub handle_request {
 
   # Text at the top of the window
   $html = qq~
-		  <body class="datagrid">
+	  <body class="datagrid">
 
-			   <form style="width: 1000px;overflow:auto;padding: 5px;-ro-width: auto;" enctype="application/x-www-form-urlencoded" action="/" name="EntrezForm" method="post" onsubmit="return false;" id="EntrezForm">
+	   <form style="width: 1000px;overflow:auto;padding: 5px;-ro-width: auto;" enctype="application/x-www-form-urlencoded" action="/" name="EntrezForm" method="post" onsubmit="return false;" id="EntrezForm">
 	  <div>
 	  <br>
 	  <h1>SRM Experiments Available in PASSEL</h1>
@@ -403,9 +404,9 @@ sub handle_request {
 		      </tr>
 	  </table>
 	  </form>
+          <br><br>
 	  </body>
   ~;
   print $html;
 
-  $sbeamsMOD->display_page_footer();
 }
