@@ -6,7 +6,7 @@
 # Description : Runs Search and/or GetProteins for a list of protein
 #               identifiers
 #
-# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -154,15 +154,17 @@ sub handle_request {
 
   my %parameters = %{$ref_parameters};
 
-  # put a spacer so that showing hidden content doesn't mangle the layout
-  print "<BR>$spacer\n" if $htmlmode;
 
   #### Get the HTML to display the tabs
   my $tabMenu = $sbeamsMOD->getTabMenu(
     parameters_ref => \%parameters,
     program_name => $PROG_NAME,
   );
-  print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+  if ($sbeams->output_mode() eq 'html') {
+    print $tabMenu->asHTML();
+    print"<script>document.title = 'PeptideAtlas: Search Proteins';</script>\n";
+  }
+
 
   #### Get the current atlas_build_id based on parameters or session
   my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(

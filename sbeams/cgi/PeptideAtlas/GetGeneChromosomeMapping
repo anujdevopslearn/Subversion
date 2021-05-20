@@ -7,7 +7,7 @@
 #
 # Description : 
 #
-# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -177,7 +177,7 @@ sub handle_request {
   my $TABLE_NAME = $parameters{'QUERY_NAME'};
 
   #### Set some specific settings for this program
-  my $CATEGORY="Get Gene Chromsome Mapping";
+  my $CATEGORY="Get Gene Chromosome Mapping";
   $TABLE_NAME="AT_GetGeneChromosomeMapping" unless ($TABLE_NAME);
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetGeneChromosomeMapping";
 

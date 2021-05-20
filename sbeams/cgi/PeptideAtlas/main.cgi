@@ -102,6 +102,7 @@ sub main
 
       if ($sbeams->output_mode() eq 'html') {
 	$sbeamsMOD->display_page_header(project_id => $project_id);
+	print "<script>document.title = 'PeptideAtlas: Select Build';</script>";
 	handle_request(ref_parameters=>\%parameters);
 	$sbeamsMOD->display_page_footer();
       }
@@ -121,7 +122,6 @@ sub main
 # Show the main welcome page
 ###############################################################################
 sub handle_request {
-
   my %args = @_;
 
   #### Process the arguments list
@@ -134,7 +134,7 @@ sub handle_request {
   #### Get the current atlas_build_id based on parameters or session
   my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
     parameters_ref => \%parameters,
-  );
+      );
   if (defined($atlas_build_id) && $atlas_build_id < 0) {
     #### Don't return. Let the user pick from a valid one.
     #return;
@@ -145,28 +145,27 @@ sub handle_request {
   my $tabMenu = $sbeamsMOD->getTabMenu(
     parameters_ref => \%parameters,
     program_name => $PROG_NAME,
-  );
+      );
   if ($sbeams->output_mode() eq 'html') {
-    print "<BR>\n";
     print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
     print "<BR>\n";
   }
 
 
-    #### Read in the standard form values
-    my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
-    my $TABLE_NAME = $parameters{'QUERY_NAME'};
+  #### Read in the standard form values
+  my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
 
 
-    #### Set some specific settings for this program
-    my $PROGRAM_FILE_NAME = $PROG_NAME;
-    my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
-    my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
+  #### Set some specific settings for this program
+  my $PROGRAM_FILE_NAME = $PROG_NAME;
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+  my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
 
 
-    #### Get a list of accessible project_ids
-    my @accessible_project_ids = $sbeams->getAccessibleProjects();
-    my $accessible_project_ids = join( ",", @accessible_project_ids ) || '0';
+  #### Get a list of accessible project_ids
+  my @accessible_project_ids = $sbeams->getAccessibleProjects();
+  my $accessible_project_ids = join( ",", @accessible_project_ids ) || '0';
 
 #           ( SELECT COUNT(*) FROM $TBAT_PEPTIDE_INSTANCE WHERE 
 #             atlas_build_id = AB.atlas_build_id AND n_observations > 1 ) AS n_distinct
@@ -175,8 +174,8 @@ sub handle_request {
 #                  $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB 
 #               ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
 #             WHERE atlas_build_id = AB.atlas_build_id ) AS n_distinct
-    #### Get a list of available atlas builds
-    my $sql = qq~
+  #### Get a list of available atlas builds
+  my $sql = qq~
     SELECT AB.atlas_build_id, atlas_build_name, atlas_build_description,
            default_atlas_build_id, organism_specialized_build, organism_name,
            ( SELECT max(cumulative_n_peptides)
@@ -200,31 +199,31 @@ sub handle_request {
     ORDER BY organism_name ASC, 
               atlas_build_name ASC, organism_specialized_build ASC, AB.atlas_build_id DESC
     ~;
-    my @atlas_builds = $sbeams->selectSeveralColumns($sql);
+  my @atlas_builds = $sbeams->selectSeveralColumns($sql);
 
-    my $default_build_name = '';
-    foreach my $atlas_build ( @atlas_builds ) {
-      if ($atlas_build->[0] == $atlas_build_id) {
-      	$default_build_name = $atlas_build->[1];
-      }
-      $atlas_build->[2] = $sbeams->escapeXML( value => $atlas_build->[2] );
+  my $default_build_name = '';
+  foreach my $atlas_build ( @atlas_builds ) {
+    if ($atlas_build->[0] == $atlas_build_id) {
+      $default_build_name = $atlas_build->[1];
     }
+    $atlas_build->[2] = $sbeams->escapeXML( value => $atlas_build->[2] );
+  }
 
-    #### If the output_mode is HTML, then display the form
+  #### If the output_mode is HTML, then display the form
 
-    if ($parameters{output_format} eq 'json') {
-      use JSON;
-      my $json = new JSON;
-      my $jstr = $json->utf8->encode(\@atlas_builds);
-      print("Access-Control-Allow-Origin: *\n");
-      print("Content-Type: application/json\n\n");
-      print $jstr;
-      return;
+  if ($parameters{output_format} eq 'json') {
+    use JSON;
+    my $json = new JSON;
+    my $jstr = $json->utf8->encode(\@atlas_builds);
+    print("Access-Control-Allow-Origin: *\n");
+    print("Content-Type: application/json\n\n");
+    print $jstr;
+    return;
 
-    }
-    elsif ($sbeams->output_mode() eq 'html') {
+  }
+  elsif ($sbeams->output_mode() eq 'html') {
 
-        print qq~
+    print qq~
         <script LANGUAGE="Javascript">
           function switchAtlasBuild() {
             document.AtlasBuildList.apply_action.value = "GO";
@@ -233,116 +232,112 @@ sub handle_request {
         </script>
         ~;
 
-        print $q->start_form(-method=>"POST",
-                             -action=>"$base_url",
-			     -name=>"AtlasBuildList",
-                            );
+    print $q->start_form(-method=>"POST",
+			 -action=>"$base_url",
+			 -name=>"AtlasBuildList",
+	);
 
-	unless ($default_build_name) {
-	  $default_build_name = qq~<FONT COLOR="red"> - NONE - </FONT>~;
-	}
-	my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'atlas_build_select',
-                                                  visible => 0,
-                                                  tooltip => 'Show/Hide Section',
-                                                  imglink => 1,
-                                                  textlink => 1,
-                                                  tr_asref => 1,
-                                                  hidetext => 'View default builds',
-                                                  showtext => 'View all builds',
-                                                  sticky  => 1 );
+    unless ($default_build_name) {
+      $default_build_name = qq~<FONT COLOR="red"> - NONE - </FONT>~;
+    }
+    my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'atlas_build_select',
+						    visible => 0,
+						    tooltip => 'Show/Hide non-default builds',
+						    imglink => 1,
+						    textlink => 1,
+						    tr_asref => 1,
+						    hidetext => 'View default builds',
+						    showtext => 'View all builds',
+						    sticky  => 1 );
 
-  print qq~
-  <P>Below is a listing of the PeptideAtlas builds available to
+    print qq~
+  <div style='margin-left:15px;max-width:1000px;'>
+  <p>Below is a listing of the PeptideAtlas builds available to
   you.  Your current default build is checked.  Other
   PeptideAtlas pages will show you information from the
   selected default build.  Click on any of the radio buttons
   below to select another build as your default. Your
   selection is stored in a cookie and future accesses
-  to PeptideAtlas in this session will use the selected build</P>
-  <P>Your current build is: <font color="red">$default_build_name</font></P>
+  to PeptideAtlas in this session will use the selected build.</p>
+  <p>Your current build is: <span style="color:#b00;font-weight:bold;">$default_build_name</span></p>
+  </div>
   $link
   ~;
 
-  my $table = SBEAMS::Connection::DataTable->new();
+    my $table = SBEAMS::Connection::DataTable->new();
 
-  my $rows = $table->getRowNum();
-  $parameters{newstyle} = 1 if !defined $parameters{newstyle};
-  if ( !$parameters{newstyle} ) { # old school, name and description
-    foreach my $atlas_build ( @atlas_builds ) {
-      my @trinfo;
-      my $selected = '';
-      if ($atlas_build->[0] == $atlas_build_id) {
-        $selected = 'CHECKED ';
+    my $rows = $table->getRowNum();
+    $parameters{newstyle} = 1 if !defined $parameters{newstyle};
+    if ( !$parameters{newstyle} ) { # old school, name and description
+      foreach my $atlas_build ( @atlas_builds ) {
+	my @trinfo;
+	my $selected = '';
+	if ($atlas_build->[0] == $atlas_build_id) {
+	  $selected = 'CHECKED ';
+	}
+	if ( !$atlas_build->[3] ) {
+	  @trinfo = ( $tr =~ /(NAME)=('[^']+')\s+(ID)=('[^']+')\s+(CLASS)=('[^']+')/ );
+	}
+
+	$atlas_build->[0] = "<input $selected type='radio' name='atlas_build_id' value='$atlas_build->[0]' onclick='blur()' onchange='switchAtlasBuild()'>";
+
+	$table->addRow( [@{$atlas_build}[0..2]] );
+	$rows = $table->getRowNum();
+	$table->setRowAttr(  COLS => [1..3], ROWS => [$rows], @trinfo );
       }
-      if ( !$atlas_build->[3] ) {
-        @trinfo = ( $tr =~ /(NAME)=('[^']+')\s+(ID)=('[^']+')\s+(CLASS)=('[^']+')/ );
-      }
-
-      $atlas_build->[0] =<<"      END";
-      <INPUT $selected TYPE="radio" NAME="atlas_build_id" VALUE="$atlas_build->[0]" onclick=blur() onchange="switchAtlasBuild()">
-      END
-
-      $table->addRow( [@{$atlas_build}[0..2]] );
-      $rows = $table->getRowNum();
-      $table->setRowAttr(  COLS => [1..3], ROWS => [$rows], @trinfo );
-    }
-    $table->setColAttr(  COLS => [2], ROWS => [1..$rows], BGCOLOR => '#cccccc', NOWRAP => 1 );
-    $table->setColAttr(  COLS => [3], ROWS => [1..$rows], BGCOLOR => '#eeeeee' );
-  } else {
+      $table->setColAttr(  COLS => [2], ROWS => [1..$rows], BGCOLOR => '#cccccc', NOWRAP => 1 );
+      $table->setColAttr(  COLS => [3], ROWS => [1..$rows], BGCOLOR => '#eeeeee' );
+    } else {
 #    SELECT AB.atlas_build_id, atlas_build_name, atlas_build_description,
 #           default_atlas_build_id, organism_specialized_build, organism_name, n_distinct
 
-    $table->addRow( [ '', 'Build Name', '# distinct', 'Organism', 'is_def', 'Description', 'Build Home' ] );
-    $table->setRowAttr(  COLS => [1..7], ROWS => [1], BGCOLOR => '#bbbbbb', ALIGN=>'CENTER' );
-    $table->setHeaderAttr( BOLD => 1 );
-    foreach my $atlas_build ( @atlas_builds ) {
-      my @row;
-      my @trinfo;
-      my $selected = '';
-      my $bgcolor = '#dddddd';
-      if ($atlas_build->[0] == $atlas_build_id) {
-        $selected = 'CHECKED ';
-      }
-      if ( !$atlas_build->[3] ) {
-        if ( $selected ne 'CHECKED ' ) { # We will show the current build regardless
-          $log->debug( "checking is $atlas_build->[0]" );
-          @trinfo = ( $tr =~ /(NAME)=('[^']+')\s+(ID)=('[^']+')\s+(CLASS)=('[^']+')/ );
-        }
-        $bgcolor = '#eeeeee';
-      } 
+      $table->addRow( [ '', 'Build Name', '# distinct', 'Organism', 'is_def', 'Description', 'Build Home' ] );
+      $table->setRowAttr(  ROWS => [1], BGCOLOR => '#002664', ALIGN=>'CENTER' );
+      $table->setHeaderAttr( WHITE_TEXT => 1, BOLD => 1 );
+      foreach my $atlas_build ( @atlas_builds ) {
+	my @row;
+	my @trinfo;
+	my $selected = '';
+	my $bgcolor = '#f3f1e4';
+	if ($atlas_build->[0] == $atlas_build_id) {
+	  $selected = 'CHECKED ';
+	}
+	if ( !$atlas_build->[3] ) {
+	  if ( $selected ne 'CHECKED ' ) { # We will show the current build regardless
+	    $log->debug( "checking is $atlas_build->[0]" );
+	    @trinfo = ( $tr =~ /(NAME)=('[^']+')\s+(ID)=('[^']+')\s+(CLASS)=('[^']+')/ );
+	  }
+	  $bgcolor = '#d3d1c4';
+	} 
 
-      $row[1] =<<"      END";
-      <A HREF=buildDetails?atlas_build_id=$atlas_build->[0] TITLE="View details of Atlas Build $atlas_build->[1]">
-      $atlas_build->[1]</A>
-      END
-      $row[0] =<<"      END";
-      <INPUT $selected TYPE="radio" NAME="atlas_build_id" VALUE="$atlas_build->[0]" onchange="switchAtlasBuild()">
-      END
-      $row[2] = $atlas_build->[6];
-      $row[3] = $atlas_build->[5];
-      $row[5] = $sbeams->truncateStringWithMouseover( string => $atlas_build->[2], len => 50 );
-      $row[4] = $atlas_build->[4] || '';
-      $row[4] = ( !$atlas_build->[3] ) ? 'N' : ( $row[4] ) ?
-                "<SPAN CLASS=popup_help TITLE='$atlas_build->[4]'>Y</SPAN>" : 'Y';
-      if ( $atlas_build->[7] ne '' &&  $atlas_build->[7] =~ /http.*builds\/([^\/]+)/){
-         $row[6] = "<a href='$atlas_build->[7]' target='_blank'>$1</a>";
-      }else{
-         $row[6] = '';
+	$row[1] = "<a href='buildDetails?atlas_build_id=$atlas_build->[0]' title='View details of Atlas Build $atlas_build->[1]'>$atlas_build->[1]</a>";
+	$row[0] = "<input $selected type='radio' name='atlas_build_id' value='$atlas_build->[0]' onchange='switchAtlasBuild()'>";
+
+	$row[2] = $sbeams->commifyNumber( $atlas_build->[6] );
+	$row[3] = $atlas_build->[5];
+	$row[5] = $sbeams->truncateStringWithMouseover( string => $atlas_build->[2], len => 50 );
+	$row[4] = $atlas_build->[4] || '';
+	$row[4] = ( !$atlas_build->[3] ) ? 'N' : ( $row[4] ) ?
+	    "<span class='popup_help' title='$atlas_build->[4]'>Y</span>" : 'Y';
+	if ( $atlas_build->[7] ne '' &&  $atlas_build->[7] =~ /http.*builds\/([^\/]+)/){
+	  $row[6] = "<a href='$atlas_build->[7]' target='_blank'>$1</a>";
+	}else{
+	  $row[6] = '';
+	}
+	$table->addRow( \@row );
+	$rows = $table->getRowNum();
+	$table->setRowAttr(  COLS => [1..7], ROWS => [$rows], BGCOLOR => $bgcolor, @trinfo );
       }
-      $table->addRow( \@row );
-      $rows = $table->getRowNum();
-      $table->setRowAttr(  COLS => [1..7], ROWS => [$rows], BGCOLOR => $bgcolor, @trinfo );
-    }
-    $table->setColAttr(  COLS => [1..7], ROWS => [1..$rows], NOWRAP => 1 );
-    $table->setColAttr(  COLS => [3], ROWS => [1..$rows], ALIGN => 'RIGHT' );
-    $table->setColAttr(  COLS => [4,5], ROWS => [1..$rows], ALIGN => 'CENTER' );
-#    $table->setColAttr(  COLS => [3], ROWS => [1..$rows], BGCOLOR => '#eeeeee' );
-  } # end else
-  print "$table";
-  print $q->hidden( "apply_action", '');
-  print $q->end_form;
+      $table->setColAttr(  COLS => [1..7], ROWS => [1..$rows], NOWRAP => 1 );
+      $table->setColAttr(  COLS => [3], ROWS => [1..$rows], ALIGN => 'RIGHT' );
+      $table->setColAttr(  COLS => [4,5], ROWS => [1..$rows], ALIGN => 'CENTER' );
+
+    } # end else
+    print "$table";
+    print $q->hidden( "apply_action", '');
+    print $q->end_form;
 
   }
 
-
 } # end showMainPage
+

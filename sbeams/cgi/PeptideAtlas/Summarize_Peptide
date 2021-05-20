@@ -5,7 +5,7 @@
 #
 # Description : Prints global summary of a given peptide
 #
-# SBEAMS is Copyright (C) 2000-2014 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -154,7 +154,6 @@ sub handle_request {
   );
 
   if ( $is_html ) {
-    print '<br>';
     print $tabMenu->asHTML() 
   }
 
@@ -225,7 +224,7 @@ sub handle_request {
   print "<br>" if $is_html; 
 
   if ( $is_html ) {
-    print '<table>' . $atlas->encodeSectionHeader( text => "Peptide Atlas Summary", LMTABS=>1, no_toggle => 1 ) . '</table>';
+    print $atlas->encodeSectionHeader( text => "PeptideAtlas Summary", LMTABS=>1, no_toggle => 1 );
   }
 
   if ( $parameters{show_all_builds} ) {
@@ -290,7 +289,7 @@ sub get_form {
   }
 
   my $form = qq~
-  <br>
+  <br><br>
   <form name=SearchForm>
   <b>Summary for :</b>&nbsp;
   <input type=text size=30 maxlength=80 name=searchForThis value="$params->{peptide}"></input>
@@ -300,6 +299,7 @@ sub get_form {
                       </select>
   $buttons
   </form>
+  <script>document.title = 'PeptideAtlas Peptide Summary: $params->{peptide}';</script>
   ~;
 
   return $form;
@@ -418,7 +418,6 @@ sub get_pa_resultset {
 
 sub get_passel_resultset {
   my $params = shift;
-
 
   my $sql = qq~
   SELECT COUNT(*) AS total,

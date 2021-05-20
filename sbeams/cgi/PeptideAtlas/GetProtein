@@ -364,22 +364,22 @@ sub handle_request {
       $html_cache_loc = "$PHYSICAL_BASE_DIR/htmlcache/GetProtein";
     }
     #$log->debug("html_cache_name  $ENV{REQUEST_URI}  $html_cache_loc/$html_cache_name");
-		if ( -e "$html_cache_loc/$html_cache_name"){
-			 if (open (IN,"<$html_cache_loc/$html_cache_name")){
-				 print "Content-type: text/html\n\n";
-				 print $_ while (<IN>);
-				 close IN;
-				 exit;
-			 }
-		}
+    if ( -e "$html_cache_loc/$html_cache_name"){
+      if (open (IN,"<$html_cache_loc/$html_cache_name")){
+	print "Content-type: text/html\n\n";
+	print $_ while (<IN>);
+	close IN;
+	exit;
+      }
+    }
   }
 
 
-	my $project_id = $sbeamsMOD->getProjectID(
-			atlas_build_id => $parameters{atlas_build_id}
-			);
+  my $project_id = $sbeamsMOD->getProjectID(
+    atlas_build_id => $parameters{atlas_build_id}
+      );
   $sbeamsMOD->display_page_header(project_id => $project_id, init_tooltip => 1);
-  print "<BR>$spacer\n" if $htmlmode;
+  #print "<BR>$spacer\n" if $htmlmode;
   print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
 
 
@@ -537,6 +537,7 @@ sub handle_request {
             document.SearchForm.apply_action.value = "GO";
             document.SearchForm.submit();
           }
+          document.title = "PeptideAtlas Protein: $protein_name";
         </script>
       ~;
 
@@ -573,6 +574,12 @@ sub handle_request {
       print "Protein Name: ";
       print $q->textfield( -name => "protein_name", -size=>50, -default=>$protein_name );
 
+      print $q->submit(-name => "action",
+                       -value => 'QUERY',
+		       -style => 'margin-left:30px;',
+                       -label => 'GO');
+
+
       my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'extra_fields',
 						      visible => 0,
 						      fulllink => 1,
@@ -585,7 +592,7 @@ sub handle_request {
       for my $field ( qw( use_ssr min_ssr max_ssr use_len min_len max_len use_tm use_sig ) ) {
         $parameters{$field} = $p_defs{$field} if !defined $parameters{$field};
         print "<tr $tr><td>\n";
-        print "$field: ";
+        print "$field: </td><td>";
         print $q->textfield( $field, $parameters{$field});
         print "</td></tr>\n";
       }
@@ -609,12 +616,6 @@ sub handle_request {
                              -size => 25);
       }
       print $q->hidden( "apply_action", '');
-
-      print "&nbsp;&nbsp;&nbsp;";
-
-      print $q->submit(-name => "action",
-                       -value => 'QUERY',
-                       -label => 'GO');
       print $q->end_form;
 
       print "</nobr>";
@@ -677,7 +678,7 @@ sub handle_request {
   }
   if($is_trypsin_build eq 'N'){
     print qq~
-          <div  style="border:5px double; color:white;  background-color: CC0000; width: 600px;"  >
+          <div style="border:5px double; color:white; background-color: CC0000; width: 600px;"  >
           WARNING: This build contains many samples that are not digested with trypsin
           and therefore the usual trypsin-centric display elements are turned off.
           </div>
@@ -723,98 +724,96 @@ sub handle_request {
       print qq~
         This protein identifier was not found in
         atlas build '$atlas_build_names{$atlas_build_id}'.
-				<br>
-				Please check selections and try again.
-							<p>
-				<form method="post" action="Search">
-				Or, search for the identifer across all major PeptideAtlas builds:
-							&nbsp;&nbsp;<input type="text" name="search_key" value="$protein_name" size="20" maxlength="60"/>
-				<input type="submit" name="apply_action" value="GO" /><BR>
+	<br>
+	Please check selections and try again.
+	<p>
+	<form method="post" action="Search">
+	Or, search for the identifer across all major PeptideAtlas builds:
+	&nbsp;&nbsp;<input type="text" name="search_key" value="$protein_name" size="20" maxlength="60"/>
+	<input type="submit" name="apply_action" value="GO" /><BR>
 						~;
-			## looking for similar ids
-			my $sql = qq~
-					SELECT SKE.RESOURCE_NAME, SKE.RESOURCE_TYPE, BS.BIOSEQUENCE_ID
-					FROM $TBAT_SEARCH_KEY_ENTITY SKE
-					JOIN $TBAT_BIOSEQUENCE BS ON (BS.BIOSEQUENCE_NAME = SKE.SEARCH_KEY_NAME)
-					JOIN $TBAT_ATLAS_BUILD AB ON (AB.BIOSEQUENCE_SET_ID = BS.BIOSEQUENCE_SET_ID
-																			 AND AB.ATLAS_BUILD_ID = $atlas_build_id) 
-					WHERE SKE.RESOURCE_NAME in (
-						(
-							 SELECT SKE2.PROTEIN_ALIAS_MASTER
-							 FROM $TBAT_SEARCH_KEY_ENTITY SKE2
-							 WHERE SKE2.RESOURCE_NAME like '$protein_name%'
-						 )
-						UNION
-						( SELECT SKE4.RESOURCE_NAME
-							FROM $TBAT_SEARCH_KEY_ENTITY SKE4
-							WHERE  SKE4.PROTEIN_ALIAS_MASTER like '$protein_name%' 
-						)
-						UNION (
-							 SELECT SKE4.RESOURCE_NAME
-							 FROM $TBAT_SEARCH_KEY_ENTITY SKE4
-							 WHERE SKE4.search_key_name like '$protein_name%'
-						)
-					)
-			~;
-			my @rows = $sbeams->selectSeveralColumns ($sql);
+	## looking for similar ids
+      my $sql = qq~
+		SELECT SKE.RESOURCE_NAME, SKE.RESOURCE_TYPE, BS.BIOSEQUENCE_ID
+		FROM $TBAT_SEARCH_KEY_ENTITY SKE
+		JOIN $TBAT_BIOSEQUENCE BS ON (BS.BIOSEQUENCE_NAME = SKE.SEARCH_KEY_NAME)
+		JOIN $TBAT_ATLAS_BUILD AB ON (AB.BIOSEQUENCE_SET_ID = BS.BIOSEQUENCE_SET_ID
+		AND AB.ATLAS_BUILD_ID = $atlas_build_id) 
+		WHERE SKE.RESOURCE_NAME in (
+			(
+				 SELECT SKE2.PROTEIN_ALIAS_MASTER
+				 FROM $TBAT_SEARCH_KEY_ENTITY SKE2
+				 WHERE SKE2.RESOURCE_NAME like '$protein_name%'
+			 )
+			UNION
+			( SELECT SKE4.RESOURCE_NAME
+				FROM $TBAT_SEARCH_KEY_ENTITY SKE4
+				WHERE  SKE4.PROTEIN_ALIAS_MASTER like '$protein_name%' 
+			)
+			UNION (
+				 SELECT SKE4.RESOURCE_NAME
+				 FROM $TBAT_SEARCH_KEY_ENTITY SKE4
+				 WHERE SKE4.search_key_name like '$protein_name%'
+			)
+		)
+	~;
+      my @rows = $sbeams->selectSeveralColumns ($sql);
       if (@rows){
-				my %related_names = ();
-				my %ids;
-				foreach my $row(@rows){
-					my ($name, $type, $biosequence_id) = @$row;
-					$related_names{$name} = $type;
-					$ids{$biosequence_id} =1;
-				}
-				my $biosequence_ids = join (",", keys %ids);
-				$sql = qq~
-					 SELECT DISTINCT B1.BIOSEQUENCE_NAME, B2.BIOSEQUENCE_NAME 
-					 FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR 
-					 LEFT JOIN $TBAT_BIOSEQUENCE B1 ON (B1.BIOSEQUENCE_ID = BR.RELATED_BIOSEQUENCE_ID) 
-					 LEFT JOIN $TBAT_BIOSEQUENCE B2 ON (B2.BIOSEQUENCE_ID = BR.REFERENCE_BIOSEQUENCE_ID)
-					 WHERE BR.atlas_build_id = $atlas_build_id
-					 AND (BR.related_biosequence_id in ($biosequence_ids) 
-								OR BR.reference_biosequence_id in ($biosequence_ids))
-					 AND RELATIONSHIP_TYPE_ID = 2
-				~;
-         #$sbeams->display_sql(sql=>$sql) ;
+	my %related_names = ();
+	my %ids;
+	foreach my $row(@rows){
+	  my ($name, $type, $biosequence_id) = @$row;
+	  $related_names{$name} = $type;
+	  $ids{$biosequence_id} =1;
+	}
+	my $biosequence_ids = join (",", keys %ids);
+	$sql = qq~
+		 SELECT DISTINCT B1.BIOSEQUENCE_NAME, B2.BIOSEQUENCE_NAME 
+		 FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR 
+		 LEFT JOIN $TBAT_BIOSEQUENCE B1 ON (B1.BIOSEQUENCE_ID = BR.RELATED_BIOSEQUENCE_ID) 
+		 LEFT JOIN $TBAT_BIOSEQUENCE B2 ON (B2.BIOSEQUENCE_ID = BR.REFERENCE_BIOSEQUENCE_ID)
+		 WHERE BR.atlas_build_id = $atlas_build_id
+		 AND (BR.related_biosequence_id in ($biosequence_ids) 
+			OR BR.reference_biosequence_id in ($biosequence_ids))
+		 AND RELATIONSHIP_TYPE_ID = 2
+		~;
+	@rows = $sbeams->selectSeveralColumns ($sql);
+	my %biosequence_identifcal = ();
+	foreach my $row(@rows){
+	  my ($name1, $name2) = @$row;
+	  $biosequence_identifcal{$name1}{$name2} =1;
+	  foreach my $p (keys %{$biosequence_identifcal{$name2}}){
+	    $biosequence_identifcal{$name1}{$p} =1;
+	  }
+	  $biosequence_identifcal{$name2}{$name1} = 1;
+	  foreach my $p (keys %{$biosequence_identifcal{$name1}}){
+	    $biosequence_identifcal{$name2}{$p} =1;
+	  }
 
-				@rows = $sbeams->selectSeveralColumns ($sql);
-				my %biosequence_identifcal = ();
-				foreach my $row(@rows){
-					my ($name1, $name2) = @$row;
-					$biosequence_identifcal{$name1}{$name2} =1;
-					foreach my $p (keys %{$biosequence_identifcal{$name2}}){
-						$biosequence_identifcal{$name1}{$p} =1;
-					}
-					$biosequence_identifcal{$name2}{$name1} = 1;
-					foreach my $p (keys %{$biosequence_identifcal{$name1}}){
-						$biosequence_identifcal{$name2}{$p} =1;
-					}
-
-				}
-				print  "<br><h4>Here are some related protein names in the same build. Proteins in the same row have identical sequences.<br><br>" if (keys %related_names); 
-				foreach my $name(sort {$a cmp $b} keys %related_names){
-					 print "<a href='" . "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_build_id\&protein_name=$name\&action=QUERY" .
-									"'>$name</a>";
-					 if (defined $biosequence_identifcal{$name}){
-						 foreach my $name3(sort {$a cmp $b} keys %{$biosequence_identifcal{$name}}){
-								next if ($name3 eq $name);
-								print ", <a href='" .
-											"$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_build_id\&protein_name=$name3\&action=QUERY" .
-											"'>$name3</a>";
-						 }
-					 }
-					 print "<br><br>";
-				}
+	}
+	print  "<br><h4>Here are some related protein names in the same build. Proteins in the same row have identical sequences.<br><br>" if (keys %related_names); 
+	foreach my $name(sort {$a cmp $b} keys %related_names){
+	  print "<a href='" . "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_build_id\&protein_name=$name\&action=QUERY" .
+	      "'>$name</a>";
+	  if (defined $biosequence_identifcal{$name}){
+	    foreach my $name3(sort {$a cmp $b} keys %{$biosequence_identifcal{$name}}){
+	      next if ($name3 eq $name);
+	      print ", <a href='" .
+		  "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_build_id\&protein_name=$name3\&action=QUERY" .
+		  "'>$name3</a>";
+	    }
+	  }
+	  print "<br><br>";
+	}
         print "</h4>";
 
       }else{
-			 $sbeams->reportException(
-						state => 'ERROR',
-						type => 'RECORD NOT FOUND',
-						message => "The protein entered '$protein_name' was not found ".
-							"in the atlas build '$atlas_build_names{$atlas_build_id}'.",
-				);
+	$sbeams->reportException(
+	  state => 'ERROR',
+	  type => 'RECORD NOT FOUND',
+	  message => "The protein entered '$protein_name' was not found ".
+	  "in the atlas build '$atlas_build_names{$atlas_build_id}'.",
+	    );
       }
     } else {
       $sbeams->reportException(
@@ -989,7 +988,7 @@ sub handle_request {
 
   if ($sbeams->output_mode() eq 'html') {
     $htmlcontent = qq~
-      <TABLE style="margin-left:15px;">
+      <table style="margin-left:15px;">
     ~;
     # Display a link to Steven Lewis's 3D visualization tool if available.
     # Eventually, will move 3D resources to PeptideAtlas server area
@@ -1391,7 +1390,7 @@ sub handle_request {
 						       value => sprintf("%0.3f", $biosequence->{norm_PSMs_per_100K}) )
 	  if defined $biosequence->{norm_PSMs_per_100K};
 
-      $htmlcontent .= "</TABLE>\n";
+      $htmlcontent .= "</table>\n";
 
 
       print scalar $sbeams->make_toggle_section( neutraltext => $biosequence->{biosequence_name},
@@ -1526,84 +1525,84 @@ sub handle_request {
       my %peptides_m;
 
       foreach my $line (<IN>){
-				chomp $line ;
-				my (@spids,$plate,$tube);
-				if( $line =~ /TP\d+,([^,]+),(\w),(\d+),.*VE.+_ISBHOT(0[0123]\d).*/ || $line =~ /TP\d+,([^,]+),(\w),(\d+).*,ISBHOT(0[0123]\d).*/){
-					$plate = "ISBHOT$4";
-					@spids = split(/\./,$1);
-					if(length($3) == 1){
-						$tube = "{$2".'0'."$3,$2$3}";
-					} else {
-						$tube = "$2$3";
-					}
-				}
-				foreach my $a (@spids){
-					my $p = "/proteomics/peptideatlas/archive/rmoritz/HumanMRMAtlas/Origene/Velos/$plate*/".
-							"method/XTK/VE*_$tube\_*-ipro.prot.xml";
+	chomp $line ;
+	my (@spids,$plate,$tube);
+	if( $line =~ /TP\d+,([^,]+),(\w),(\d+),.*VE.+_ISBHOT(0[0123]\d).*/ || $line =~ /TP\d+,([^,]+),(\w),(\d+).*,ISBHOT(0[0123]\d).*/){
+	  $plate = "ISBHOT$4";
+	  @spids = split(/\./,$1);
+	  if(length($3) == 1){
+	    $tube = "{$2".'0'."$3,$2$3}";
+	  } else {
+	    $tube = "$2$3";
+	  }
+	}
+	foreach my $a (@spids){
+	  my $p = "/proteomics/peptideatlas/archive/rmoritz/HumanMRMAtlas/Origene/Velos/$plate*/".
+	      "method/XTK/VE*_$tube\_*-ipro.prot.xml";
 
-					$PPfile{$a}{path} = $p;
-					if($tube =~ /\{(\w+),.*/){
-						$tube = $1;
-					}
-					$PPfile{$a}{tube} = $plate.'-'.$tube;
-					if($a =~ /(\S+)\-\d+/){
-						$a = $1;
-						$PPfile{$a}{path} = $p;
-						$PPfile{$a}{tube} = $plate.'-'.$tube;
+	  $PPfile{$a}{path} = $p;
+	  if($tube =~ /\{(\w+),.*/){
+	    $tube = $1;
+	  }
+	  $PPfile{$a}{tube} = $plate.'-'.$tube;
+	  if($a =~ /(\S+)\-\d+/){
+	    $a = $1;
+	    $PPfile{$a}{path} = $p;
+	    $PPfile{$a}{tube} = $plate.'-'.$tube;
 
-					}
-				}
+	  }
+	}
       }
       if(defined $PPfile{$protein_name}){
-				foreach my $m (@methods){
-					my $file = $PPfile{$protein_name}{path};
-					my $str;
-					if($parameters{ori_tube} ne ''){
-						$parameters{ori_tube} =~ /(ISBHOT\d{3})-(\w)(\d+)/;
-						if(length($3) == 1){
-							$str = "$1*/method/XTK/VE*_{$2".'0'."$3,$2$3}_*-ipro.prot.xml";
-						} else {
-							$str = "$1*/method/{XTK,XTK*allmod}/VE*_$2$3\_*-ipro.prot.xml";
-						}
-						$file = "/proteomics/peptideatlas/archive/rmoritz/HumanMRMAtlas/Origene/Velos/$str";
-					}
-					$file =~ s/method/$m/;
-					my @files = `ls $file`;
-					if(@files > 1 or @files == 0 ){
-						print join("<BR>", @files);
-						goto LABEL;
-						#}#elsif(! @files ){
-						#  print "$PPfile <BR>";
-					} else {
-						%{$peptides_m{$m}} = $origenecov -> getPeptides(
-																			 ref_parameters     => \%parameters,
-																			 ProteinProphetfile => $files[0],
-																			 protein_name       => $protein_name);
-					}
+	foreach my $m (@methods){
+	  my $file = $PPfile{$protein_name}{path};
+	  my $str;
+	  if($parameters{ori_tube} ne ''){
+	    $parameters{ori_tube} =~ /(ISBHOT\d{3})-(\w)(\d+)/;
+	    if(length($3) == 1){
+	      $str = "$1*/method/XTK/VE*_{$2".'0'."$3,$2$3}_*-ipro.prot.xml";
+	    } else {
+	      $str = "$1*/method/{XTK,XTK*allmod}/VE*_$2$3\_*-ipro.prot.xml";
+	    }
+	    $file = "/proteomics/peptideatlas/archive/rmoritz/HumanMRMAtlas/Origene/Velos/$str";
+	  }
+	  $file =~ s/method/$m/;
+	  my @files = `ls $file`;
+	  if(@files > 1 or @files == 0 ){
+	    print join("<BR>", @files);
+	    goto LABEL;
+	    #}#elsif(! @files ){
+	    #  print "$PPfile <BR>";
+	  } else {
+	    %{$peptides_m{$m}} = $origenecov -> getPeptides(
+	      ref_parameters     => \%parameters,
+	      ProteinProphetfile => $files[0],
+	      protein_name       => $protein_name);
+	  }
 
-	      }
+	}
 
-				## LM: did not update this...yet!
-				my ($tr, $link ) = $sbeams->make_table_toggle( name => 'ori_getprotein_sequence',
-												 visible => 0,
-												 tooltip => 'Show/Hide Section',
-												 imglink => 1,
-												 sticky => 1 );
+	## LM: did not update this...yet!
+	my ($tr, $link ) = $sbeams->make_table_toggle( name => 'ori_getprotein_sequence',
+						       visible => 0,
+						       tooltip => 'Show/Hide Section',
+						       imglink => 1,
+						       sticky => 1 );
 
 
-				my $ori_help = $origenecov ->get_plot_help(name => 'ori_getprotein_sequence_desc' );
-				my $graphic_head = $sbeamsMOD->encodeSectionHeader( text => "Sequence Coverage of Each Fragmentation Method (TPP PeptideProb >= 0.9 and ProteinProb >= 0.9)", link => $link );
-				my %graphic_params = (     peptide => \%peptides_m,
-								 protein_data  => $biosequence,
-								 tr_info => $tr,
-								 obs_color => $parameters{obs_color} );
+	my $ori_help = $origenecov ->get_plot_help(name => 'ori_getprotein_sequence_desc' );
+	my $graphic_head = $sbeamsMOD->encodeSectionHeader( text => "Sequence Coverage of Each Fragmentation Method (TPP PeptideProb >= 0.9 and ProteinProb >= 0.9)", link => $link );
+	my %graphic_params = (     peptide => \%peptides_m,
+				   protein_data  => $biosequence,
+				   tr_info => $tr,
+				   obs_color => $parameters{obs_color} );
 
-				$graphic_section = $origenecov -> get_sequence_graphic( %graphic_params, %motif_params );
-				my $primary = qq~ &nbsp;&nbsp;<b>Below show $protein_name in</b>:&nbsp;$PPfile{$protein_name}{tube}<BR> ~;
-				if($parameters{ori_tube}){
-					$primary =  qq~ &nbsp;&nbsp;<b>Below show $protein_name in</b>:&nbsp;$parameters{ori_tube}<BR> ~;
-				}
-				print qq~ <TABLE width="100%" >
+	$graphic_section = $origenecov -> get_sequence_graphic( %graphic_params, %motif_params );
+	my $primary = qq~ &nbsp;&nbsp;<b>Below show $protein_name in</b>:&nbsp;$PPfile{$protein_name}{tube}<BR> ~;
+	if($parameters{ori_tube}){
+	  $primary =  qq~ &nbsp;&nbsp;<b>Below show $protein_name in</b>:&nbsp;$parameters{ori_tube}<BR> ~;
+	}
+	print qq~ <TABLE width="100%" >
                <TR $tr><TD ALIGN=left>$graphic_head</TD></TR>
                <TR $tr><TD ALIGN=left>$ori_help</TD></TR>
                <TR $tr><TD ALIGN=left>
@@ -1613,18 +1612,18 @@ sub handle_request {
                <TR $tr><TD> $graphic_section</TD></TR>
           ~;
 
-				for my $method( @methods){
-					my ( $sequence, $tags ,$coverage) = $origenecov -> displayAnnotatedSequence(
-						peptides => \%{$peptides_m{$method}},
-						biosequence => $biosequence,
-						method => $method,
-							);
-					print "\n <TR $tr><TD > " . $origenecov -> get_html_seq( sequence => $sequence,
-												 tags => $tags,
-												 method => $method,
-												 coverage => $coverage ) . "</TD></TR>\n";
-				}
-				print "</TABLE></DIV>\n";
+	for my $method( @methods){
+	  my ( $sequence, $tags ,$coverage) = $origenecov -> displayAnnotatedSequence(
+	    peptides => \%{$peptides_m{$method}},
+	    biosequence => $biosequence,
+	    method => $method,
+	      );
+	  print "\n <TR $tr><TD > " . $origenecov -> get_html_seq( sequence => $sequence,
+								   tags => $tags,
+								   method => $method,
+								   coverage => $coverage ) . "</TD></TR>\n";
+	}
+	print "</TABLE></DIV>\n";
       }
     LABEL:
     }
@@ -1786,42 +1785,42 @@ sub handle_request {
       push @pa_accessions, $row->[0];
       my $ntt = 0;
       if ( defined $row->[$ntt_idx] && $row->[$ntt_idx] ne '') {
-				$ntt = $row->[$ntt_idx];
-						} else {
-				if ( $row->[$pre_idx] =~ /[-RK]/ ) {
-					$ntt++;
-				}
-				if ( $row->[$fol_idx] =~ /[RK]$/ || $row->[$fol_idx] eq '-' ) {
-					$ntt++;
-				}
+	$ntt = $row->[$ntt_idx];
+      } else {
+	if ( $row->[$pre_idx] =~ /[-RK]/ ) {
+	  $ntt++;
+	}
+	if ( $row->[$fol_idx] =~ /[RK]$/ || $row->[$fol_idx] eq '-' ) {
+	  $ntt++;
+	}
       }
       $row->[$ntt_idx] = $ntt if !defined $row->[$ntt_idx];
 
       my $mc = 0;
       if ( defined $row->[$mc_idx] && $row->[$mc_idx] ne '') {
-				$mc = $row->[$mc_idx];
-						} elsif ( $row->[$seq_idx] =~ /[RK][^P]/ ) {
-				$mc++;
+	$mc = $row->[$mc_idx];
+      } elsif ( $row->[$seq_idx] =~ /[RK][^P]/ ) {
+	$mc++;
       }
       $row->[$mc_idx] = $mc if !defined $row->[$mc_idx];
 
       my $mgl = 0;
       if ( $row->[$ngl_idx] > 1 ) {
-				$mgl++;
+	$mgl++;
       }
 
       push @sample_list, [ $row->[0], $row->[$resultset_ref->{column_hash_ref}{'sample_ids'}] ];
 
       for my $idx ($resultset_ref->{column_hash_ref}{'sample_ids'},
 		   $resultset_ref->{column_hash_ref}{'is_subpeptide_of'} ) {
-				$row->[$idx] =~ s/\s//g;
-				my @samples = split( /,/, $row->[$idx] );
-				if ( $idx == $resultset_ref->{column_hash_ref}{'sample_ids'} ) {
-					my $cnt = scalar( @samples );
-					$row->[$idx] = ( $htmlmode ) ? "<A HREF='$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$row->[0]&action=QUERY#samples' TITLE='$row->[$idx]'> $cnt </A>" : $cnt;
-				} else {
-					$row->[$idx] = scalar( @samples );
-				}
+	$row->[$idx] =~ s/\s//g;
+	my @samples = split( /,/, $row->[$idx] );
+	if ( $idx == $resultset_ref->{column_hash_ref}{'sample_ids'} ) {
+	  my $cnt = scalar( @samples );
+	  $row->[$idx] = ( $htmlmode ) ? "<A HREF='$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$row->[0]&action=QUERY#samples' TITLE='$row->[$idx]'> $cnt </A>" : $cnt;
+	} else {
+	  $row->[$idx] = scalar( @samples );
+	}
       }
 
       my %sample_list = @sample_list;
@@ -2196,7 +2195,6 @@ sub get_ortholog_information {
 }
 
 sub get_peptide_mappings  {
-
   my %args = @_;
   my @biosequence = split( /\*/, $args{biosequence} );
   my $base_sequence = $biosequence[0];
@@ -2290,7 +2288,6 @@ sub get_synthesized_peptides {
 #
 #-
 sub get_sequence_graphic {
-
   ## read passed args, set up variables ##
   my %args = @_;;
 
@@ -3240,21 +3237,12 @@ sub get_sequence_graphic {
 #  my $tr_link =  "<TR><TD>$link</TD></TR>";
   # Generate and return HTML for graphic
   my $graphic =<<"  EOG";
-  <TABLE>
-    <TR $tr>
-      <TD>
         <img src='$HTML_BASE_DIR/$tmp_img_path/$file_name' ISMAP USEMAP='#$pid' alt='Sorry No Img' BORDER=0>
         $map
-      </TD>
-    </TR>
-    <TR $tr>
-      <TD ALIGN='RIGHT'>
-        <TABLE BORDER='0' class='lgnd_outline'>
+    <br>
+        <table style='border-width:1px;margin-left:40%;' class='lgnd_outline'>
         $legend
-        </TABLE>
-      </TD>
-    </TR>
-  </TABLE>
+        </table>
   $style
   EOG
 
@@ -3704,11 +3692,11 @@ sub displayAnnotatedSequence {
        </SCRIPT>
         ~;
       }
-      $seqHTML .= qq~ <PRE>$variant_list</PRE> $var_toggle_link <BR> ~;
+      $seqHTML .= qq~ <pre style='margin-left:15px;'>$variant_list</PRE> $var_toggle_link <br> ~;
     }
     $seqHTML .= "<BR>\n";
     $seqHTML .= "<B>Annotations in Sequence Context:</B> <BR>\n";
-    $seqHTML .= "<div style='width: 80vw'>$html_seq->{clustal_display} <BR></div>\n";
+    $seqHTML .= "<div style='width: 95vw'>$html_seq->{clustal_display} <br></div>\n";
   }
 
   if ( !$html_seq->{has_variants} ) {
@@ -4442,9 +4430,9 @@ sub renderProteinAccessionAndStatus {
 
     my $statusWidget = $sbeamsMOD->make_pa_tooltip(
       tip_text => $statusMessage,
-      link_text => "<font size=\"5\" color=\"$statusColor\"><B>Status: $identification_status</B></font>&nbsp;&nbsp;<img src=\"../../images/greyqmark.gif\"><BR>" );
-    print "<font size=\"5\" color=\"blue\"><B>$biosequence->{biosequence_name}</B></font>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\n";
-    print "$statusWidget<BR>\n";
+      link_text => "<font size='5' color='$statusColor'><B>Status: $identification_status</B></font>&nbsp;&nbsp;<img src='../../images/greyqmark.gif'><br>" );
+    print "<font size='5' style='margin-left:15px;margin-right:30px;color:blue;font-weight:bold;'>$biosequence->{biosequence_name}</font>\n";
+    print "$statusWidget<br>\n";
   }
 
   return(1);

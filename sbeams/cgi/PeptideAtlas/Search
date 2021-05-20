@@ -6,7 +6,7 @@
 #
 # Description : Searches the search_key table for matching elements
 #
-# SBEAMS is Copyright (C) 2000-2014 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -129,10 +129,10 @@ sub main {
   if ( !$parameters{action} && !$parameters{apply_action} ) {
     handle_request(ref_parameters=>\%parameters);
   } else {
-		my $paramstr = join( ',', %parameters );
-		$log->logCGI( paramstr => $paramstr, mode => 'start' );
+    my $paramstr = join( ',', %parameters );
+    $log->logCGI( paramstr => $paramstr, mode => 'start' );
     handle_request(ref_parameters=>\%parameters);
-		$log->logCGI( paramstr => $paramstr, mode => 'done' );
+    $log->logCGI( paramstr => $paramstr, mode => 'done' );
     $sbeamsMOD->display_page_footer();
   }
 
@@ -145,7 +145,6 @@ sub main {
 # Handle Request
 ###############################################################################
 sub handle_request {
-
   my %args = @_;
 
   #### Process the arguments list
@@ -296,7 +295,7 @@ sub handle_request {
       $buffer .= $q->start_form(-method=>"POST",
                            -action=>"$base_url",
                           );
-      $buffer .= "<BR>".$tabMenu->asHTML();
+      $buffer .= $tabMenu->asHTML();
       $buffer .= "<BR>$spacer<BR><P>";
       $buffer .= qq~<nobr><CENTER><IMG SRC="$HTML_BASE_DIR/images/PeptideAtlas_Logo.png"><BR>~;
       #$buffer .= qq~<img src="$HTML_BASE_DIR/images/space.gif" height=1 width=30>~;
@@ -976,7 +975,7 @@ sub handle_request {
     if ($sbeams->invocation_mode() eq 'http') {
       $sbeamsMOD->display_page_header(project_id => $project_id);
       print $buffer;
-      print "Click [GO] to execute the search<BR>\n";
+      print "<br><br><center>Click <b>[QUERY]</b> to execute the search</center><br>\n";
     } else {
       print "Set action=GO to execute the search\n";
     }
@@ -1064,70 +1063,70 @@ sub query_repository{
 }
 
 sub displayTable{
-   my %args = @_;
-   my $resultset_ref = $args{resultset_ref};
-   my $column_array_ref = $args{column_array_ref};
-   my $colnameidx_ref = $args{colnameidx_ref};
-   my $column_titles_ref = $args{column_titles_ref};
-   my $build_type_selection = $args{build_type_selection};
-   my $parameter_ref = $args{parameter_ref};
-   my $rs_param_ref = $args{rs_param_ref};
-   my $url_cols_ref = $args{url_cols_ref};
-   my $hidden_cols_ref = $args{hidden_cols_ref};
-   my $max_width_ref = $args{max_width_ref};
-   my $base_url = $args{base_url};
-   my $ini_search_key = $args{search_key};
-   my $spacer = $sbeams->getGifSpacer(100);
+  my %args = @_;
+  my $resultset_ref = $args{resultset_ref};
+  my $column_array_ref = $args{column_array_ref};
+  my $colnameidx_ref = $args{colnameidx_ref};
+  my $column_titles_ref = $args{column_titles_ref};
+  my $build_type_selection = $args{build_type_selection};
+  my $parameter_ref = $args{parameter_ref};
+  my $rs_param_ref = $args{rs_param_ref};
+  my $url_cols_ref = $args{url_cols_ref};
+  my $hidden_cols_ref = $args{hidden_cols_ref};
+  my $max_width_ref = $args{max_width_ref};
+  my $base_url = $args{base_url};
+  my $ini_search_key = $args{search_key};
+  my $spacer = $sbeams->getGifSpacer(100);
    
-	 my %filtered_result = ();
-   ### one search key may have several search key type, we only keep one
-   my %Distinct_SearchResult = ();
-   ### keep the recored of maxium number of matched for row entry..
-   my %max_n_matches = ();
+  my %filtered_result = ();
+  ### one search key may have several search key type, we only keep one
+  my %Distinct_SearchResult = ();
+  ### keep the recored of maxium number of matched for row entry..
+  my %max_n_matches = ();
 
-   my $page_size = $rs_param_ref->{page_size} || 50;
-   my $page_number = $rs_param_ref->{page_number} || 0;
+  my $page_size = $rs_param_ref->{page_size} || 50;
+  my $page_number = $rs_param_ref->{page_number} || 0;
 
-   my @searchKeys = split(/\s+/, $ini_search_key);
-   my $firstKey = $searchKeys[0];
-   my $lastKey;
-   if(scalar @searchKeys == 1){
-      $lastKey = '';
-   }
-   else{
-     $lastKey = $searchKeys[scalar @searchKeys -1];
-   }
+  my @searchKeys = split(/\s+/, $ini_search_key);
+  my $firstKey = $searchKeys[0];
+  my $lastKey;
+  if(scalar @searchKeys == 1){
+    $lastKey = '';
+  }
+  else{
+    $lastKey = $searchKeys[scalar @searchKeys -1];
+  }
    
-	 for my $row ( @{$resultset_ref->{data_ref}} ) {
-			 my $search_key = uc($row->[0]);
-			 my $build_type = $row->[1];
-			 my $rescource_name = $row->[2];
-			 my $organism_name = $row->[7];
-       my $resource_n_matches = $row->[4];
-       my $resource_type = 'Protein';
-       if ($row->[8] =~ /sumed/){
-         $row->[8] =~ s/sumed/sumed by/;
-       }elsif($row->[8] =~ /identical/){
-         $row->[8] =~ s/identical/identical to/;
-       }elsif($row->[8] =~ /indistinguishable/){
-         $row->[8] =~ s/indistinguishable/indistinguishable from/;
-       }
-			 next if($rescource_name =~ /NO_ENS/);
-       $resource_type = 'Peptide' if($row->[3] eq 'PeptideAtlas peptide');
+  for my $row ( @{$resultset_ref->{data_ref}} ) {
+    my $search_key = uc($row->[0]);
+    my $build_type = $row->[1];
+    my $rescource_name = $row->[2];
+    my $organism_name = $row->[7];
+    my $resource_n_matches = $row->[4];
+    my $resource_type = 'Protein';
+    if ($row->[8] =~ /sumed/){
+      $row->[8] =~ s/sumed/sumed by/;
+    }elsif($row->[8] =~ /identical/){
+      $row->[8] =~ s/identical/identical to/;
+    }elsif($row->[8] =~ /indistinguishable/){
+      $row->[8] =~ s/indistinguishable/indistinguishable from/;
+    }
+    next if($rescource_name =~ /NO_ENS/);
+    $resource_type = 'Peptide' if($row->[3] eq 'PeptideAtlas peptide');
 
-       if($max_n_matches{$resource_type}{$search_key}{$organism_name}{n_obs} < $resource_n_matches){
-         $max_n_matches{$resource_type}{$search_key}{$organism_name}{n_obs} = $resource_n_matches;
-       }
-       push @{$max_n_matches{$resource_type}{$search_key}{$organism_name}{data}}, $row;
-			 #if(not defined $Distinct_SearchResult{$search_key}{$organism_name}{$build_type}{$rescource_name}){
-       #   if($search_key =~ /(\s+|^|_|-)$ini_search_key(_|-|\s+|$)/i){
-       #    	push @{$filtered_result{$resource_type}{highpriority}{$search_key}{$organism_name}},$row;
-       #   }else{
-       #     push @{$filtered_result{$resource_type}{lowpriority}{$search_key}{$organism_name}} , $row;
-       #   }
-			 #}
-			 $Distinct_SearchResult{$search_key}{$organism_name}{$build_type}{$rescource_name} = 1;
-	 }
+    if($max_n_matches{$resource_type}{$search_key}{$organism_name}{n_obs} < $resource_n_matches){
+      $max_n_matches{$resource_type}{$search_key}{$organism_name}{n_obs} = $resource_n_matches;
+    }
+    push @{$max_n_matches{$resource_type}{$search_key}{$organism_name}{data}}, $row;
+    #if(not defined $Distinct_SearchResult{$search_key}{$organism_name}{$build_type}{$rescource_name}){
+    #   if($search_key =~ /(\s+|^|_|-)$ini_search_key(_|-|\s+|$)/i){
+    #    	push @{$filtered_result{$resource_type}{highpriority}{$search_key}{$organism_name}},$row;
+    #   }else{
+    #     push @{$filtered_result{$resource_type}{lowpriority}{$search_key}{$organism_name}} , $row;
+    #   }
+    #}
+    $Distinct_SearchResult{$search_key}{$organism_name}{$build_type}{$rescource_name} = 1;
+  }
 
   ### count number of result rows, auto expand when result row <= 2 
   my $n_result_rows = 0;
@@ -1145,18 +1144,18 @@ sub displayTable{
   foreach my $resource_type(keys %max_n_matches){
     foreach my $search_key ( keys %{$max_n_matches{$resource_type}}){
       foreach my $organism_name(keys %{$max_n_matches{$resource_type}{$search_key}}){
-        my $n_obs = 0;
-        $n_obs = $max_n_matches{$resource_type}{$search_key}{$organism_name}{n_obs};
-        if($search_key =~ /(\s+|^|_|-)$ini_search_key(_|-|\s+|$)/i){
-          push @{$filtered_result{$organism_name}{$n_obs}{highpriority}{$search_key}{$resource_type}}, 
-          @{$max_n_matches{$resource_type}{$search_key}{$organism_name}{data}};
-        }else{
-          push @{$filtered_result{$organism_name}{$n_obs}{lowpriority}{$search_key}{$resource_type}},
-          @{$max_n_matches{$resource_type}{$search_key}{$organism_name}{data}};
-        }
-        $n_result_rows++;
-       }
-     }
+	my $n_obs = 0;
+	$n_obs = $max_n_matches{$resource_type}{$search_key}{$organism_name}{n_obs};
+	if($search_key =~ /(\s+|^|_|-)$ini_search_key(_|-|\s+|$)/i){
+	  push @{$filtered_result{$organism_name}{$n_obs}{highpriority}{$search_key}{$resource_type}}, 
+	  @{$max_n_matches{$resource_type}{$search_key}{$organism_name}{data}};
+	}else{
+	  push @{$filtered_result{$organism_name}{$n_obs}{lowpriority}{$search_key}{$resource_type}},
+	  @{$max_n_matches{$resource_type}{$search_key}{$organism_name}{data}};
+	}
+	$n_result_rows++;
+      }
+    }
   }
 
   if( $parameter_ref->{open_all} || $n_result_rows <= 2 ){
@@ -1165,147 +1164,147 @@ sub displayTable{
 
   my $pre_resource_type = '';
 
- foreach my $organism_name (sort {$a cmp $b} keys %filtered_result){
-   foreach my $n_obs (sort {$b <=> $a} keys %{$filtered_result{$organism_name}}){
-    foreach my $order (qw(highpriority lowpriority)){
-   	  foreach my $search_key (sort {$a cmp $b} keys %{$filtered_result{$organism_name}{$n_obs}{$order}}){
-        foreach my $resource_type (sort {$a cmp $b} keys %{$filtered_result{$organism_name}{$n_obs}{$order}{$search_key}}){ 
-					if( $ROW_COUNT >= $page_size*$page_number && $ROW_COUNT < $page_size*($page_number+1)){
-						$resultset_ref->{data_ref} = \@{$filtered_result{$organism_name}{$n_obs}{$order}{$search_key}{$resource_type}};      
-						my %resource_names = ();
-						my $n_resource_name = 1 ;
-						my $n_builds = scalar keys %{$Distinct_SearchResult{$search_key}{$organism_name}};
-						my $download_link = '';
-						my $str = '';
-						my $str_build = '';
-						my $search_key_org = $search_key;
-						next if($n_builds == 0);
-						if($n_builds > 1){
-						 $str_build = 's';
-						}
-						foreach my $build( keys %{$Distinct_SearchResult{$search_key}{$organism_name}}){
-							foreach my $id (keys %{$Distinct_SearchResult{$search_key}{$organism_name}{$build}}){
-							 $resource_names{$id} = 1;
-						 }
-						}
-						$n_resource_name = scalar keys %resource_names;
-
-						if($n_resource_name > 1){
-							$str = 's';
-						}
-
-						if ( $build_type_selection->{atlas_build_ids} =~ /^\d+$/ ) {
-							my @identifiers;
-							for my $row ( @{$resultset_ref->{data_ref}} ) {
-								push @identifiers, $row->[$colnameidx_ref->{resource_name}];
-							} 
-							my $id_string = join( '%3B', @identifiers );
-
-							$id_string =~ s/\s//g;
-							my $prot_link = qq ~<A HREF="GetProteins?atlas_build_id=$build_type_selection->{atlas_build_ids};
-															biosequence_name_constraint=$id_string;QUERY_NAME=AT_GetProteins;action=QUERY"> link</A> ~;
-							my $pep_link = $prot_link;
-							$pep_link =~ s/GetProteins/GetPeptides/g;
-
-							$download_link = qq~
-								$spacer You can download more information about the proteins via this $prot_link. <BR>
-								$spacer Or information about all observed peptides for the proteins via this $pep_link.
-							~;
-					 }
-					 if ( $sbeams->output_mode() eq 'html') {
-							 my ( $tr, $link ) = $sbeams->make_table_toggle( name => $table_name,
-																										visible => $visible,
-																										tooltip => 'Show/Hide Section',
-																										imglink => 0,
-																										sticky => 0 );
-							 my $pre_str='';
-							 my $aft_str='';
-							 my $str1 = '';
-							 my $str2 = '';
-							 my $search_key_str = '';
-							 my $pattern = "$firstKey.*$lastKey";
-							 if($lastKey eq ''){
-								 $pattern = $firstKey;
-							 }
-							 
-							 $search_key =~ /(.*)($pattern)(.*)/i;
-							 $search_key_str = $2;
-               $search_key_str =~ s/([\[\]\(\)])/\\$1/g;
-
-							 if(length($search_key) > 80){
-								 if(length($2) > 80){
-									 if($1){$pre_str = '...';}
-									 if($3){$aft_str = '...';}
-								 }
-								 else{   
-									 my $len = int((80 - length($2))/2);
-									 if(length($1) > $len){
-										 $pre_str = '...';
-										 $search_key =~ s/.+\s+(\S*.{$len}$search_key_str.*)/$1/i;
-									 }
-									 if(length($3) > $len){
-										 $aft_str = '...';
-										 $search_key =~ s/(.*$search_key_str.{$len}\S*)\s+.+/$1/i;
-									 }
-								 }
-							 }
-							 if(length($search_key_str) > 80){
-									my $len = 80 - length($firstKey) - length($lastKey);
-									$search_key_str =~ s/^$firstKey(.{$len}).*$lastKey$/$firstKey$1...$lastKey/i;
-							 }else{
-								 $search_key =~ /(.*)$search_key_str(.*)/i;
-								 #if($1 ne ''){ $str1 = qq~<font style="BACKGROUND-COLOR: FFFF99">$1</font>~;}
-								 #if($2 ne ''){ $str2 = qq~<font style="BACKGROUND-COLOR: FFFF99">$2</font>~;}
-								 if($1){ $str1 = $1;}
-								 if($2){ $str2 = $2;}
-							 }
-               my $patt = join("|", @searchKeys);
-							 #foreach (@searchKeys){
-               $search_key_str =~ s/\\//g;
-							 $search_key_str =~s/($patt)/<font style="BACKGROUND-COLOR: CCCCCC">$1<\/font>/ig;
-							 #}
-							 $search_key_str =~ s/(<font.+<\/font>)(.+)<font/$1<font style="BACKGROUND-COLOR: FFFF99">$2<\/font><font/g;
-							 if($n_resource_name == 1){
-									 $search_key_str = qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/$resultset_ref->{data_ref}->[0]->[$colnameidx_ref->{resource_url}]">$pre_str$str1$search_key_str$str2$aft_str</A>~;
-							 }
-							 else{
-								 $search_key_str = qq~$pre_str$str1$search_key_str$str2$aft_str~;
-							 }
-
-							 my $text = qq~$organism_name: $search_key_str - find <B>$n_resource_name</B> identifier$str in <B>$n_builds</B> build$str_build ~;
-							 if( $n_obs >= 1){ 
-									$text .= qq~, observed <= <B>$n_obs</B> times ~;
-							 }else{
-									$text .=  qq~, observed <B>0</B> time~;
-							 }
-
-							 my $buffer = qq~<TR><TD colspan="2" width="1000">$link $text</TD></TR>~;
-						
-							 print "$resource_type hits<BR>" if($pre_resource_type ne $resource_type);
-							 $pre_resource_type = $resource_type;
-							 print qq~ \n<TABLE width="1000" >$buffer</TABLE><TABLE><TR $tr><TD COLSPAN=2>~;
-							 #### Display the resultset
-							 $sbeams->displayResultSet(
-									resultset_ref=>$resultset_ref,
-									query_parameters_ref=> $parameter_ref,
-									url_cols_ref=> $url_cols_ref,
-									hidden_cols_ref=> $hidden_cols_ref,
-									max_widths=> $max_width_ref,
-									column_titles_ref=> $column_titles_ref,
-									sortable  => 1,
-							 );
-							 print "</TD></TR></TABLE>\n";
-							$table_name++; 
-						 }
-					}#check row_count
-					$ROW_COUNT++;
-        }
-			}
-     }
+  foreach my $organism_name (sort {$a cmp $b} keys %filtered_result){
+    foreach my $n_obs (sort {$b <=> $a} keys %{$filtered_result{$organism_name}}){
+      foreach my $order (qw(highpriority lowpriority)){
+	foreach my $search_key (sort {$a cmp $b} keys %{$filtered_result{$organism_name}{$n_obs}{$order}}){
+	  foreach my $resource_type (sort {$a cmp $b} keys %{$filtered_result{$organism_name}{$n_obs}{$order}{$search_key}}){ 
+	    if( $ROW_COUNT >= $page_size*$page_number && $ROW_COUNT < $page_size*($page_number+1)){
+	      $resultset_ref->{data_ref} = \@{$filtered_result{$organism_name}{$n_obs}{$order}{$search_key}{$resource_type}};      
+	      my %resource_names = ();
+	      my $n_resource_name = 1 ;
+	      my $n_builds = scalar keys %{$Distinct_SearchResult{$search_key}{$organism_name}};
+	      my $download_link = '';
+	      my $str = '';
+	      my $str_build = '';
+	      my $search_key_org = $search_key;
+	      next if($n_builds == 0);
+	      if($n_builds > 1){
+		$str_build = 's';
+	      }
+	      foreach my $build( keys %{$Distinct_SearchResult{$search_key}{$organism_name}}){
+		foreach my $id (keys %{$Distinct_SearchResult{$search_key}{$organism_name}{$build}}){
+		  $resource_names{$id} = 1;
 		}
+	      }
+	      $n_resource_name = scalar keys %resource_names;
+
+	      if($n_resource_name > 1){
+		$str = 's';
+	      }
+
+	      if ( $build_type_selection->{atlas_build_ids} =~ /^\d+$/ ) {
+		my @identifiers;
+		for my $row ( @{$resultset_ref->{data_ref}} ) {
+		  push @identifiers, $row->[$colnameidx_ref->{resource_name}];
+		} 
+		my $id_string = join( '%3B', @identifiers );
+
+		$id_string =~ s/\s//g;
+		my $prot_link = qq ~<A HREF="GetProteins?atlas_build_id=$build_type_selection->{atlas_build_ids};
+				    biosequence_name_constraint=$id_string;QUERY_NAME=AT_GetProteins;action=QUERY"> link</A> ~;
+		my $pep_link = $prot_link;
+		$pep_link =~ s/GetProteins/GetPeptides/g;
+
+		$download_link = qq~
+				  $spacer You can download more information about the proteins via this $prot_link. <BR>
+				  $spacer Or information about all observed peptides for the proteins via this $pep_link.
+				    ~;
+	      }
+	      if ( $sbeams->output_mode() eq 'html') {
+		my ( $tr, $link ) = $sbeams->make_table_toggle( name => $table_name,
+								visible => $visible,
+								tooltip => 'Show/Hide Section',
+								imglink => 0,
+								sticky => 0 );
+		my $pre_str='';
+		my $aft_str='';
+		my $str1 = '';
+		my $str2 = '';
+		my $search_key_str = '';
+		my $pattern = "$firstKey.*$lastKey";
+		if($lastKey eq ''){
+		  $pattern = $firstKey;
+		}
+
+		$search_key =~ /(.*)($pattern)(.*)/i;
+		$search_key_str = $2;
+		$search_key_str =~ s/([\[\]\(\)])/\\$1/g;
+
+		if(length($search_key) > 80){
+		  if(length($2) > 80){
+		    if($1){$pre_str = '...';}
+		    if($3){$aft_str = '...';}
+		  }
+		  else{   
+		    my $len = int((80 - length($2))/2);
+		    if(length($1) > $len){
+		      $pre_str = '...';
+		      $search_key =~ s/.+\s+(\S*.{$len}$search_key_str.*)/$1/i;
+		    }
+		    if(length($3) > $len){
+		      $aft_str = '...';
+		      $search_key =~ s/(.*$search_key_str.{$len}\S*)\s+.+/$1/i;
+		    }
+		  }
+		}
+		if(length($search_key_str) > 80){
+		  my $len = 80 - length($firstKey) - length($lastKey);
+		  $search_key_str =~ s/^$firstKey(.{$len}).*$lastKey$/$firstKey$1...$lastKey/i;
+		}else{
+		  $search_key =~ /(.*)$search_key_str(.*)/i;
+		  #if($1 ne ''){ $str1 = qq~<font style="BACKGROUND-COLOR: FFFF99">$1</font>~;}
+		  #if($2 ne ''){ $str2 = qq~<font style="BACKGROUND-COLOR: FFFF99">$2</font>~;}
+		  if($1){ $str1 = $1;}
+		  if($2){ $str2 = $2;}
+		}
+		my $patt = join("|", @searchKeys);
+		#foreach (@searchKeys){
+		$search_key_str =~ s/\\//g;
+		$search_key_str =~s/($patt)/<font style="BACKGROUND-COLOR: CCCCCC">$1<\/font>/ig;
+		#}
+		$search_key_str =~ s/(<font.+<\/font>)(.+)<font/$1<font style="BACKGROUND-COLOR: FFFF99">$2<\/font><font/g;
+		if($n_resource_name == 1){
+		  $search_key_str = qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/$resultset_ref->{data_ref}->[0]->[$colnameidx_ref->{resource_url}]">$pre_str$str1$search_key_str$str2$aft_str</A>~;
+		}
+		else{
+		  $search_key_str = qq~$pre_str$str1$search_key_str$str2$aft_str~;
+		}
+
+		my $text = qq~$organism_name: $search_key_str - find <B>$n_resource_name</B> identifier$str in <B>$n_builds</B> build$str_build ~;
+		if( $n_obs >= 1){ 
+		  $text .= qq~, observed <= <B>$n_obs</B> times ~;
+		}else{
+		  $text .=  qq~, observed <B>0</B> time~;
+		}
+
+		my $buffer = qq~<TR><TD colspan="2" width="1000">$link $text</TD></TR>~;
+
+		print "$resource_type hits<BR>" if($pre_resource_type ne $resource_type);
+		$pre_resource_type = $resource_type;
+		print qq~ \n<TABLE width="1000" >$buffer</TABLE><TABLE><TR $tr><TD COLSPAN=2>~;
+		#### Display the resultset
+		$sbeams->displayResultSet(
+		  resultset_ref=>$resultset_ref,
+		  query_parameters_ref=> $parameter_ref,
+		  url_cols_ref=> $url_cols_ref,
+		  hidden_cols_ref=> $hidden_cols_ref,
+		  max_widths=> $max_width_ref,
+		  column_titles_ref=> $column_titles_ref,
+		  sortable  => 1,
+		    );
+		print "</TD></TR></TABLE>\n";
+		$table_name++; 
+	      }
+	    }#check row_count
+	    $ROW_COUNT++;
+	  }
+	}
+      }
+    }
   }
 } # end displayTable
-                                             
+
 sub throw_error {
   my %args = @_;
   for my $arg ( qw(project error) ) {
@@ -1565,6 +1564,8 @@ sub getSearchKeyTypeHTML {
   my $spacer = $sbeams->getGifSpacer(300);
   my $content = qq~
   <SCRIPT  TYPE="text/javascript">
+   document.title = "PeptideAtlas: Search";
+						
   function toggle_boxes(type) {
     var fields = new Array();
     if ( type == "specific" ) {

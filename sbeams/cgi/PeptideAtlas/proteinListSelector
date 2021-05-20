@@ -3,7 +3,7 @@
 ###############################################################################
 # $Id$
 #
-# SBEAMS is Copyright (C) 2000-2020 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -48,10 +48,8 @@ my $show_image = 0;
 
 
 { # Main 
-
     # Authenticate or exit
     my $username = $sbeams->Authenticate( allow_anonymous_access => 1) || exit;
-
 
 
     ## get current settings
@@ -60,7 +58,8 @@ my $show_image = 0;
     my $list_help = get_table_help( table => 'list' );
     my $protein_help = get_table_help( table => 'protein' );
 
-    my $page = $sbeams->getGifSpacer( 700 ) . "<BR>\n";
+    my $page = "<script>document.title = 'PeptideAtlas: HPP Protein List';</script>\n";
+
 
     # Get the HTML to display the tabs
     my $tabMenu = $atlas->getTabMenu(
@@ -69,7 +68,7 @@ my $show_image = 0;
     );
 
     $page .=<<"    END";
-		$tabMenu
+    $tabMenu
      <br>
     $list_help
     END
@@ -84,9 +83,9 @@ my $show_image = 0;
 
     # Print what we already have, speed up apparent page loading time.
     $atlas->display_page_header( onload => "set_toggle_box( 'protein_list_table' );sortables_init()", sortable => 1 );
-		print $page;
+    print $page;
 
-		$atlas->display_page_footer();
+    $atlas->display_page_footer();
 
 } # end main
 
@@ -229,51 +228,56 @@ sub get_list_overview {
     }
 
     my $spc = $sbeams->getGifSpacer(5);
-    my $tab = $sbeams->getGifSpacer(20);
+    my $tab = '<td style="width:30px;"></td>';
 
     my $contributor = $atlas->encodeSectionItem( key   => 'Contributors',
-                              value => "$info->{contributors}" . $spc, vspan => 3 ) . "\n";
-    $contributor =~ s/NOWRAP/>$tab<\/TD><TD NOWRAP/;
-    $log->info( "contributor is $contributor" );
+						 tr_info => 'class="hoverable"',
+						 value => "$info->{contributors}" . $spc, vspan => 3 ) . "\n";
+    $contributor =~ s|<TD|$tab<TD|;
+    #$log->info( "contributor is $contributor" );
 
     my $desc = $atlas->encodeSectionItem( key   => 'Description',
-                              value => $info->{description}, vspan => 3 ) . "\n";
-    $desc =~ s/NOWRAP/>$tab<\/TD><TD NOWRAP/;
+					  tr_info => 'class="hoverable"',
+					  value => $info->{description}, vspan => 3 ) . "\n";
+    $desc =~ s|<TD|$tab<TD|;
 
     my $nprot = $atlas->encodeSectionItem( key   => 'Number of Proteins', 
-                              value => $info->{n_proteins}, vspan => 3 ) . "\n";
-    $nprot =~ s/NOWRAP/>$tab<\/TD><TD NOWRAP/;
+					   tr_info => 'class="hoverable"',
+					   value => $info->{n_proteins}, vspan => 3 ) . "\n";
+    $nprot =~ s|<TD|$tab<TD|;
 
     my $url = '';
     if ( $info->{url} ) {
       $url = $atlas->encodeSectionItem( key   => 'Reference', 
-                             value => "<A HREF='$info->{url}'>$info->{url}</A>", vspan => 3 ) . "\n";
-      $url =~ s/NOWRAP/>$tab<\/TD><TD NOWRAP/;
+					tr_info => 'class="hoverable"',
+					value => "<A HREF='$info->{url}'>$info->{url}</A>", vspan => 3 ) . "\n";
+    $url =~ s|<TD|$tab<TD|;
     }
     my $pmed = '';
     if ( $info->{pubmed_id} ) {
       $pmed = $atlas->encodeSectionItem( key   => 'Pub Med Link', 
-                key   => 'PubMed Link', 
-                value => "<A HREF='http://www.ncbi.nlm.nih.gov/pubmed/$info->{pubmed_id}'>$info->{pubmed_id}</A>", 
-                vspan => 3 ) . "\n";
-      $pmed =~ s/NOWRAP/>$tab<\/TD><TD NOWRAP/;
+					 key   => 'PubMed Link', 
+					 tr_info => 'class="hoverable"',
+					 value => "<A HREF='http://www.ncbi.nlm.nih.gov/pubmed/$info->{pubmed_id}'>$info->{pubmed_id}</A>", 
+					 vspan => 3 ) . "\n";
+      $pmed =~ s|<TD|$tab<TD|;
     }
 
-    $table .= "<TR><TD colspan=3> <div style='font-family:Helvetica, Arial, sans-serif;font-size:120%;font-weight:bold;color:#FF8700' id=heading>$info->{list_title}&nbsp;&nbsp;<a href=proteinList?protein_list_id=$info->{protein_list_id} title='Search proteins in the $info->{list_title} HPP B/D List'> View list <img src=/devDC/sbeams/images/search_icon_small.png></img></a></div> </TD></TR>\n";
-    my $sub_table = "<table>\n";
+    $table .= "<TR><TD colspan=3> <div style='font-size:large;font-weight:bold;color:#ff5f00' id=heading>$info->{list_title}&nbsp;&nbsp;<a href=proteinList?protein_list_id=$info->{protein_list_id} title='Search proteins in the $info->{list_title} HPP B/D List'> View list <img src=/devDC/sbeams/images/search_icon_small.png></img></a></div> </TD></TR>\n";
+    my $sub_table = "";#<table>\n";
     $sub_table .= "$contributor\n";
     $sub_table .= "$nprot\n";
     $sub_table .= "$url\n";
     $sub_table .= "$pmed\n";
-    $sub_table .= "</table>\n";
-    $log->info( $sub_table);
+    #$sub_table .= "</table>\n";
+    #$log->info( $sub_table);
     
     my $img = '';
     my $caption = '';
     if ( $info->{image_path} ) {
       my @path = split( /\//, $info->{image_path});
       my $web_path = "/devDC/sbeams/images/$path[$#path]";
-      $img = "$tab<img src=$web_path height=80 width=80></img>\n";
+      $img = "<img src='$web_path' style='height:80px;width:80px;'></img>\n";
       $caption = $info->{image_caption} || '';
     }
 
@@ -284,9 +288,10 @@ sub get_list_overview {
       $abstract =~ s/\n/<br>/g;
     }
   
-    $table .= "<tr><td colspan=3 valign=top>$sub_table</td></tr>\n";
+#    $table .= "<tr><td colspan=3 valign=top>$sub_table</td></tr>\n";
+    $table .= $sub_table;
     $table .= "<tr><td></td><td valign=top><a href=MapSearch title='Use image-based interface to build sub-list' >$img</a></td><td valign=top>$caption</td></tr>\n" if $img;
-    $table .= "<tr><td>$tab</td><td colspan=2 valign=top>$tab $abstract</td></tr>\n";
+    $table .= "<tr><td></td><td colspan='2' valign='top'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$abstract</td></tr>\n";
     $table .= "<tr><td colspan=3 valign=top>$spc</td></tr>\n";
     $table .= "<tr><td colspan=3 valign=top>$spc</td></tr>\n";
   }
@@ -297,7 +302,6 @@ sub get_list_overview {
 
 # Peptide build stats
 sub get_list_table {
-
   my $build_id = shift;
 
   # Get a list of accessible project_ids
@@ -692,7 +696,6 @@ sub get_btxt {
 
 }
 sub get_list_selector {
-
   my $sql =<<"  END";
   SELECT title, first_name, last_name, protein_list_id
   FROM $TBAT_DOMAIN_PROTEIN_LIST DPL
@@ -702,12 +705,9 @@ sub get_list_selector {
 
   my $sth = $sbeams->get_statement_handle( $sql );
   my $help = qq~
-       <div style="font-family:Helvetica, Arial, sans-serif;font-size:200%;font-weight:bold" id=heading> Protein List Selector </div>
-   <br>
-   <div id=help style="width:800px"> Below are several lists of high-priority proteins from the various participating groups of the Biology/Disease-driven Human Proteome Project (B/D-HPP). Click on the search icon next to any list to bring up a tool that helps you select proteins to explore in PeptideAtlas or SRMAtlas. A template file for submitting a protein list can be <a href=http://www.peptideatlas.org/download/template_files/HPP_B-D_ListTemplate.xlsx> downloaded here </a>
-
-  </div>
-
+   <h1 id="heading"> Protein List Selector </h1>
+   <p id=help style="margin-left:15px;max-width:1000px"> Below are several lists of high-priority proteins from the various participating groups of the Biology/Disease-driven Human Proteome Project (B/D-HPP). Click on the search icon next to any list to bring up a tool that helps you select proteins to explore in PeptideAtlas or SRMAtlas. A template file for submitting a protein list can be <a href=http://www.peptideatlas.org/download/template_files/HPP_B-D_ListTemplate.xlsx> downloaded here </a>.
+  </p>
   <br>
   ~;
   return $help;

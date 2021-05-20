@@ -1,12 +1,12 @@
 #!/usr/local/bin/perl
 
 ###############################################################################
-# $Id: $
+# $Id$
 #
 # Description : This script authenticates the user, and then
 #               displays the opening access page.
 #
-# SBEAMS is Copyright (C) 2000-2010 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -119,10 +119,7 @@ sub main
     program_name => $PROG_NAME,
   );
   if ($sbeams->output_mode() eq 'html') {
-    print "<BR>\n";
-    unless ( $atlas->is_srm_mode() ) {
-      print $tabMenu->asHTML();
-    }
+    print $tabMenu->asHTML();
     print "<BR>\n";
   }
 

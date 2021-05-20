@@ -8,7 +8,7 @@
 # Description : This program that allows users to
 #               get proteins from the PeptideAtlas based on various criteria.
 #
-# SBEAMS is Copyright (C) 2000-2014 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -192,7 +192,6 @@ sub handle_request {
   my $get_coverage_density_only = 0;
 
   #### Show current user context information
-  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
   #$sbeams->printUserContext();
 
   #### Get the HTML to display the tabs
@@ -202,6 +201,7 @@ sub handle_request {
   );
   if ( $sbeams->output_mode() eq 'html' ) {
     print $tabMenu->asHTML();
+    print "<script>document.title = 'PeptideAtlas: Get Proteins';</script>";
     if ( my $msg = $q->cookie( 'SubmitMessage' ) ) {
       print qq~
       <br>

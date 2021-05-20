@@ -6,7 +6,7 @@
 #
 # Description : PeptideAtlas Submission System main dataset viewer page
 #
-# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -177,7 +177,6 @@ sub handle_request {
 
 
   #### Show current user context information
-  print "<BR>\n" if ($output_mode eq 'html');
   #$sbeams->printUserContext();
 
   #### Get the HTML to display the tabs
@@ -490,7 +489,7 @@ sub handle_request {
 
 
      if ($authentication->{result} eq 'Success') {
-       print "<B><font color=\"red\">Welcome $firstName $lastName ($emailAddress)</B></font>\n";
+       print "<B><font color='#b00'>Welcome $firstName $lastName ($emailAddress)</B></font>\n";
        print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
        print $q->submit(-name => "action",
 			-value => 'LOGOUT',
@@ -503,32 +502,32 @@ sub handle_request {
 
        print "<B>Password</B>";
        print qq~<input type="password" name="password" value="$password" size=10 maxlength=50/>~;
-       print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
 
        print $q->submit(-name => "action",
+			-style => "margin-left:30px;",
 			-value => 'LOGIN',
 			-label => 'LOGIN');
      }
-     print "<BR>\n";
+     print "<br><br>\n";
 
-     print "<B><font color=\"red\">Dataset Identifier</B></font>\n";
+     print "<B><font color='#b00'>Dataset Identifier</B></font>\n";
      print $q->textfield( "identifier", $datasetIdentifier, 10, 10);
 
      if (! $isAccessible || $parameters{datasetPassword}) {
-       print "<B>Dataset Password</B>\n";
        print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
+       print "<B>Dataset Password</B>\n";
        print qq~<input type="password" name="datasetPassword" value="$parameters{datasetPassword}" size=10 maxlength=10/>~;
      }
 
-     print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
      print $q->submit(-name => "action",
+		      -style => "margin-left:30px;",
 		      -value => 'VIEW',
 		      -label => 'VIEW');
      print "<BR>\n";
      print "<HR>\n";
 
      unless ($datasetIdentifier) {
-       print "<BR><BR>Please provide a dataset identifier above and click [View].<P>";
+       print "<br><br>Please provide a dataset identifier above and click <b>[View]</b>.<br><br>";
        return;
      }
      if (@errors) {

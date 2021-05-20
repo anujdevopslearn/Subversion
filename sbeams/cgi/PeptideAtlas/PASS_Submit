@@ -6,7 +6,7 @@
 #
 # Description : PeptideAtlas Submission System main submit page
 #
-# SBEAMS is Copyright (C) 2000-2020 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -169,7 +169,6 @@ sub handle_request {
   my %parameters = %{$ref_parameters};
 
   #### Show current user context information
-  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
   #$sbeams->printUserContext();
 
   #### Get the HTML to display the tabs
@@ -370,13 +369,13 @@ sub handle_request {
      print "<H3>Submit a new SRM Dataset</H3>";
      print "<P>Thank you for submitting a dataset to PASSEL.</P>";
 
-     print qq~<table style="border:3px solid #b00;background:#f3f1e4;" cellpadding="5"><tr><td><img height="50" width="50" src="../../images/alert-icon.png"></td><td style="color:#b00;"><b>NOTICE:</b> This submission system accepts <b>only SRM datasets</b>.<br><br>If you have a DDA or DIA dataset to submit, please <a href="http://www.proteomexchange.org/submission">submit to PRIDE or MassIVE via ProteomeXchange instead</a>.<br><br><b>SRM datasets may still be submitted to PASSEL below.<BR></b></td></tr></table>
+     print qq~<table style="margin-left:30px;border:3px solid #b00;background:#f3f1e4;" cellpadding="5"><tr><td><img height="50" width="50" src="../../images/alert-icon.png"></td><td style="color:#b00;"><b>NOTICE:</b> This submission system accepts <b>only SRM datasets</b>.<br><br>If you have a DDA or DIA dataset to submit, please <a href="http://www.proteomexchange.org/submission">submit to PRIDE or MassIVE via ProteomeXchange instead</a>.<br><br><b>SRM datasets may still be submitted to PASSEL below.<BR></b></td></tr></table>
      ~;
 
-     print "<UL style='font-size:larger;'><LI>Please fill out the form below to register a new submission.";
+     print "<UL style='margin-left:20px;font-size:larger;'><LI>Please fill out the form below to register a new submission.";
      print "<LI>After completing the form, you will receive instructions on how to upload your data via FTP";
      print "<LI>&#11088; items are required";
-     print "<LI>Please prepare your transition list (methods file) in <a href='http://www.mcponline.org/content/early/2011/12/12/mcp.R111.015040.abstract'><font color=\'#b00\'><b>TraML</b></font></a> format (or, if not possible, using this <a href='http://www.peptideatlas.org/upload/PASSEL_transition_list_template.xlsx'><font color=\'#b00\'>tsv template</font></a>).";
+     print "<LI>Please prepare your transition list (methods file) in <a href='http://www.mcponline.org/content/early/2011/12/12/mcp.R111.015040.abstract'>TraML</a> format (or, if not possible, using this <a href='http://www.peptideatlas.org/upload/PASSEL_transition_list_template.xlsx'>tsv template</a>).";
      print "</UL>";
 
      print $q->start_form(-method=>"POST",
@@ -384,7 +383,7 @@ sub handle_request {
                           -name=>"MainForm",
 			 );
 
-     print "<table cellpadding='8' style='border-collapse:collapse;margin-bottom:50px;' class='info_box'>";
+     print "<table cellpadding='8' style='margin-left:5px;border-collapse:collapse;margin-bottom:50px;' class='info_box'>";
 
      if (@errors) {
        print "<tr><td colspan='4' style='background:#b00;color:#fff;text-align:center;font-weight:bold;'>ERRORS</td></tr>";

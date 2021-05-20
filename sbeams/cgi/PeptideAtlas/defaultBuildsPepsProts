@@ -7,7 +7,7 @@
 #
 # Description : This script displays details about all Atlas builds
 #
-# SBEAMS is Copyright (C) 2000-2009 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -88,21 +88,13 @@ sub main
 
     #### Decide what action to take based on information so far
     if ($parameters{action} eq "???") {
-
         # Some action
  
     } else {
-
         $sbeamsMOD->display_page_header(project_id => $project_id);
-
         handle_request(ref_parameters=>\%parameters);
-
         $sbeamsMOD->display_page_footer();
-
     }
-
-
-
 
 } # end main
 
@@ -111,14 +103,13 @@ sub main
 # Show the main welcome page
 ###############################################################################
 sub handle_request {
+  my %args = @_;
 
-    my %args = @_;
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+  || die "ref_parameters not passed";
 
-    #### Process the arguments list
-    my $ref_parameters = $args{'ref_parameters'}
-        || die "ref_parameters not passed";
-
-    my %parameters = %{$ref_parameters};
+  my %parameters = %{$ref_parameters};
 
 
   #### Get the current atlas_build_id based on parameters or session
@@ -137,8 +128,7 @@ sub handle_request {
     program_name => $PROG_NAME,
   );
   if ($sbeams->output_mode() eq 'html') {
-    print "<BR>\n";
-    print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+    print $tabMenu->asHTML();
     print "<BR>\n";
   }
 
@@ -163,6 +153,7 @@ sub handle_request {
             document.AtlasBuildList.apply_action.value = "GO";
             document.AtlasBuildList.submit();
           }
+         document.title = 'PeptideAtlas: Download Builds Peps & Prots';
         </script>
         ~;
 
@@ -171,14 +162,15 @@ sub handle_request {
 			     -name=>"AtlasBuildList",
                             );
   print qq~
-  <P>Links below will retrieve the identified peptides and proteins
+  <div style='margin-left:15px;margin-top:25px;min-height:600px;'>
+     Links below will retrieve the identified peptides and proteins
      for the latest PeptideAtlas build for each organism.<br>
      These URLs stay constant over time and can be used programmatically.
-  </P>
+     <br><br>
   ~;
 
 
-  my $table = SBEAMS::Connection::DataTable->new();
+  my $table = SBEAMS::Connection::DataTable->new(CELLPADDING=>5);
 
   my $this_row = $table->getRowNum();
 
@@ -193,9 +185,9 @@ sub handle_request {
   $headers[$n_canonicals_idx] = 'canonical proteins';
 
   # Define header row
-  $table ->addRow( \@headers );
-  $table->setRowAttr(  COLS => [1..$ncols], ROWS => [1], BGCOLOR => '#bbbbbb', ALIGN=>'CENTER' );
-  $table->setHeaderAttr( BOLD => 1 );
+  $table->addRow( \@headers );
+  $table->setRowAttr(  COLS => [1..$ncols], ROWS => [1], BGCOLOR => '#002664', ALIGN=>'CENTER' );
+  $table->setHeaderAttr( WHITE_TEXT => 1, BOLD => 1 );
 
   my @organisms = ('Human', 'Mouse', 'Pig', 'Drosophila', 'C elegans', 'Yeast');
 
@@ -203,7 +195,7 @@ sub handle_request {
     my @row;
     my @trinfo;
     my $selected = '';
-    my $bgcolor = '#dddddd';
+    my $bgcolor = '#f3f1e4';
 
     $row[$org_idx] = $organism;
     $row[$distinct_peps_idx] =<<"    END";
@@ -230,7 +222,7 @@ sub handle_request {
   $table->setColAttr(  COLS => [$org_idx+1], ROWS => [2..$nrows], NOWRAP => 1 );
   $table->setColAttr(  COLS => [$org_idx+1], ROWS => [1..$nrows], ALIGN => 'LEFT' );
   $table->setColAttr(  COLS => [$org_idx+2..$ncols], ROWS => [1..$nrows], ALIGN => 'CENTER' );
-  print "$table";
+  print "$table\n</div>\n";
   print $q->hidden( "apply_action", '');
   print $q->end_form;
 

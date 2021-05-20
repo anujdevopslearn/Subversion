@@ -1140,7 +1140,7 @@ sub get_download_form {
                                                     tooltip => 'Show/Hide advanced download options',
                                                      sticky => 1,
                                                     imglink => 1,
-                                                    content => "<DIV class=clear_info_box disply: inline-block>$calc_check<BR>$ce_check</DIV>",
+                                                    content => "<DIV class=clear_info_box display: inline-block>$calc_check<BR>$ce_check</DIV>",
                                                    textlink => 1,
                                                    hidetext => 'Hide advanced download options',
                                                    showtext => 'Show advanced download options',

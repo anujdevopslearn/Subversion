@@ -8,7 +8,7 @@
 # Description : This program that allows users to
 #               get proteins from the PeptideAtlas based on various criteria.
 #
-# SBEAMS is Copyright (C) 2000-2010 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -169,7 +169,6 @@ sub handle_request {
   my ($chrom_num, $genetic_locus, $stend_option, $no_coord_count, $pid, $map, $file_name, $tmp_img_path);
 
   #### Show current user context information
-  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
   #$sbeams->printUserContext();
 
   #### Get the HTML to display the tabs
@@ -177,7 +176,10 @@ sub handle_request {
     parameters_ref => \%parameters,
     program_name => $PROG_NAME,
   );
-  print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+  if ($sbeams->output_mode() eq 'html') {
+    print $tabMenu->asHTML();
+    print"<script>document.title = 'PeptideAtlas: Compare Proteins in 2 Builds';</script>\n";
+  }
 
 
   #### Get the current atlas_build_ids based on parameters or session

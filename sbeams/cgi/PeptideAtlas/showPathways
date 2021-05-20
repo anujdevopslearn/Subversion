@@ -6,14 +6,13 @@
 #
 # Description :  Show protein information overlayed on KEGG pathway maps.
 #
-# SBEAMS is Copyright (C) 2000-2011 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
 # LICENSE file distributed with this software.
 #
 ###############################################################################
-
 
 use strict;
 use lib qw (../../lib/perl);
@@ -86,9 +85,9 @@ $|++;
     parameters_ref => $params,
     program_name => $script_name,
   );
-  my $content = '';
+  my $content = "<script>document.title = 'PeptideAtlas: Show Pathways for ".$atlas->getCurrentAtlasOrganism( atlas_build_id => $atlas_build_id, parameters_ref => $params)."';</script>\n";
   if ( $sbeams->output_mode() eq 'html' ) {
-    $content = $tabMenu->asHTML(); 
+    $content .= $tabMenu->asHTML(); 
   }
 
   # Decision block, what type of page are we going to display?
@@ -124,20 +123,9 @@ $|++;
 sub add_build_selector {
   my $build_id = shift;
 
-  my $selector = qq~
-  <table>
-   <tr>
-    <td align=right valign=top><b>Select Atlas Build:</b>
-    </td>
-    <td align=left valign=top>
-  ~;
-  $selector .= $atlas->getBuildSelector( atlas_build_id => $atlas_build_id );
-  $selector .= qq~
-    </td>
-   </tr>
-  </table>
-  <script language=javascript>function hideTimerInfo() {} </script>
-  ~;
+  my $selector = '<br><b>Select Atlas Build:</b>';
+  $selector .= $atlas->getBuildSelector( atlas_build_id => $atlas_build_id, inline => 1 );
+  $selector .= '<script>function hideTimerInfo() {} </script>';
   return $selector;
 }
 
@@ -147,7 +135,7 @@ sub add_build_selector {
 sub list_pathways {
   my $params = shift;
   my $url = $q->url( -full=>1 );
-  my $page = $sbeams->getGifSpacer(900);
+  my $page = ''; #$sbeams->getGifSpacer(900);
 
   if ( !$atlas->has_search_key_data( parameters_ref => $params ) ) {
     $sbeams->set_page_message( type => 'Error', msg => <<"    END" );
@@ -161,26 +149,21 @@ sub list_pathways {
 
   my $table = SBEAMS::Connection::DataTable->new();
   $table->addRow( ['Pathway ID', 'View Data','Pathway Definition' ] );
-  $table->setRowAttr( ROWS => [1], BGCOLOR => '#bbbbbb', ALIGN=>'CENTER', NOWRAP => 0, HEIGHT => 35 );
-  $table->setHeaderAttr(BOLD=>1);   # this actually has effect via sub formatHeader
+  $table->setRowAttr( ROWS => [1], BGCOLOR => '#002664', ALIGN=>'CENTER', NOWRAP => 0, HEIGHT => 35 );
+  $table->setHeaderAttr(WHITE_TEXT=>1,BOLD=>1);   # this actually has effect via sub formatHeader
 
-
-  $page .= qq~
-    <BR>
-    <BR>
-    <BR>
-  ~;
+  $page .= "<br><br>";
 
   my $pa_img = "<IMG SRC=$HTML_BASE_DIR/images/pa_tiny.png BORDER=0 />";
   my $srm_img = "<IMG SRC=$HTML_BASE_DIR/images/srmatlas-icon.gif BORDER=0 />";
 
   for my $path ( @{$pathways} ) {
     my $desc = $q->escape( $path->{definition} );
-    my $links = "<A HREF=$url?apply_action=pathway_details;path_id=$path->{entry_id};path_def=$desc;searchdb=pa TARGET=_pa_pathdetails TITLE='View data from pathway proteins in Peptide Atlas'>$pa_img</A> ";
-    $links .= " <A HREF=$url?apply_action=pathway_details;path_id=$path->{entry_id};path_def=$desc;searchdb=srm TARGET=_srm_pathdetails TITLE='View data from pathway proteins in SRM Atlas'>$srm_img</A> ";
+    my $links = "<A HREF=$url?apply_action=pathway_details;path_id=$path->{entry_id};path_def=$desc;searchdb=pa TARGET=_pa_pathdetails TITLE='View data from pathway proteins in PeptideAtlas'>$pa_img</A> ";
+    $links .= " <A HREF=$url?apply_action=pathway_details;path_id=$path->{entry_id};path_def=$desc;searchdb=srm TARGET=_srm_pathdetails TITLE='View data from pathway proteins in SRMAtlas'>$srm_img</A> ";
     $table->addRow( [$path->{entry_id},$links,$path->{definition} ] ); 
   }
-  $table->alternateColors(PERIOD => 1, FIRSTROW=> 2, BGCOLOR => '#e0e0e0');
+  $table->alternateColors(PERIOD => 1, FIRSTROW=> 2, DEF_BGCOLOR => '#f3f1e4', BGCOLOR => '#d3d1c4');
   my $nrows = $table->getRowNum();
   $table->setColAttr(  COLS => [2], ROWS => [2..$nrows], ALIGN => 'CENTER' );
 
@@ -212,11 +195,12 @@ sub pathway_details {
 #  my $addpath = ( $params->{path_def} =~ /pathway/i ) ? '' : 'Pathway ';
 #  print "<DIV ID=1234321 CLASS=visible>\n";
 
-  my $src_atlas = ( $params->{searchdb} eq 'srm' ) ? 'SRM Atlas' : 'Peptide Atlas';
+  my $src_atlas = ( $params->{searchdb} eq 'srm' ) ? 'SRMAtlas' : 'PeptideAtlas';
   print qq~
+<script>document.title = 'PeptideAtlas: Show (KEGG) Pathway for $params->{path_def}';</script>
     <PRE>
   The image below shows the pathway for $params->{path_def} from KEGG, annotated with information from the
-  $src_atlas.  As shown in the legend, proteins for which there are peptides in the <B>$src_atlas<B> are colored green, while proteins for 
+  $src_atlas.  As shown in the legend, proteins for which there are peptides in the <B>$src_atlas</B> are colored green, while proteins for 
   which there is no information are colored yellow.  Some nodes in the network may have no color, this is because there is no information 
   on them from KEGG.  Each colored node is clickable, linking to a page showing more detailed information.  The link below will load a 
   query with all known proteins in the pathway, you can modify options as desired and submit.
@@ -227,10 +211,10 @@ sub pathway_details {
 
 
   print <<"  END";
-  <A ONCLICK="toggle_stats();">
-   <IMG SRC=$HTML_BASE_DIR/images/small_gray_minus.gif TITLE='Show/Hide Stats' ID='1234321_gif'><DIV CLASS=visilink ID=123454321> Hide Stats</DIV></A>
-   <DIV ID=1234321 CLASS=visible>
-   <BR>
+  <a href="#" onclick="toggle_stats();return false;">
+   <img src="$HTML_BASE_DIR/images/small_gray_minus.gif" title='Show/Hide Stats' ID='1234321_gif'><div class="visilink" id="123454321"> Hide Stats</div></a>
+   <div id="1234321" class="visible">
+   <br>
   END
   print "Looking up genes in $params->{path_def} ($params->{path_id}) at KEGG - ";
 
@@ -297,7 +281,7 @@ sub pathway_details {
     div.hidden {
     display: none;
     }
-    span { 
+    span.legend { 
      border: solid;
      border-width: 1px;
     }
@@ -401,41 +385,33 @@ sub pathway_details {
   );
 
   my $t6 = new Benchmark;
-	print parseTime( $t6, $t5, '' ) . " seconds <BR>\n";
+  print parseTime( $t6, $t5, '' ) . " seconds <BR>\n";
 
 
   print "Getting colored map from KEGG - ";
   # Send gene/color info to kegg for a map
   my $build_id = ( $params->{searchdb} eq 'srm' ) ? $atlas_build_id : $pabst_build_id;
   my $url = $keggmap->getColoredPathway( seen => $seen,
-                                     build_id => $build_id,
-                                     searchdb => $params->{searchdb},
-                                        genes => $gene_list,
-                                       );
+					 build_id => $build_id,
+					 searchdb => $params->{searchdb},
+					 genes => $gene_list,
+      );
   
   my $t7 = new Benchmark;
   $log->debug( parseTime( $t7, $t6, "seconds to get color pathway" ) );
-	print parseTime( $t7, $t6, '' ) . " seconds <BR>\n";
-
-
-
+  print parseTime( $t7, $t6, '' ) . " seconds <BR>\n";
 
   print <<"  END";
-
-  <BR>
+  <br>
   $gaggle_info
-  <BR>
-  <BR>
-  <BR>
+  <br>
   $table
   <INPUT TYPE=HIDDEN NAME=apply_action VALUE='gene_list'></INPUT> 
   <INPUT TYPE=HIDDEN NAME=path_id VALUE='$params->{path_id}'></INPUT> 
   </FORM>
-  
   <BR>
   <HR WIDTH=600 ALIGN=LEFT>
   END
-
 
 
   print  "\n</DIV>\n";
@@ -454,7 +430,7 @@ sub pathway_details {
 
 # Put pathway link here...
 
-  print "$image_map<BR>\n";
+  print "&nbsp;&nbsp;$image_map<BR>\n";
 
   my @coordinates = @{$processed->{coords}};
   
@@ -492,7 +468,7 @@ sub getExpressionValues {
       $atlas_hits{$row[0]} = $row[1];
     }
 
-  } else {  # Fetch from Peptide Atlas, original
+  } else {  # Fetch from PeptideAtlas, original
 
     my $search_type = ( $kegg_organism =~ /hsa|mmu|ssc|bta|rno|ecb|ptr/ ) ? 'Entrez GeneID' : 'ORF NAME';
     $search_type = 'KEGG' if ( $kegg_organism =~ /bbu/);
@@ -570,20 +546,20 @@ sub getExpressionValues {
 sub getExpressionLegend {
   my $cell = $sbeams->getGifSpacer(20); # . "<BR>\n";
   my $table =<<"  END";
-  <TABLE BORDER=0>
-   <TR> 
-    <TD> Peptides Observed </TD>
-    <TD BGCOLOR='#98FB98'> <SPAN> $cell </SPAN> </TD>
-   </TR>
-   <TR> 
-    <TD> No Peptides observed </TD>
-    <TD BGCOLOR='#FFFF00'> <SPAN> $cell </SPAN> </TD>
-   </TR>
-   <TR> 
-    <TD> N/A </TD>
-    <TD > <SPAN> $cell </SPAN> </TD>
-   </TR>
-  </TABLE>
+  <table border='0'>
+   <tr> 
+    <td> Peptides Observed </td>
+    <td bgcolor='#98FB98'> <span class="legend"> $cell </span> </td>
+   </tr>
+   <tr> 
+    <td> No Peptides observed </td>
+    <td bgcolor='#FFFF00'> <span class="legend"> $cell </span> </td>
+   </tr>
+   <tr> 
+    <td> N/A </td>
+    <td > <span class="legend"> $cell </span> </td>
+   </tr>
+  </table>
   END
   return $table;
 #   <TR> 

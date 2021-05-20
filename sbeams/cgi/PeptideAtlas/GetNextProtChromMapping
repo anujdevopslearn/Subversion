@@ -7,7 +7,7 @@
 #
 # Description : 
 #
-# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -149,17 +149,16 @@ sub handle_request {
 
   my ($nextprot_mapping_id,$atlas_build_id);
 
-  #### Show current user context information
-  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
-
 
   #### Get the HTML to display the tabs
   my $tabMenu = $sbeamsMOD->getTabMenu(
     parameters_ref => \%parameters,
     program_name => $PROG_NAME,
   );
-  print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
-
+  if ($sbeams->output_mode() eq 'html') {
+    print $tabMenu->asHTML();
+    print"<script>document.title = 'PeptideAtlas: Get neXtProt Chromosome Mapping';</script>\n";
+  }
 
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
@@ -174,7 +173,7 @@ sub handle_request {
   my $TABLE_NAME = $parameters{'QUERY_NAME'};
 
   #### Set some specific settings for this program
-  my $CATEGORY="Get neXtProt Chromsome Mapping";
+  my $CATEGORY="Get neXtProt Chromosome Mapping";
   $TABLE_NAME="AT_GetNextProtChromMapping" unless ($TABLE_NAME);
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetNextProtChromMapping";
 

@@ -5,7 +5,7 @@
 # Author      : Zhi Sun
 # Description : This script shows the PeptideAtlas passel_submission page
 #
-# SBEAMS is Copyright (C) 2000-2011 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -142,7 +142,6 @@ sub handle_request {
   my %parameters = %{$ref_parameters};
 
   #### Show current user context information
-  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
   #$sbeams->printUserContext();
 
   #### Get the HTML to display the tabs
@@ -169,11 +168,11 @@ sub handle_request {
 							}
 		</script>
 
-		<B><font color="red">Email address</B></font>
+		<B><font color="#b00">Email address</B></font>
 		 <input type="text" id="email" value="" size=50 maxlength=80/>
 		 &nbsp;&nbsp;&nbsp;&nbsp;
 
-		 <B><font color="red">Password</B></font>
+		 <B><font color="#b00">Password</B></font>
 		 <input type="password" id="password" value="" size=10 maxlength=50/>
 		 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 		<input type="button" id="login" value="LOGIN" />

@@ -258,7 +258,6 @@ sub handle_request {
   my %parameters = %{$ref_parameters};
 
   #### Show current user context information
-  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
   #$sbeams->printUserContext();
   
   #### Get the HTML to display the tabs
@@ -768,6 +767,8 @@ sub handle_request {
       #############################################################################
       #### peptide overview
       #############################################################################
+      print "<script>document.title = 'PeptideAtlas Peptide: $peptide_sequence[0]';</script>";
+
       my $summ = '<TABLE style="margin-left:15px;">';
       my $tr = 'class="hoverable"';
 

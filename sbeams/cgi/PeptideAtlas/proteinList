@@ -3,7 +3,7 @@
 ###############################################################################
 # $Id$
 #
-# SBEAMS is Copyright (C) 2000-2020 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -46,10 +46,8 @@ my $show_image = 0;
 
 
 { # Main 
-
     # Authenticate or exit
     my $username = $sbeams->Authenticate( allow_anonymous_access => 1) || exit;
-
 
 
     ## get current settings
@@ -716,19 +714,15 @@ sub get_list_selector {
 
   my $sth = $sbeams->get_statement_handle( $sql );
   my $help = qq~
-   <div style="font-family:Helvetica, Arial, sans-serif;font-size:200%;font-weight:bold" id=heading> Protein List Query </div>
-   <br>
-   <div id=help style="width:800px"> This tool helps you select proteins to explore in PeptideAtlas or SRMAtlas based on lists of high-priority proteins from the various participating groups of the Biology/Disease-driven Human Proteome Project (B/D-HPP).
-
-  </div>
-  <br>
-  <br>
+   <h1 id="heading"> Protein List Query </h1>
+   <p id="help" style="width:800px;margin-left:15px;"> This tool helps you select proteins to explore in PeptideAtlas or SRMAtlas based on lists of high-priority proteins from the various participating groups of the Biology/Disease-driven Human Proteome Project (B/D-HPP).
+  </p>
   ~;
 
   my $select = qq~
   $help
   <br>
-  <form method=post id=list_selector>
+  <form method="post" id="list_selector">
   <I> Choose an HPP B/D protein list to explore:</I> &nbsp;&nbsp; <select name=protein_list_id onchange=load_list();>
   ~;
 
@@ -745,7 +739,6 @@ sub get_list_selector {
     document.getElementById('list_selector').submit();
   }
   </script>
-    <br>
   <br>
   ~;
 #  die Dumper($select);

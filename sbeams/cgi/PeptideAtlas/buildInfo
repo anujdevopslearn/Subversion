@@ -7,7 +7,7 @@
 #
 # Description : This script displays details about all default Atlas builds
 #
-# SBEAMS is Copyright (C) 2000-2014 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -115,7 +115,6 @@ sub main
 # Show the page
 ###############################################################################
 sub handle_request {
-
   my %args = @_;
 
     #### Process the arguments list
@@ -141,7 +140,6 @@ sub handle_request {
     program_name => $PROG_NAME,
   );
   if ($sbeams->output_mode() eq 'html') {
-    print "<BR>\n";
     print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
     print "<BR>\n";
   }
@@ -226,6 +224,7 @@ sub handle_request {
           document.AtlasBuildList.apply_action.value = "GO";
           document.AtlasBuildList.submit();
         }
+      document.title = 'PeptideAtlas: Build Stats & Lists';
       </script>
     ~ if $is_html;
 
@@ -234,10 +233,10 @@ sub handle_request {
 			     -name=>"AtlasBuildList",
                             ) if $is_html;
 
-  	unless ($default_build_name) {
-	    $default_build_name = qq~<FONT COLOR="red"> - NONE - </FONT>~;
-	  }
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'atlas_build_select',
+    unless ($default_build_name) {
+      $default_build_name = qq~<FONT COLOR="red"> - NONE - </FONT>~;
+    }
+    my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'atlas_build_select',
                                                   visible => 0,
                                                   tooltip => 'Show/Hide Section',
                                                   imglink => 1,
@@ -246,20 +245,21 @@ sub handle_request {
                                                   hidetext => 'View default builds',
                                                   showtext => 'View all builds',
                                                   sticky  => 1 );
-  my $earl = $q->self_url();
-  $earl .= '?output_mode=tsv';
-  my $download_link = "Download table as a <a href=$earl> TSV file </a>\n";
-  if ( !$ppt ) {
-    print qq~
-    <P>Number of proteins returned on click may differ from tallies shown here:<BR>
-    &nbsp;&nbsp;--Protein tallies exclude decoy, unmapped, and some contaminant proteins.<BR>
-    &nbsp;&nbsp;--Swiss-Prot click returns only 6-char core identifiers, not splice variants.<BR>
-    See <i>Protein ID terms</i> in left sidebar for nomenclature.  $download_link</P>
+    my $earl = $q->self_url();
+    $earl .= '?output_mode=tsv';
+    my $download_link = "Download table as a <a href='$earl'> TSV file </a>\n";
+    if ( !$ppt ) {
+      print qq~
+    <div style='padding-left:25px;margin-top:10px;margin-bottom:10px;'>
+    Number of proteins returned on click may differ from tallies shown here:
+    <li>Protein tallies exclude decoy, unmapped, and some contaminant proteins.</li>
+    <li>Swiss-Prot click returns only 6-char core identifiers, not splice variants.</li>
+    See <i>Protein ID terms</i> in sidebar menu for nomenclature.  $download_link
+    </div>
     ~ if $is_html;
-  } else {
-    print "<p>To hide any row, click its Build Name. To reset, reload page. </p>\n" if $is_html;
-  }
-
+    } else {
+      print "<p>To hide any row, click its Build Name. To reset, reload page. </p>\n" if $is_html;
+    }
 
 
   ### Construct headers for info table
@@ -350,8 +350,8 @@ sub handle_request {
   # Define header row
   $table ->addRow( \@headers );
   # setRowAttr does not take a COLS arg.
-  $table->setRowAttr( ROWS => [1], BGCOLOR => '#bbbbbb', ALIGN=>'CENTER', NOWRAP => 0, HEIGHT => 35 );
-  $table->setHeaderAttr(BOLD=>1);   # this actually has effect via sub formatHeader
+  $table->setRowAttr( ROWS => [1], BGCOLOR => '#002664', ALIGN=>'CENTER', NOWRAP => 0, HEIGHT => 35 );
+  $table->setHeaderAttr(WHITE_TEXT=>1,BOLD=>1);   # this actually has effect via sub formatHeader
 
   # Read in the rows
   my $selected = '';
@@ -418,12 +418,22 @@ sub handle_request {
     pop @row;
     my @trinfo;
     my $selected = '';
-    my $bgcolor = '#dddddd';
+    my $bgcolor = '#f3f1e4';
 
     # Check atlas build ID
     my $id = $row[$atlas_build_id_output_idx];
     my $atlas_build = $atlas_build_hash{$id};
     next if (! defined $atlas_build);
+
+    $row[$spectra_searched_idx]   = $sbeams->commifyNumber($row[$spectra_searched_idx]);
+    $row[$psm_count_idx]          = $sbeams->commifyNumber($row[$psm_count_idx]);
+    $row[$distinct_peps_idx]      = $sbeams->commifyNumber($row[$distinct_peps_idx]);
+    $row[$n_canonicals_idx]       = $sbeams->commifyNumber($row[$n_canonicals_idx]);
+    $row[$n_canon_dist_idx]       = $sbeams->commifyNumber($row[$n_canon_dist_idx]);
+    $row[$n_disting_prots_idx]    = $sbeams->commifyNumber($row[$n_disting_prots_idx]);
+    $row[$n_seq_unique_prots_idx] = $sbeams->commifyNumber($row[$n_seq_unique_prots_idx]);
+    $row[$n_swiss_idx]            = $sbeams->commifyNumber($row[$n_swiss_idx]);
+    $row[$n_covering_idx]         = $sbeams->commifyNumber($row[$n_covering_idx]);
 
     if ( $parameters{organism_default_builds} ) {
       next if !$accessible_default_builds{$id};
@@ -485,7 +495,7 @@ sub handle_request {
 	$log->debug( "checking is $atlas_build->[$atlas_atlas_build_id_output_idx]" );
 	@trinfo = ( $tr =~ /(NAME)=('[^']+')\s+(ID)=('[^']+')\s+(CLASS)=('[^']+')/ );
       }
-      $bgcolor = '#eeeeee' unless ($ppt);
+      $bgcolor = '#d3d1c4' unless ($ppt);
     }
     if (! $ppt) {
       $table->setRowAttr( ROWS => [$this_row], BGCOLOR => $bgcolor, @trinfo );
@@ -516,8 +526,6 @@ sub handle_request {
     $table->setColAttr(COLS=>[$build_name_ppt_idx+1..$peptide_inclusion_ppt_idx+1],ROWS=>[1..$nrows],ALIGN=>'LEFT');
     $table->setColAttr(  COLS => [$peptide_inclusion_ppt_idx+2..$n_swiss_ppt_idx+1], ROWS => [1..$nrows], ALIGN => 'RIGHT' );
     $table->setColAttr(  COLS => [$atlas_build_id_output_idx+1], ROWS => [1..$nrows], HIDDEN => 1 );
-    # this seems to have no effect.
-    #$table->alternateColors(PERIOD => 2, FIRSTROW=> 2, BGCOLOR => '#e0e0e0');
   }
   if ( $is_html ) {
     print $link unless $ppt;  #table toggle

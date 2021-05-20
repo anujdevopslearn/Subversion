@@ -5,7 +5,7 @@
 # Author      : Terry Farrah
 # Description : Javascipt browser for SRM experiments
 #
-# SBEAMS is Copyright (C) 2000-2011 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -269,7 +269,6 @@ sub handle_request {
 
 
   #### Show current user context information
-  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
   #$sbeams->printUserContext();
 
 

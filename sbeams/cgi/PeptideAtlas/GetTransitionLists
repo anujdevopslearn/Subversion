@@ -6,7 +6,7 @@
 #
 # Description : Returns transitions lists info in PeptideAtlas
 #
-# SBEAMS is Copyright (C) 2000-2009 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -157,9 +157,6 @@ sub handle_request {
 
   my %parameters = %{$ref_parameters};
 
-
-  # put a spacer so that showing hidden content doesn't mangle the layout
-  print "<BR>$spacer\n" if $htmlmode;
 
   #### Get the HTML to display the tabs
   my $tabMenu = $sbeamsMOD->getTabMenu(

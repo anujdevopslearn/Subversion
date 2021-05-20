@@ -225,8 +225,9 @@ sub get_alignment_display {
 
 
   $clustal_display .= qq~
+<script>document.title = 'PeptideAtlas: Compare Protein Sequences';</script>
 <a title="show/hide help" onclick="if(document.getElementById('pageinfo').style.display == 'none') document.getElementById('pageinfo').style.display = ''; else document.getElementById('pageinfo').style.display = 'none';" href="#">Page Info and Legend</a>
-<div id="pageinfo" style="display: none;">
+<div id="pageinfo" style="margin-left:5px;padding-left:5px;border:1px solid #666;max-width:90%;background:#f1f1f1;display: none;">
 <p>In the <b>Peptide Mapping</b> section below, peptides for each protein are represented by <span style="background:lightskyblue;">blue</span>, <span style="background:#ffad4e;">orange</span>, and <span style="background:springgreen;">green</span> rectangles as defined in the <b>Legend</b>. Rectangles are proportional to each peptide's length. Peptides for the top protein are displayed in alphabetical order. Additional peptides not mapping to the first protein are added after the first set. Within each block of new peptides, the peptides are in alphabetical-order for that protein.</p>
 <p>Red superscript letters <sup><span style='color:red;'>ABCD...</span></sup> after the protein identifiers denote groups of protein entries that are identical in sequence (All the proteins with <span style='color:red;'>A</span> are identical in sequence, etc.)</p>
 <p>The <b>Sequence Coverage</b> section below, all relevant proteins are aligned with <a target="_new" href="http://www.clustal.org/omega/">Clustal Omega</a> and all detected peptides are displayed in colors. In the <b>consensus</b> (bottom) row, a * indicates identity across all sequences. Other symbols denote varying degrees of similarity. The controls in and below the Sequence Coverage section may be used to adjust the list of proteins displayed.</p>
@@ -423,10 +424,10 @@ sub get_alignment_display {
 
   # peptide map map
   $clustal_display .= "<br><div class='hoverabletitle'>Peptide Mapping</div>";
-  $clustal_display .= "<div style='width: calc(100vw - 180px); overflow-x: auto; border-right: 1px solid #aaa'>\n<table style='border-spacing:0px'>";
+  $clustal_display .= "<div style='width: calc(100vw - 20px); overflow-x: auto; border-right: 1px solid #aaa'>\n<table style='border-spacing:0px'>";
   for my $map_prot (split / /, $peptide_map{'protein_list'}) {
     $clustal_display .= "<tr style='border-top: 1px solid #aaa;'>";
-    $clustal_display .= "<td class='sequence_font' style='border-top: 1px solid #aaa; border-right: 1px solid #aaa; background-color:#f3f1e4; text-align: right; white-space: nowrap; position:sticky; left: 0px; z-index:95;'>$map_prot";
+    $clustal_display .= "<td class='sequence_font' style='border-top: 1px solid #aaa; border-right: 1px solid #aaa; background-color:#f3f1e4; text-align: right; white-space: nowrap; position:sticky; left: 0px; z-index:6;'>$map_prot";
 
     if ( $dup_seqs{$map_prot} ) {
       $clustal_display .= "<sup><span style='color:red;'>$dup_seqs{$map_prot}</span></sup>";
@@ -491,8 +492,6 @@ sub get_alignment_display {
   } else {
     #print "$fasta<br>";
     my $clustal = $MSF->runClustalW( sequences => $fasta );
-    my $nseqs = scalar @{$clustal};
-    #print "nseqs=$nseqs<br>";
     if ( ref $clustal ne 'ARRAY' ) {
       my $rerun_link = '';
       if ( $seqtype{decoy} && $seqtype{fwd} ) {
@@ -502,9 +501,12 @@ sub get_alignment_display {
 &nbsp;        Try re-running clustalW with <a href="$url;decoys=yes"> only DECOY</a> sequences?<br>
         ~;
       }
-      $clustal_display = "<br>" . $sbeams->makeErrorText( "Error running Clustal: $clustal" );
-      $clustal_display .= "<br> $rerun_link";
-    } else {
+      $clustal_display = "<div style='margin:50px;'>" . $sbeams->makeErrorText( "Error running Clustal: $clustal" );
+      $clustal_display .= "<br> $rerun_link</div>";
+    }
+    else {
+      my $nseqs = scalar @{$clustal};
+      #print "nseqs=$nseqs<br>";
       $clustal_display .= get_clustal_display( alignments => $clustal, 
 					       dup_seqs => \%dup_seqs,
 					       pepseq => $peptide,
@@ -526,7 +528,7 @@ sub get_clustal_display {
   my $display = qq~
 	<br><br>
         <div class='hoverabletitle'>Sequence Coverage</div>
-	<div style="width: calc(100vw - 180px); overflow-x: auto; border-right: 1px solid #aaa">
+	<div style="width: calc(100vw - 20px); overflow-x: auto; border-right: 1px solid #aaa">
 	<form method="POST" name="custom_alignment">
 	<table style="border-spacing:1px; border:0;">
 	~;
@@ -584,8 +586,8 @@ sub get_clustal_display {
 
     $display .= qq~
 		<tr>
-                <td style="padding:3px; background-color: #f3f1e4; position:sticky; left: 0px; z-index:95;">$checkbox </td>
-	        <td style="padding:3px; background-color: #f3f1e4; position:sticky; left: 20px; z-index:95; border-right: 1px solid #aaa; text-align: right;" class="sequence_font">$seq->[0]$dup</td>
+                <td style="padding:3px; background-color: #f3f1e4; position:sticky; left: 0px; z-index:6;">$checkbox </td>
+	        <td style="padding:3px; background-color: #f3f1e4; position:sticky; left: 20px; z-index:6; border-right: 1px solid #aaa; text-align: right;" class="sequence_font">$seq->[0]$dup</td>
 		<td style="padding:3px; white-space: nowrap;" class="sequence_font">$sequence</td>
 		</tr>
 		~;
@@ -669,6 +671,7 @@ sub get_clustal_display {
 	</form>
 	<br><br>
   Save link to recall current <a href='$CGI_BASE_DIR/shortURL?key=$short_url'>sequence alignment</a>.
+	<br><br>
 	~;
 
   return $display;

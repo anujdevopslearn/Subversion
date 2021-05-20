@@ -116,9 +116,9 @@ sub processDatabaseActions {
     my $prot_info = new SBEAMS::PeptideAtlas::ProtInfo;
     $VERBOSE = 0;
     $TESTONLY = 0;
-		$prot_info->setSBEAMS($sbeams);
-		$prot_info->setVERBOSE($VERBOSE);
-		$prot_info->setTESTONLY($TESTONLY);
+    $prot_info->setSBEAMS($sbeams);
+    $prot_info->setVERBOSE($VERBOSE);
+    $prot_info->setTESTONLY($TESTONLY);
 
     ## get original value 
     my $orig_spectrum_annotation_level = 0; 
@@ -133,108 +133,116 @@ sub processDatabaseActions {
       $orig_spectrum_annotation_level = $result[0];
     }
     if ($apply_action eq "UPDATE ANNOTATION") {
-			my %rowdata = (
-		       spectrum_annotation_level_id => $parameters{user_spectrum_annotation},
-		       comment => $parameters{user_spectrum_commment}
-		       );
-			my $PK = $sbeams->updateOrInsertRow(
-					    update => 1,
-					    table_name => $TBAT_SPECTRUM_ANNOTATION,
-					    rowdata_ref => \%rowdata,
-					    PK => 'spectrum_annotation_id',
-					    PK_value => $parameters{spectrum_annotation_id},
-					    return_PK => 1,
-					    add_audit_parameters => 1
-					    );
+      my %rowdata = (
+	spectrum_annotation_level_id => $parameters{user_spectrum_annotation},
+	comment => $parameters{user_spectrum_commment}
+	  );
+      my $PK = $sbeams->updateOrInsertRow(
+	update => 1,
+	table_name => $TBAT_SPECTRUM_ANNOTATION,
+	rowdata_ref => \%rowdata,
+	PK => 'spectrum_annotation_id',
+	PK_value => $parameters{spectrum_annotation_id},
+	return_PK => 1,
+	add_audit_parameters => 1
+	  );
 
-			if ($PK) { 
+      if ($PK) { 
         my $action = '';
         if ($orig_spectrum_annotation_level <= 2 && $parameters{user_spectrum_annotation} > 2 ){
-				  $action = 'remove';
-        }elsif($orig_spectrum_annotation_level > 2 && $parameters{user_spectrum_annotation} <= 2 ){
-           $action = 'add';
+	  $action = 'remove';
         }
+	elsif($orig_spectrum_annotation_level > 2 && $parameters{user_spectrum_annotation} <= 2 ){
+	  $action = 'add';
+        }
+
         if($action){
-					$prot_info -> update_protInfo (
-						spectrum_annotation_id => $parameters{spectrum_annotation_id}, 
-						atlas_build_id=>$parameters{atlas_build_id},
-						action => $action);
+	  $prot_info -> update_protInfo (
+	    spectrum_annotation_id => $parameters{spectrum_annotation_id}, 
+	    atlas_build_id=>$parameters{atlas_build_id},
+	    action => $action);
         }
         $sbeams->set_page_message( type => 'Info',  msg => "Your annotation record has been updated." ); 
       }
-			else     { $sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem updating your annotation record." ); }
-
-			$redirect++;
-    } elsif ($apply_action eq "ADD ANNOTATION") {
-			my %rowdata = (
-		       annotator_contact_id => $sbeams->getCurrent_contact_id(),
-		       spectrum_identification_id => $parameters{spectrum_identification_id},
-		       spectrum_id => $parameters{spectrum_id},
-		       identified_peptide_sequence => $parameters{peptide},
-		       identified_peptide_charge => $parameters{assumed_charge},
-		       spectrum_annotation_level_id => $parameters{user_spectrum_annotation},
-		       comment => $parameters{user_spectrum_commment}
-		       );
-
-			my $PK = $sbeams->updateOrInsertRow(
-				   insert => 1,
-				   table_name => $TBAT_SPECTRUM_ANNOTATION,
-				   rowdata_ref => \%rowdata,
-				   return_PK => 1,
-				   add_audit_parameters => 1
-				   );
-
-			if ($PK) { 
-        if ($parameters{user_spectrum_annotation} > 2 ){
-					$prot_info -> update_protInfo (
-						spectrum_annotation_id => $PK,
-						atlas_build_id=>$parameters{atlas_build_id},
-						action => 'remove',
-          );
-        }
-        $sbeams->set_page_message( type => 'Info',  msg => "Your annotation record has been added." ); 
+      else {
+	$sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem updating your annotation record." );
       }
-			else     { $sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem inserting your annotation record." ); }
 
-			$redirect++;
+      $redirect++;
+    }
+    elsif ($apply_action eq "ADD ANNOTATION") {
+      my %rowdata = (
+	annotator_contact_id => $sbeams->getCurrent_contact_id(),
+	spectrum_identification_id => $parameters{spectrum_identification_id},
+	spectrum_id => $parameters{spectrum_id},
+	identified_peptide_sequence => $parameters{peptide},
+	identified_peptide_charge => $parameters{assumed_charge},
+	spectrum_annotation_level_id => $parameters{user_spectrum_annotation},
+	comment => $parameters{user_spectrum_commment}
+	  );
 
-    } elsif ($apply_action eq "DELETE ANNOTATION") {
-			my %rowdata = (
-		       record_status => 'D'
-		       );
+      my $PK = $sbeams->updateOrInsertRow(
+	insert => 1,
+	table_name => $TBAT_SPECTRUM_ANNOTATION,
+	rowdata_ref => \%rowdata,
+	return_PK => 1,
+	add_audit_parameters => 1
+	  );
 
-			my $PK = $sbeams->updateOrInsertRow(
-					    update => 1,
-					    table_name => $TBAT_SPECTRUM_ANNOTATION,
-					    rowdata_ref => \%rowdata,
-					    PK => 'spectrum_annotation_id',
-					    PK_value => $parameters{spectrum_annotation_id},
-					    return_PK => 1,
-					    add_audit_parameters => 1
-					    );
+      if ($PK) { 
+        if ($parameters{user_spectrum_annotation} > 2 ){
+	  $prot_info -> update_protInfo (
+	    spectrum_annotation_id => $PK,
+	    atlas_build_id=>$parameters{atlas_build_id},
+	    action => 'remove',
+	      );
+        }
+        $sbeams->set_page_message( type => 'Info',  msg => "Your annotation record has been added." );
+      }
+      else {
+	$sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem inserting your annotation record." );
+      }
 
-			if ($PK) { 
+      $redirect++;
+    }
+    elsif ($apply_action eq "DELETE ANNOTATION") {
+      my %rowdata = (
+	record_status => 'D'
+	  );
+
+      my $PK = $sbeams->updateOrInsertRow(
+	update => 1,
+	table_name => $TBAT_SPECTRUM_ANNOTATION,
+	rowdata_ref => \%rowdata,
+	PK => 'spectrum_annotation_id',
+	PK_value => $parameters{spectrum_annotation_id},
+	return_PK => 1,
+	add_audit_parameters => 1
+	  );
+
+      if ($PK) { 
         ## annotation has low value, need to add back obs
         if ($orig_spectrum_annotation_level > 2){
-					$prot_info -> update_protInfo (
-						spectrum_annotation_id => $PK,
-						atlas_build_id=>$parameters{atlas_build_id},
-						action => 'add',
-					);
+	  $prot_info -> update_protInfo (
+	    spectrum_annotation_id => $PK,
+	    atlas_build_id=>$parameters{atlas_build_id},
+	    action => 'add',
+	      );
         }
         $sbeams->set_page_message( type => 'Info',  msg => "Your annotation record has been deleted." ); 
       }
-			else     { $sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem deleting your annotation record." ); }
+      else {
+	$sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem deleting your annotation record." );
+      }
 
-			$redirect++;
+      $redirect++;
+    }
 
-		}
-
-		if ($redirect) {
-			$q->delete( 'apply_action' );
-			print $q->redirect( $q->self_url() );
-			exit;
-		}
+    if ($redirect) {
+      $q->delete( 'apply_action' );
+      print $q->redirect( $q->self_url() );
+      exit;
+    }
 
 }
 
@@ -243,7 +251,6 @@ sub processDatabaseActions {
 # Process Request
 ###############################################################################
 sub processRequest {
-
     #### Define some general variables
     my ($i,$element,$key,$value,$sql);
 
@@ -500,9 +507,6 @@ sub processRequest {
     }
 
 
-
-
-
     #### Show the universal spectrum identifier input box
     my $htmlBuffer = getUSIInputForm( usi => $usiStr, parameters => \%parameters );
     if ( $output_mode eq 'HTML' ) {
@@ -527,12 +531,10 @@ sub processRequest {
     #### Display the header
     if ( $peptidoform ) {
       my $peptideformString = $convertedPeptidoformStr || $peptidoform;
-      print "<H2 CLASS=section_description ALIGN=CENTER>Spectrum for $peptideformString <SUP>+$charge</SUP></H2>\n";
-      print '<h3 ID="annotations_head" style="display:none"><div ID="annotations_summary" COLSPAN="2">-- No annotations here --</div></h3>';
+      print "<script>document.title = 'PeptideAtlas Spectrum: $peptideformString';</script>";
+      print "<h1>Spectrum for $peptideformString <sup>+$charge</sup></h1>\n";
+      print '<h3 id="annotations_summary" style="display:none">-- No annotations here --</h3>';
     }
-
-
-
 
 
 
@@ -572,15 +574,16 @@ sub processRequest {
       #### Hand the expected and observed fragments to the heuristic PSM
       #### evaluator!!!
       if (scalar @annotated_peaks) {
-				my $evaluation = $evaluator->evaluate_PSM_heuristically(
-				annotated_peaks_aref => \@annotated_peaks,
-				sorted_product_ions_aref => $sortedProductIons_aref,
-				modified_sequence => $peptidoform,
-				charge => $charge,
-				);
-				print "$evaluation<br>\n";
-      } else {
-				print "Cannot retrieve annotated peaks; cannot evaluate.<br>\n";
+	my $evaluation = $evaluator->evaluate_PSM_heuristically(
+	  annotated_peaks_aref => \@annotated_peaks,
+	  sorted_product_ions_aref => $sortedProductIons_aref,
+	  modified_sequence => $peptidoform,
+	  charge => $charge,
+	    );
+	print "$evaluation<br>\n";
+      }
+      else {
+	print "Cannot retrieve annotated peaks; cannot evaluate.<br>\n";
       }
     }
 
@@ -641,7 +644,7 @@ sub processRequest {
       $series = '1,1,1';
     }
 
-    #### Process the spectrum with my own annotater
+    #### Process the spectrum with my own annotator
     my $spectrum = Proteomics::Spectra::Spectrum->new(peptideIon=>"$peptidoform/$charge");
     #### Read the spectrum in from the text buffer
     $spectrum->parseLibrarySpectrumEntry(buffer=>\@spectrumBuffer);
@@ -694,7 +697,7 @@ sub processRequest {
           selWinHigh        => $parameters{selWinHigh},
           ms1scanLabel      => $parameters{ms1scanLabel},
           ms1peaks          => $parameters{ms1peaks},
-	      jsSpectrumDataString => $jsSpectrumDataString
+       jsSpectrumDataString => $jsSpectrumDataString
         );
     } else {
       print "<BR><BR>The Lorikeet spectrum viewer is currently unable to display spectrum without any peptide ion interpretation. A temporary hack while we fix this is to set the sequence to 'PEPTIDE'<BR><BR>\n";
@@ -762,6 +765,19 @@ sub spectrumAnalysisWorkbench {
   my $bufferedSpectrum = $args{bufferedSpectrum};
   my $hidden_form_fields = $args{hidden_form_fields};
 
+
+  my ($html, $linkhtml) = $sbeams->make_toggle_section(
+    neutraltext => "Spectrum Analysis Workbench",
+    sticky => 1,
+    name => 'spectrumanalysisworkbench_div',
+    barlink => 1,
+    opendiv => 1,
+    visible => 1,
+    link => '<a name="SAWB">&nbsp;</a>',
+    content => ' ' );
+
+  print $linkhtml.$html;
+
   #### Display the workbench controls
   displayWorkbenchControls(
     parameters => $parameters,
@@ -775,6 +791,7 @@ sub spectrumAnalysisWorkbench {
     peptideIon => $peptideIon,
   );
 
+  print "</div>\n<br><br>\n";
 }
 
 
@@ -824,7 +841,7 @@ sub displayWorkbenchControls {
   );
 
   my $tmp = $parameters->{SAWB_minimumIntensity} || '';
-  my $minimumIntensityFilterControl = qq~<INPUT TYPE="text" NAME="SAWB_minimumIntensity" LENGTH=15 VALUE="$tmp">~;
+  my $minimumIntensityFilterControl = qq~<input type="text" name="SAWB_minimumIntensity" length="15" VALUE="$tmp">~;
 
   #### If not manually set, set the high/low resolution control based on a possible fragmentation_type_id
   if ( !defined($parameters->{SAWB_resolutionHighLow}) ) {
@@ -869,12 +886,6 @@ sub displayWorkbenchControls {
     ],
   );
 
-  print qq~
-    <table width="100%" class="table_setup">
-    <tr class="orange_bg"><th>Spectrum&nbsp;Analysis&nbsp;Workbench</th><td><a name="SAWB">&nbsp;</a></td></tr>
-    </table>
-  ~;
-
 
   #### Determine defaults for alternate sequence
   my $alt_sequence = $parameters->{alt_sequence} || '';
@@ -896,8 +907,7 @@ sub displayWorkbenchControls {
     ],
   );
 
-  print qq~<table border=1><tr><td>
-    <FORM METHOD="post" ACTION="$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROG_NAME">
+  print qq~<form method="post" action="$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROG_NAME" style="background:#f3f1e4;border-bottom:1px solid #5e6a71;border-top:1px solid #5e6a71;padding:5px 15px;">
       $hidden_form_fields
       Alternate sequence: <INPUT TYPE="text" NAME="alt_sequence" SIZE="40" VALUE="$alt_sequence"></INPUT>
       Comparison sequence: <INPUT TYPE="text" NAME="comp_sequence" SIZE="40" VALUE="$comp_sequence"></INPUT>
@@ -908,10 +918,8 @@ sub displayWorkbenchControls {
       Minimum Intensity: $minimumIntensityFilterControl<BR>
       Resolution: $resolutionHighLowControl &nbsp;&nbsp;&nbsp;
       Fragmentation: $fragmentationControl
-      <BR>
-      <INPUT TYPE='submit' VALUE='REFRESH'>
-    </FORM>
-    </TD></TR></TABLE>
+      <input style='margin-left:400px;' type='submit' value='REFRESH'>
+    </form>
   ~;
 
   return;
@@ -1230,7 +1238,7 @@ sub printUserAnnotations {
     my $buffer;
     my $total = 0; # this starts as a counter, then becomes a string
     my $show_form = 1;
-    my $line_sep = "<tr><td colspan='2'><hr size='1' noshade></td></tr>";
+    my $line_sep = "<tr><td colspan='2'><hr></td></tr>";
 
     my $sql = qq~
 	SELECT SA.spectrum_annotation_id, SA.comment, SA.date_modified,
@@ -1253,8 +1261,8 @@ sub printUserAnnotations {
     my @rows = $sbeams->selectSeveralColumns($sql);
 
     $buffer = qq~
+	<a name="user_annotations"></a>
 	<table width="100%" class="table_setup">
-	<tr class="orange_bg"><th>User annotations</th><td><a name="user_annotations">&nbsp;</a></td></tr>
 	~;
 
     if (@rows) {
@@ -1264,17 +1272,18 @@ sub printUserAnnotations {
 	    $total++;
 
 	    if ($args{modified_sequence}.$args{charge} eq $sequence.$charge) {
-		$buffer .= "<tr id='${uname}${annot_id}_annot_tr'><th valign='top'>$level</th><td>$first $last ($date)<br />\n";
-	    } else {
+		$buffer .= "<tr id='${uname}${annot_id}_annot_tr'><th valign='top'>$level</th><td>$first $last ($date)<br>\n";
+	    }
+	    else {
 		my $link = $q->self_url();
 		$link =~ s/\?.*//;  # clear querystring
 		$link .= "?spectrum_identification_id=$ident_id;peptide=$sequence;assumed_charge=$charge";
 
-		$buffer .= "<tr bgcolor='#dddddd' id='${uname}${annot_id}_annot_tr'><th valign='top'>$level<br /><a href='$link' style='color:red'>$sequence +$charge</a></th><td>$first $last ($date)<br />\n";
+		$buffer .= "<tr bgcolor='#dddddd' id='${uname}${annot_id}_annot_tr'><th valign='top'>$level<br /><a href='$link' style='color:red'>$sequence +$charge</a></th><td>$first $last ($date)<br>\n";
 	    }
 
 	    my $disp_comment = $comment;
-	    $disp_comment =~ s|\n|<BR />\n|g; # display carriage returns
+	    $disp_comment =~ s|\n|<br>\n|g; # display carriage returns
 	    $buffer .= "$disp_comment\n";
 
 	    if ( ($uname eq $current_username) &&
@@ -1282,12 +1291,12 @@ sub printUserAnnotations {
 		$show_form = 0;
 
 		$buffer .= qq~
-		    <br /><div align='right'><a href='javascript:showEditForm();'>Edit my annotation</a> | <a href='javascript:confirm_delete();'>Delete</a>
-		    <FORM NAME="delete_annotation" METHOD="post" action="$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROG_NAME">
+		    <br>
+                    <a style='margin-left:-50px;' href='javascript:showEditForm();'>Edit my annotation</a> | <a href='javascript:confirm_delete();'>Delete</a>
+		    <form id="delete_annotation" method="post" action="$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROG_NAME">
 		    $args{form_fields}
-		    <INPUT TYPE='hidden' NAME='spectrum_annotation_id' VALUE='$annot_id'>
-   		    <INPUT TYPE='hidden' NAME='apply_action' VALUE='DELETE ANNOTATION'></FORM>
-		    </div>
+		    <input type='hidden' name='spectrum_annotation_id' value='$annot_id'>
+   		    <input type='hidden' name='apply_action' value='DELETE ANNOTATION'></form>
 		    ~;
 
 		$buffer .= "</td></tr>\n";
@@ -1307,8 +1316,7 @@ sub printUserAnnotations {
 
     } else {
 	$buffer .= qq~
-	    <tr><td>&nbsp;</td>
-	    <td class='section_heading'>There are no user annotations for this spectrum<br /></td></tr>
+	    <tr><td colspan='2'><h3 style='display:inline;'>There are no user annotations for this spectrum</h3></td></tr>
 	    $line_sep
 	    ~;
     }
@@ -1325,7 +1333,7 @@ sub printUserAnnotations {
 	    ~;
 
     } elsif ($show_form) {
-	$buffer .= "<tr id='${current_username}add_annot_tr'><th valign='top'><a href='javascript:showEditForm();'>Add annotation</a></th><td>&nbsp;</td></tr>\n";
+	$buffer .= "<tr id='${current_username}add_annot_tr'><td valign='top'><a href='javascript:showEditForm();'>[ + ] Add annotation</a></td><td>&nbsp;</td></tr>\n";
 
 	$buffer .= &printUserAnnotationsForm(
 					     form_type => 'add',
@@ -1372,11 +1380,17 @@ sub printUserAnnotations {
     $buffer .=<< "EOJS" if $innerHTML;
 <SCRIPT LANGUAGE="JavaScript" TYPE="text/javascript">
     document.getElementById("annotations_summary").innerHTML = '$innerHTML';
-    document.getElementById("annotations_head").style.display = 'table-row';
+    document.getElementById("annotations_summary").style.display = 'inline';
 </SCRIPT>
 EOJS
 
-    return $buffer;
+    return scalar $sbeams->make_toggle_section(
+      neutraltext => "User Annotations ($num)",
+      sticky => 1,
+      name => 'userannotations_div',
+      barlink => 1,
+      visible => ($num > 0),
+      content => $buffer );
 }
 
 
@@ -1394,13 +1408,11 @@ sub printUserAnnotationsForm {
     $args{annot_id} ||= 0;
     $args{extra_form_fields} ||= '';
 
-    my $spacer = "&nbsp;"x5;
-
     my $trname = $args{uname};
     $trname .= ($args{form_type} eq 'add') ? 'add' : $args{annot_id};
 
     my $buffer = qq~
-	<SCRIPT LANGUAGE="JavaScript" TYPE="text/javascript">
+	<script>
 	<!--
 	function showEditForm() {
 	    document.getElementById('${trname}_annot_tr').style.display = 'none';
@@ -1414,11 +1426,11 @@ sub printUserAnnotationsForm {
         function confirm_delete() {
 	    var del = confirm("Are you sure you want to delete your comment?");
 	    if (del==true) {
-		document.delete_annotation.submit();
+		document.getElementById("delete_annotation").submit();
 	    }
 	}
         // -->
-	</SCRIPT>
+	</script>
 	~;
 
     # add a hidden <tr> for edit form
@@ -1455,12 +1467,12 @@ sub printUserAnnotationsForm {
     $buffer .= qq~
 	<tr style='display:none' id='${trname}_form_tr'>
 	<th valign='top'>
-	<FORM METHOD="post" action="$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROG_NAME">
+	<form method="post" action="$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROG_NAME">
 	$args{extra_form_fields}
 	$select</th>
-	<td><TEXTAREA ROWS='6' COLS='80' NAME='user_spectrum_commment'>$args{default_comment}</TEXTAREA><br />
-	<div align='right'><INPUT TYPE='submit' NAME='apply_action' VALUE='$form_action ANNOTATION'>$spacer<a class='small_form_field' href='javascript:hideEditForm();'>CANCEL</a></div>
-        </FORM>
+	<td><textarea rows='6' cols='80' name='user_spectrum_commment'>$args{default_comment}</textarea><br>
+	<div><input type='submit' name='apply_action' value='$form_action ANNOTATION'><a style='margin-left:75px;' class='pa-smg' href='javascript:hideEditForm();'>CANCEL</a></div>
+        </form>
 	~;
 
     # caller will close the td and tr
@@ -1505,31 +1517,26 @@ sub getUSIInputForm {
   }
   $usi = "" unless ( $usi );
 
-  my $buffer = qq~<TABLE BORDER=0><TR><TD>
-       <SCRIPT LANGUAGE="JavaScript">
+  my $buffer = qq~
+       <script>
        function fillInUSI(input_field) {
-         exampleNumber = Math.floor((Math.random()*5))
-         if ( exampleNumber == 0 ) {
-           document.USIForm.USI.value = "mzspec:PXD000561:Adult_Urinarybladder_bRP_Elite_71_f14:scan:1872:FSGSSSGADR/2";
-         } else if ( exampleNumber == 1 ) {
-           document.USIForm.USI.value = "mzspec:PXD000865:00603_F01_P004608_B00F_A00_R1:scan:14453:SSLLDVLAAR/2";
-         } else if ( exampleNumber == 2 ) {
-           document.USIForm.USI.value = "mzspec:PXD002286:081213-Wittie-Phos-1A:scan:14366:MVC[Carbamidomethyl]S[Phospho]PVTVR/2";
-         } else if ( exampleNumber == 3 ) {
-           document.USIForm.USI.value = "mzspec:PXD001464:CL_1hRP_rep3:nativeId:1,1,2740,10:Q[Gln->pyro-Glu]IGDALPVSC[Carbamidomethyl]TISASR/2";
-         } else {
-           document.USIForm.USI.value = "mzspec:PXD002255:ES_XP_Ubi_97H_HCD_349:scan:9617:LAEIYVNSSFYK/2";
-         }
+           var exampleUSIs = [
+                 "mzspec:PXD000561:Adult_Urinarybladder_bRP_Elite_71_f14:scan:1872:FSGSSSGADR/2",
+                 "mzspec:PXD000865:00603_F01_P004608_B00F_A00_R1:scan:14453:SSLLDVLAAR/2",
+                 "mzspec:PXD002286:081213-Wittie-Phos-1A:scan:14366:MVC[Carbamidomethyl]S[Phospho]PVTVR/2",
+                 "mzspec:PXD001464:CL_1hRP_rep3:nativeId:1,1,2740,10:Q[Gln->pyro-Glu]IGDALPVSC[Carbamidomethyl]TISASR/2",
+                 "mzspec:PXD002255:ES_XP_Ubi_97H_HCD_349:scan:9617:LAEIYVNSSFYK/2"
+            ];
+         document.USIForm.USI.value = exampleUSIs[Math.floor((Math.random()*exampleUSIs.length))];
          return;
        }
-       </SCRIPT>
-    <FORM NAME="USIForm" METHOD="post" action="$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROG_NAME">
+       </script>
+    <form name="USIForm" method="post" action="$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROG_NAME" style="background: #f3f1e4;padding: 5px;border-bottom: 1px solid #5e6a71;">
     <font size="+1">Universal Spectrum Identifier:</font>&nbsp;&nbsp;&nbsp;<a target="_blank" href="http://psidev.info/usi/">(what's this?)</a>&nbsp;&nbsp;&nbsp;
-          <INPUT TYPE="button" NAME="example_button" VALUE="example" onClick="fillInUSI(example_button)"><BR>
-    <INPUT TYPE="text" NAME="USI" SIZE="100" VALUE="$usi"></INPUT>
-    <INPUT TYPE='submit' VALUE='VIEW'>
-    </FORM>
-    </TD></TR></TABLE>
+          <input type="button" name="example_button" value="example" onClick="fillInUSI(example_button)"><br>
+    <input type="text" name="USI" size="100" value="$usi"></input>
+    <input type='submit' value='VIEW'>
+    </form>
   ~;
 
   return $buffer;
@@ -2318,8 +2325,4 @@ sub getCompactNativeId {
   return($compactNativeId);
 
 } # end getCompactNativeId
-
-
-
-
 
