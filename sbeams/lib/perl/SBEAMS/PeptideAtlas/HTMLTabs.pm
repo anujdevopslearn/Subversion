@@ -31,24 +31,16 @@ my $sbeams;
 
 ##our $VERSION = '0.20'; can get this from Settings::get_sbeams_version
 
-my $activate_PASSEL = 1;
-
 
 ###############################################################################
 # Constructor
 ###############################################################################
-sub new 
-{
-    my $this = shift;
-
-    my $class = ref($this) || $this;
-
-    my $self = {};
-
-    bless $self, $class;
-
-    return($self);
-
+sub new {
+  my $this = shift;
+  my $class = ref($this) || $this;
+  my $self = {};
+  bless $self, $class;
+  return($self);
 }
 
 
@@ -57,9 +49,7 @@ sub new
 ###############################################################################
 sub printTabMenu {
   my $self = shift;
-
   my $tabMenu = $self->getTabMenu(@_);
-
   print $tabMenu->asHTML();
 }
 
@@ -67,9 +57,7 @@ sub printTabMenu {
 ###############################################################################
 # getTabMenu
 ###############################################################################
-sub getTabMenu
-{
-
+sub getTabMenu {
     my $self = shift;
 
     $sbeams = $self->getSBEAMS();
@@ -88,7 +76,7 @@ sub getTabMenu
     my $current_subtab=1;
 
     if ( ($PROG_NAME =~ /^main.cgi|buildDetails/) ||
-    ($PROG_NAME =~ /^main.cgi\?(\S+)/ ))
+	 ($PROG_NAME =~ /^main.cgi\?(\S+)/ ))
     {
        $current_tab=2;
 
@@ -99,7 +87,7 @@ sub getTabMenu
        $current_subtab=2;
 
     } elsif ( ($PROG_NAME =~ /^defaultBuildsPepsProts/) ||
-    ($PROG_NAME =~ /defaultBuildsPepsProts\?(\S+)/ ))
+	      ($PROG_NAME =~ /defaultBuildsPepsProts\?(\S+)/ ))
     {
        $current_tab=2;
        $current_subtab=3;
@@ -121,7 +109,7 @@ sub getTabMenu
        $current_tab=4;
 
     } elsif ($PROG_NAME=~ /^GetNextProtChromMapping/ || 
-     $PROG_NAME =~ /^GetNextProtChromMapping\?(\S+)/ ) {
+	     $PROG_NAME =~ /^GetNextProtChromMapping\?(\S+)/ ) {
        $current_tab=4;
        $current_subtab=3;
 
@@ -131,19 +119,19 @@ sub getTabMenu
        $current_tab=3;
 
     } elsif ( ($PROG_NAME =~ /^GetProteins/) ||
-    ($PROG_NAME =~ /GetProteins\?(\S+)/ ))
+	      ($PROG_NAME =~ /GetProteins\?(\S+)/ ))
     {
        $current_tab=4;
        $current_subtab=2;
 
     } elsif ( ($PROG_NAME =~ /^CompareBuildsProteins/) ||
-    ($PROG_NAME =~ /CompareBuildsProteins\?(\S+)/ ))
+	      ($PROG_NAME =~ /CompareBuildsProteins\?(\S+)/ ))
     {
        $current_tab=4;
        $current_subtab=4;
 
     } elsif ( ($PROG_NAME =~ /^showPathways/) ||
-    ($PROG_NAME =~ /showPathways\?(\S+)/ ))
+	      ($PROG_NAME =~ /showPathways\?(\S+)/ ))
     {
        $current_tab=4;
        $current_subtab=6;
@@ -153,102 +141,93 @@ sub getTabMenu
        $current_subtab=7;
 
     } elsif ( ($PROG_NAME =~ /^GetTransitions/) ||
-    ($PROG_NAME =~ /ViewSRMList\?(\S+)/ ))
+	      ($PROG_NAME =~ /ViewSRMList\?(\S+)/ ))
     {
        $current_tab=5;
        $current_subtab=1;
 
     } elsif ( ($PROG_NAME =~ /^quant_info/) ||
-    ($PROG_NAME =~ /ViewSRMList\?(\S+)/ ))
+	      ($PROG_NAME =~ /ViewSRMList\?(\S+)/ ))
     {
        $current_tab=5;
        $current_subtab=1;
 
     } elsif ( ($PROG_NAME =~ /^GetProtein/) ||
-    ($PROG_NAME =~ /GetProtein\?(\S+)/ ))
+	      ($PROG_NAME =~ /GetProtein\?(\S+)/ ))
     {
        $current_tab=3;
        $current_subtab=2;
 
     }elsif ( ($PROG_NAME =~ /^Summarize_Peptide/) ||
-    ($PROG_NAME =~ /Summarize_Peptide\?(\S+)/ ))
+	     ($PROG_NAME =~ /Summarize_Peptide\?(\S+)/ ))
     {
        $current_tab=2;
        $current_subtab=4;
 
     }elsif ( ($PROG_NAME =~ /^viewOrthologs/) ||
-    ($PROG_NAME =~ /viewOrthologs\?(\S+)/ ))
+	     ($PROG_NAME =~ /viewOrthologs\?(\S+)/ ))
     {
        $current_tab=2;
        $current_subtab=5;
 
     }elsif ( ($PROG_NAME =~ /^GetTransitionLists/) ||
-    ($PROG_NAME =~ /GetTransitionLists\?(\S+)/ ))
+	     ($PROG_NAME =~ /GetTransitionLists\?(\S+)/ ))
     {
        $current_tab=5;
        $current_subtab=2;
     }elsif ( ($PROG_NAME =~ /^ViewSRMBuild/) ||
-    ($PROG_NAME =~ /ViewSRMBuild\?(\S+)/ ))
+	     ($PROG_NAME =~ /ViewSRMBuild\?(\S+)/ ))
     {
        $current_tab=5;
        $current_subtab=3;
     }elsif ( ($PROG_NAME =~ /^GetSELExperiments/) ||
-    ($PROG_NAME =~ /GetSELExperiments\?(\S+)/ ))
+	     ($PROG_NAME =~ /GetSELExperiments\?(\S+)/ ))
     {
        $current_tab=5;
        $current_subtab=4;
     }elsif ( ($PROG_NAME =~ /^GetSELTransitions/) ||
-    ($PROG_NAME =~ /GetSELTransitions\?(\S+)/ ))
+	     ($PROG_NAME =~ /GetSELTransitions\?(\S+)/ ))
     {
        $current_tab=5;
        $current_subtab=5;
-    }elsif($PROG_NAME =~ /^GetPTP$/){
-      $current_tab=6;
-      $current_subtab=1;
-    }elsif($PROG_NAME =~ /^GetPTPP.*/){
-      $current_tab=6;
-      $current_subtab=2;
-    }elsif($PROG_NAME =~ /^GetPTPAtlasS.*/){
-      $current_tab=6;
-      $current_subtab=3;
-
-    #### SWATH Atlas tabs
-    } elsif ($PROG_NAME =~ /DIA_library_download/) {
-       $current_tab=8;
-       $current_subtab=1;
-    } elsif ($PROG_NAME =~ /DIA_library_subset/) {
-       $current_tab=8;
-       $current_subtab=2;
-    } elsif ($PROG_NAME =~ /DIA_search/) {
-       $current_tab=8;
-       $current_subtab=3;
-    } elsif ($PROG_NAME =~ /AssessDIALib/) {
-       $current_tab=8;
-       $current_subtab=4;
 
 
     #### PeptideAtlas Submission System PASS tabs
     } elsif ($PROG_NAME =~ /^PASS_Summary/) {
-       $current_tab=7;
+       $current_tab=6;
        $current_subtab=1;
     } elsif ($PROG_NAME =~ /^PASS_Submit/) {
-       $current_tab=7;
+       $current_tab=6;
        $current_subtab=2;
     } elsif ($PROG_NAME =~ /^PASS_View/) {
+       $current_tab=6;
+       $current_subtab=3;
+ 
+
+    #### SWATH Atlas tabs
+    } elsif ($PROG_NAME =~ /DIA_library_download/) {
+       $current_tab=7;
+       $current_subtab=1;
+    } elsif ($PROG_NAME =~ /DIA_library_subset/) {
+       $current_tab=7;
+       $current_subtab=2;
+    } elsif ($PROG_NAME =~ /DIA_search/) {
        $current_tab=7;
        $current_subtab=3;
+    } elsif ($PROG_NAME =~ /AssessDIALib/) {
+       $current_tab=7;
+       $current_subtab=4;
     }
-
 
 
     ## set up tab structure:
     my $tabmenu = SBEAMS::Connection::TabMenu->
         new( %args,
              cgi => $q,
-             activeColor => 'f3f1e4',
-             inactiveColor   => 'd3d1c4',
+             activeColor   => 'f3f1e4',
+             inactiveColor => 'd3d1c4',
              hoverColor => '22eceb',
-             atextColor => '5e6a71', # black
+             atextColor => '5e6a71', # ISB gray
              itextColor => 'ff0000', # red
              isDropDown => '1',
              # paramName => 'mytabname', # uses this as cgi param
@@ -261,12 +240,14 @@ sub getTabMenu
     );
 
 
+    #### Search, tab = 1
     $tabmenu->addTab( label => 'Search',
                       helptext => 'Search PeptideAtlas by keyword',
                       URL => "$CGI_BASE_DIR/PeptideAtlas/Search"
                     );
 
 
+    #### All Builds, tab = 2
     $tabmenu->addTab( label => 'All Builds' );
 
     $tabmenu->addMenuItem( tablabel => 'All Builds',
@@ -300,6 +281,7 @@ sub getTabMenu
 			   );
 
 
+    #### Current Build, tab = 3
     $tabmenu->addTab( label => 'Current Build' );
 
     $tabmenu->addMenuItem( tablabel => 'Current Build',
@@ -315,6 +297,7 @@ sub getTabMenu
 			   );
 
 
+    #### Queries, tab = 4
     $tabmenu->addTab( label => 'Queries' );
 
     $tabmenu->addMenuItem( tablabel => 'Queries',
@@ -356,6 +339,8 @@ sub getTabMenu
 			   url => "$CGI_BASE_DIR/PeptideAtlas/proteinListSelector"
 			   );
 
+
+    #### SRMAtlas, tab = 5
     $tabmenu->addTab( label => 'SRMAtlas' );
 
     $tabmenu->addMenuItem( tablabel => 'SRMAtlas',
@@ -376,45 +361,26 @@ sub getTabMenu
 			   url => "$CGI_BASE_DIR/PeptideAtlas/ViewSRMBuild"
 			   );
 
-if ($activate_PASSEL) {
-  #$tabmenu->addTab( label => 'PASSEL' );   # let's fold into SRMAtlas
 
     $tabmenu->addMenuItem( tablabel => 'SRMAtlas',
 			   label => 'PASSEL Experiments',
 			   helptext => 'Browse SRM experiments',
 			   url => "$CGI_BASE_DIR/PeptideAtlas/GetSELExperiments"
-			   );
+	);
 
     $tabmenu->addMenuItem( tablabel => 'SRMAtlas',
 			   label => 'PASSEL Data',
 			   helptext => 'View transition groups for SRM experiments',
 			   url => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions"
-			   );
-}
+	);
 
-    $tabmenu->addTab( label => 'PTPAtlas' );
-		$tabmenu->addMenuItem( tablabel => 'PTPAtlas',
-  		 label => 'Search Protein',
-	  	 helptext => 'Get Proteotypic Peptides for one Protein',
-		   url => "$CGI_BASE_DIR/PeptideAtlas/GetPTP"
-		 );
-    $tabmenu->addMenuItem( tablabel => 'PTPAtlas',
-         label => 'Get PTP Peptides',
-         helptext => 'Get Proteotypic Peptides for one or more Proteins',
-         url => "$CGI_BASE_DIR/PeptideAtlas/GetPTPPeptides"
-         );
-    $tabmenu->addMenuItem( tablabel => 'PTPAtlas',
-         label => 'Get Database Statistics',
-         url => "$CGI_BASE_DIR/PeptideAtlas/GetPTPAtlasStat"
-         );
 
-    #### PeptideAtlas Submission System PASS tabs
-    if (1) {
+    #### PeptideAtlas Submission System PASS tabs, tab = 6
     $tabmenu->addTab( label => 'Submission',
-         label => 'Submission',
-         helptext => 'Submit or access datasets',
-         url => "$CGI_BASE_DIR/PeptideAtlas/PASS_Submit"
-         );
+		      label => 'Submission',
+		      helptext => 'Submit or access datasets',
+		      url => "$CGI_BASE_DIR/PeptideAtlas/PASS_Submit"
+	);
     $tabmenu->addMenuItem( tablabel => 'Submission',
 			   label => 'Datasets Summary',
 			   helptext => 'View/manage submitted datasets',
@@ -430,36 +396,32 @@ if ($activate_PASSEL) {
 			   helptext => 'View/access a previously submitted dataset',
 			   url => "$CGI_BASE_DIR/PeptideAtlas/PASS_View"
 			   );
-    }
 
 
-    #### SWATH tabs
-#    if ( 1 && !$sbeams->isGuestUser() ) {
-    if ( 1 ) {
+    #### SWATH tabs, tab = 7
     $tabmenu->addTab( label => 'SWATH/DIA',
-         helptext => 'Resource for data independent analysis',
+		      helptext => 'Resource for data independent analysis',
         );
     $tabmenu->addMenuItem( tablabel => 'SWATH/DIA',
-         label => 'SWATH Libraries',
-         helptext => 'Download libraries in various formats',
-         url => "$CGI_BASE_DIR/PeptideAtlas/GetDIALibs?mode=download_libs"
-         );
+			   label => 'SWATH Libraries',
+			   helptext => 'Download libraries in various formats',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/GetDIALibs?mode=download_libs"
+	);
     $tabmenu->addMenuItem( tablabel => 'SWATH/DIA',
-         label => 'Custom Libraries',
-         helptext => 'Generate custom subset libraries',
-         url => "$CGI_BASE_DIR/PeptideAtlas/GetDIALibs?mode=subset_libs"
-         );
+			   label => 'Custom Libraries',
+			   helptext => 'Generate custom subset libraries',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/GetDIALibs?mode=subset_libs"
+	);
     $tabmenu->addMenuItem( tablabel => 'SWATH/DIA',
-         label => 'Search datasets',
-         helptext => 'Search contributed datasets with your SWATH libs',
-         url => "$CGI_BASE_DIR/PeptideAtlas/DIA_search"
-         );
+			   label => 'Search datasets',
+			   helptext => 'Search contributed datasets with your SWATH libs',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/DIA_search"
+	);
     $tabmenu->addMenuItem( tablabel => 'SWATH/DIA',
-         label => 'Assess Library',
-         helptext => 'Assess physical properties of DIA Library',
-         url => "$CGI_BASE_DIR/PeptideAtlas/AssessDIALibrary"
-         );
-    }
+			   label => 'Assess Library',
+			   helptext => 'Assess physical properties of DIA Library',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/AssessDIALibrary"
+	);
 
 
     $tabmenu->setCurrentTab( currtab => $current_tab, currsubtab => $current_subtab );
