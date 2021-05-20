@@ -257,8 +257,8 @@ sub handle_request {
     $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
 
-  #### Print link to old GetProteins cgi
-  if ($sbeams->output_mode() eq 'html') {
+  #### Print link to old GetProteins cgi -- DISABLED 5/2021 LM
+  if (0) {  #$sbeams->output_mode() eq 'html') {
     my $BYPEP_TABLE_NAME="AT_GetProteinsByPep";
     my ($BYPEP_PROGRAM_FILE_NAME) =
       $sbeamsMOD->returnTableInfo($BYPEP_TABLE_NAME,"PROGRAM_FILE_NAME");
