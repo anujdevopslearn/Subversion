@@ -81,7 +81,7 @@ sub getTabMenu {
        $current_tab=2;
 
     } elsif ( ($PROG_NAME =~ /^buildInfo/) ||
-    ($PROG_NAME =~ /buildInfo\?(\S+)/ ))
+	      ($PROG_NAME =~ /buildInfo\?(\S+)/ ))
     {
        $current_tab=2;
        $current_subtab=2;
@@ -93,18 +93,18 @@ sub getTabMenu {
        $current_subtab=3;
 
     } elsif ( ($PROG_NAME =~ /^SearchProteins/) ||
-    ($PROG_NAME =~ /SearchProteins\?(\S+)/ ))
+	      ($PROG_NAME =~ /SearchProteins\?(\S+)/ ))
     {
        $current_tab=4;
        $current_subtab=5;
 
     } elsif( ($PROG_NAME =~ /^Search/) ||
-    ($PROG_NAME =~ /^Search\?(\S+)/ ))
+	     ($PROG_NAME =~ /^Search\?(\S+)/ ))
     {
        $current_tab=1;
 
     } elsif( ($PROG_NAME =~ /^GetPeptides/) ||
-    ($PROG_NAME =~ /^GetPeptides\?(\S+)/ ))
+	     ($PROG_NAME =~ /^GetPeptides\?(\S+)/ ))
     {
        $current_tab=4;
 
@@ -114,7 +114,7 @@ sub getTabMenu {
        $current_subtab=3;
 
      }elsif( ($PROG_NAME =~ /^GetPeptide/) ||
-    ($PROG_NAME =~ /^GetPeptide\?(\S+)/ ))
+	     ($PROG_NAME =~ /^GetPeptide\?(\S+)/ ))
     {
        $current_tab=3;
 
@@ -217,8 +217,10 @@ sub getTabMenu {
     } elsif ($PROG_NAME =~ /AssessDIALib/) {
        $current_tab=7;
        $current_subtab=4;
-    }
 
+    } elsif ($PROG_NAME eq 'none') {
+      $current_tab=99;
+    }
 
     ## set up tab structure:
     my $tabmenu = SBEAMS::Connection::TabMenu->

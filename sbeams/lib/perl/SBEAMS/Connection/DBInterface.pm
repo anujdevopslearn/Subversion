@@ -5312,11 +5312,10 @@ sub display_input_form {
   } else {
       my $spacer = $args{use_tabbed_panes} ? $self->getTabbedPanesDHTML()."<br/>\n".$self->addTabbedPane(label => "Form") : $LINESEPARATOR;
       print qq!
-	  <P>
-	  <H2>$CATEGORY</H2>
+	  <h1>$CATEGORY</h1>
 	  $spacer
-	  <FORM METHOD="post" ACTION="$PROGRAM_FILE_NAME" NAME="$form_name" $file_upload_flag $onSubmit>
-	  <TABLE BORDER=0>
+	  <form method="post" action="$PROGRAM_FILE_NAME" NAME="$form_name" $file_upload_flag $onSubmit>
+	  <table border=0>
       !;
   }
 
@@ -5750,8 +5749,8 @@ sub display_form_buttons {
       $pad <INPUT TYPE="submit" NAME="action" VALUE="QUERY">
       $pad <INPUT TYPE="submit" NAME="action" VALUE="REFRESH">
       $pad <INPUT TYPE="reset"  VALUE="Reset">
-       </TR></TABLE>
-       </FORM>
+       </TR></table>
+       </form>
   ~;
   $buttons .= $self->closeTabbedPane(selected=>1) if $args{use_tabbed_panes};
 	

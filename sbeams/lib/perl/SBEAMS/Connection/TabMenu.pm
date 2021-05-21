@@ -3,7 +3,7 @@
 #
 # Description : Module for building tabbed (drop-down) menus for HTML pages. 
 #
-# SBEAMS is Copyright (C) 2000-2009 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -47,7 +47,7 @@ my $log = SBEAMS::Connection::Log->new();
 #-
 sub new {
   my $class = shift;
-  my $this = { activeColor => 'BBBBBB', # dark grey
+  my $this = { activeColor   => 'BBBBBB', # dark grey
                inactiveColor => 'DEDEDE', # light grey 
                hoverColor => 'BBCCBB', # greenish
                atextColor => '000000', # black
@@ -93,10 +93,10 @@ sub new {
 
   # Allow constructor to define some tabs
   if ( ref( $this->{labels} ) eq 'ARRAY' ) {
-      foreach( @{$this->{labels}} ) {
-        $this->addTab( label => $_ );
-      }
+    foreach( @{$this->{labels}} ) {
+      $this->addTab( label => $_ );
     }
+  }
   
   return $this;
 }
@@ -325,19 +325,16 @@ sub getActiveTab {
   my $this = shift;
   
   if ( $this->{_currentTab} && $this->{_currentTab} <= $this->{_tabIndex} ) {
-   
     # If a tab was already selected, it is active
     return ( $this->{_currentTab} )
     
   } elsif ( $this->{_defaultTab} ) {
-
     # Else use default
     return ( $this->{_defaultTab} );
 
   } else {
-
-  # Else use first tab
-  return 1;
+    # Else don't select any
+    return 0;
 
   }
 }
