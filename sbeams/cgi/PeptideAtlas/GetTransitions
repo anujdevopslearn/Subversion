@@ -72,9 +72,7 @@ main();
 exit(0);
 
 # Main Program
-sub main 
-{
-
+sub main {
   $sbeams->time_stmt( "in main" );
 
   # Authenticate and exit if a username is not returned
@@ -139,10 +137,10 @@ sub main
 https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst_build_id=164&protein_name_constraint=P00533&protein_file=&peptide_sequence_constraint=&peptide_file=&peptide_length=&n_highest_intensity_fragment_ions=4&n_peptides_per_protein=5&target_instrument=2&exclusion_range=&SwissProt=on&4H=1&5H=1&Hper=1&ssr_p=0.5&C=1&D=1&M=1&P=1&R=1&S=1&W=1&nQ=1&NxST=1&nE=1&nM=1&Xc=1&nX=1&BA=1&obs=2&PATR=10&min_l=7&min_p=0.2&max_l=25&max_p=0.2&cmod_opts=light&min_mz=&max_mz=&speclinks=on&rt_type=7&y_ions=on&b_ions=on&C[160]=on&N[115]=on&set_current_work_group=&set_current_project_id=&QUERY_NAME=AT_GetTransitions&apply_action_hidden=&action=QUERY
   ~;
 
-	if ( !$parameters{pabst_build_id} && $parameters{SBEAMSentrycode} && $parameters{SBEAMSentrycode} == 'SRM73sFPASS1' ) {
-		$parameters{pabst_build_id} = 164;
-		$parameters{protein_name_constraint} ||= 'P00533';
-		$parameters{SwissProt} ||= 'checked';
+  if ( !$parameters{pabst_build_id} && $parameters{SBEAMSentrycode} && $parameters{SBEAMSentrycode} == 'SRM73sFPASS1' ) {
+    $parameters{pabst_build_id} = 164;
+    $parameters{protein_name_constraint} ||= 'P00533';
+    $parameters{SwissProt} ||= 'checked';
     $parameters{action} ||= 'QUERY';
     $parameters{rt_type} ||= 7;
     $parameters{y_ions} ||= 'on';
@@ -150,7 +148,7 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
     $parameters{'C[160]'} ||= 'on';
     $parameters{'N[115]'} ||= 'on';
     $parameters{'N[115]'} ||= 'on';
-	}
+  }
 
   # Fetch pabst_build_id based on params. 
   # 1 - passed pabst_build_id param
@@ -294,6 +292,7 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
 
   # Add select list javascript
   if ( $is_html ) {
+    print "<script>document.title = 'Query Transitions from SRMAtlas';</script>";
     print qq~
       <link rel="stylesheet" href="//code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css">
        <script src="//code.jquery.com/jquery-1.9.1.js"></script>
@@ -577,7 +576,6 @@ function verify_build() {
 # Handle Request
 ###############################################################################
 sub print_form {
-
   my %args = @_;
 
   # Historical, don't ask.
@@ -849,7 +847,6 @@ sub get_rt_select {
 
 
 sub get_mod_filters {
-
   my %opts = @_;
 
   my %mods = ( 'C[143]' => '',
@@ -951,7 +948,6 @@ sub get_multimap_filters {
 }
 
 sub get_namespace_filters {
-
   my %opts = @_;
 
 
@@ -1016,7 +1012,6 @@ sub get_namespace_filters {
 
 
 sub get_ion_filters {
-
   my %opts = @_;
 
   my $b_ions = 'checked';
@@ -1075,7 +1070,6 @@ sub get_cmod_select {
 }
 
 sub get_cmod_radio {
-
   my $curr_val = shift || 'default';
   my %sel = ( default => '', heavy_only => '', 'both' => '', 'light_only' => '' );
   $sel{$curr_val} = 'checked';
@@ -1090,7 +1084,6 @@ sub get_cmod_radio {
 }
 
 sub get_download_form {
-
   my $form = '<FORM NAME=DWNLD ID=DWNLD ACTION=GetResultSet.cgi/SRMAtlasAssays.tsv onSubmit="setMethodName()">';
 
   my $select = qq~
@@ -1156,7 +1149,6 @@ sub get_download_form {
 }
 
 sub get_multi_selects {
-
   my $instr2code = $best_peptide->getInstrumentMap();
   my $src_select = "<SELECT MULTIPLE SIZE=4 NAME=transition_source>\n";
   for my $instr ( sort( keys( %{$instr2code} ) ) ) {
@@ -1485,8 +1477,8 @@ sub fetch_transitions {
     </H4>
     END
 
-		return;
-	}
+    return;
+  }
 
 
   # New filter, remove peptide ions with various mass mods.
@@ -2207,31 +2199,31 @@ sub fetch_transitions {
       $cleanseq =~ s/\[\d+\]//g;
 
       if ( $parameters{multimap} eq 'results' ) {
-  			my $pepion = $row[1] . '__' . $row[6];
-	  		$pepion_used{$pepion} ||= {};
-	  		$peptide_used{$cleanseq} ||= {};
-				my $skip_protein = 0;
-		  	for my $used_prot ( keys( %{$peptide_used{$cleanseq}} ) ) {
+	my $pepion = $row[1] . '__' . $row[6];
+	$pepion_used{$pepion} ||= {};
+	$peptide_used{$cleanseq} ||= {};
+	my $skip_protein = 0;
+	for my $used_prot ( keys( %{$peptide_used{$cleanseq}} ) ) {
 #		  	for my $used_prot ( keys( %{$pepion_used{$pepion}} ) ) {
-			  	if ( $used_prot !~ /$prot/ ) {
-						$skip_protein++;
-						last;
-					}
-  			}
-				if ( $skip_protein ) {
-					$skipped_multimap{$prot} ||= {};
-					$skipped_multimap{$prot}->{$cleanseq}++;
-					next;
-				}
-	  		$pepion_used{$pepion}->{$prot}++;
-	  		$peptide_used{$cleanseq}->{$prot}++;
-			} elsif ( $parameters{multimap} eq 'global' ) {
-				if ( $peptide_mappings->{$cleanseq} && $peptide_mappings->{$cleanseq} !~ />1</ ) {
-					$log->info( "Skipping $cleanseq for global doppletude" );
-					$skipped_multimap{$prot}->{$cleanseq}++;
-					next;
-				}
-			}
+	  if ( $used_prot !~ /$prot/ ) {
+	    $skip_protein++;
+	    last;
+	  }
+	}
+	if ( $skip_protein ) {
+	  $skipped_multimap{$prot} ||= {};
+	  $skipped_multimap{$prot}->{$cleanseq}++;
+	  next;
+	}
+	$pepion_used{$pepion}->{$prot}++;
+	$peptide_used{$cleanseq}->{$prot}++;
+      } elsif ( $parameters{multimap} eq 'global' ) {
+	if ( $peptide_mappings->{$cleanseq} && $peptide_mappings->{$cleanseq} !~ />1</ ) {
+	  $log->info( "Skipping $cleanseq for global doppletude" );
+	  $skipped_multimap{$prot}->{$cleanseq}++;
+	  next;
+	}
+      }
 
       $peps{$pep_key}++;
 
@@ -2346,8 +2338,6 @@ sub fetch_transitions {
             ~;
           }
         }
-
-
 
 
         $links = "$srm_link$pa_link$pratlas_link$np_link$pc_link$srmc_link";
@@ -2768,17 +2758,16 @@ sub fetch_transitions {
           $suppress_header = 0;
         }
         $sbeams->displayResultSet( resultset_ref => $rs,
-                             query_parameters_ref=>\%parameters,
-                             rs_params_ref=> \%rs_params,
-                             url_cols_ref=> [],
-                             hidden_cols_ref=> {},
-                             max_widths=> {},
-                             column_titles_ref=> $rs->{column_list_ref},
-                             base_url=> '',
-                             suppress_header => $suppress_header,
-														 output_mode => $sbeams->output_mode()
-                               );
-
+				   query_parameters_ref=>\%parameters,
+				   rs_params_ref=> \%rs_params,
+				   url_cols_ref=> [],
+				   hidden_cols_ref=> {},
+				   max_widths=> {},
+				   column_titles_ref=> $rs->{column_list_ref},
+				   base_url=> '',
+				   suppress_header => $suppress_header,
+				   output_mode => $sbeams->output_mode()
+	    );
 
       }
 
@@ -2869,7 +2858,6 @@ sub update_status {
 }
 
 sub get_quant_info {
-
   my %quant;
   my $pep_string = shift || return \%quant;
 
@@ -2891,7 +2879,6 @@ sub get_quant_info {
 }
 
 sub get_protein_context {
-
   my %args = @_;
 #  die Dumper( %args );
 
@@ -2917,7 +2904,6 @@ sub get_protein_context {
 
 ##################
 sub get_peptide_mappings {
-
   my %mappings;
   my $pep_string = shift || return \%mappings;
 
@@ -2958,31 +2944,29 @@ sub get_peptide_mappings {
 
       my $sth = $sbeams->get_statement_handle($sql);
       while ( my @row = $sth->fetchrow_array() ) {
-			  for my $pep ( keys( %{$bioseqs{$row[1]}} ) ) {
-		      my $sep = ( $pep2accstr{$pep} ) ? ',' : '';
-  				$pep2accstr{$pep} .= $sep . $row[0];
-	  		}
-	    }
-    
+	for my $pep ( keys( %{$bioseqs{$row[1]}} ) ) {
+	  my $sep = ( $pep2accstr{$pep} ) ? ',' : '';
+	  $pep2accstr{$pep} .= $sep . $row[0];
+	}
+      }
     }
 
-
     for my $pep ( keys( %mappings ) ) {
-			if ( $pep2accstr{$pep} ) {
-			  my $cnt = $mappings{$pep};
-			  $mappings{$pep} = "<SPAN TITLE='$pep2accstr{$pep}'>$cnt</SPAN>" if $is_html;
-			} else {
-			}
-		}
-	}
+      if ( $pep2accstr{$pep} ) {
+	my $cnt = $mappings{$pep};
+	$mappings{$pep} = "<SPAN TITLE='$pep2accstr{$pep}'>$cnt</SPAN>" if $is_html;
+      } else {
+      }
+    }
+  }
 
   return \%mappings;
 }
 
 sub get_bad_qqq {
   my %args = ( sequence_clause => '',
-	             probability => 0.5,
-							 @_ );
+	       probability => 0.5,
+	       @_ );
 
   $args{sequence_clause} =~ s/PP\.peptide_//gm;
 
@@ -2999,11 +2983,11 @@ sub get_bad_qqq {
   my %spectra;
 
   while ( my @row = $sth->fetchrow_array() ) {
-		my $spec_key = $row[0] . $row[1];
-		$spectra{$spec_key}++;
-	}
+    my $spec_key = $row[0] . $row[1];
+    $spectra{$spec_key}++;
+  }
 
-	return \%spectra;
+  return \%spectra;
 }
 
 sub isIRT {
@@ -3073,7 +3057,6 @@ sub get_scan_path {
 }
 
 sub get_consensus_links {
-
   my %args = @_;
 
   my $seq = $args{seq};
@@ -3209,7 +3192,6 @@ sub calculateCE {
 }
 
 sub is_srma_preview_site {
-
   my $referrer = shift || $q->referer();
   my $is_allowed = 0;
 

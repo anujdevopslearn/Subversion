@@ -80,13 +80,15 @@ $|++;
 
   $params->{apply_action} ||= 'list_pathways';
 
+  my $content = '';
+
   #### Get the HTML to display the tabs
   my $tabMenu = $atlas->getTabMenu(
     parameters_ref => $params,
     program_name => $script_name,
   );
-  my $content = "<script>document.title = 'PeptideAtlas: Show Pathways for ".$atlas->getCurrentAtlasOrganism( atlas_build_id => $atlas_build_id, parameters_ref => $params)."';</script>\n";
   if ( $sbeams->output_mode() eq 'html' ) {
+    $content .= "<script>document.title = 'PeptideAtlas: Show Pathways for ".$atlas->getCurrentAtlasOrganism( atlas_build_id => $atlas_build_id, parameters_ref => $params)."';</script>\n";
     $content .= $tabMenu->asHTML(); 
   }
 

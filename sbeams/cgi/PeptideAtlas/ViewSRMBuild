@@ -81,8 +81,6 @@ sub main
     $sbeams->setSessionAttribute( key => 'PA_resource', value => 'SRMAtlas' );
 
 
-
-
     # Read in the default input parameters
     my $n_params_found = $sbeams->parse_input_parameters(
         q=>$q,
@@ -119,6 +117,7 @@ sub main
     program_name => $PROG_NAME,
   );
   if ($sbeams->output_mode() eq 'html') {
+    print "<script>document.title = 'SRMAtlas Builds list';</script>";
     print $tabMenu->asHTML();
     print "<BR>\n";
   }

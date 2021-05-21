@@ -286,6 +286,16 @@ sub processRequest {
     my $spectrumName = '';
 
 
+    #### Get the HTML to display the tabs
+    my $tabMenu = $sbeamsMOD->getTabMenu(
+      parameters_ref => \%parameters,
+      program_name => 'none',
+	);
+    if ($output_mode eq 'HTML') {
+      print $tabMenu->asHTML();
+    }
+
+
     #### If a Universal Spectral Identifier is supplied, interpret it
     my $usiStr = $q->param('USI') || $q->param('usi') || $parameters{usi};
     if ( $usiStr ) {
@@ -1531,7 +1541,7 @@ sub getUSIInputForm {
          return;
        }
        </script>
-    <form name="USIForm" method="post" action="$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROG_NAME" style="background: #f3f1e4;padding: 5px;border-bottom: 1px solid #5e6a71;">
+    <form name="USIForm" method="post" action="$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROG_NAME" style="background: #f3f1e4;padding: 5px;border-bottom: 1px solid #5e6a71;border-top:1px solid #5e6a71;">
     <font size="+1">Universal Spectrum Identifier:</font>&nbsp;&nbsp;&nbsp;<a target="_blank" href="http://psidev.info/usi/">(what's this?)</a>&nbsp;&nbsp;&nbsp;
           <input type="button" name="example_button" value="example" onClick="fillInUSI(example_button)"><br>
     <input type="text" name="USI" size="100" value="$usi"></input>

@@ -185,8 +185,10 @@ sub handle_request {
      program_name => $PROG_NAME,
   ) if ($output_mode eq 'html');
 
-  print $tabMenu->asHTML() . '<BR>' if ($output_mode eq 'html');
-
+  if ($sbeams->output_mode() eq 'html') {
+    print "<script>document.title = 'View a PASSEL Dataset';</script>";
+    print $tabMenu->asHTML();
+  }
 
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
@@ -383,28 +385,27 @@ sub handle_request {
 
     unless (@errors) {
       my $validation = $PASS->validateDatasetAnnotations(formParameters=>\%parameters);
-			if ($validation->{result} eq 'Success') {
-				my $updateResult = updateDataset(
-								authentication=>$authentication,
-								formParameters=>\%parameters,
-								identifier => $parameters{'identifier'},
-							);
-				if ($updateResult->{result} eq 'Success') {
-					$printForm = 0;
+      if ($validation->{result} eq 'Success') {
+	my $updateResult = updateDataset(
+	  authentication=>$authentication,
+	  formParameters=>\%parameters,
+	  identifier => $parameters{'identifier'},
+	    );
+	if ($updateResult->{result} eq 'Success') {
+	  $printForm = 0;
           ## check if the publicReleaseDate change from ge Current date to le Current date
           if (($datasetMetadata->{publicReleaseDate}&& substr($datasetMetadata->{publicReleaseDate},0,10) ge substr($date,0,10)) && 
-             ($parameters{publicReleaseDate} && substr($parameters{publicReleaseDate},0,10) le substr($date,0,10)) ){
+	      ($parameters{publicReleaseDate} && substr($parameters{publicReleaseDate},0,10) le substr($date,0,10)) ){
           }
  
-				} else {
-					push(@errors,"updateResult returned $updateResult->{result}");
-					push(@errors,@{$updateResult->{errors}}) if ($updateResult->{errors});
-				}
+	} else {
+	  push(@errors,"updateResult returned $updateResult->{result}");
+	  push(@errors,@{$updateResult->{errors}}) if ($updateResult->{errors});
+	}
       } else {
-				push(@errors,@{$validation->{errors}});
+	push(@errors,@{$validation->{errors}});
       }
     }
-
   }
 
 
@@ -451,7 +452,7 @@ sub handle_request {
       print "<HR>\n";
       print "<TABLE cellpadding=\"5\"><TR><TD bgcolor=\"#ff9999\">";
       foreach my $error ( @errors ) {
-				print "<LI>$error\n";
+	print "<LI>$error\n";
       }
       print "</TD></TR></TABLE>\n";
     }
@@ -463,17 +464,16 @@ sub handle_request {
   #########################################################################
   #### Print the form
   if ($sbeams->output_mode() eq 'html') {
-     print "<H3>View Dataset</H3>";
+     print "<h1>View Dataset</h1>";
 
      if (@errors) {
-     print "<HR>\n";
+       print "<HR>\n";
        print "<TABLE cellpadding=\"5\"><TR><TD bgcolor=\"#ff9999\">";
        foreach my $error ( @errors ) {
-				 print "<LI>$error\n";
+	 print "<LI>$error\n";
        }
        print "</TD></TR></TABLE>\n";
      }
-
 
      print "<HR>\n";
      print "<nobr>";
@@ -571,14 +571,14 @@ sub handle_request {
          print "<B><font color=\"red\">Notice:</B></font> This dataset has not yet been marked as finalized!<BR>";
          print "If the upload is now done and you are happy with the result: ";
          print $q->submit(-name => "action",
-		      -value => 'FINALIZE',
-		      -label => 'FINALIZE');
+			  -value => 'FINALIZE',
+			  -label => 'FINALIZE');
          print "<BR>\n";
 
          print "Since the dataset is not currently finalized, you may: ";
          print $q->submit(-name => "action",
-		      -value => 'EDIT',
-		      -label => 'EDIT');
+			  -value => 'EDIT',
+			  -label => 'EDIT');
          print "<BR>\n";
 
          print "<HR>\n";

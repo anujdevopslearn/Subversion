@@ -131,7 +131,6 @@ sub main {
 # Handle Request
 ###############################################################################
 sub handle_request {
-
   my %args = @_;
   $log->debug( "Start page " . time() );
 
@@ -150,7 +149,10 @@ sub handle_request {
      program_name => $PROG_NAME,
   );
 
-  print $tabMenu->asHTML() . '<BR>' if ($sbeams->output_mode() eq 'html');
+  if ($sbeams->output_mode() eq 'html') {
+    print "<script>document.title = 'PASSEL Datasets';</script>";
+    print $tabMenu->asHTML().'<br>';
+  }
 
   my $html = qq~
 		</head>
@@ -232,10 +234,10 @@ sub handle_request {
 			</tr>
 		</table>
 		</form>
+		<br><br>
 		</body>
  ~;
 
   print $html;
-
 }
 

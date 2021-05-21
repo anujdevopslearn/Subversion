@@ -9,7 +9,7 @@
 #               get SRM Experiment library
 #               transitions from the PeptideAtlas based on various criteria.
 #
-# SBEAMS is Copyright (C) 2000-2011 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -95,7 +95,6 @@ exit(0);
 # Call $sbeams->Authenticate() and exit if it fails or continue if it works.
 ###############################################################################
 sub main {
-
   #### Do the SBEAMS authentication and exit if a username is not returned
   exit unless ($current_username = $sbeams->Authenticate(
     #permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin'],
@@ -156,7 +155,7 @@ sub handle_request {
 
 
   #### Show current user context information
-  #print "<BR>\n" if ($sbeams->output_mode() eq 'html');
+  print "<script>document.title = 'Get SRM Experiment Transitions';</script>" if ($sbeams->output_mode() eq 'html');
   #$sbeams->printUserContext();
 
   #### Get the HTML to display the tabs
@@ -200,7 +199,7 @@ sub handle_request {
 
   #### Print browser warning
   if ($sbeams->output_mode() eq 'html') {
-    print "<p><b><i>Works best under Firefox.</i></b><br>";
+    print "<b><i>Works best under Firefox</i></b>";
   }
 
   #### Read the input parameters for each column
@@ -835,7 +834,7 @@ sub handle_request {
     if ($sbeams->invocation_mode() eq 'http') {
       print "<H4>Select parameters above and press QUERY</H4>\n";
     } else {
-      print "You need to supply some parameters to contrain the query\n";
+      print "You need to supply some parameters to constrain the query\n";
     }
   }
 
@@ -1201,8 +1200,7 @@ sub postProcessResultset {
 } # end postProcessResultset
 
 #######################################################################
-sub getOrganismFullName 
-{
+sub getOrganismFullName {
     my %args = @_;
     
     my $organism_id = $args{organism_id};
@@ -1349,8 +1347,7 @@ sub get_url_cols {
 
 sub get_AJAX {
 
-
-my $ajax = q~
+  my $ajax = q~
 <script type='text/javascript' src='/sbeams/usr/javascript/jquery/jquery.js'></script>
 <script type="text/javascript" charset="utf-8">
 $(document).ready( function() {
@@ -1383,6 +1380,5 @@ $(document).ready( function() {
 
 </script>
   ~;
-return $ajax;
-
+  return $ajax;
 }

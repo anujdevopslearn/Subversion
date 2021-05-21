@@ -158,7 +158,6 @@ sub main {
 # Handle Request
 ###############################################################################
 sub handle_request {
-
   my %args = @_;
   $log->debug( "Start page " . time() );
 
@@ -177,8 +176,10 @@ sub handle_request {
      program_name => $PROG_NAME,
   );
 
-  print $tabMenu->asHTML() . '<BR>' if ($sbeams->output_mode() eq 'html');
-
+  if ($sbeams->output_mode() eq 'html') {
+    print "<script>document.title = 'Submit a new SRM Dataset to PASSEL';</script>";
+    print $tabMenu->asHTML();
+  }
 
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
@@ -366,8 +367,8 @@ sub handle_request {
   #########################################################################
   #### Print the form
   if ($sbeams->output_mode() eq 'html' && $printForm) {
-     print "<H3>Submit a new SRM Dataset</H3>";
-     print "<P>Thank you for submitting a dataset to PASSEL.</P>";
+     print "<h1>Submit a new SRM Dataset</h1>";
+     print "<p>Thank you for submitting a dataset to PASSEL</p>";
 
      print qq~<table style="margin-left:30px;border:3px solid #b00;background:#f3f1e4;" cellpadding="5"><tr><td><img height="50" width="50" src="../../images/alert-icon.png"></td><td style="color:#b00;"><b>NOTICE:</b> This submission system accepts <b>only SRM datasets</b>.<br><br>If you have a DDA or DIA dataset to submit, please <a href="http://www.proteomexchange.org/submission">submit to PRIDE or MassIVE via ProteomeXchange instead</a>.<br><br><b>SRM datasets may still be submitted to PASSEL below.<BR></b></td></tr></table>
      ~;

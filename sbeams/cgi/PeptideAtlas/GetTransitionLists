@@ -163,8 +163,11 @@ sub handle_request {
     parameters_ref => \%parameters,
     program_name => $PROG_NAME,
   );
-  print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
 
+  if ($sbeams->output_mode() eq 'html') {
+    print $tabMenu->asHTML();
+    print "<script>document.title = 'Download Public SRM Transition Lists from PeptideAtlas';</script>";
+  }
 
   #### SHOW ALL LISTS
   ##
@@ -228,14 +231,14 @@ sub display_transitions_lists {
     # $transitionsXML = '<?xml version="1.0" encoding="ISO-8859-1"?><transition_lists><base_download_url>http://www.peptideatlas.org/cgi/fileDownloader.pl/</base_download_url>';
     my $transitionsHTML =  ($context eq 'user') ?
 	"<H2>View and Download SRM Transition Lists Uploaded by <font color=red>$current_username</font></H2>\n" :
-	"<H2>Download Public SRM Transition Lists from PeptideAtlas</H2>\n";
+	"<h1>Download Public SRM Transition Lists from PeptideAtlas</h1>\n";
 
     $transitionsHTML .= $sbeamsMOD->encodeSectionHeader(
-              LMTABS => 1,
-              no_toggle => 1,
-							text => 'Uploaded Transitions Lists',
-							link => $link
-							);
+      LMTABS => 1,
+      no_toggle => 1,
+      text => 'Uploaded Transitions Lists',
+      link => $link
+	);
 
 #  my $trans_help = get_table_help( 'annotated_transitions' );
 #  my $transitions_lists = $sbeamsMOD->get_transitions_lists();
