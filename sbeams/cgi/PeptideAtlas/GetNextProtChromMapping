@@ -443,10 +443,10 @@ sub handle_request {
 
 
   my $sql = qq~
-		SELECT $columns_clause
+	SELECT $columns_clause
     FROM $TBAT_NEXTPROT_CHROMOSOME_MAPPING NCM
-		JOIN $TBAT_NEXTPROT_MAPPING NM  ON (NM.ID = NCM.NEXTPROT_MAPPING_ID) 
-		WHERE 1=1 
+	JOIN $TBAT_NEXTPROT_MAPPING NM  ON (NM.ID = NCM.NEXTPROT_MAPPING_ID) 
+	WHERE 1=1 
    $nextprot_mapping_id_clause
    $gene_name_clause
    $ensembl_name_clause
@@ -554,10 +554,9 @@ sub handle_request {
     if ($sbeams->invocation_mode() eq 'http') {
       print "<H4>Select parameters above and press QUERY</H4>\n";
     } else {
-      print "You need to supply some parameters to contrain the query\n";
+      print "You need to supply some parameters to constrain the query\n";
     }
   }
-
 
 } # end handle_request
 
@@ -592,25 +591,26 @@ sub displayTableSummary{
 
   my $prefix = $sbeams->addTabbedPane(label => "Summary");
   my $HTML= $sbeamsMOD->encodeSectionTable( header => 1,
-                  set_download => 0,
-                  chg_bkg_idx => 1,
-                  align  => [qw(left right right)],
-                  rows => \@ratio );
+					    set_download => 0,
+					    chg_bkg_idx => 1,
+					    align  => [qw(left right right)],
+					    rows => \@ratio );
 
-    print qq~
+  print qq~
       $prefix
-      <TABLE>
+      <table>
       $HTML
-      </TABLE>
-      <br>Protein Identification Terminology used in PeptideAtlas can be found <a
-href="http://www.peptideatlas.org/docs/protein_ident_terms.php">here<a>  
-    <hr color='black'></div>
-      <SCRIPT LANGUAGE="JavaScript" TYPE="text/javascript">
+      </table>
+      <br>Protein identification terminology used in PeptideAtlas can be found
+      <a href="http://www.peptideatlas.org/docs/protein_ident_terms.php">here</a>  
+      <hr color='black'></div>
+      <script>
        document.getElementById("messagetab").innerHTML = " ";
        var mytab = 'resultsettab' + (resultsettabs.length - 1);
-    </SCRIPT>
+      </script>
    ~ if ($sbeams->output_mode() eq 'html'); 
 }
+
 ###############################################################################
 # evalSQL
 #
@@ -619,9 +619,7 @@ href="http://www.peptideatlas.org/docs/protein_ident_terms.php">here<a>
 ###############################################################################
 sub evalSQL {
   my $sql = shift;
-
   return eval "\"$sql\"";
-
 } # end evalSQL
 
 
@@ -654,4 +652,3 @@ sub postProcessResultset {
   $resultset_ref->{data_ref} = \@new_result_set;
 
 } # end postProcessResult
-
