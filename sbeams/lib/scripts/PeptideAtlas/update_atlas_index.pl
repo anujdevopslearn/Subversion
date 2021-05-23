@@ -44,6 +44,9 @@ my $cmd = "$FindBin::Bin/../../scripts/Core/runsql.pl -u $ENV{user} -p $ENV{pass
  
 open (IN, "<$file" ) or die "cannot open $file \n";
 
+my $module = $sbeams->getSBEAMS_SUBDIR();
+my $database =  $DBPREFIX{$module};
+
 my $flag = 0;
 while (my $line = <IN>){
   chomp $line ;
@@ -58,7 +61,7 @@ while (my $line = <IN>){
   }
   if ($flag){
     $line =~ s/\-\-WITH/ WITH/; 
-    $line =~ s/dbo/peptideatlas.dbo/;
+    $line =~ s/dbo./$database/;
     print "$line\n";
     my $log = `$cmd '$line'`;
   }
