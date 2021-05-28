@@ -1,6 +1,6 @@
 package SBEAMS::PeptideAtlas::Utilities;
 
-use lib "/net/db/projects/PeptideAtlas/lib/Swissknife_1_72/lib";
+use lib "/net/db/projects/PeptideAtlas/lib/Swissknife/lib";
 use vars qw($resultset_ref );
 
 use SWISS::Entry;
@@ -1893,10 +1893,10 @@ sub get_html_seq_vars {
     $str .= $div_txt{$enz};
   }
   $return{seq_display} = $str;
-
-  if ( $args{swiss} ) {
+  if ( $args{swiss} ){
     $self->{_swiss} = $args{swiss};
   } else {
+
     $self->{_swiss} = $self->get_uniprot_annotation( %args );
   }
   my $swiss = $self->{_swiss};
@@ -2440,24 +2440,29 @@ sub get_uniprot_annotation {
 
   return \%annot unless $args{accession};
 
+  my $build_id = $args{build_id};
+  return if (! $build_id);
   my $np_clause = "AND is_nextprot = 'N'";
   $np_clause = "AND is_nextprot = 'Y'" if $args{use_nextprot};
 
   my $sql = qq~
   SELECT file_path, entry_offset, entry_name
   FROM $TBAT_UNIPROT_DB UD 
-  JOIN $TBAT_UNIPROT_DB_ENTRY UDE
-  ON UD.uniprot_db_id = UDE.uniprot_db_id
+  JOIN $TBAT_UNIPROT_DB_ENTRY UDE ON (UD.uniprot_db_id = UDE.uniprot_db_id )
+  JOIN $TBAT_ATLAS_BUILD AB ON (AB.biosequence_set_id = UD.biosequence_set_id) 
   WHERE entry_accession = '$args{accession}'
+  AND AB.atlas_build_id = $build_id
   $np_clause
   ORDER BY uniprot_db_entry_id DESC
   ~;
 
   my $sbeams = $self->getSBEAMS();
   my @results = $sbeams->selectrow_array( $sql );
+  #print " file_path, entry_offset, entry_name " . join(",", @results) . "\n";
 
   my $entry = $self->read_uniprot_dat_entry( path => $results[0],
 					     offset => $results[1] );
+  #print "$entry\n";
 
   if ( !$entry ) {
     return \%annot;

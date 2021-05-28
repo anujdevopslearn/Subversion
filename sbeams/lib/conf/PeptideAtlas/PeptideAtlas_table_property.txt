@@ -92,8 +92,7 @@ AT_peptide_instance_annotation	Peptide Instance Annotation	PeptideAtlas_infrastr
 AT_protein_identification_annotation	ProteinIdentificationAnnotation	PeptideAtlas_infrastructure	YES	$TBAT_PROTEIN_IDENTIFICATION_ANNOTATION	protein_identification_annotation_id		ManageTable.cgi?TABLE_NAME=AT_protein_identification_annotation		
 AT_public_data_repository	Public Data Repository	PeptideAtlas_infrastructure	YES	$TBAT_PUBLIC_DATA_REPOSITORY	dataset_id		ManageTable.cgi?TABLE_NAME=AT_public_data_repository	AT_public_data_repository	
 AT_fragmentation_type	fragmentation type 	PeptideAtlas_infrastructure	YES	$TBAT_FRAGMENTATION_TYPE	fragmentation_type_id		ManageTable.cgi?TABLE_NAME=AT_fragmentation_type 		
-AT_uniprot_db	Get PTP Peptides	PeptideAtlas_infrastructure	NO	$TBAT_UNIPROT_DB	uniprot_db_id				
-AT_uniprot_db_entry	Get PTP Peptides	PeptideAtlas_infrastructure	NO	$TBAT_UNIPROT_DB_ENTRY	uniprot_db_entry_id				
+AT_uniprot_db	Get DAT Files	PeptideAtlas_infrastructure	YES	$TBAT_UNIPROT_DB	uniprot_db_id		ManageTable.cgi?TABLE_NAME=AT_uniprot_db
 AT_domain_protein_list	Domain Protein List	PeptideAtlas_infrastructure	YES	$TBAT_DOMAIN_PROTEIN_LIST	protein_list_id		ManageTable.cgi?TABLE_NAME=AT_domain_protein_list		
 AT_domain_list_protein	Domain List Protein	PeptideAtlas_infrastructure	NO	$TBAT_DOMAIN_LIST_PROTEIN	list_protein_id				
 AT_proteases	Proteases	PeptideAtlas_infrastructure	YES	$TBAT_PROTEASES	id		ManageTable.cgi?TABLE_NAME=AT_proteases		
