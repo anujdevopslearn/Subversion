@@ -446,10 +446,14 @@ sub get_dataset_spec_protein_info {
   }
   $align[0] = 'left';
   my @records = ();
+  my @annotation_urls;
+  my $anno = 0;
   foreach my $repository_id (sort {$a cmp $b } keys %unique_prot2dataset_cnt){ 
     my @row =();
-    my $repository_id_w_links = $atlas->get_dataset_url($repository_id);
-    push @row , $repository_id_w_links; 
+    my ($repository_id_w_links, $annotation_url) = $atlas->get_dataset_url($repository_id);
+    push @row , $repository_id_w_links;
+    push @annotation_urls, $annotation_url; 
+    $anno =1 if ($annotation_url ne '');
     foreach my $level_name (@level_names){
       my $cnt = $unique_prot2dataset_cnt{$repository_id}{$level_name} || '';
       if (defined $unique_prot2dataset_cnt{$repository_id}{$level_name}){
@@ -471,6 +475,14 @@ sub get_dataset_spec_protein_info {
       }
     }
     push @records, \@row;
+  }
+  ## insert annotation column to second column
+  if ($anno){
+    for (my $i=0; $i<=$#records; $i++){
+      splice @{$records[$i]}, 1, 0, $annotation_urls[$i];
+    }
+    splice @headings, 1, 0, 'Experiment Annotation';
+    splice @align, 1, 0, 'center';
   }
   my $html = $atlas->create_table (data => \@records,
                           column_names=> \@headings,
@@ -733,7 +745,7 @@ sub get_sample_info {
   #### Define some variables needed to build the query
   my @column_array = (
       ["repository_identifiers","S.repository_identifiers","Dataset"],
-      ["sample_id", "S.sample_id","sample_id"],
+      ["sample_id", "S.sample_id","Experiment ID"],
       ["sample_tag", "sample_tag", "Experiment Tag"],
       ["n_runs","SBS.n_runs", "MS Runs"],
       ["n_searched_spectra", "SBS.n_searched_spectra", "Spectra Searched"],
@@ -826,12 +838,15 @@ sub get_sample_info {
   if ($organism !~ /(human|Arabidopsis)/i){
     $hidden_cols{'sample_category'} = 1;
   }
-  $hidden_cols{'sample_id'} = 1;
+  #$hidden_cols{'sample_id'} = 1;
   my @samples;
   ## rows without second and last column
   my @samples2;
   my $rownum =0;
   my @column_names;
+  my @annotation_urls;
+  my $anno = 0;
+
   for my $batch ( @sample_info ) {
     $show_image++;
     # if these aren't defined, set to zero
@@ -886,10 +901,13 @@ sub get_sample_info {
       }
       $batch->[$idx] =~ s/,$//;
     }
+    my $annotation_url = '';
     for my $idx ($colnameidx{'repository_identifiers'}) {
       next if ( ! $batch->[$idx]);
-      $batch->[$idx] = $atlas->get_dataset_url($batch->[$idx]);
+      ($batch->[$idx], $annotation_url) = $atlas->get_dataset_url($batch->[$idx]);
     }
+    push @annotation_urls, $annotation_url;
+    $anno = 1 if ($annotation_url ne '');
     my @row_data;
     my $idx = 0;
     foreach my $col (sort {$colnameidx{$a} <=> $colnameidx{$b}} keys %colnameidx){
@@ -926,8 +944,16 @@ sub get_sample_info {
     }
 
   }
-
-  my @align = qw(left left center center center center center center center center center center center center center);
+  ## insert annotation column to second column
+  my @column_names_copy = @column_names;
+  my @align = qw(left left left center center center center center center center center center center center center center);
+  if ($anno){
+    for (my $i=0; $i<=$#samples2; $i++){
+      splice @{$samples2[$i]}, 1, 0, $annotation_urls[$i];
+    }
+    splice @column_names, 1, 0, 'Experiment Annotation';
+    splice @align, 1, 0, 'center';
+  }
   my $html = $atlas->create_table (data => \@samples2,
 				   column_names=> \@column_names,
 				   table_name => "Experiment Contribution",
@@ -936,8 +962,8 @@ sub get_sample_info {
 				   sortable => 0,
 				   download_table => 1);
 
-  push @column_names , "sample_category_id";
-  return ( $html, \@samples, \@column_names);
+  push @column_names_copy , "sample_category_id";
+  return ( $html, \@samples, \@column_names_copy);
 }
 
 sub get_dataset_contrib_info {
@@ -982,10 +1008,17 @@ sub get_dataset_contrib_info {
   return '' if (! @info);
 
   my (@samples);
+  my @annotation_urls;
+  my $anno = 0;
   for my $batch ( @info ) {
     for my $idx ($colnameidx{'repository_identifiers'}) {
       next if ( ! $batch->[$idx]);
-      $batch->[$idx] = $atlas->get_dataset_url($batch->[$idx]);
+      my $annotation_url = '';
+      ($batch->[$idx], $annotation_url) = $atlas->get_dataset_url($batch->[$idx]);
+      if ($annotation_url ne ''){
+        $anno=1;
+      }
+      push @annotation_urls, $annotation_url;  
     }
     push @samples, $batch;
   }
@@ -1009,8 +1042,15 @@ sub get_dataset_contrib_info {
     }
 
   }
-
+  ## insert annotation column to second column
   my @align = qw(left center center center center center center center center center center center center center center);
+  if ($anno){
+    for (my $i=0; $i<=$#samples; $i++){
+      splice @{$samples[$i]}, 1, 0, $annotation_urls[$i];
+    }
+    splice @column_titles, 1, 0, 'Experiment Annotation';
+    splice @align, 1, 0, 'center';
+  }
   my $html = $atlas->create_table (data => \@samples,
                           column_names=> \@column_titles,
                           table_name => "Dataset Contribution",
@@ -1134,10 +1174,14 @@ sub get_dataset_protein_info {
   $align[0] = 'left';
   my $headings_ref = $atlas->make_sort_headings( headings => \@sortable);
   my @records = ();
+  my @annotation_urls;
+  my $anno = 0;
   foreach my $repository_id (sort {$a cmp $b} keys %dataset_prot_cnt){
     my @row =();
-    my $repository_id_w_links = $atlas->get_dataset_url($repository_id);
-    push @row , $repository_id_w_links; 
+    my ($repository_id_w_links, $annotation_url) = $atlas->get_dataset_url($repository_id);
+    push @row , $repository_id_w_links;
+    push @annotation_urls, $annotation_url;
+    $anno = 1 if ($annotation_url ne ''); 
     foreach my $level_name (@level_names){
       my $cnt = scalar keys %{$dataset_prot_cnt{$repository_id}{$level_name}} || 0;
       if ( $cnt){
@@ -1159,6 +1203,15 @@ sub get_dataset_protein_info {
     }
     push @records, \@row;
   }
+  ## insert annotation column to second column
+  if ($anno){
+    for (my $i=0; $i<=$#records; $i++){
+      splice @{$records[$i]}, 1, 0, $annotation_urls[$i];
+    }
+    splice @headings, 1, 0, 'Experiment Annotation';
+    splice @align, 1, 0, 'center';
+  }
+
   my $html = $atlas->create_table (data => \@records,
                           column_names=> \@headings,
                           table_name => "Dataset Protein Info",

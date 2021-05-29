@@ -1432,10 +1432,15 @@ sub getSampleTableDisplay{
   my $rows_to_show = $args{rows_to_show} || 25;
   my @samples = ();
   my $pre_id = '';
+  my $anno =0;
+  my @annotation_urls;
   foreach my $row (@$data){
      my ($id, $title, $nobs,$ins,$enzyme,$pub_name, $abstract, $link, $rp_id) = @$row;
+     my $annotation_url;
      $id = "<a href='". "$CGI_BASE_DIR/PeptideAtlas/ManageTable.cgi?TABLE_NAME=AT_SAMPLE&sample_id=" . $id . "' target='_blank'>$id</a>";
-     $rp_id = $self->get_dataset_url ($rp_id);
+     ($rp_id, $annotation_url) = $self->get_dataset_url ($rp_id);
+     $anno = 1 if ($annotation_url ne '');
+     push @annotation_urls, $annotation_url;
      if ($pre_id eq $id){next;$pre_id = $id;}  ## keep one publication only
      if ($abstract){
        $pub_name = $self->make_pa_tooltip( tip_text => "Abstract: $abstract", link_text => "<a href='$link'>$pub_name</a>" );
@@ -1457,6 +1462,15 @@ sub getSampleTableDisplay{
     @cols = ('Experiment ID','Dataset','Experiment Name', 'Instrument','Enzyme','Publication');
     @align = qw(center left left center left left left);
   }
+  if ($anno){
+    for (my $i=0; $i<=$#samples; $i++){
+      splice @{$samples[$i]}, 2, 0, $annotation_urls[$i];
+    }
+    splice @cols, 2, 0, 'Experiment Annotation';
+    splice @align, 2, 0, 'center';
+
+  }  
+
   foreach my $col (@cols){
     push @headings, $col, '';
   }
@@ -1465,7 +1479,7 @@ sub getSampleTableDisplay{
   my $table = $self->encodeSectionTable( header => 1, 
                                          tr_info => $args{tr_info},
                                          align  => [@align],
-					 bkg_interval => 3,
+																				 bkg_interval => 3,
                                          nowrap => [qw(4 6)],
                                          rows_to_show => $rows_to_show,
                                          max_rows => $args{max_rows},
@@ -3051,6 +3065,7 @@ sub get_dataset_url{
   my %dataset_annotation = ();
 	my $url = "http://proteomecentral.proteomexchange.org/api/autocomplete/v0.1/datasets";
 	my $content  = get($url);
+  my $annotation_url = '';
 	$content =~ s/[\[\]"\s+\n\r]//g;
 	foreach my $pxd (split(",", $content)){
 		next if ($pxd eq '');
@@ -3070,7 +3085,7 @@ sub get_dataset_url{
     if ($url){
       $url= "<a href='$url$id' target='_blank'>$id</a>";
       if (defined $dataset_annotation{$id}){
-        $url .= "<a href='http://www.peptideatlas.org/datasets/annotation.php?dataset_id=$id' target='_blank'>&nbsp;[annot]</a>";
+        $annotation_url = "<a href='http://www.peptideatlas.org/datasets/annotation.php?dataset_id=$id' target='_blank'>annot</a>";
       }
       $url .= ",";
     }else{
@@ -3078,7 +3093,7 @@ sub get_dataset_url{
     }
   }
   $url =~ s/,$//;
-  return $url;
+  return ($url,$annotation_url);
 }
 
 sub create_table {
