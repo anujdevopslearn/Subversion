@@ -77,7 +77,9 @@ sub new {
       'C[554]' => 450.275205,   # ABI old ICAT heavy (UniMod)
       'D[97]'  => -18.010565,    # Dehydration
       'D[114]' =>	-0.984016,    # Amidation
+      'D[137]' =>  21.981943, # Cation:Na  UNIMOD:30
       'E[111]' => -18.010565,   # Pyro-glu from E (UniMod)
+      'E[151]' => 21.981943, # Cation:Na  UNIMOD:30
       'F[163]' => 15.9949,    # Oxidation
       'F[157]' => 10.027228,    # 13C(9)15N(1) Silac label (Unimod)
       'I[119]' => 6.020129,     # 13C(5) Silac label (Unimod)
