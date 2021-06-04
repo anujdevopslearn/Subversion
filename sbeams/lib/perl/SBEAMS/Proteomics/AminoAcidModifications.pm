@@ -172,6 +172,7 @@ sub new {
       'n[37]'  => 36.0754,      # Dimethyl-Heavy (Unimod)
       'n[43]'  => 42.0367,      # Acetylation    (Unimod)
       'n[44]'  => 43.0247,      # Carbamylation  (Unimod)
+      'n[46]' => 46.083939,     # Acetyl:2H(3)  UNIMOD:36
       'n[58]'  => 57.0513,      # N-term Carbamidomethyl,
       'n[141]' => 140.094963,   # mTRAQ light (Unimod 888)
       'n[145]' => 144.1544,     # mTRAQ medium (Unimod 889), ABI iTRAQ (UniMod 214)
@@ -207,6 +208,7 @@ sub new {
       'E[111]' => -18.0153,   # Pyro-glu from E (UniMod)
       'E[151]' => 21.981943, # Cation:Na  UNIMOD:30
       'F[157]' => 9.9273,     # 13C(9)15N(1) Silac label (Unimod)
+      'H[153]' => 15.9949,      # Oxidation  
       'I[119]' => 5.9559,     # 13C(6) Silac label (Unimod)
       'I[120]' => 6.9493,     # 13C(6) Silac label (Unimod)
       'L[116]' => 3.0185,     # D3_Label
@@ -238,6 +240,7 @@ sub new {
       'K[600]' => 471.4942,   # QQTGG SUMO
       'M[147]' => 15.9848,    # Oxidation (UniMod)
       'M[163]' =>	31.9988,    #	Dioxidation (UniMod)
+      'M[174]' => 43.00581,     # Carbamyl  (Unimod 5) M is a site
       'N[115]' => 0.9848,     # Glyc-Asn (UniMod)
       'P[67]'  => -30.026,    #	Proline oxidation to pyrrolidinone (UniMod)
       'P[113]' => 15.9848,    # Oxidation (UniMod)
@@ -249,11 +252,13 @@ sub new {
       'Q[129]' =>	0.9848,     # Deamidation
       'S[69]' => -18.0153,    # Dehydration
       'S[91]' => 3.9714,      # 13C3 15N1 label for SILAC
+      'S[115]' => 27.99491,     # Formylation
       'S[130]'  => 43.0247,   # Carbamylation  (Unimod)
       'S[167]' => 79.9799,    # Phosphorylation (UniMod)
       'S[166]' => 79.9799,    # Phosphorylation (UniMod)
       'S[201]'  => 114.1026,  #   ubiquitinylation residue
       'T[83]'  => -18.0153,   # Dehydration
+      'T[129]' => 27.99491,     # Formylation
       'T[181]' => 79.9799,    # Phosphorylation (UniMod)
       'T[215]'  => 114.1026,  #   ubiquitinylation residue
       'V[104]' => 4.9633,     # 13C(5) Silac label (Unimod)
@@ -282,6 +287,7 @@ sub get_modification_names {
       'n[37]'  =>  'N-term Dimethyl-Heavy', #  (Unimod)
       'n[43]'  =>  'N-term Acetylation', #     (Unimod)
       'n[44]'  =>  'N-term Carbamylation', #   (Unimod)
+      'n[46]'  =>  'Acetyl:2H(3)', #  UNIMOD:36
       'n[145]' =>  'N-term iTRAQ', # (UniMod)
       'n[230]' =>  'N-term iTRAQ 6 plex', #
       'n[305]' =>  'N-term iTRAQ 8 plex', #
@@ -311,6 +317,7 @@ sub get_modification_names {
       'E[111]' =>  'Glu GlyPyro-glu', #  from E (UniMod)
       'E[151]' =>  'Cation:Na', #  UNIMOD:30
       'F[157]' =>  'Phe 13C(9)15N(1) Silac label', #  (Unimod)
+      'H[153]' =>  'Oxidation',      # Oxidation  
       'I[119]' =>  'Ile 13C(6) Silac label', #  (Unimod)
       'L[116]' =>  'Leu D3_Label', #
       'L[123]' =>  'Leu D10_Label', #
@@ -330,10 +337,12 @@ sub get_modification_names {
       'L[120]' =>  'Leu 13C(6)15N(1) Silac label', #  (Unimod)
       'M[147]' =>  'Met Oxidation', #  (UniMod)
       'M[163]' =>  'Met Dioxidation', #  (UniMod)
+      'M[174]' =>  'Carbamyl',     # Carbamyl  (Unimod 5) M is a site
       'N[115]' =>  'Asn N-glycosylation', #  (UniMod)
       'R[166]' =>  'Arg Silac', #  (UniMod)
       'R[162]' =>	 'Arg 13C(6) Silac', #  label
       'Q[111]' =>  'Gln Pyro-glu', #  from Q', #  (UniMod)
+      'S[115]' =>  'Formylation',
       'S[167]' =>  'Ser Phosphorylation', #  (UniMod)
       'S[166]' =>  'Ser Phosphorylation', #  (UniMod)
       'T[181]' =>  'Thr Phosphorylation', #  (UniMod)
@@ -350,6 +359,7 @@ sub get_modification_names {
       'R[184]' =>  "di-Methylation (Unimod)",
       'R[157]' =>  "Citrullination (Unimod)",
       'S[129]' =>  "Acetylation  (Unimod 1)",
+      'T[129]' =>  "Formylation",
       'T[143]' =>  "Acetylation  (Unimod 1)",
 
       # Avg masses, defined by EDeutsch software
