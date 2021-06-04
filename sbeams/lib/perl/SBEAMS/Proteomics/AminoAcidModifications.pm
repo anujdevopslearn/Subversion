@@ -203,7 +203,9 @@ sub new {
       'C[554]' => 450.6221,   # ABI old ICAT heavy (UniMod)
       'D[97]'  => -18.0153,    # Dehydration
       'D[114]' =>	-0.9848,    #	Amidation
+      'D[137]' =>  21.981943, # Cation:Na  UNIMOD:30
       'E[111]' => -18.0153,   # Pyro-glu from E (UniMod)
+      'E[151]' => 21.981943, # Cation:Na  UNIMOD:30
       'F[157]' => 9.9273,     # 13C(9)15N(1) Silac label (Unimod)
       'I[119]' => 5.9559,     # 13C(6) Silac label (Unimod)
       'I[120]' => 6.9493,     # 13C(6) Silac label (Unimod)
@@ -305,7 +307,9 @@ sub get_modification_names {
       'C[546]' =>  'Cys old ICAT light', #  (UniMod)
       'C[553]' =>  'Cys old ICAT heavy', #  (UniMod)
       'C[554]' =>  'Cys old ICAT heavy', #  (UniMod)
+      'D[137]' =>  'Cation:Na', #  UNIMOD:30
       'E[111]' =>  'Glu GlyPyro-glu', #  from E (UniMod)
+      'E[151]' =>  'Cation:Na', #  UNIMOD:30
       'F[157]' =>  'Phe 13C(9)15N(1) Silac label', #  (Unimod)
       'I[119]' =>  'Ile 13C(6) Silac label', #  (Unimod)
       'L[116]' =>  'Leu D3_Label', #
