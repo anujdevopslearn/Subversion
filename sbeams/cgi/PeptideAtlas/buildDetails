@@ -947,6 +947,7 @@ sub get_sample_info {
   ## insert annotation column to second column
   my @column_names_copy = @column_names;
   my @align = qw(left left left center center center center center center center center center center center center center);
+  my @noWrap = (3,17,19,20);
   if ($anno){
     for (my $i=0; $i<=$#samples2; $i++){
       splice @{$samples2[$i]}, 1, 0, $annotation_urls[$i];
@@ -958,6 +959,7 @@ sub get_sample_info {
 				   column_names=> \@column_names,
 				   table_name => "Experiment Contribution",
 				   table_id => "exp_contribution",
+           nowrap => \@noWrap, 
 				   align => \@align,
 				   sortable => 0,
 				   download_table => 1);

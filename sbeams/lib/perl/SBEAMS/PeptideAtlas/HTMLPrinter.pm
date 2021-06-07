@@ -3107,7 +3107,8 @@ sub create_table {
   my $sortable = $args{sortable} || 0;
   my $table_width = $args{width} || 800;
   my $rows_to_show = $args{rows_to_show} || 25;
-  my $nowrap = $args{nowrap} || 1;
+  my @noWrapCol = ();
+  my $nowrap = $args{nowrap} || \@noWrapCol; 
   my $download_table = $args{download_table} || 0;
   unshift @$data, $column_names;
   my $table = $self->encodeSectionTable(unified_widgets => 1,
@@ -3115,7 +3116,7 @@ sub create_table {
                               header => 1,
                               bkg_interval => 3,
                               set_download => $download_table,
-                              nowrap => [$nowrap],
+                              nowrap => $nowrap,
                               table_id => $table_id,
                               align => [@$align],
                               width => $table_width ,
