@@ -763,7 +763,7 @@ sub get_sample_info {
       ["date_created", "CONVERT(VARCHAR(10), PE.date_created, 126)", "Date Added"],
       ["pubmed_id", "pubmed_id", "Pubmed Id or DOI"],
       ["instrument_name","instrument_name","Instrument Name"],
-      ["sample_category", "SC.name", "Sample Catefory"],
+      ["sample_category", "SC.name", "Sample Category"],
       ["sample_category_id", "S.sample_category_id", "sample_category_id"]
     );
 

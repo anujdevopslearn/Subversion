@@ -543,11 +543,11 @@ sub get_column_defs {
 			 'Unique Peptides'=> "The number of distinct peptides that are seen only in this experiment/dataset (unique contribution).  This discriminates against smaller experiments/dataset, and is less useful in atlas' with a large number of experiments. " ,
 			 'Added Peptides'=> 'Order-dependent unique peptides contributed by a given experiment.  The contribution for each experiment/datasets is based on the experiments that have gone before it, so later experiments/datasets tend to have a lower progressive contribution. ' ,
 			 'Cumulative Peptides'=> 'Order-dependent cumulative number of unique peptides contributed to build by this and previous experiments/datasets. ' ,
-			 'Distinct Canonical Proteins'=> 'The number of canonical (highly distinguishable, non-redundant) protein sequences identified from the peptides in this experiment/dataset.' ,
-			 'Unique Canonical Proteins'=> 'The number of canonical proteins that have peptides observed in the sample only.',
-			 'Added Canonical Proteins'=> 'Order-dependent unique canonical proteins contributed by a given experiment/dataset.',
-			 'Cumulative Canonical Proteins'=> 'Order-dependent cumulative number of canonical proteins contributed to build by this and previous experiments.<br>Counts non-human contaminants, so final tally may be greater than Canonical Proteins count in Build Overview. ' ,
-
+			 'Distinct Canonical Proteins'=> 'Number of canonical (containing 2+ uniquely mapping peptides of length 9+) protein sequences identified from the peptides present in this experiment/dataset.',
+			 'Unique Canonical Proteins'=> 'Number of canonical proteins that have peptides observed in the sample only, and not in others.',
+			 'Added Canonical Proteins'=> 'Order-dependent increase in the number of proteins gaining canonical status by the addition of this experiment/dataset.',
+			 'Cumulative Canonical Proteins'=> 'Order-dependent cumulative number of canonical proteins contributed to build by this and previous experiments.
+Counts only primary reference proteome entries, so final tally may be smaller than Canonical Proteins count in Build Overview, which includes entries from other proteomes.',
 			#batch
 			 'Experiment Tag'=> 'Tag for this experiment. ' ,
 			 'Unique All Proteins'=> 'The number of proteins (not limited to canonical protein) that have peptides observed in the sample only.',
