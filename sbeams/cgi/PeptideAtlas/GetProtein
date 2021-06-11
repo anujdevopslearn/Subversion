@@ -4196,10 +4196,12 @@ sub displayExternalLinksSection {
   if ($currentOrganism =~ /Arabidopsis/ && $biosequence->{biosequence_name} =~ /^A/ ){
     my %prot_links=( 'POGS' => 'http://pogs.uoregon.edu/#/search/genemodel/',
                      'SUBA' => 'http://suba.live/factsheet.html?id=',
+                     'PTMViewer' => 'https://www.psb.ugent.be/webtools/ptm-viewer/protein.php?id=',
                      'PhosPhAt' => 'http://phosphat.mpimp-golm.mpg.de/app.html?agi=',
                      'PPDB' => 'http://ppdb.tc.cornell.edu/dbsearch/gene.aspx?acc=');
     my %prot_link_titles = ( 'POGS' => 'Putative Orthologous Groups DB',
 			     'SUBA' => 'Subcellular Location Database for Arabidopsis Proteins',
+			     'PTMViewer' => 'The Plant PTM Viewer',
 			     'PhosPhAt' => 'The Arabidopsis Protein Phosphorylation Site Database',
 			     'PPDB' => 'The Plant Proteome Database');
 
