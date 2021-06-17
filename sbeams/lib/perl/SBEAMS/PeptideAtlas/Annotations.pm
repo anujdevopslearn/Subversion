@@ -534,7 +534,7 @@ sub get_column_defs {
 			'no-choice' => 'Number of PSMs covering this site for which there was no choice in the localization of the PTM. Only one residue was an S, T, or Y',
 			'non-enriched' => 'Number of PSMs covering this site with no phospho modification anywhere on the peptide, and originating from a non-enriched sample, typically not searched for phospho',
 			#dataset
-			 'Datase'=>'Public repository identifier',
+			 'Dataset'=>'Public repository identifier',
 			 'MS Runs'=>'The total number of runs for this experiment/dataset.',
 			 'Spectra Searched'=> 'The total number of spectra searched in the experiment/dataset ' ,
 			 'Spectra ID\'d'=> 'The number of spectra identifed with a probability greater than the atlas threshold ' ,
@@ -584,7 +584,12 @@ Counts only primary reference proteome entries, so final tally may be smaller th
       'Representative'=>'Representative means that there are peptides that map uniquely to a set of non-canonical proteins, thereby indicating that at least one of the proteins in the set must be present, but it cannot be determined which it is.',
       'Insufficient Evidence'=>'Protein has one or more apparently uniquely mapping peptides but none are 9AA or greater',
       'Weak' => 'Protein has one peptide that is uniquely mapping and at least 9 AA long, but is missing a second peptide that meets HPP guidelines',
- 
+       #Proteome Coverage (exhaustive)
+       'Database' => 'Name of database, which collectively form the reference database for this build',
+       'N_Prots' => 'Total number of entries in subject database',
+       'N_Obs_Prots' => 'Number of proteins within the subject database to which at least one observed peptide maps',
+       'Pct_Obs' => 'The percentage of the subject proteome covered by one or more observed peptides',
+       
   );
 
   if ( $args{labels} ) {
