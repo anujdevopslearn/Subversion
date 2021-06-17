@@ -1517,116 +1517,17 @@ sub handle_request {
                                glyco => $motif_params{glyco},
                            );
 
-
-    ### show sequence coverage for difference method
+    #############################################################################
+    #### Origene coverage display 
+    ### show sequence coverage for difference methods
+    #############################################################################
+    
     if ($htmlmode and $atlas_build_names{$atlas_build_id} =~ /Origene/i){
-      my $file = "/net/db/projects/PeptideAtlas/species/Human/Origene/ExpectedProtein.txt";
-      open(IN, "<$file") or die "cannot open $file\n";
-      my %PPfile = ();
-      my %peptides_m;
+       displayOrigeneAnnotatedSequence (protein_name =>$protein_name,
+                                        parameters => \%parameters, 
+                                       biosequence=>$biosequence,
+                                       motif_params => \%motif_params);
 
-      foreach my $line (<IN>){
-	chomp $line ;
-	my (@spids,$plate,$tube);
-	if( $line =~ /TP\d+,([^,]+),(\w),(\d+),.*VE.+_ISBHOT(0[0123]\d).*/ || $line =~ /TP\d+,([^,]+),(\w),(\d+).*,ISBHOT(0[0123]\d).*/){
-	  $plate = "ISBHOT$4";
-	  @spids = split(/\./,$1);
-	  if(length($3) == 1){
-	    $tube = "{$2".'0'."$3,$2$3}";
-	  } else {
-	    $tube = "$2$3";
-	  }
-	}
-	foreach my $a (@spids){
-	  my $p = "/proteomics/peptideatlas/archive/rmoritz/HumanMRMAtlas/Origene/Velos/$plate*/".
-	      "method/XTK/VE*_$tube\_*-ipro.prot.xml";
-
-	  $PPfile{$a}{path} = $p;
-	  if($tube =~ /\{(\w+),.*/){
-	    $tube = $1;
-	  }
-	  $PPfile{$a}{tube} = $plate.'-'.$tube;
-	  if($a =~ /(\S+)\-\d+/){
-	    $a = $1;
-	    $PPfile{$a}{path} = $p;
-	    $PPfile{$a}{tube} = $plate.'-'.$tube;
-
-	  }
-	}
-      }
-      if(defined $PPfile{$protein_name}){
-	foreach my $m (@methods){
-	  my $file = $PPfile{$protein_name}{path};
-	  my $str;
-	  if($parameters{ori_tube} ne ''){
-	    $parameters{ori_tube} =~ /(ISBHOT\d{3})-(\w)(\d+)/;
-	    if(length($3) == 1){
-	      $str = "$1*/method/XTK/VE*_{$2".'0'."$3,$2$3}_*-ipro.prot.xml";
-	    } else {
-	      $str = "$1*/method/{XTK,XTK*allmod}/VE*_$2$3\_*-ipro.prot.xml";
-	    }
-	    $file = "/proteomics/peptideatlas/archive/rmoritz/HumanMRMAtlas/Origene/Velos/$str";
-	  }
-	  $file =~ s/method/$m/;
-	  my @files = `ls $file`;
-	  if(@files > 1 or @files == 0 ){
-	    print join("<BR>", @files);
-	    goto LABEL;
-	    #}#elsif(! @files ){
-	    #  print "$PPfile <BR>";
-	  } else {
-	    %{$peptides_m{$m}} = $origenecov -> getPeptides(
-	      ref_parameters     => \%parameters,
-	      ProteinProphetfile => $files[0],
-	      protein_name       => $protein_name);
-	  }
-
-	}
-
-	## LM: did not update this...yet!
-	my ($tr, $link ) = $sbeams->make_table_toggle( name => 'ori_getprotein_sequence',
-						       visible => 0,
-						       tooltip => 'Show/Hide Section',
-						       imglink => 1,
-						       sticky => 1 );
-
-
-	my $ori_help = $origenecov ->get_plot_help(name => 'ori_getprotein_sequence_desc' );
-	my $graphic_head = $sbeamsMOD->encodeSectionHeader( text => "Sequence Coverage of Each Fragmentation Method (TPP PeptideProb >= 0.9 and ProteinProb >= 0.9)", link => $link );
-	my %graphic_params = (     peptide => \%peptides_m,
-				   protein_data  => $biosequence,
-				   tr_info => $tr,
-				   obs_color => $parameters{obs_color} );
-
-	$graphic_section = $origenecov -> get_sequence_graphic( %graphic_params, %motif_params );
-	my $primary = qq~ &nbsp;&nbsp;<b>Below show $protein_name in</b>:&nbsp;$PPfile{$protein_name}{tube}<BR> ~;
-	if($parameters{ori_tube}){
-	  $primary =  qq~ &nbsp;&nbsp;<b>Below show $protein_name in</b>:&nbsp;$parameters{ori_tube}<BR> ~;
-	}
-	print qq~ <TABLE width="100%" >
-               <TR $tr><TD ALIGN=left>$graphic_head</TD></TR>
-               <TR $tr><TD ALIGN=left>$ori_help</TD></TR>
-               <TR $tr><TD ALIGN=left>
-                        &nbsp;&nbsp;<b>$protein_name is primary protein in</b>:&nbsp;$PPfile{$protein_name}{tube} <BR>
-                        $primary
-               </TD></TR>
-               <TR $tr><TD> $graphic_section</TD></TR>
-          ~;
-
-	for my $method( @methods){
-	  my ( $sequence, $tags ,$coverage) = $origenecov -> displayAnnotatedSequence(
-	    peptides => \%{$peptides_m{$method}},
-	    biosequence => $biosequence,
-	    method => $method,
-	      );
-	  print "\n <TR $tr><TD > " . $origenecov -> get_html_seq( sequence => $sequence,
-								   tags => $tags,
-								   method => $method,
-								   coverage => $coverage ) . "</TD></TR>\n";
-	}
-	print "</TABLE></DIV>\n";
-      }
-    LABEL:
     }
 
 
@@ -2404,7 +2305,7 @@ sub get_sequence_graphic {
   # Had initially used the peptide query above, but the start/end coordinates
   # were problematic.  Thus we need to do it again.
   my $sql = qq~
-     SELECT DISTINCT 
+     SELECT 
            P.peptide_accession,
            P.peptide_sequence,
            PI.n_genome_locations,
@@ -2920,7 +2821,7 @@ sub get_sequence_graphic {
                       -bgcolor     => $colors{Observed},
                       -fgcolor     => 'black',
                       -font2color  => '#882222',
-                      -key         => 'Observed SNP peptides',
+                      -key         => 'Observed VARIANT peptides',
                       -bump        => 1,
                       -height      => 8,
                       -label       => '', # sub { my $f = shift; my $n = $f->display_name(); $n =~ s/(.*)::::.*/$1/g; return $n },
@@ -3511,7 +3412,7 @@ sub displayAnnotatedSequence {
     JOIN $TBAT_SAMPLE S ON S.sample_id = PIS.sample_id
     JOIN $TBAT_PROTEASES P ON S.protease_id = P.id
     WHERE atlas_build_id = $args{atlas_build_id}
-    AND biosequence_name = '$biosequence->{biosequence_name}'
+    AND biosequence_name = '$biosequence->{biosequence_name}' 
     ~;
     my $sth = $sbeams->get_statement_handle($sql);
     while ( my @row = $sth->fetchrow_array() ) {
@@ -3537,6 +3438,7 @@ sub displayAnnotatedSequence {
   my $html_seq = $sbeamsMOD->get_html_seq_vars( seq => $sequence,
                                           accession => $biosequence->{biosequence_name},
                                            build_id => $args{atlas_build_id}, 
+                                           organism => $current_page->{organism}, 
                                       show_all_snps => 1,
                                                tags => $tags,
                                               mupit => 1,
@@ -3572,10 +3474,16 @@ sub displayAnnotatedSequence {
       } else {
         $source .= "(see <a href='$self_url?use_nextprot=1'>neXtProt </a> annotations)";
       }
+      
     }
 
     if ( $html_seq->{has_variants} ) {
-      $seqHTML .= "<b>Annotated Variants from $source </b><BR>\n";
+      if ($current_page->{organism} =~ /Arabidopsis/i){
+        $seqHTML .= "<b>Annotated Variants </b><BR>\n";
+      }else{
+        $seqHTML .= "<b>Annotated Variants from $source </b><BR>\n";
+      }
+
       my $class = 'visible';
 #      <script src="https://code.jquery.com/jquery-3.1.0.js"></script>
 
@@ -3645,7 +3553,8 @@ sub displayAnnotatedSequence {
             my $observations = '';
             my $class = 'pa_snp_obs_font';
             my $uniq = '';
-            my $title = 'SNP was observed at given frequency in Peptide Atlas.';
+            my $title = 'VARIANT was observed at given frequency in Peptide Atlas.';
+            $title = 'VARIANT was observed at given frequency of ARAPORT11 proteins in Peptide Atlas.' if ($current_page->{organism} =~ /Arabidopsis/);
             if ( $nobs->{unique}->{$skey} ne $post_cnt || !$post_cnt ) {
               if ( !$nobs->{unique}->{$skey} ) {
                 $class = 'pa_snp_warn_font';
@@ -3657,7 +3566,7 @@ sub displayAnnotatedSequence {
               $uniq = "($nobs->{unique}->{$skey} unique)" if $nobs->{unique}->{$skey};
             }
 
-            $var->[1] = "<a href=ViewPeptideExpression?atlas_build_id=$args{atlas_build_id};spep=$spep;opep=$opep;use_nextprot=$use_nextprot;acc=$biosequence->{biosequence_name} title='View SNP expression profile'>$var->[1]</a>";
+            $var->[1] = "<a href=ViewPeptideExpression?atlas_build_id=$args{atlas_build_id};spep=$spep;opep=$opep;use_nextprot=$use_nextprot;acc=$biosequence->{biosequence_name} title='View VARIANT expression profile' target='_blank' >$var->[1]</a>";
             $title .= "<br>Supporting Peptides:<br>$spep_str";
             $var->[4] = qq~<span class=$class onMouseout="hideTooltip()" onMouseover="showTooltip(event,'$title')">Obs $perc ~ . '% (' . "$post_cnt/$total) $uniq </span> $var->[4] ";
 
@@ -3670,7 +3579,7 @@ sub displayAnnotatedSequence {
         $prot =~ s/NX_//g;
         my $mupit_link = "&nbsp;&nbsp;|<a target=_mupit href=http://cravat.us/MuPIT_Interactive/?gm=${prot}:$var->[3]&protquery=y title='View this residue highlighted in green in the $prot structure at MuPit Interactive'><img src=$HTML_BASE_DIR/images/3D_smallest.png border=0></a>|";
         $mupit_link = '' if $var->[3] eq 'End';
-        $mupit_link = '' unless $var->[0] eq 'SNP';
+        $mupit_link = '' unless $var->[0] eq 'VARIANT';
         my $div_id = $prot . '_' . $var->[1];
         $variant_list .= join( "\t", @{$var}[0..4] ) . "<div class=$class id=$div_id>$mupit_link</div>" . "\n";
       }
@@ -4440,3 +4349,121 @@ sub renderProteinAccessionAndStatus {
 
   return(1);
 }
+
+sub displayOrigeneAnnotatedSequence { 
+  my %args = @_;
+  my $protein_name = $args{protein_name};
+  my $parameters = $args{parameters};
+  my $biosequence = $args{biosequence};
+  my %motif_params = %{$args{motif_params}};
+
+	my $file = "/net/db/projects/PeptideAtlas/species/Human/Origene/ExpectedProtein.txt";
+	open(IN, "<$file") or die "cannot open $file\n";
+	my %PPfile = ();
+	my %peptides_m;
+
+	foreach my $line (<IN>){
+		chomp $line ;
+		my (@spids,$plate,$tube);
+		if( $line =~ /TP\d+,([^,]+),(\w),(\d+),.*VE.+_ISBHOT(0[0123]\d).*/ || $line =~ /TP\d+,([^,]+),(\w),(\d+).*,ISBHOT(0[0123]\d).*/){
+			$plate = "ISBHOT$4";
+			@spids = split(/\./,$1);
+			if(length($3) == 1){
+				$tube = "{$2".'0'."$3,$2$3}";
+			} else {
+				$tube = "$2$3";
+			}
+		}
+		foreach my $a (@spids){
+			my $p = "/proteomics/peptideatlas/archive/rmoritz/HumanMRMAtlas/Origene/Velos/$plate*/".
+					"method/XTK/VE*_$tube\_*-ipro.prot.xml";
+
+			$PPfile{$a}{path} = $p;
+			if($tube =~ /\{(\w+),.*/){
+				$tube = $1;
+			}
+			$PPfile{$a}{tube} = $plate.'-'.$tube;
+			if($a =~ /(\S+)\-\d+/){
+				$a = $1;
+				$PPfile{$a}{path} = $p;
+				$PPfile{$a}{tube} = $plate.'-'.$tube;
+
+			}
+		}
+	}
+	if(defined $PPfile{$protein_name}){
+		foreach my $m (@methods){
+			my $file = $PPfile{$protein_name}{path};
+			my $str;
+			if($parameters->{ori_tube} ne ''){
+				$parameters->{ori_tube} =~ /(ISBHOT\d{3})-(\w)(\d+)/;
+				if(length($3) == 1){
+					$str = "$1*/method/XTK/VE*_{$2".'0'."$3,$2$3}_*-ipro.prot.xml";
+				} else {
+					$str = "$1*/method/{XTK,XTK*allmod}/VE*_$2$3\_*-ipro.prot.xml";
+				}
+				$file = "/proteomics/peptideatlas/archive/rmoritz/HumanMRMAtlas/Origene/Velos/$str";
+			}
+			$file =~ s/method/$m/;
+			my @files = `ls $file`;
+			if(@files > 1 or @files == 0 ){
+				print join("<BR>", @files);
+				goto LABEL;
+				#}#elsif(! @files ){
+				#  print "$PPfile <BR>";
+			} else {
+				%{$peptides_m{$m}} = $origenecov -> getPeptides(
+					ref_parameters     => $parameters,
+					ProteinProphetfile => $files[0],
+					protein_name       => $protein_name);
+			}
+
+		}
+
+		## LM: did not update this...yet!
+		my ($tr, $link ) = $sbeams->make_table_toggle( name => 'ori_getprotein_sequence',
+										 visible => 0,
+										 tooltip => 'Show/Hide Section',
+										 imglink => 1,
+										 sticky => 1 );
+
+
+		my $ori_help = $origenecov ->get_plot_help(name => 'ori_getprotein_sequence_desc' );
+		my $graphic_head = $sbeamsMOD->encodeSectionHeader( text => "Sequence Coverage of Each Fragmentation Method (TPP PeptideProb >= 0.9 and ProteinProb >= 0.9)", link => $link );
+		my %graphic_params = (     peptide => \%peptides_m,
+						 protein_data  => $biosequence,
+						 tr_info => $tr,
+						 obs_color => $parameters->{obs_color} );
+
+		my $graphic_section = $origenecov -> get_sequence_graphic( %graphic_params, %motif_params );
+		my $primary = qq~ &nbsp;&nbsp;<b>Below show $protein_name in</b>:&nbsp;$PPfile{$protein_name}{tube}<BR> ~;
+		if($parameters->{ori_tube}){
+			$primary =  qq~ &nbsp;&nbsp;<b>Below show $protein_name in</b>:&nbsp;$parameters->{ori_tube}<BR> ~;
+		}
+		print qq~ <TABLE width="100%" >
+								 <TR $tr><TD ALIGN=left>$graphic_head</TD></TR>
+								 <TR $tr><TD ALIGN=left>$ori_help</TD></TR>
+								 <TR $tr><TD ALIGN=left>
+													&nbsp;&nbsp;<b>$protein_name is primary protein in</b>:&nbsp;$PPfile{$protein_name}{tube} <BR>
+													$primary
+								 </TD></TR>
+								 <TR $tr><TD> $graphic_section</TD></TR>
+						~;
+
+		for my $method( @methods){
+			my ( $sequence, $tags ,$coverage) = $origenecov -> displayAnnotatedSequence(
+				peptides => \%{$peptides_m{$method}},
+				biosequence => $biosequence,
+				method => $method,
+					);
+			print "\n <TR $tr><TD > " . $origenecov -> get_html_seq( sequence => $sequence,
+										 tags => $tags,
+										 method => $method,
+										 coverage => $coverage ) . "</TD></TR>\n";
+		}
+		print "</TABLE></DIV>\n";
+	}
+LABEL:
+
+}
+

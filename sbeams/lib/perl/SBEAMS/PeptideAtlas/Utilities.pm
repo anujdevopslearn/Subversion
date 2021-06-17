@@ -1672,7 +1672,7 @@ sub get_html_seq_vars {
   my %return = ( seq_display => '',
                  clustal_display => '',
                  variant_list => [ [qw( Type Num Start End Info )] ] );
-  
+  my $organism = $args{organism} || ''; 
 # Let the caller do this.
 #  my $full_seq = $args{seq} || return '';
 #  my @seqs = split( /\*/, $full_seq );
@@ -1927,7 +1927,7 @@ sub get_html_seq_vars {
 								      nostrip => 1 );
   push @global_clustal, $primary_clustal;
 
-  my %type2display = ( VARIANT => 'SNP',
+  my %type2display = ( VARIANT => 'VARIANT',
 		       CHAIN => 'Chain',
 		       INIT_MET => 'InitMet',
 		       SIGNAL => 'Signal',
@@ -2002,7 +2002,7 @@ sub get_html_seq_vars {
   my @clustal_middle;
   my @clustal_bottom;
   for my $track ( @global_clustal ) {
-    if ( $track->[0] && $track->[0] =~ /SNP/ ) {
+    if ( $track->[0] && $track->[0] =~ /VARIANT/ ) {
       if ( $obs_snps{$track->[0]} ) {
         push @clustal_middle, $track;
       } else {
@@ -2046,16 +2046,27 @@ sub get_html_seq_vars {
         $sep = ',';
       }
 
+
       my $nmap_sql = qq~
         SELECT PEPTIDE_INSTANCE_ID, COUNT(DISTINCT MATCHED_BIOSEQUENCE_ID)
         FROM $TBAT_PEPTIDE_MAPPING PM
         JOIN $TBAT_BIOSEQUENCE B
           ON B.biosequence_id = PM.matched_biosequence_id
         WHERE peptide_instance_id IN ( $pi_str )
-        --AND dbxref_id = 1
-        --AND len( biosequence_name ) = 6
         GROUP BY peptide_instance_id
       ~;
+
+      if ($organism =~ /Arabidopsis/i){
+        $nmap_sql = qq~
+					SELECT PEPTIDE_INSTANCE_ID, COUNT(DISTINCT MATCHED_BIOSEQUENCE_ID)
+					FROM $TBAT_PEPTIDE_MAPPING PM
+					JOIN $TBAT_BIOSEQUENCE B
+						ON B.biosequence_id = PM.matched_biosequence_id
+					WHERE peptide_instance_id IN ( $pi_str )
+					AND B.biosequence_name like 'AT%'
+					GROUP BY peptide_instance_id
+				~;
+      }
       my $sbeams = $self->getSBEAMS();
       my $sth = $sbeams->get_statement_handle( $nmap_sql );
       while ( my @row = $sth->fetchrow_array() ) {
@@ -2075,12 +2086,12 @@ sub get_html_seq_vars {
       my $post = $2;
       eval { substr( $snpped_seq, $site - 1, 1, $post ) };
       if ( $@ ) {
-        $log->error( "Error in SNP substring" );
+        $log->error( "Error in VARIANT substring" );
         $log->error( $@ );
         $log->error( Dumper( $obs_snps{$snp} ) );
         $log->error( Dumper( %args ) );
         if ( $site > length( $snpped_seq ) ) {
-          $log->error( "SNP position has exceeded length of sequence!" );
+          $log->error( "VARIANT position has exceeded length of sequence!" );
           last;
         }
         next;
@@ -2205,7 +2216,7 @@ sub get_snp_coverage {
   my $cnt = 1;
   my %snp_cover;
   for my $item ( @{$args{swiss}->{VARIANT}} ) {
-    my $key = 'SNP_' . $cnt++; 
+    my $key = 'VARIANT_' . $cnt++; 
     $snp_cover{$key} = $item->{annot};
   }
   return \%snp_cover;
@@ -2455,7 +2466,6 @@ sub get_uniprot_annotation {
   $np_clause
   ORDER BY uniprot_db_entry_id DESC
   ~;
-
   my $sbeams = $self->getSBEAMS();
   my @results = $sbeams->selectrow_array( $sql );
   #print " file_path, entry_offset, entry_name " . join(",", @results) . "\n";
