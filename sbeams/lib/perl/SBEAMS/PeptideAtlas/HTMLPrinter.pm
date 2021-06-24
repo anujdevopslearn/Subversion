@@ -211,10 +211,11 @@ sub displayGuestPageHeader {
   my $skinLink = $args{uri} || 'http://www.peptideatlas.org/.index.dbbrowse2021.php';
   my $resource = $sbeams->getSessionAttribute( key => 'PA_resource' ) || '';
   if ( $resource eq 'SRMAtlas' ) {
-    $skinLink = 'http://www.srmatlas.org/.index.dbbrowse.php';
+    #$skinLink = 'http://www.srmatlas.org/.index.dbbrowse.php';
+    $skinLink = 'http://www.swathatlas.org/.index.dbbrowse-swa2021.php';
   } elsif ( $resource eq 'DIAAtlas' ) {
 #    $skinLink = 'http://www.srmatlas.org/.index.dbbrowse.php';
-    $skinLink = 'http://www.swathatlas.org/.index.dbbrowse.php';
+    $skinLink = 'http://www.swathatlas.org/.index.dbbrowse-swa2021.php';
   }
   my $response = $ua->request( HTTP::Request->new( GET => "$skinLink" ) );
   my @page = split( "\n", $response->content() );
