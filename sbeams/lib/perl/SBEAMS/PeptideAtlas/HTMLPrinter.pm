@@ -43,7 +43,6 @@ sub printPageHeader {
   $self->display_page_header(@_);
 }
 
-my %dataset_annotation = ();
 
 ###############################################################################
 # display_page_header
@@ -211,10 +210,9 @@ sub displayGuestPageHeader {
   my $skinLink = $args{uri} || 'http://www.peptideatlas.org/.index.dbbrowse2021.php';
   my $resource = $sbeams->getSessionAttribute( key => 'PA_resource' ) || '';
   if ( $resource eq 'SRMAtlas' ) {
-    #$skinLink = 'http://www.srmatlas.org/.index.dbbrowse.php';
-    $skinLink = 'http://www.swathatlas.org/.index.dbbrowse-swa2021.php';
+    $skinLink = 'http://www.srmatlas.org/.index.dbbrowse.php';
   } elsif ( $resource eq 'DIAAtlas' ) {
-#    $skinLink = 'http://www.srmatlas.org/.index.dbbrowse.php';
+#    $skinLink = 'http://www.swathatlas.org/.index.dbbrowse.php';
     $skinLink = 'http://www.swathatlas.org/.index.dbbrowse-swa2021.php';
   }
   my $response = $ua->request( HTTP::Request->new( GET => "$skinLink" ) );
@@ -2013,7 +2011,6 @@ sub get_proteome_coverage_new {
   my $self = shift;
   my $build_id = shift; 
   my $patterns = shift;
-  my $data_only = shift;
   my @patterns = @$patterns;
 
   return [] if (! $build_id || ! @patterns);
@@ -2129,17 +2126,13 @@ sub get_proteome_coverage_new {
 				       sortable => 1 );
   $table .= '</table>';
 
-  if ($data_only){
-    return \@return;
-  }else{
-    return $table;
-  }
+  return $table;
 }
 
 sub get_proteome_coverage {
   my $self = shift;
   my $build_id = shift || return [];
-  my $data_only = shift;
+
   my $sbeams = $self->getSBEAMS();
 
   my $sql = qq~
@@ -2315,20 +2308,14 @@ sub get_proteome_coverage {
 				       sortable => 1 );
   $table .= '</table>';
 
-  if ($data_only){
-    return \@return;
-  }else{
-    return $table;
-  }
+  return $table;
 }
 
 sub get_what_is_new {
   my $self = shift;
   my $build_id = shift || return [];
-  my $data_only = shift;
-
   my $sbeams = $self->getSBEAMS();
-  # check if it is default build 
+  # check if it default build 
   my $sql = qq~
     SELECT  DEFAULT_ATLAS_BUILD_ID
     FROM $TBAT_DEFAULT_ATLAS_BUILD 
@@ -2460,11 +2447,8 @@ sub get_what_is_new {
 					   visible => 1,
 					   content => "<table>$sampleDisplay</table>" );
   }
-  if ($data_only){
-    return (\@return,  \@sample_ids);
-  }else{ 
-    return $table;
-  }
+  
+  return $table;
 }
 
 sub get_scroll_table {
@@ -2512,7 +2496,7 @@ sub display_peptide_sample_category_plotly{
   my $self = shift;
   my %args = @_;
   my $data_ref = $args{data_ref};
-  my $sample_array_ref = $args{sample_array_ref};
+  my $sample_arrayref = $args{sample_arrayref};
   my $build_id = $args{build_id};
   my $column_name_ref = $args{column_name_ref};
 
@@ -2529,7 +2513,7 @@ sub display_peptide_sample_category_plotly{
  foreach my $data (@$data_ref){
     my ($name,$id,$cnt) = @$data;
     my ($good_spectra) =0;
-    foreach my $row (@$sample_array_ref){
+    foreach my $row (@$sample_arrayref){
       my $n = scalar @$row; 
       my $sample_cat_id  = $row->[$cols{"sample_category_id"}];
       if ($sample_cat_id eq $id){
@@ -2537,6 +2521,7 @@ sub display_peptide_sample_category_plotly{
         $total_observed_spectra += $row->[$cols{"Spectra ID'd"}]; 
       }
     }  
+ 
     push @n_good_spectra, $good_spectra;
     push @peptide_count, $cnt; 
     push @sample_category,'<a href="'."https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptides?atlas_build_id=$build_id&sample_category_id=$id&QUERY_NAME=AT_GetPeptides&apply_action=QUERY" .'">'. $name .'  </a>';
@@ -2835,15 +2820,9 @@ sub displayExperiment_contri_plotly{
     my $n_canonical_proteins = $row->[$cols{"Distinct Canonical Proteins"}];
     my $cumulative_n_proteins = $row->[$cols{"Cumulative Canonical Proteins"}];
     my $sample_tag =  $row->[$cols{"Experiment Tag"}];
-    $sample_tag =~ s/[\n\r]//g;
-    $sample_tag =~ s/.*sample_id=\d+["']\s?>//;
+    $sample_tag =~ s/.*sample_id=\d+\'>//;
     $sample_tag =~ s/<.*//;
     push @sample_label, ($sample_tag,'','');
-    $n_good_spectra =~ s/,//g;
-    $n_distinct_peptides =~ s/,//g;
-    $cumulative_n_peptides  =~ s/,//g;
-    $n_canonical_proteins  =~ s/,//g;
-    $cumulative_n_proteins =~ s/,//g;
 
 		if ($idx ==0 ){
 				push @cumpepx, 0;
@@ -2852,6 +2831,7 @@ sub displayExperiment_contri_plotly{
         push @cumpepx, $pre_cum_n_good_spectra;
 			}
 			push @cumpepx, $pre_cum_n_good_spectra+$n_good_spectra;
+      
 			push @cumpepy, ($cumulative_n_peptides,$cumulative_n_peptides,0);
 			push @idvpepy, ($n_distinct_peptides,$n_distinct_peptides,0);
 			push @cumproty, ($cumulative_n_proteins,$cumulative_n_proteins,0);
@@ -2972,7 +2952,6 @@ sub tableHeatMap{
   my $self = shift;
   my %args = @_;
   my $table_id = $args{table_id};
-  my $col = $args{column} || 2;
   my $total = $args{total} || 0;
   my $str = qq~
      <script type="text/javascript" src="$CGI_BASE_DIR/../usr/javascript/jquery/jquery.min.js"></script>
@@ -2989,7 +2968,7 @@ sub tableHeatMap{
 	  };
 
 	  // get all values
-	  var counts= jQuery('#$table_id  td:nth-child($col)').map(function() {
+	  var counts= jQuery('#$table_id  td:first-child+td').map(function() {
 	    if (jQuery(this).text() ){
 	      return parseInt(jQuery(this).text());
 	    }else{
@@ -3002,7 +2981,7 @@ sub tableHeatMap{
            sum = $total;
         }
 	// add classes to cells based on nearest 10 value
-	jQuery('#$table_id  td:nth-child($col)').each(function(){
+	jQuery('#$table_id  td:first-child + td').each(function(){
 		var val = parseInt(jQuery(this).text());
 		var pctval = parseInt((Math.round((val/sum)*100)).toFixed(0));
                 var pctval2 = 100 - pctval ;
@@ -3038,16 +3017,15 @@ sub plotly_barchart {
 			push @category, $row->[0];
 			push @cnt , $row->[1];
 		}
-		my $category_str = join("','", @category);
+		my $category_str = join(",", @category);
 		my $cnt_str = join(",", @cnt);
     my $marker = '';
     if ($colors && $colors->[$counter]){
       $marker = "marker: {color: '$colors->[$counter]";
     }
-    
 		$plot_js .= qq~
 				var t$counter = {
-					x: ['$category_str'],
+					x: [$category_str],
 					y: [$cnt_str],
 					name: '$names->[$counter]', 
 					type: 'bar',	
@@ -3064,7 +3042,7 @@ sub plotly_barchart {
 					barmode: 'group',
           font: {size: 18},
           legend:{x: 0.02,y: 1.25 ,font: { size: 12}},
-          xaxis: {type: 'category', dtick:$dtick,title: '$xtitle'},
+          xaxis: {dtick:$dtick,title: '$xtitle',rangemode:'tozero'},
           yaxis: {title: '$ytitle'},
         };
         Plotly.newPlot('$divname', data, layout);
@@ -3084,16 +3062,15 @@ sub get_dataset_url{
   my $repository_ids = shift;
   my $url ='';
   my @ids = split(/[,;]/, $repository_ids);
-	my $annotation_url = '';
-  unless (%dataset_annotation){
-		my $url = "http://proteomecentral.proteomexchange.org/api/autocomplete/v0.1/datasets";
-		my $content  = get($url);
-		$content =~ s/[\[\]"\s+\n\r]//g;
-		foreach my $pxd (split(",", $content)){
-			next if ($pxd eq '');
-			$dataset_annotation{$pxd} =1;
-		}
-  }
+  my %dataset_annotation = ();
+	my $url = "http://proteomecentral.proteomexchange.org/api/autocomplete/v0.1/datasets";
+	my $content  = get($url);
+  my $annotation_url = '';
+	$content =~ s/[\[\]"\s+\n\r]//g;
+	foreach my $pxd (split(",", $content)){
+		next if ($pxd eq '');
+		$dataset_annotation{$pxd} =1;
+	}
   $url='';
 
   foreach my $id(@ids){
