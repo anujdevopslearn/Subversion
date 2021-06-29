@@ -124,10 +124,11 @@ my %basespace = ( basespace_params => '' );
 
     if ( $params->{mode} eq 'subset_libs' ) {
       my $title = qq~
-      <div style="font-family:Helvetica, Arial, sans-serif;font-size:150%;font-weight:bold" id=heading>Custom Library Download </div>
+      <div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:150%;font-weight:700" id=heading>
+	  <font color =#ff5f00 >|</font> Custom Library Download </div>
       <br>
       ~;
-      $page .= $title;
+     # $page .= $title;
       $page .= $tabMenu;
       $page .= get_status_box("Generating library, may take several minutes") unless $params->{action} eq 'trigger';
       print $page;
@@ -349,8 +350,8 @@ sub get_library_table {
 
   my $help = qq~
    <br>
-   <div style="font-family:Helvetica, Arial, sans-serif;font-size:150%;font-weight:bold" id=heading> Library Download </div>
-  </div>
+   <div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:150%;font-weight:700" id=heading>
+   <font color =#ff5f00 >|</font> Library Download </div>
   ~;
 #   <div id=help style="width:800px"> Download SWATH/DIA libraries in any of the supported formats. 
 #   <br><br>
@@ -491,14 +492,14 @@ sub get_library_table {
     my $publication = '';
     if ( $lib_zero->[13] && $lib_zero->[14] ) {
       if ( $lib_zero->[13] =~ /In press/ || $lib_zero->[13] =~ /Submitted/ ) {
-        $publication = "Publication: <i>$lib_zero->[14]</i> ($lib_zero->[13]) <br>";
+        $publication = "<font color = #ff5f00><b>Publication:</b></font> <i>$lib_zero->[14]</i> ($lib_zero->[13]) <br>";
       } else {
-        $publication = "Publication: <i>$lib_zero->[14]</i> (<a href='$lib_zero->[13]'>View</a>) <br>";
+        $publication = "<font color = #ff5f00><b>Publication:</b></font> <i>$lib_zero->[14]</i> (<a href='$lib_zero->[13]'>View</a>) <br>";
       }
     }
     my $description = '';
     if ( $lib_zero->[15] ) {
-      $description = "$lib_zero->[15]<br>";
+      $description = "<font color = #002664>$lib_zero->[15]</font><br>";
     }
 
     my $px_link = '';
@@ -516,12 +517,14 @@ sub get_library_table {
     $lib_zero->[12] .= '<br>' if $lib_zero->[12];
     $content .= qq~
     <br>
-     <span style="font-family:Helvetica, Arial, sans-serif;font-size:110%;font-weight:bold" id=heading> $lib </span><br>
+	 <font color = #002664>
+     <span style="font-family:Barlow, Arial, sans-serif;font-size:110%;font-weight:bold" id=heading> $lib </span><br>
      $description
      $lib_zero->[11] $px_link <br>
      $lib_zero->[12] 
      $publication
      $link <table>$lib_table
+	 </font>
     <br>
     ~;
   }
@@ -610,8 +613,8 @@ sub get_subset_form {
       } else {
         my $fname = $sbeams->getRandomString( num_chars => 20 );
 
-        my $exec = "$PHYSICAL_BASE_DIR/lib/scripts/PeptideAtlas/extract_ionlibrary_subset.pl --in $path --out /tmp/$fname --format $format ";
-
+#        my $exec = "$PHYSICAL_BASE_DIR/lib/scripts/PeptideAtlas/extract_ionlibrary_subset.pl --in $path --out /tmp/$fname --format $format ";
+	my $exec = "/proteomics/sw/scripts/extract_ionlibrary_subset.pl --in $path --out /tmp/$fname --format $format ";
         if ( $params->{swaths_file} ) {
           my $file_name = $q->param( 'swaths_file' );
           my $sfile = $sbeams->getRandomString( num_chars => 20 );
@@ -724,10 +727,18 @@ sub get_subset_form {
       }
     }
   }
+  
+  my $title = qq~
 
-
+     <br>
+      ~;
+	  
+	  
   my $help = qq~
-   <div id=help style="width:720px"> This form allows you to a list of proteins to extract a subset SWATH/DIA library. This can be done with a user-uploaded list, or with any of the 
+  <br>
+   <div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:150%;font-weight:700" id=heading>
+   <font color =#ff5f00 >|</font> Custom Library Download </div>
+   <div id=help style="width:720px; font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700"><br><br> This form allows you to a list of proteins to extract a subset SWATH/DIA library. This can be done with a user-uploaded list, or with any of the 
    Biology/Disease-driven Human Proteome Project ( <a href="http://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/proteinList?protein_list_id=2"> B/D-HPP </a>) contributed lists.
   </div>
   ~;
@@ -864,10 +875,10 @@ sub get_subset_form {
   }
   </script>
   <style type="text/css">
-   .cellblock_top { border-top:1px solid; border-color:black; border-left:1px solid; border-right:1px solid; padding:10px }
-   .cellblock_bottom { border-bottom:thin solid; border-color:black; border-left:thin solid; border-right:thin solid; padding:10px }
-   .cellblock { border-color:black; border-left:thin solid; border-right:thin solid}
-   .cellblock_complete { border-color:black; border-left:thin solid; border-right:thin solid; border-top: thin solid; border-bottom:thin solid }
+   .cellblock_top { border-top:1px solid; border-color:#002664; border-left:1px solid; border-right:1px solid; padding:10px }
+   .cellblock_bottom { border-bottom:thin solid; border-color:#002664; border-left:thin solid; border-right:thin solid; padding:10px }
+   .cellblock { border-color:#002664; border-left:thin solid; border-right:thin solid}
+   .cellblock_complete { border-color:#002664; border-left:thin solid; border-right:thin solid; border-top: thin solid; border-bottom:thin solid }
   </style>
 
   <table style="border-collapse: collapse">
@@ -875,23 +886,23 @@ sub get_subset_form {
   <input type=hidden name=mode value=subset_libs />
   <input type=hidden name=action value=download />
   $basespace{basespace_params}
-  <tr><td colspan=3 align=left><b>Library selection</b></td></tr>
+   <tr><td colspan=3 align=left><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading><b>Library selection</b></div></td></tr>
   <tr class=cellblock_top>
-    <td align=right><b><i> Input library<sup>&dagger;</sup>:</i></b></td>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Input library</div><sup>&dagger;</sup>:</i></b></td>
     $title2help->{Library}
     <td>$lib_select</td>
   </tr>
   <tr class=cellblock_bottom>
-    <td align=right><b><i> Output file name:</i></b></td>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Output file name:</div></i></b></td>
     $title2help->{basename}
     <td><input type=text name=basename id=basename size=36/></td>
   </tr>
   <tr>
     <td colspan=3>&nbsp;</td>
-    <tr><td colspan=3 align=left><b>Protein filtering</b></td></tr>
+    <tr><td colspan=3 align=left><b><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading>Protein filtering</div></b></td></tr>
   </tr>
   <tr class="cellblock_top">
-    <td align=right><b><i> Proteins:</i></b></td>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Proteins:</div></i></b></td>
     $title2help->{Proteins}
     <td><input type=file name=protein_file id=protein_file></input></td>
   </tr>
@@ -901,46 +912,46 @@ sub get_subset_form {
     <td align=left>$or</td>
   </tr>
   <tr class="cellblock_bottom">
-    <td align=right><b><i> HPP/BD list:</i></b></td>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> HPP/BD list:</div></i></b></td>
     $title2help->{domain_protein_list_id}
     <td>$domain_protein_list_select</input></td>
   </tr>
   <tr>
     <td colspan=3>&nbsp;</td>
   </tr>
-  <tr><td colspan=3 align=left><b>M/Z filtering</b></td></tr>
+  <tr><td colspan=3 align=left><b><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading>M/Z filtering</div></b></td></tr>
   <tr class=cellblock_top>
-    <td align=right><b><i> Min precursor mz:</i></b></td>
+     <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Min precursor mz:</div></i></b></td>
     $title2help->{prec_min_mz}
     <td><input type=text id=prec_min_mz name=prec_min_mz onchange=specify_swath('direct') size=12 value=$prec_min_mz></input></td>
   </tr>
   <tr class=cellblock>
-    <td align=right><b><i> Max precursor mz:</i></b></td>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Min precursor mz:</div></i></b></td>
     $title2help->{prec_max_mz}
     <td><input type=text id=prec_max_mz name=prec_max_mz onchange=specify_swath('direct') size=12 value=$prec_max_mz></input></td>
   </tr>
   <tr class=cellblock>
-    <td align=right><b><i> Min fragment mz:</i></b></td>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Min fragment mz:</div></i></b></td>
     $title2help->{frag_min_mz}
     <td><input type=text id=frag_min_mz name=frag_min_mz onchange=specify_swath('direct') size=12 value=$frag_min_mz></input></td>
   </tr>
   <tr class=cellblock_bottom>
-    <td align=right><b><i> Max fragment mz:</i></b></td>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Max fragment mz:</div></i></b></td>
     $title2help->{frag_max_mz}
     <td><input type=text id=frag_max_mz name=frag_max_mz onchange=specify_swath('direct') size=12 value=$frag_max_mz></input></td>
   </tr>
   <tr>
     <td colspan=3>&nbsp;</td>
   </tr>
-  <tr><td colspan=3 align=left><b>Number of fragment ions</b></td></tr>
+  <tr><td colspan=3 align=left><b><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading>Number of fragment ions</div></b></td></tr>
 
   <tr class=cellblock_top>
-    <td align=right><b><i> Min num fragments:</i></b></td>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Min num fragments:</div></i></b></td>
     $title2help->{min_num_frags}
     <td><input type=text id=min_num_frags name=min_num_frags onchange=check_num_frags() size=12 value=$min_num_frags></input></td>
   </tr>
   <tr class=cellblock_bottom>
-    <td align=right><b><i> Max num fragments:</i></b></td>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Max num fragments:</div></i></b></td>
     $title2help->{max_num_frags}
     <td><input type=text id=max_num_frags name=max_num_frags onchange=check_num_frags() size=12 value=$max_num_frags></input></td>
   </tr>
@@ -948,15 +959,15 @@ sub get_subset_form {
     <td colspan=3>&nbsp;</td>
   </tr>
 
-  <tr><td colspan=3 align=left><b>Isotopic labelling</b></td></tr>
+  <tr><td colspan=3 align=left><b><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading>Isotopic labelling</div></b></td></tr>
 
   <tr class=cellblock_top>
-    <td align=right><b><i>Heavy isotopes:</i></b></td>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Heavy isotopes:</div></i></b></td>
     $title2help->{cmod_mass}
     <td>$cmod_mass_select</td>
   </tr>
   <tr class=cellblock_bottom>
-    <td align=right><b><i> Transition types:</i></b></td>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Transition types:</div></i></b></td>
     $title2help->{cmod_opts}
     <td>$cmod_opts_radio</td>
   </tr>
@@ -964,10 +975,10 @@ sub get_subset_form {
     <td colspan=3>&nbsp;</td>
   </tr>
 
-  <tr><td colspan=3 align=left><b>SWATH Settings</b></td></tr>
+  <tr><td colspan=3 align=left><b><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading>SWATH Settings</div></b></td></tr>
 
   <tr class="cellblock_top">
-    <td align=right><b><i>Upload SWATHs file:</i></b></td>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading>Upload SWATHs file:</div></i></b></td>
     $title2help->{swaths_file}
     <td><input type=file name=swaths_file id=swaths_file onchange=specify_swath('file')></input></td>
   </tr>
@@ -977,7 +988,7 @@ sub get_subset_form {
     <td align=left>$or</td>
   </tr>
   <tr class=cellblock>
-    <td align=right><b>No SWATHs file:</b></td>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading>No SWATHs file:</div></b></td>
     $title2help->{no_swaths_file}
     <td align=left><input type=checkbox $no_swaths /></td>
   </tr>
@@ -987,12 +998,12 @@ sub get_subset_form {
     <td align=left>$or</td>
   </tr>
   <tr class=cellblock>
-    <td align=right><b><i> SWATH window size:</i></b></td>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> SWATH window size:</div></i></b></td>
     $title2help->{swath_size}
     <td white-space:nowrap><input type=text name=swath_size id=swath_size onchange=specify_swath('direct') size=12 value=$swath_size></input><span id=swath_cnt>($n_bins total bins)</span></td>
   </tr>
   <tr class=cellblock_bottom>
-    <td align=right><b><i> SWATH window overlap:</i></b></td>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> SWATH window overlap:</div></i></b></td>
     $title2help->{swath_overlap}
     <td white-space:nowrap><input type=text name=swath_overlap id=swath_overlap onchange=specify_swath('direct') size=12 value=$swath_overlap></input></td>
   </tr>
@@ -1003,7 +1014,8 @@ sub get_subset_form {
 
   <tr>
     <td>&nbsp;</td>
-    <td colspan=2 align=left><input type=submit value='Generate Custom Library'></input></td>
+    <td colspan=2 align=left><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading><input type=submit value='Generate Custom Library'></input></div></td>
+	
   </tr>
   </table>
   
