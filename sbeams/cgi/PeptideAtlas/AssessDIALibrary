@@ -96,10 +96,11 @@ my $page = '';
 
     if ( 1 ) {
       my $title = qq~
-      <div style="font-family:Helvetica, Arial, sans-serif;font-size:150%;font-weight:bold" id=heading>DIA Library Assessment</div>
-      <br>
+      <div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:150%;font-weight:700"  id=heading>
+		<font color =#ff5f00 >........|</font> DIA Library Assessment.</div>
+	<br>
       ~;
-      $page .= $title;
+    #  $page .= $title;
       $page .= $tabMenu;
       $page .= qq~
     <script>
@@ -342,7 +343,7 @@ sub get_library_table {
 
   my $help = qq~
    <br>
-   <div style="font-family:Helvetica, Arial, sans-serif;font-size:150%;font-weight:bold" id=heading> Library Download </div>
+   <div style="font-family:Barlow, Arial, sans-serif;font-size:150%;font-weight:bold" id=heading> Library Download </div>
   </div>
   ~;
 #   <div id=help style="width:800px"> Download SWATH/DIA libraries in any of the supported formats. 
@@ -712,7 +713,7 @@ sub analyze_library {
   my $downloads = qq~
   <table style="border-collapse: collapse" border=0 width=500>
   <tr>
-    <td colspan=2 align=left><b>Download Files</b></td>
+    <td colspan=2 align=left><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:150%;font-weight:700" id=heading><font color =#ff5f00 >|</font><b> Download Files</b></div></td>
   </tr>
   <tr></tr>
   <tr class="cellblock_top"> 
@@ -783,7 +784,10 @@ sub analyze_library {
 sub get_subset_form {
   
   my $help = qq~
-   <div id=help style="width:720px"><br><br> This form allows you to assess various properties of a DIA library in OpenSWATH, Spectronaut, or Peakview formats. 
+  <br>
+   <div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:150%;font-weight:700" id=heading>
+	  <font color =#ff5f00 >|</font> DIA Library Assessment</div>
+   <div id=help style="width:720px; font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700"><br><br> This form allows you to assess various properties of a DIA library in OpenSWATH, Spectronaut, or Peakview formats.
   </div>
   ~;
   
@@ -858,25 +862,25 @@ sub get_subset_form {
 
   <table style="border-collapse: collapse" border=0 width=500>
   <form method=post id=assess onSubmit="return check_form('submit')" enctype="multipart/form-data">
-
-  <b>Input data</b>
+  <br>
+  <div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:150%;font-weight:700" id=heading>Input data</div>
   <tr class="cellblock_top">
     <td>&nbsp;</td>
     <td>&nbsp;</td>
     <td>&nbsp;</td>
   </tr>
   <tr class=cellblock>
-    <td align=right><b><i> Ion Library:</i></b></td>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Ion Library:</div></i></b></td>
     $title2help->{ion_library}
     <td><input type=file name=ion_library id=ion_library onchange="sizeme()"></input></td>
   </tr>
   <tr class=cellblock>
-    <td align=right><b><i>SWATHs definition file (optional):</i></b></td>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> SWATHs definition file (optional):</div></i></b></td>
     $title2help->{swaths_file}
     <td><input type=file name=swaths_file id=swaths_file></input></td>
   </tr>
   <tr class=cellblock>
-    <td align=right><b><i>Proteome mapping file (optional):</i></b></td>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Proteome mapping file (optional):</div></i></b></td>
     $title2help->{pep_file}
     <td><input type=file name=pep_file id=pep_file></input></td>
   </tr>
@@ -889,19 +893,19 @@ sub get_subset_form {
   <tr><td/></tr>
   <tr><td/></tr>
   <tr><td/></tr>
-  <tr><td colspan=3 align=left><input type=radio id=analyze value=analyze name=mode checked onclick=check_form('assess')><b>Analyze Library</b></td></tr>
+  <tr><td colspan=3 align=left><b><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:150%;font-weight:700" id=heading><input type=radio id=analyze value=analyze name=mode checked onclick=check_form('assess')>Analyze Library</b></div></td></tr>
   <tr class="cellblock_top">
     <td>&nbsp;</td>
     <td>&nbsp;</td>
     <td>&nbsp;</td>
   </tr>
   <tr class=cellblock>
-    <td align=right><b><i>Assess mass diffs(optional):</i></b></td>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Assess mass diffs(optional):</div></i></b></td>
     $title2help->{assess_massdiff}
     <td>Yes<input type=radio name=massdiff checked=yes>&nbsp;No<input type=radio name=massdiff></td>
   </tr>
   <tr class=cellblock>
-    <td align=right><b><i>Print definitions for each test(optional):</i></b></td>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Print definitions for each test(optional):</div></i></b></td>
     $title2help->{col_defs}
     <td>Yes<input type=radio name=coldefs checked=yes>&nbsp;No<input type=radio name=coldefs></td>
   </tr>
@@ -919,19 +923,19 @@ sub get_subset_form {
   <tr><td/></tr>
   <tr><td/></tr>
 
-  <tr><td colspan=3 align=left><input type=radio id=update value=correct name=mode onclick=check_form('correct') ><b>Correct Library</b></td></tr>
+  <tr><td colspan=3 align=left><b><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:150%;font-weight:700" id=heading><input type=radio id=update value=correct name=mode onclick=check_form('correct') >Correct Library</b></div></td></tr>
   <tr class="cellblock_top">
     <td>&nbsp;</td>
     <td>&nbsp;</td>
     <td>&nbsp;</td>
   </tr>
   <tr class=cellblock>
-    <td align=right class=inactive_text id=filter_cell><b><i>Filter problem assays:</i></b></td>
+    <td align=right class=inactive_text id=filter_cell><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Filter problem assays:</div></i></b></td>
     $title2help->{assess_massdiff}
     <td><input type=radio name=mod_type id=filter value=filter onclick=check_form('blur') >&nbsp;</td>
   </tr>
   <tr class=cellblock>
-    <td align=right class="inactive_text" id=correct_cell><b><i>Re-compute m/z values:</i></b></td>
+    <td align=right class="inactive_text" id=correct_cell><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Re-compute m/z values:</div></i></b></td>
     $title2help->{assess_massdiff}
     <td><input type=radio name=mod_type id=correct value=correct onclick=check_form('blur')>&nbsp;</td>
   </tr>
