@@ -211,7 +211,7 @@ sub getTabMenu {
     } elsif ($PROG_NAME =~ /DIA_library_subset/) {
        $current_tab=7;
        $current_subtab=2;
-    } elsif ($PROG_NAME =~ /DIA_search/) {
+    } elsif ($PROG_NAME =~ /Upload_library/) {
        $current_tab=7;
        $current_subtab=3;
     } elsif ($PROG_NAME =~ /AssessDIALib/) {
@@ -405,24 +405,24 @@ sub getTabMenu {
 		      helptext => 'Resource for data independent analysis',
         );
     $tabmenu->addMenuItem( tablabel => 'SWATH/DIA',
-			   label => 'SWATH Libraries',
+			   label => 'Download Library',
 			   helptext => 'Download libraries in various formats',
-			   url => "$CGI_BASE_DIR/PeptideAtlas/GetDIALibs?mode=download_libs"
+			   url => "$CGI_BASE_DIR/SWATHAtlas/GetDIALibs?mode=download_libs"
 	);
     $tabmenu->addMenuItem( tablabel => 'SWATH/DIA',
-			   label => 'Custom Libraries',
+			   label => 'Custom Library',
 			   helptext => 'Generate custom subset libraries',
-			   url => "$CGI_BASE_DIR/PeptideAtlas/GetDIALibs?mode=subset_libs"
+			   url => "$CGI_BASE_DIR/SWATHAtlas/GetDIALibs?mode=subset_libs"
 	);
     $tabmenu->addMenuItem( tablabel => 'SWATH/DIA',
-			   label => 'Search datasets',
-			   helptext => 'Search contributed datasets with your SWATH libs',
-			   url => "$CGI_BASE_DIR/PeptideAtlas/DIA_search"
+			   label => 'Upload Library',
+			   helptext => 'Uploading DIA spectral ion libraries at SWATHAtlas',
+			   url => "http://www.swathatlas.org/uploadlibrary.php"
 	);
     $tabmenu->addMenuItem( tablabel => 'SWATH/DIA',
 			   label => 'Assess Library',
 			   helptext => 'Assess physical properties of DIA Library',
-			   url => "$CGI_BASE_DIR/PeptideAtlas/AssessDIALibrary"
+			   url => "$CGI_BASE_DIR/SWATHAtlas/AssessDIALibrary"
 	);
 
 
