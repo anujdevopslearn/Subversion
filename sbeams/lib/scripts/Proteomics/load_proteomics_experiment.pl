@@ -46,6 +46,10 @@ use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::Proteomics;
 use SBEAMS::Proteomics::Settings;
 use SBEAMS::Proteomics::Tables;
@@ -53,10 +57,6 @@ use SBEAMS::Proteomics::Tables;
 $sbeams = SBEAMS::Connection->new();
 $sbeamsPROT = SBEAMS::Proteomics->new();
 $sbeamsPROT->setSBEAMS($sbeams);
-
-use SBEAMS::PeptideAtlas;
-use SBEAMS::PeptideAtlas::Settings;
-use SBEAMS::PeptideAtlas::Tables;
 
 
 #### Set program name and usage banner
@@ -244,10 +244,10 @@ sub handleRequest {
 
   #### Get the file_prefix if it was specified, and otherwise guess
   unless ($file_prefix) {
-    my $module = $sbeams->getSBEAMS_SUBDIR();
-    $file_prefix = $RAW_DATA_DIR{Proteomics} if ($module eq 'Proteomics');
+    my $module = $sbeams->getSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+    $file_prefix = $RAW_DATA_DIR{Proteomics};
+    print "$module file_prefix='$file_prefix'\n";
   }
-
 
   #### If there are any parameters left, complain and print usage
   if ($ARGV[0]){
@@ -356,12 +356,8 @@ sub handleRequest {
 
       ## retrieve experiment directory from experiment record:
       my $exp_dir = getExperimentDirectory( exp_id => $experiment_id);
-
-      print, "interact file:  $interact_fname\n";
-
       if ( -e "$file_prefix/$exp_dir/$search_subdir/$interact_fname")
       {
-
           $full_interact_file_path = "$file_prefix/$exp_dir/$search_subdir/$interact_fname";
 
       } else
@@ -374,8 +370,6 @@ sub handleRequest {
       }
 
   } 
-
-
 
   #### Loop over each experiment, determining its status and processing
   #### it if desired
@@ -419,41 +413,39 @@ sub handleRequest {
 
       #### If we're not just checking the status
       if ($list_all eq '' && $status->{experiment_path}) {
-
         my $prefix = $file_prefix;
-
         $prefix = '' if ($status->{experiment_path} =~ /\/dblocal/);
 
         my $source_dir;
-	if ($status->{experiment_path} =~ /^\//) {
-	  $source_dir = $status->{experiment_path}."/".
-          $search_batch_subdir;
-	} else {
-	  $source_dir = $prefix."/".$status->{experiment_path}."/".
-          $search_batch_subdir;
-	}
+				if ($status->{experiment_path} =~ /^\//) {
+					$source_dir = $status->{experiment_path}."/".
+								$search_batch_subdir;
+				} else {
+					$source_dir = $prefix."/".$status->{experiment_path}."/".
+								$search_batch_subdir;
+				}
 
-	if (!-d $source_dir) {
-	    print "WARNING: Directory not found! $source_dir\n";
-	}
+				if (!-d $source_dir) {
+						print "WARNING: Directory not found! $source_dir\n";
+				}
 
-  	#### If user asked for a load, do it
-  	if ($load) {
-          print "Loading data in $source_dir\n";
+				#### If user asked for a load, do it
+				if ($load) {
+							print "Loading data in $source_dir\n";
 
-	  if ($pepxml_load) {
-  	    $result = loadProteomicsExperimentFromPepXML(
-  	      experiment_tag=>$status->{experiment_tag},
-  	      source_dir=>$source_dir
-            );
+				if ($pepxml_load) {
+						$result = loadProteomicsExperimentFromPepXML(
+							experiment_tag=>$status->{experiment_tag},
+							source_dir=>$source_dir
+								);
 
-	  } else {
-  	    $result = loadProteomicsExperiment(
-  	      experiment_tag=>$status->{experiment_tag},
-  	      source_dir=>$source_dir,
-	      experiment_list_file=>$experiment_list_file
-            );
-	}
+				} else {
+						$result = loadProteomicsExperiment(
+							experiment_tag=>$status->{experiment_tag},
+							source_dir=>$source_dir,
+						experiment_list_file=>$experiment_list_file
+								);
+			}
   	  print "\n";
   	}
 
