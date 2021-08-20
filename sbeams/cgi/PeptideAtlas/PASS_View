@@ -145,7 +145,7 @@ sub main {
         );
 
         $sbeamsMOD->display_page_header(project_id => $project_id,
-				                                init_tooltip => 1);
+					init_tooltip => 1);
 
         handle_request(ref_parameters=>\%parameters);
 
@@ -273,7 +273,7 @@ sub handle_request {
   my $isOwner = 0;
   my $isAccessible = 0;
   my $isAdmin = 0;
-  
+
   my ($date) = `date '+%F'`;
   chomp($date);
   if ($datasetIdentifier) {
@@ -286,8 +286,8 @@ sub handle_request {
     } else {
       #print "Is '$date' ge '$datasetMetadata->{publicReleaseDate}'?<BR>\n";
       if ($datasetMetadata->{publicReleaseDate} && substr($date,0,10) ge substr($datasetMetadata->{publicReleaseDate},0,10)) {
-				#print "INFO: Current date '$date' is greater than release date '$datasetMetadata->{publicReleaseDate}'<BR>\n";
-				$isAccessible = 1;
+	#print "INFO: Current date '$date' is greater than release date '$datasetMetadata->{publicReleaseDate}'<BR>\n";
+	$isAccessible = 1;
       }
     }
 
@@ -309,10 +309,10 @@ sub handle_request {
     if ( ( $authentication->{result} eq 'Success' &&
            uc($emailAddress) eq uc($datasetMetadata->{emailAddress}) ) || $isAdmin) {
       finalizeDataset(
-				authentication=>$authentication,
-				identifier=>$parameters{'identifier'},
+	authentication=>$authentication,
+	identifier=>$parameters{'identifier'},
         emailAddress=>$datasetMetadata->{emailAddress},
-      );
+	  );
       $datasetMetadata = getPASSMetaData(identifier=>$datasetIdentifier);
     } else {
       push(@errors,@{$authentication->{errors}}) if ($authentication->{errors});
@@ -442,7 +442,7 @@ sub handle_request {
         errors => \@errors,
       );
       if ($result->{errors}) {
-				push(@errors,@{$result->{errors}});
+	push(@errors,@{$result->{errors}});
       }
     } else {
       push(@errors,@{$authentication->{errors}}) if ($authentication->{errors});
@@ -633,30 +633,24 @@ sub handle_request {
        print "<HR>\n";
      }
 
-
-     print "<TABLE width=\"800\"><TR><TD>\n";
-     print "<B>Metadata:</B><P>\n";
      print DisplayPASSMetaData(identifier=>$datasetIdentifier);
-     print "<BR>\n";
-     print "</TR></TD></TABLE>\n";
      print "<HR>\n";
 
      print "<B>Official URL for this dataset:</B> http://www.peptideatlas.org/PASS/$datasetIdentifier<BR>\n";
-     print "<B>To access files via FTP, use credentials:</B><PRE>\n";
+     print "<B>To access files via FTP, use credentials:</B><PRE style='margin-left:50px;'>\n";
      print "Servername: ftp.peptideatlas.org\nUsername: $datasetIdentifier\nPassword: $datasetMetadata->{datasetPassword}\n</PRE><BR>\n";
      print "Or use your browser's FTP mode: <a target=\"_blank\" href=\"ftp://$datasetIdentifier:$datasetMetadata->{datasetPassword}\@ftp.peptideatlas.org/\">ftp://$datasetIdentifier:$datasetMetadata->{datasetPassword}\@ftp.peptideatlas.org/</a><BR><BR>\n";
      print "<HR>\n";
 
-     print "<B>Listing of files:</B><P>\n";
+     print "<h3>Listing of files:</h3>\n";
      print DisplayPASSDirListing(identifier=>$datasetIdentifier,
              baseURL=>$base_url,
            );
-     print "<BR>\n";
-     print "<a href=\"$base_url?identifier=$datasetIdentifier&browseArea=upload&path=/\">Browse FTP upload area</a><BR>\n";
+     #print "<BR>\n";
+     print "<h3><a href=\"$base_url?identifier=$datasetIdentifier&browseArea=upload&path=/\">Browse FTP upload area</a></h3>\n";
      #print "<a href=\"$base_url?identifier=$datasetIdentifier&browseArea=processing&path=/\">Browse AutoQCprocessing area</a><BR>\n";
-     print "<BR>\n";
-     print "<HR>\n";
 
+     $sbeamsMOD->display_page_footer();
   }
   if ($action !~ /LOG(OUT|IN)/i && $action !~ /(VIEW|SET)$/i ) {
     my $str = do '/net/dblocal/www/html/sbeams/lib/scripts/PeptideAtlas/create_PASS_Json.pl';
@@ -778,7 +772,6 @@ sub registerUser {
 
 
   return $response;
-
 }
 
 
@@ -858,7 +851,6 @@ sub validateDatasetAnnotations {
 
 
   return $response;
-
 }
 
 
@@ -1000,7 +992,6 @@ sub getPASSMetaData {
 
   $response->{result} = 'Success';
   return $response;
-
 }
 
 
@@ -1019,40 +1010,24 @@ sub DisplayPASSMetaData {
   my $result = getPASSMetaData(identifier=>$identifier);
 
   if ($result->{result} eq 'Success') {
-    print "<B><font color=red>datasetIdentifier:</font></B> $result->{datasetIdentifier}<BR>\n";
-    print "<B><font color=red>datasetType:</font></B> $result->{datasetType}<BR>\n";
-    print "<B><font color=red>submitter:</font></B> $result->{submitterStr}<BR>\n";
-    print "<B><font color=red>submitter_organization</font></B> $result->{submitter_organization}<BR>\n";
-    print "<B><font color=red>lab_head_full_name:</font></B> $result->{lab_head_full_name}<BR>\n";
-    print "<B><font color=red>lab_head_email:</font></B> $result->{lab_head_email}<BR>\n";
-    print "<B><font color=red>lab_head_organization:</font></B> $result->{lab_head_organization}<BR>\n";
-    print "<B><font color=red>lab_head_country:</font></B> $result->{lab_head_country}<BR>\n";
-    print "<B><font color=red>datasetTag:</font></B> $result->{datasetTag}<BR>\n";
-    print "<B><font color=red>datasetTitle:</font></B> $result->{datasetTitle}<BR>\n";
-    print "<B><font color=red>publicReleaseDate:</font></B> $result->{publicReleaseDate}<BR>\n";
-    print "<B><font color=red>finalizedDate:</font></B> $result->{finalizedDate}<BR>\n";
+    my @result_fields = qw(datasetIdentifier datasetType submitter submitter_organization lab_head_full_name lab_head_email lab_head_organization lab_head_country datasetTag datasetTitle publicReleaseDate finalizedDate summary contributors publication growth treatment extraction separation digestion acquisition informatics instruments species massModifications);
 
-    print "<B><font color=red>summary:</font></B> $result->{summary}<BR>\n";
-    print "<B><font color=red>contributors:</font></B> $result->{contributors}<BR>\n";
-    print "<B><font color=red>publication:</font></B> $result->{publication}<BR>\n";
-    print "<B><font color=red>growth:</font></B> $result->{growth}<BR>\n";
-    print "<B><font color=red>treatment:</font></B> $result->{treatment}<BR>\n";
-    print "<B><font color=red>extraction:</font></B> $result->{extraction}<BR>\n";
-    print "<B><font color=red>separation:</font></B> $result->{separation}<BR>\n";
-    print "<B><font color=red>digestion:</font></B> $result->{digestion}<BR>\n";
-    print "<B><font color=red>acquisition:</font></B> $result->{acquisition}<BR>\n";
-    print "<B><font color=red>informatics:</font></B> $result->{informatics}<BR>\n";
-    print "<B><font color=red>instruments:</font></B> $result->{instruments}<BR>\n";
-    print "<B><font color=red>species:</font></B> $result->{species}<BR>\n";
-    print "<B><font color=red>massModifications:</font></B> $result->{massModifications}<BR>\n";
+    print '<table cellpadding="8" style="margin-left:5px;border-collapse:collapse;width:95%;" class="info_box"><tbody>';
+    print "<tr><td style='text-align:center;background-color:#444;color:#fff;letter-spacing: 3px; text-transform: uppercase;font-weight: bold;}' colspan='2'>Metadata</td></tr>\n";
+
+    for my $r (@result_fields) {
+      print "<tr><td style='vertical-align:top;' class='bold_text'>$r</td>";
+      $r = 'submitterStr' if ($r eq 'submitter');
+      print "<td>$result->{$r}</td></tr>\n";
+    }
+
+    print "</tbody></table>\n\n";
 
   } else {
-    print "ERROR: Unable to get dataset metadata.<BR>\n";
+    print "<h2>Metadata:</h2>ERROR: Unable to get dataset metadata.<BR>\n";
   }
 
-
   return $response;
-
 }
 
 
@@ -1082,7 +1057,7 @@ sub displayEditMetaDataForm {
   }
 
   if ($sbeams->output_mode() eq 'html') {
-     print "<H3>Update Dataset Metadata</H3>";
+     print "<H1>Update Dataset Metadata</H1>";
 
      $PASS->displayErrors(errors=>$errors);
 
@@ -1095,9 +1070,7 @@ sub displayEditMetaDataForm {
        print "</TD></TR></TABLE>\n";
      }
 
-
      print "<HR>\n";
-     print "<nobr>";
      print $q->start_form(-method=>"POST",
                           -action=>"$base_url",
                           -name=>"MainForm",
@@ -1114,10 +1087,12 @@ sub displayEditMetaDataForm {
      }
 
 
-     print "<B><font color=red>datasetIdentifier:</font></B> $result->{datasetIdentifier}<BR>\n";
+     print '<table cellpadding="8" style="margin-left:5px;border-collapse:collapse;width:95%;" class="info_box"><tbody>';
+     print "<tr><td style='text-align:center;background-color:#444;color:#fff;letter-spacing: 3px;font-weight: bold;' colspan='4'> $result->{datasetIdentifier} </td></tr>";
+
+     print "<tr><td class='bold_text'>Dataset Identifier</td><td></td><td> $result->{datasetIdentifier}</td><td></td></tr>\n";
      print $q->hidden(-name=>'identifier',-default=>$result->{datasetIdentifier});
-     print "<B><font color=red>submitter:</font></B> $result->{submitterStr}<BR>\n";
-     print "<HR>\n";
+     print "<tr><td class='bold_text'>Submitter</td><td></td><td> $result->{submitterStr}</td><td></td></tr>\n";
 
 
      #### If the parameters are not filled in already, fill them in from the previous data
@@ -1146,24 +1121,30 @@ sub displayEditMetaDataForm {
      }
 
      #### Print the entry form
-     print "<B><font color=\"red\">Dataset type</B></font> (Please select the broad category classifying the dataset. This will aid in determining how to process it.)<BR>\n";
-     print qq~<select name="datasetType">~;
-     for (my $i=0; $i < scalar(@datasetTypes); $i+=2) {
-       my ($key,$label) = @datasetTypes[$i..$i+1];
-       my $selected = '';
-       $selected = 'selected="true" ' if ($parameters{'datasetType'} eq $key);
-       print qq~  <option $selected value="$key">$label</option>\n~;
-     }
-     print "</select>\n";
-     print "<BR>\n";
+     print "<tr><td class='bold_text'>Dataset type</td>"; # (Please select the broad category classifying the dataset. This will aid in determining how to process it.)<BR>\n";
 
-     print "<B><font color=\"red\">Dataset tag</B></font> (Enter a short {up to 20 characters} \"tag\" for this dataset)<BR>It should be globally unique. It will be used in lists of datasets where the title might be too long.<BR>\n";
+     # do not allow edits to this field - 202108 LM
+     #print qq~<select name="datasetType">~;
+     #for (my $i=0; $i < scalar(@datasetTypes); $i+=2) {
+     #  my ($key,$label) = @datasetTypes[$i..$i+1];
+     #  my $selected = '';
+     #  $selected = 'selected="true" ' if ($parameters{'datasetType'} eq $key);
+     #  print qq~  <option $selected value="$key">$label</option>\n~;
+     #}
+     #print "</select>\n";
+
+     print "<td></td><td> $parameters{'datasetType'} </td><td></td></tr>\n";
+     print "<tr><td colspan='4'><HR></td></tr>\n";
+
+     print "<tr><td class='bold_text'>Dataset tag</td>";
+     print "<td class='req'>&#11088;</td><td>";
      print $q->textfield( "datasetTag", $parameters{'datasetTag'}, 20, 20);
-     print "<BR>\n";
+     print "</td><td class='textsm'>Enter a short {up to 20 characters} \"tag\" for this dataset<BR>It should be globally unique. It will be used in lists of datasets where the title might be too long.</td></tr>";
 
-     print "<B><font color=\"red\">Dataset title</B></font> (Enter a nice descriptive title {up to 200 characters} for this dataset)<BR>\n";
-     print $q->textarea( "datasetTitle", $parameters{'datasetTitle'}, 3, 66);
-     print "<BR>\n";
+     print "<tr><td class='bold_text'>Dataset title</td>";
+     print "<td class='req'>&#11088;</td><td>";
+     print $q->textarea( "datasetTitle", $parameters{'datasetTitle'}, 3, 62);
+     print "</td><td class='textsm'>Enter a nice descriptive title {up to 200 characters} for this dataset</td></tr>";
 
      print qq~
        <SCRIPT LANGUAGE="JavaScript">
@@ -1181,106 +1162,121 @@ sub displayEditMetaDataForm {
        </SCRIPT>
      ~;
 
-     print "<B><font color=\"red\">Dataset Release Date</B></font> (Enter the date on which the data may be released publicly)<BR>\n";
-     print "(Please use the format  2011-08-16)<BR>\n";
+     print "<tr><td class='bold_text'>Dataset Release Date</td>";
+     print "<td class='req'>&#11088;</td><td>";
      print $q->textfield( "publicReleaseDate", $parameters{'publicReleaseDate'}, 10, 10);
      print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
      print qq~<INPUT TYPE="button" NAME="publicReleaseDate_button" VALUE="TODAY" onClick="ClickedTodayButton(publicReleaseDate)">\n~;
-     print "<BR>\n";
-     print "<HR>\n";
+     print "</td><td class='textsm'>Enter the date on which the data may be released publicly<br>Please use the format  2011-08-16</td></tr>";
 
-     print "<B><font color=\"red\">Contributors</B></font> (Enter the names of people who are contributing this dataset, including the submitter, if applicable)<BR>\n";
-     print $q->textarea( "contributors", $parameters{'contributors'}, 5, 50);
-     print "<BR>\n";
+     print "<tr><td class='bold_text'>Contributors</td>";
+     print "<td class='req'>&#11088;</td><td>";
+     print $q->textarea( "contributors", $parameters{'contributors'}, 5, 62);
+     print "</td><td class='textsm'>Enter the names of people who are contributing this dataset, including the submitter, if applicable</td></tr>";
 
-     print "<B><font color=\"red\">Submitter organization</B></font> (Enter submitter's organization)<BR>\n";
-     print qq~<input type="text" name="submitter_organization" value="$parameters{submitter_organization}" size=100 maxlength=255/>~;
-     print "<BR>\n";
+     print "<tr><td class='bold_text'>Submitter organization</td>";
+     print "<td class='req'>&#11088;</td><td>";
+     print qq~<input type="text" name="submitter_organization" value="$parameters{submitter_organization}" size="60" maxlength=255/>~;
+     print "</td><td class='textsm'>Enter submitter's organization</td></tr>";
 
-     print "<B><font color=\"red\">Lab head</B></font> (Enter full name of lab head)<BR>\n";
-     print qq~<input type="text" name="lab_head_full_name" value="$parameters{lab_head_full_name}" size=100 maxlength=255/>~;
-     print "<BR>\n";
+     print "<tr><td class='bold_text'>Lab head</td>";
+     print "<td class='req'>&#11088;</td><td>";
+     print qq~<input type="text" name="lab_head_full_name" value="$parameters{lab_head_full_name}" size="60" maxlength=255/>~;
+     print "</td><td class='textsm'>Enter full name of lab head</td></tr>";
 
-     print "<B><font color=\"red\">Lab head email</B></font> (Enter email of lab head)<BR>\n";
-     print qq~<input type="text" name="lab_head_email" value="$parameters{lab_head_email}" size=100 maxlength=255/>~;
-     print "<BR>\n";
+     print "<tr><td class='bold_text'>Lab head email</td>";
+     print "<td class='req'>&#11088;</td><td>";
+     print qq~<input type="text" name="lab_head_email" value="$parameters{lab_head_email}" size="60" maxlength=255/>~;
+     print "</td><td class='textsm'>Enter email of lab head</td></tr>";
 
-     print "<B><font color=\"red\">Lab head organization</B></font> (Enter organization of lab head)<BR>\n";
-     print qq~<input type="text" name="lab_head_organization" value="$parameters{lab_head_organization}" size=100 maxlength=255/>~;
-     print "<BR>\n";
+     print "<tr><td class='bold_text'>Lab head organization</td>";
+     print "<td class='req'>&#11088;</td><td>";
+     print qq~<input type="text" name="lab_head_organization" value="$parameters{lab_head_organization}" size="60" maxlength=255/>~;
+     print "</td><td class='textsm'>Enter organization of lab head</td></tr>";
 
-     print "<B><font color=\"red\">Lab head country</B></font> (Enter country of lab head's organization)<BR>\n";
-     print qq~<input type="text" name="lab_head_country" value="$parameters{lab_head_country}" size=100 maxlength=255/>~;
-     print "<BR>\n";
+     print "<tr><td class='bold_text'>Lab head country</td>";
+     print "<td class='req'>&#11088;</td><td>";
+     print qq~<input type="text" name="lab_head_country" value="$parameters{lab_head_country}" size="60" maxlength=255/>~;
+     print "</td><td class='textsm'>Enter country of lab head's organization</td></tr>";
 
-     print "<B><font color=\"red\">Publication</B></font> (Enter the associated publication with this dataset) (Please enter a PubMed ID if available.)<BR>\n";
-     print "(If no PubMed ID is available yet, please use format: Smith, DA, and Wesson, TB, Manuscript Title, Journal, submitted)<BR>\n";
-     print "(Or if no publication is on the horizon, please just enter \"unpublished\")<BR>\n";
-     print $q->textarea( "publication", $parameters{'publication'}, 5, 50);
-     print "<BR>\n";
+     print "<tr><td class='bold_text'>Publication</td>";
+     print "<td class='req'>&#11088;</td><td>";
+     print $q->textarea( "publication", $parameters{'publication'}, 5, 62);
+     print "</td><td class='textsm'>Enter the associated publication with this dataset<br>Please enter a PubMed ID if available.<br>";
+     print "If no PubMed ID is available yet, please use format: Smith, DA, and Wesson, TB, Manuscript Title, Journal, submitted<BR>";
+     print "Or if no publication is on the horizon, please just enter \"unpublished\")</td></tr>";
 
-     print "<B><font color=\"red\">Instrument(s) used</B></font> (Enter the model name of the instrument(s) used for this dataset)<BR>\n";
-     print "(Please use the format: Thermo Scientific LTQ Orbitrap, AB Sciex QTRAP 5600, etc.) (You may enter more than one if applicable)<BR>\n";
-     print $q->textarea( "instruments", $parameters{'instruments'}, 2, 40);
-     print "<BR>\n";
+     print "<tr><td class='bold_text'>Instrument(s) used</td>";
+     print "<td class='req'>&#11088;</td><td>";
+     print $q->textarea( "instruments", $parameters{'instruments'}, 2, 62);
+     print "</td><td class='textsm'>Enter the model name of the instrument(s) used for this dataset<BR>\n";
+     print "Please use the format: Thermo Scientific LTQ Orbitrap, AB Sciex QTRAP 5600, etc. You may enter more than one if applicable</td></tr>";
 
-     print "<B><font color=\"red\">Species studied</B></font> (Enter the name of the species studied)<BR>\n";
-     print "(Please use the format: Human, Mouse, Drosophila melanogaster, etc.) (You may enter more than one if applicable)<BR>\n";
-     print $q->textarea( "species", $parameters{'species'}, 2, 40);
-     print "<BR>\n";
+     print "<tr><td class='bold_text'>Species studied</td>";
+     print "<td class='req'>&#11088;</td><td>";
+     print $q->textarea( "species", $parameters{'species'}, 2, 62);
+     print "</td><td class='textsm'>Enter the name of the species studied<BR>\n";
+     print "Please use the format: Human, Mouse, Drosophila melanogaster, etc.  You may enter more than one if applicable</td></tr>";
 
-     print "<B><font color=\"red\">Mass modifications</B></font> (Enter any mass modifications applied to the sample)<BR>\n";
-     print "(Please use the format: static: C+57.021464, variable: K+8.014199, R+10.008269, or \"none\" if none.)<BR>\n";
-     print $q->textarea( "massModifications", $parameters{'massModifications'}, 2, 40);
-     print "<BR>\n";
-     print "<HR>\n";
+     print "<tr><td class='bold_text'>Mass modifications</td>";
+     print "<td class='req'>&#11088;</td><td>";
+     print $q->textarea( "massModifications", $parameters{'massModifications'}, 2, 62);
+     print "</td><td class='textsm'>Enter any mass modifications applied to the sample<BR>\n";
+     print "Please use the format: static: C+57.021464, variable: K+8.014199, R+10.008269, or \"none\" if none.</td></tr>";
 
-     print "<B>Summary</B> (Enter a free-text summary or description of the dataset, experiment, or project)<BR>\n";
-     print $q->textarea( "summary", $parameters{'summary'}, 6, 80);
-     print "<BR>\n";
+     print "<tr><td class='bold_text'>Summary</td>";
+     print "<td class='req'></td><td>";
+     print $q->textarea( "summary", $parameters{'summary'}, 6, 62);
+     print "</td><td class='textsm'>Enter a free-text summary or description of the dataset, experiment, or project</td></tr>";
 
-     print "<B>Growth Protocol</B> (Enter a free-text description of the growth protocol or organism preparation)<BR>\n";
-     print $q->textarea( "growth", $parameters{'growth'}, 6, 80);
-     print "<BR>\n";
+     print "<tr><td class='bold_text'>Growth Protocol</td>";
+     print "<td class='req'></td><td>";
+     print $q->textarea( "growth", $parameters{'growth'}, 6, 62);
+     print "</td><td class='textsm'>Enter a free-text description of the growth protocol or organism preparation</td></tr>";
 
-     print "<B>Treatment Protocol</B> (Enter a free-text description of the treatments applied to the organism prior to sample acquisition)<BR>\n";
-     print $q->textarea( "treatment", $parameters{'treatment'}, 6, 80);
-     print "<BR>\n";
+     print "<tr><td class='bold_text'>Treatment Protocol</td>";
+     print "<td class='req'></td><td>";
+     print $q->textarea( "treatment", $parameters{'treatment'}, 6, 62);
+     print "</td><td class='textsm'>Enter a free-text description of the treatments applied to the organism prior to sample acquisition</td></tr>";
 
-     print "<B>Extraction Protocol</B> (Enter a free-text description of the extraction of proteins from the treated sample(s))<BR>\n";
-     print $q->textarea( "extraction", $parameters{'extraction'}, 6, 80);
-     print "<BR>\n";
+     print "<tr><td class='bold_text'>Extraction Protocol</td>";
+     print "<td class='req'></td><td>";
+     print $q->textarea( "extraction", $parameters{'extraction'}, 6, 62);
+     print "</td><td class='textsm'>Enter a free-text description of the extraction of proteins from the treated sample(s)</td></tr>";
 
-     print "<B>Separation Protocol</B> (Enter a free-text description of the separation of proteins and/or peptides))<BR>\n";
-     print $q->textarea( "separation", $parameters{'separation'}, 6, 80);
-     print "<BR>\n";
+     print "<tr><td class='bold_text'>Separation Protocol</td>";
+     print "<td class='req'></td><td>";
+     print $q->textarea( "separation", $parameters{'separation'}, 6, 62);
+     print "</td><td class='textsm'>Enter a free-text description of the separation of proteins and/or peptides</td></tr>";
 
-     print "<B>Digestion Protocol</B> (Enter a free-text description of the digestion of the proteins into peptides))<BR>\n";
-     print $q->textarea( "digestion", $parameters{'digestion'}, 6, 80);
-     print "<BR>\n";
+     print "<tr><td class='bold_text'>Digestion Protocol</td>";
+     print "<td class='req'></td><td>";
+     print $q->textarea( "digestion", $parameters{'digestion'}, 6, 62);
+     print "</td><td class='textsm'>Enter a free-text description of the digestion of the proteins into peptides</td></tr>";
 
-     print "<B>Acquisition Protocol</B> (Enter a free-text description of the acquisition of mass spectra from the peptide sample))<BR>\n";
-     print $q->textarea( "acquisition", $parameters{'acquisition'}, 6, 80);
-     print "<BR>\n";
+     print "<tr><td class='bold_text'>Acquisition Protocol</td>";
+     print "<td class='req'></td><td>";
+     print $q->textarea( "acquisition", $parameters{'acquisition'}, 6, 62);
+     print "</td><td class='textsm'>Enter a free-text description of the acquisition of mass spectra from the peptide sample</td></tr>";
 
-     print "<B>Informatics Protocol</B> (Enter a free-text description of the informatics processing of the raw data produced by the instrument(s)))<BR>\n";
-     print $q->textarea( "informatics", $parameters{'informatics'}, 6, 80);
-     print "<BR>\n";
-     print "<HR>\n";
+     print "<tr><td class='bold_text'>Informatics Protocol</td>";
+     print "<td class='req'></td><td>";
+     print $q->textarea( "informatics", $parameters{'informatics'}, 6, 62);
+     print "</td><td class='textsm'>Enter a free-text description of the informatics processing of the raw data produced by the instrument(s)</td></tr>";
 
+     print "<tr><td colspan='4'><HR></td></tr>\n";
+
+     print "<tr><td></td><td></td><td>";
      print $q->submit(-name => "action",
+		      -class => 'form_button',
 		      -value => 'UPDATE',
 		      -label => 'UPDATE');
-
+     print "<br><br></td><td></td></tr>";
+     print "</table><br><br>";
      print $q->end_form;
-     print "</nobr>";
-
-     print "</p>";
-
     }
 
   return $response;
-
 }
 
 
@@ -1313,10 +1309,10 @@ sub DisplayPASSDirListing {
     print "<a href=\"$baseURL?identifier=$identifier&browseArea=upload&path=$path\">[View upload area]</a><BR>\n";
   } else {
     $base = $PASS_ACCOUNTS_BASE;
-    print "<BR>\n";
+    #print "<BR>\n";
     #print "<a href=\"$baseURL?identifier=$identifier&browseArea=processed&path=$path\">[View processing area]</a><BR>\n";
   }
-  print "<BR>\n";
+  #print "<BR>\n";
 
   $path = '/' unless ($path);
   $path =~ s/\.\.//g;
@@ -1329,7 +1325,7 @@ sub DisplayPASSDirListing {
 
   my @listing = `ls -lh '$fullPath'`;
 
-  print "<PRE>\n";
+  print "<PRE style='margin-left:50px;'>\n";
 
   if ($path ne '/') {
     my $parentPath = '/';
@@ -1371,7 +1367,6 @@ sub DisplayPASSDirListing {
   print "</PRE>\n";
 
   return $response;
-
 }
 
 
@@ -1454,7 +1449,6 @@ sub showFile {
   close(INFILE);
 
   return $response;
-
 }
 
 
