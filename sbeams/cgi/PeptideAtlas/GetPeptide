@@ -2389,13 +2389,14 @@ sub add_transition_link {
 
 sub sample_view {
   my $samples = shift;
-  my $tot = $samples =~ tr/,/,/;
-
-  # If we have 5 or fewer, go with the flow
-  return($samples) if $tot <= 5;
 
   $samples =~ s/\s//g;
   my @samples = split(',', $samples);
+  my $tot = scalar  @samples;
+ 
+  # If we have 5 or fewer, go with the flow
+  return($samples) if $tot <= 5;
+
 
   my $viewable = join( ',', @samples[0..3] );
   my $session_samples = "$viewable<BR>\n";
