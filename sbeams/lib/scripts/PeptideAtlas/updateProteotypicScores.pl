@@ -163,6 +163,7 @@ sub handleRequest {
 	"$atlas_build_name.  Use --list to see a listing");
   }
 
+  my $msg = $sbeams->update_PA_table_variables($atlas_build_id);
 
   #### If specified, export the build for proteotypic calculation
   my $export_file = $OPTIONS{export_file};
@@ -304,11 +305,22 @@ sub getAllPeptideMappings {
   print "INFO[$SUB] Getting all peptides for build $atlas_build_id...\n"
     if ($VERBOSE);
 
-
-  #### SQL to get all the peptide mappings
   my $sql = qq~
-     SELECT DISTINCT PI.peptide_instance_id,BS.biosequence_name,
-            PI.original_protein_name,search_batch_ids,
+      SELECT PI.peptide_instance_id ,PIS.sample_id
+      FROM $TBAT_PEPTIDE_INSTANCE PI
+      JOIN $TBAT_PEPTIDE_INSTANCE_SAMPLE PIS ON (PIS.PEPTIDE_INSTANCE_ID = PI.PEPTIDE_INSTANCE_ID)
+      WHERE PI.atlas_build_id = '$atlas_build_id'
+  ~;
+  my $sth = $sbeams->get_statement_handle($sql);
+  my %pi_sample_id=();
+  while( my @row = $sth->fetchrow_array() ) { 
+    my ($peptide_instance_id, $sample_id) = @row;
+    $pi_sample_id{$peptide_instance_id}{$sample_id} =1;
+  }
+  #### SQL to get all the peptide mappings
+   $sql = qq~
+     SELECT distinct PI.peptide_instance_id,BS.biosequence_name,
+            PI.original_protein_name,
             PI.preceding_residue || P.peptide_sequence || PI.following_residue
        FROM $TBAT_PEPTIDE_INSTANCE PI
       INNER JOIN $TBAT_PEPTIDE P
@@ -319,10 +331,16 @@ sub getAllPeptideMappings {
             ON ( PM.matched_biosequence_id = BS.biosequence_id )
       WHERE 1 = 1
         AND PI.atlas_build_id = '$atlas_build_id'
-      ORDER BY PI.peptide_instance_id
   ~;
-
-  my @peptide_mappings = $sbeams->selectSeveralColumns($sql);
+  $sth = $sbeams->get_statement_handle($sql);
+  
+  my @peptide_mappings =();
+  while( my @row = $sth->fetchrow_array() ) { 
+    my ($peptide_instance_id, $prot, $ori_prot,$seq) =@row;
+    $prot = '' unless $prot;
+    my $ids = join(",", keys %{$pi_sample_id{$peptide_instance_id}});;
+    push @peptide_mappings, [($peptide_instance_id,$prot,$ori_prot,$ids,$seq)]; 
+  }
 
   return \@peptide_mappings;
 
@@ -376,7 +394,6 @@ sub updateObservedProteotypicScores {
 
   #### Now loop over each peptide and calculate proteotypic score
   foreach my $peptide ( @{$peptides} ) {
-
     #### Determine the mapped or else original protein name
     $protein = $peptide->[1];
     unless ($protein) {
@@ -393,9 +410,9 @@ sub updateObservedProteotypicScores {
 
     if ($peptide_scores{$peptide_instance_id}) {
       if ($peptide_scores{$peptide_instance_id}->{score} < $proteotypic_score ) {
-	$peptide_scores{$peptide_instance_id}->{score} = $proteotypic_score;
-	$peptide_scores{$peptide_instance_id}->{n_search_batch_ids} = $n_peptide_samples;
-	$peptide_scores{$peptide_instance_id}->{n_protein_samples} = $n_protein_samples;
+				$peptide_scores{$peptide_instance_id}->{score} = $proteotypic_score;
+				$peptide_scores{$peptide_instance_id}->{n_search_batch_ids} = $n_peptide_samples;
+				$peptide_scores{$peptide_instance_id}->{n_protein_samples} = $n_protein_samples;
        	$peptide_scores{$peptide_instance_id}->{sequence} = $peptide->[4];
        	$peptide_scores{$peptide_instance_id}->{protein_name} = $peptide->[1];
       }
@@ -470,8 +487,7 @@ sub updateObservedProteotypicScores {
       my $protein_name = $peptide_scores{$peptide}->{protein_name};
       $threeplusproteins{$protein_name}++;
       if ($peptide_scores{$peptide}->{score} > $proteotypic_score_threshold) {
-	$proteoproteins{$protein_name}->{$peptide} =
-	  $peptide_scores{$peptide}->{score};
+	      $proteoproteins{$protein_name}->{$peptide} = $peptide_scores{$peptide}->{score} || '';
       }
 
     }
