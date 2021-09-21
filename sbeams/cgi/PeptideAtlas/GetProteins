@@ -1074,12 +1074,6 @@ sub handle_request {
       $select_clause[1]
          UNION
       $select_clause[2]
-     ORDER BY
-        group_number,
-        ppl_sort_order,
-        reference_biosequence,
-        brt_sort_order,
-        biosequence_name
     ~;
   }else{
 		$sql = qq~
@@ -1088,14 +1082,39 @@ sub handle_request {
 			$select_clause[1]
 				 UNION
 			$select_clause[2]
-		 ORDER BY
-				group_number,
-				ppl_sort_order,
-				reference_biosequence,
-				brt_sort_order,
-				biosequence_name
 		~;
   }
+
+  if ($parameters{dataset_id}){
+     $sql = qq~
+        SELECT * 
+        FROM ($sql) A
+        WHERE A.BIOSEQUENCE_NAME IN (
+					SELECT BS.BIOSEQUENCE_NAME
+					FROM $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH BIABSB
+					JOIN $TBAT_BIOSEQUENCE BS ON ( BIABSB.BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID )
+					JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
+					ON (ABSB.ATLAS_BUILD_SEARCH_BATCH_ID = BIABSB.ATLAS_BUILD_SEARCH_BATCH_ID
+						 AND ABSB.atlas_build_id = $parameters{atlas_build_id})
+					JOIN $TBAT_SAMPLE S ON (S.sample_id = ABSB.sample_id)
+					WHERE S.repository_identifiers = '$parameters{dataset_id}'
+        )
+     ~;
+  }
+  $sql .= qq~
+     ORDER BY
+        group_number,
+        ppl_sort_order,
+        reference_biosequence,
+        brt_sort_order,
+        biosequence_name
+  ~;
+
+  #$sbeams->display_sql(
+  #     sql=>$sql,
+  #     use_tabbed_panes=> '1',
+  #    );
+
 
   #### Certain types of actions should be passed to links
   my $pass_action = "QUERY";
@@ -1929,7 +1948,7 @@ sub postProcessResultset {
 
   my $n_rows = scalar(@{$resultset_ref->{data_ref}});
 
-  my $cols = $resultset_ref->{column_hash_ref};                          
+  my $cols = $resultset_ref->{column_hash_ref};                                                                                                   
                                                                          
   my $peptide_accession;                                                 
   my $nprot;                                                             
