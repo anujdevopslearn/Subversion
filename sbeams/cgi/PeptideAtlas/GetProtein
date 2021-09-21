@@ -1538,18 +1538,20 @@ sub handle_request {
     SELECT biosequence_name,offset,residue,nObs,one_site,two_sites,over_two_sites,
            nP01,nP05,nP19,nP81,nP95,nP99,nP100,
            noChoice,enrichedWithMod,enrichedNonMod,nonEnriched,
-           isInNextProt,isInUniprot,most_observed_ptm_peptide
+           isInNextProt,isInUniprot,most_observed_ptm_peptide,ptm_type
     FROM $TBAT_PTM_SUMMARY PS
     JOIN $TBAT_BIOSEQUENCE BS ON (PS.BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID)
     WHERE BS.BIOSEQUENCE_NAME = '$protein_name'
     AND PS.ATLAS_BUILD_ID = $atlas_build_id
+    ORDER BY offset
     ~;
 
     my @ptm_results = $sbeams->selectSeveralColumns ($ptm_sql);
     if(@ptm_results){
       my $GV = SBEAMS::Connection::GoogleVisualization->new();
       my %data = ();
-      my $ptm_obs = 0;
+      my %ptm_obs = ();
+      my $ptm_type = '';
       my @columns = ('Protein', 'Offset', 'Residue','nObs', 'One_mod', 'Two_mods', 'Over_two_mods',
 		     'nP<.01', 'nP<.05', 'nP<.20', 'nP.2-.8', 'nP>.80', 'nP>.95', 'nP>.99',
          'no-choice','enriched-with-mod','enriched-but-non-mod','non-enriched',
@@ -1557,41 +1559,21 @@ sub handle_request {
       foreach my $row  (@ptm_results){
 				my @vals = @$row;
 				$vals[1] = $vals[1] -1;
-        $ptm_obs = 1 if ($vals[3] > 0);
-
-				for my $i (2..$#vals){
-					$data{$vals[0]}{$vals[1]}{$columns[$i]} = $vals[$i];
-				}
+        $ptm_type = pop @vals; 
+        $ptm_obs{$ptm_type} = 1 if ($vals[3] > 0);
+        push  @{$data{$ptm_type}{$vals[0]}{$vals[1]}},[@vals[2..$#vals]];
+				#for my $i (2..$#vals){
+			  #	$data{$ptm_type}{$vals[0]}{$vals[1]}{$columns[$i]} = $vals[$i];
+				#}
       }
-      my $ptm_summary_chart = '';
-      if ($ptm_obs){
-         $ptm_summary_chart= $sbeamsMOD->displayProt_PTM_plotly(data=> \%data,
-							   protein=>$protein_name,
-							   atlas_build_id => $atlas_build_id,
-							   seq=>$biosequence->{biosequence_seq});
-      }
-      my $PTM_table_Display = $sbeamsMOD->getPTMTableDisplay( cols => \@columns,
-							      data => \%data,
-							      atlas_build_id => $atlas_build_id,
-							      biosequence_name => $protein_name,
-							      rows_to_show => 10,
-							      max_rows => 500);
-      shift @columns;
-      pop @columns;
-      my $ptm_table_help = $sbeamsMOD->get_table_help(column_titles_ref=>\@columns);
-      if ($htmlmode) {
-				my $ptmHTML = "$ptm_summary_chart \n$ptm_table_help<TABLE width='100%'>$PTM_table_Display</TABLE><BR>";
-				print scalar $sbeams->make_toggle_section( neutraltext => 'Phospho Summary',
-						   sticky => 1,
-						   name => 'getprotein_ptm_summary_div',
-						   #ToDo?# tooltip => 'Show/Hide Section',
-						   barlink => 1,
-						   visible => 1,
-						   content => $ptmHTML);
-      }
+		  my $ptm_summary_chart = $sbeamsMOD->displayProt_PTM_plotly(data=> \%data,
+					 protein=>$protein_name,
+					 atlas_build_id => $atlas_build_id,
+					 column_names =>\@columns,
+					 seq=>$biosequence->{biosequence_seq},
+           ptm_obs => \%ptm_obs);
+      print "$ptm_summary_chart\n";
     }
-
-
 
     #############################################################################
     #### Observed peptides
@@ -4269,6 +4251,10 @@ sub renderProteinAccessionAndStatus {
     if ($identification_status eq 'canonical') {
       $statusColor = "green";
       $statusMessage = "The status '$identification_status' means that this protein counts toward the total parsimonious protein count for this build. In many cases there are several highly similar proteins that can explain the observed peptides, but only one is labeled as canonical. It is possible that our algorithm selected the wrong one, or even that several of the similar proteins are present, but PeptideAtlas has no independent evidence that this is so.";
+
+    }elsif ($identification_status eq 'noncore-canonical') {
+      $statusColor = "#90EE90";
+      $statusMessage = "The status '$identification_status' means that there are uniquely mapping peptides to this protein that do not map to a protein that is considered part of the core proteome of a species. A non-core canonical protein might be an isoform, contaminant, or protein missing from the core reference proteome."; 
 
     } elsif ($identification_status =~ /ntt-subsumed by (.*)$/) {
       my $specificProteinMessage = "one or more other canonical proteins, which themselves have";

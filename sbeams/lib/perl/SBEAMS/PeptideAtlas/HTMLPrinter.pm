@@ -1502,33 +1502,32 @@ sub getPTMTableDisplay {
   shift @$cols;
   pop @$cols;
   push @rows, [@$cols];
+  my $n_cols = scalar @$cols;
   foreach my $prot (keys %$data){
     foreach my $pos (sort {$a <=> $b} keys %{$data->{$prot}}){
-      my @row = ();
-      push @row, $pos+1; 
-      #next if ($data->{$prot}{$pos}{nObs} ==0 );
-      foreach my $col (@$cols){
-        next if ($col =~ /offset/i);
-        if ($col eq 'Residue' && ($data->{$prot}{$pos}{nObs} > 0            ||
-				  $data->{$prot}{$pos}{InUniprot}  eq 'yes' ||
-				  $data->{$prot}{$pos}{InNextProt} eq 'yes' )) {
-          my $start_in_biosequence = $pos + 1;
-          my $link = "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?".
-                     "atlas_build_id=$self_build_id&searchWithinThis=Peptide+Sequence&searchForThis=".
-                     "$data->{$prot}{$pos}{peptide}&apply_action=QUERY"; 
-          $data->{$prot}{$pos}{$col} = $self->make_pa_tooltip( tip_text => "Get peptide sequence covering this site",
-                                                               link_text => "<a href='$link'>$data->{$prot}{$pos}{$col}</a>" );
-        }
-        elsif ($col eq 'InUniprot'  && $data->{$prot}{$pos}{$col} eq 'no') {
-	  $data->{$prot}{$pos}{$col} = '-';
-	}
-        elsif ($col eq 'InNextProt' && $data->{$prot}{$pos}{$col} eq 'no') {
-          $data->{$prot}{$pos}{$col} = '-';
-	}
-
-        push @row, $data->{$prot}{$pos}{$col};
+      foreach my $vals (@{$data->{$prot}{$pos}}){
+				my @row = ();
+				push @row, $pos+1; 
+        #my @columns = ('Residue','nObs', 'One_mod', 'Two_mods', 'Over_two_mods',
+        #         'nP<.01', 'nP<.05', 'nP<.20', 'nP.2-.8', 'nP>.80', 'nP>.95', 'nP>.99',
+        #                  'no-choice','enriched-with-mod','enriched-but-non-mod','non-enriched',
+        #                           'InNextProt','InUniprot','peptide');
+				if ($vals->[1] > 0 || $vals->[16] eq 'yes' || $vals->[17] eq 'yes'){
+					my $start_in_biosequence = $pos + 1;
+					my $link = "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?".
+										 "atlas_build_id=$self_build_id&searchWithinThis=Peptide+Sequence&searchForThis=".
+										 "$vals->[18]&apply_action=QUERY"; 
+					$vals->[18] = $self->make_pa_tooltip( tip_text => "Get peptide sequence covering this site",
+																								link_text => "<a href='$link'>$vals->[18]</a>" );
+				}
+				foreach my $i (0..$n_cols-2){ 
+					if ( $vals->[$i] eq '0' ||  $vals->[$i] eq 'no'){
+						$vals->[$i] = '-';
+					}
+          push@row, $vals->[$i]; 
+			  }	
+        push @rows , [@row];
       }
-      push @rows , [@row];
     }
   }
   my @align = ();
@@ -2444,6 +2443,7 @@ sub get_what_is_new {
       WHERE B.ATLAS_BUILD_ID IN ($previous_build_id)
     ) 
   ~;
+
   my @sample_ids = $sbeams->selectOneColumn($sql);
   if(@sample_ids){
     my $sampleDisplay = $self->getProteinSampleDisplay( sample_ids => \@sample_ids,
@@ -2629,112 +2629,182 @@ sub displayProt_PTM_plotly{
   my $data = $args{data};
   my $sequence = $args{seq},
   my $atlas_build_id = $args{atlas_build_id};
+  my @column_names = @{$args{column_names}};
+  my $ptm_obs = $args{ptm_obs}; 
+  my @ptm_types = keys %$data; 
+  my $div_counter=1;
+  my $plot_js =qq~
+      function getCol(matrix, col){
+         var column = [];
+         for(var i=0; i<matrix.length; i++){
+            column.push(matrix[i][col]);
+         }
+         return column;
+      };
+      var myPlots=[];
+      var allData=[];
+      var allObs=[];
+      var allXvals=[];
+      var allTicklabels=[];
+   ~;
 
-  my $dataTable = "var data=[";
-  my $curpos   = "var curpos=[";
-  my $totalObs = "var totalObs=[";
-  my $maxnobs  = 0;
-  my $seqlen = length($sequence);
+	my $seqlen = length($sequence);
+  foreach my $ptm_type (@ptm_types){
+		my $dataTable = "var data$div_counter=[";
+		my $totalObs = "var totalObs$div_counter=[";
+		my $maxnobs  = 0;
+		my $tickvals   = "var tickvals$div_counter =["; 
 
-  $sequence =~ s/\*.*//g;
-  my @aas = split(//, $sequence);
-  my $sep = '';
-  foreach my $pos (0..$#aas){
-    my $aa=$aas[$pos];
-    my $nobs = '';
-    if ($aa =~ /[STY]/){
-      if (defined $data->{$protein}{$pos}){
-        $dataTable .= "['$aa'";
-        foreach my $c (qw (nP<.01 nP<.05 nP<.20 nP.2-.8 nP>.80 nP>.95 nP>.99 no-choice)){
-          $dataTable .=",$data->{$protein}{$pos}{$c}";
-          if ($data->{$protein}{$pos}{$c} > $maxnobs){
-            $maxnobs = $data->{$protein}{$pos}{$c} ;
-          }
-          $nobs += $data->{$protein}{$pos}{$c};
+		$sequence =~ s/\*.*//g;
+		my @aas = split(//, $sequence);
+		my $sep = '';
+		foreach my $pos (0..$#aas){
+			my $aa=$aas[$pos];
+			my $nobs = '';
+			#if ($aa =~ /[$residue]/i){
+			if (defined $data->{$ptm_type}{$protein}{$pos}){
+        my $mod_aa = '';
+        foreach my $row(@{$data->{$ptm_type}{$protein}{$pos}}){ 
+          $nobs ='';
+          $mod_aa = $row->[0];
+					$dataTable .= "['$row->[0]'";
+					#foreach my $c (qw (nP<.01 nP<.05 nP<.20 nP.2-.8 nP>.80 nP>.95 nP>.99 no-choice)){
+          foreach my $i (5..12){
+						$dataTable .=",$row->[$i]";
+						if ($row->[$i] > $maxnobs){
+							$maxnobs =$row->[$i];
+						}
+						$nobs += $row->[$i]; 
+					}
+					$dataTable .= "],\n";
+					$tickvals .= "$sep"; 
+					$tickvals .=$pos+1; 
+					$totalObs .= "$sep";
+					$totalObs .= $nobs;
+          $sep = ",";
         }
-        $dataTable .= "],\n";
-      } else {
-        $dataTable .= "['$aa','','','','','','','',''],\n";
+        if (@{$data->{$ptm_type}{$protein}{$pos}} == 1 && 
+            $mod_aa ne $aa){
+            $dataTable .= "['$aa','','','','','','','',''],\n";
+						$tickvals .= "$sep";
+						$tickvals .=$pos+1;
+						$totalObs .= "$sep''";
+						$sep = ",";
+            next;
+        } 
+        next;
+			} else {
+				$dataTable .= "['$aa','','','','','','','',''],\n";
+			}
+			#} else {
+			#   $dataTable .= "['$aa','','','','','','','',''],\n";
+			#}
+			$tickvals .= "$sep"; 
+			$tickvals .=$pos+1;
+			$totalObs .= "$sep";
+			$totalObs .= $nobs;
+			$sep = ",";
+		}
+		$dataTable =~ s/,$//;
+		$dataTable =~ s/\n$//;
+		$dataTable .= "];\n";
+		$tickvals   .= "];\n"; 
+		$totalObs .= "];\n";
+
+		my $trace = "var col1 =  getCol(data$div_counter, 0);\n";
+		my @colors = ('red','orange','purple','grey','#007eca','skyblue','green','black');
+		my @names = ('<0.01','0.01-0.05','0.05-0.20','0.20-0.80','0.80-0.95','0.95-0.99','0.99-1.00','no-choice');
+		foreach my $i(1..8){
+			my $j=$i+1;
+			my $k=$i-1;
+			$trace .= qq~
+			var col$j = getCol(data$div_counter, $i);
+			var trace$i = {
+				x:xvals$div_counter,
+				y:col$j,
+				marker: {color:'$colors[$k]'},
+				type: 'bar',
+				name:'$names[$k]'
+			};
+			~;
+		}
+
+	 $plot_js .= qq~
+			$dataTable;
+			$tickvals
+			$totalObs;
+			var myDiv$div_counter = document.getElementById("protPTM_div$div_counter");
+      myPlots.push (myDiv$div_counter);
+      var xvals$div_counter = [];
+      for(var i=0; i<tickvals$div_counter.length; i++){
+        xvals$div_counter.push(i);
       }
-    } else {
-       $dataTable .= "['$aa','','','','','','','',''],\n";
-   }
-    $curpos .= "$sep";
-    $curpos .=$pos+1 ;
-    $totalObs .= "$sep";
-    $totalObs .= $nobs;
-    $sep = ",";
-  }
-  $dataTable =~ s/,$//;
-  $dataTable =~ s/\n$//;
-  $dataTable .= "];\n";
-  $curpos   .= "];\n";
-  $totalObs .= "];\n";
 
-  my $trace = "var col1 =  getCol(data, 0);\n";
-  my @colors = ('red','orange','purple','grey','#007eca','skyblue','green','black');
-  my @names = ('<0.01','0.01-0.05','0.05-0.20','0.20-0.80','0.80-0.95','0.95-0.99','0.99-1.00','no-choice');
-  foreach my $i(1..8){
-    my $j=$i+1;
-    my $k=$i-1;
-    $trace .= qq~
-    var col$j = getCol(data, $i);
-    var trace$i = {
-      x:curpos,
-      y:col$j,
-      marker: {color:'$colors[$k]'},
-      type: 'bar',
-      name:'$names[$k]'
-    };
-    ~;
-  }
-
-  my $plot_js = qq~
-    function getCol(matrix, col){
-       var column = [];
-       for(var i=0; i<matrix.length; i++){
-          column.push(matrix[i][col]);
-       }
-       return column;
-    };
-    $dataTable;
-    $curpos;
-    $totalObs;
-		var myDiv = document.getElementById('protPTM_div');
-    $trace
-		var layout = {
-			tickmode:'linear',
-			tdick:50,
-      annotations: [],
-      hovermode:'x unified',
-      barmode:'stack',
-      yaxis:{title:'nObs',rangemode:'tozero'}
-		};
-   
-		for ( var i = 0 ; i < $seqlen; i++ ) {
-      if (totalObs[i] > 0){
-				var result = {
-					x: curpos[i], 
-          y: totalObs[i], 
-					text: '<b>'+totalObs[i]+'</b>',
-					xanchor: 'center',
-					yanchor: 'top',
-          yshift:30,
-					showarrow: false
-				};
-				layout.annotations.push(result);
-     }
+			$trace
+			var layout$div_counter = {
+				annotations: [],
+				hovermode:'x unified',
+				barmode:'stack',
+				yaxis:{title:'nObs',rangemode:'tozero'},
+        xaxis:{tickvals: xvals$div_counter,
+               dtick:50, 
+               tickmode:'linear',
+               ticktext:tickvals$div_counter},
+			};
+		 
+			for ( var i = 0 ; i < tickvals$div_counter.length; i++ ) {
+				if (totalObs$div_counter\[i] > 0){
+					var result= {
+						x: xvals$div_counter\[i], 
+						y: totalObs$div_counter\[i], 
+						text: '<b>'+totalObs$div_counter\[i]+'</b>',
+						xanchor: 'center',
+						yanchor: 'top',
+						yshift:30,
+						showarrow: false
+					};
+					layout$div_counter.annotations.push(result);
+			 }
+		 }
+		 plotdata$div_counter= [trace1,trace2,trace3,trace4,trace5,trace6,trace7,trace8];
+		 Plotly.newPlot(myDiv$div_counter, plotdata$div_counter, layout$div_counter, {scrollZoom: true});
+     ~;
+		 $plot_js .= qq~
+       var ticklabels=[];
+			 for (var i in tickvals$div_counter){
+					ticklabels\[i]= tickvals$div_counter\[i]+ '<br>'+col1[i];
+			 }
+       allTicklabels.push(ticklabels);
+		 ~;
+     $div_counter++;
    }
-	 plotdata= [trace1,trace2,trace3,trace4,trace5,trace6,trace7,trace8];
-   Plotly.newPlot(myDiv, plotdata, layout, {scrollZoom: true});
-	 var ticklabels=[];
-	 for (var i in curpos){
-			ticklabels[i]= curpos[i]+ '<br>'+col1[i];
-	 }
-	 myDiv.on('plotly_relayout',function(eventdata){  
+
+   my $counter = 1;
+   while ($div_counter > $counter){
+     $plot_js .= "allData.push(data$counter);\n";
+     $plot_js .= "allObs.push(totalObs$counter);\n";
+     $plot_js .= "allXvals.push(xvals$counter);\n";
+     $counter++;
+   }
+
+   $plot_js .=  qq~
+	 function relayout(eventdata, div) {
+     if (Object.entries(eventdata).length === 0) {return;}
 		 //alert(JSON.stringify(eventdata));
 			var xmax=eventdata['xaxis.range[1]'];
 			var xmin=eventdata['xaxis.range[0]'];
+			var data;
+			var totalObs;
+      var xvals;
+      var ticklabels;
+      for (var i=0; i<myPlots.length; i++){
+				if (div == myPlots[i] ){
+						data = allData[i];
+						totalObs=allObs[i];
+            xvals=allXvals[i];
+            ticklabels=allTicklabels[i];
+				}
+		  }
 
 			var n = xmin  < 0 ? 0:parseInt(xmin);
 			var m = xmax  > $seqlen ? $seqlen-1 :parseInt(xmax);
@@ -2754,7 +2824,7 @@ sub displayProt_PTM_plotly{
 			 var update = {
 				 xaxis:{
 				 tickmode:'array',
-					tickvals:curpos,
+					tickvals:xvals,
 					ticktext:ticklabels,
 					tickangle:0,
 					range: [xmin, xmax], 
@@ -2764,7 +2834,7 @@ sub displayProt_PTM_plotly{
 					range:[0,ymax]
 				 }
 			 };
-				Plotly.relayout(myDiv, update);
+				Plotly.relayout(div, update);
 			}
 			if ( xmax- xmin > 40){	
 				 if (xmin < 0){
@@ -2784,7 +2854,7 @@ sub displayProt_PTM_plotly{
 						range:[0,ymax]
 					 }
 				 };
-				 Plotly.relayout(myDiv, update);
+				 Plotly.relayout(div, update);
 			 }
 			 if (eventdata['xaxis.autorange'] && eventdata['yaxis.autorange'] ){ 
 				 var update = {
@@ -2794,19 +2864,131 @@ sub displayProt_PTM_plotly{
 						yaxis:{title:'nObs',rangemode:'tozero'}
 				 }
 				};
-				Plotly.relayout(myDiv, update);
+				Plotly.relayout(div, update);
 			 }
+   };
+	 myPlots.forEach(div => {
+			div.on("plotly_relayout", function(ed) {
+				relayout(ed, div);
+			});
 	 });
   ~;
-
   my $chart = qq~
+    <div class="tab">
+			<style>
+			/* Style the tab */
+			.tab {
+				overflow: hidden;
+			}
+			/* Style the buttons inside the tab */
+			.tab button {
+			  padding: 14px 16px;
+        border: none;
+        outline: none;	
+        font-size: 14px;
+        font-weight:bold;
+				float:left;
+				color:#555555;
+				text-decoration:none;
+				background:#f3f1e4;
+        border-right:1.25px solid #AAAAAA;       
+			}
+
+			/* Change background color of buttons on hover */
+			.tab button:hover {
+				background-color:#bb0000;
+            color:#ffffff; 
+			}
+
+			/* Create an active/current tablink class */
+			.tab button.active {
+				 background:#ffffff;
+			    color:#333333; 
+			}
+
+			/* Style the tab content */
+			.tabcontent {
+				border-top: none;
+			}
+			</style>
+  ~;
+  $counter = 1;
+  foreach my $ptm_type(@ptm_types){
+    $chart .="<button type='button' class='ptmtablinks' onclick='openPTM(event,\"$ptm_type\")'>$ptm_type</button>\n";
+    $counter++;
+  }
+  $chart .="</div>";
+
+  $counter = 1;
+  foreach my $ptm_type(@ptm_types){ 
+    my @names = @column_names;
+    my $PTM_table_Display = $self->getPTMTableDisplay( cols => \@names,
+                    data => $data->{$ptm_type},
+                    atlas_build_id => $atlas_build_id,
+                    biosequence_name => $protein,
+                    rows_to_show => 10,
+                    max_rows => 500);
+    @names = @column_names[1..$#column_names-1];
+    my $ptm_table_help = $self->get_table_help(column_titles_ref=>\@names);
+		my $text = $ptm_type;
+		if ($ptm_type=~ /[STY]/i){
+			 $text = "Phospho Summary ($ptm_type)" ;
+		}elsif($ptm_type =~ /[nk]\:42/i){
+			 $text = "Acetylation Summary ($ptm_type)";
+		}elsif ($ptm_type =~ /[nKR]\:14.015/i){
+       $text = "Methylation Summary ($ptm_type)";
+    }elsif ($ptm_type eq ''){
+      $text = "PTM Summary";
+    }
+    my $html = '';
+    my $checked = '';
+    my $hidden='true';
+    if ($counter==1){
+      $checked = "checked";
+      $hidden='false';
+    }
+    if ($counter == 1){
+      $chart .= "<div  id ='$ptm_type' style='display:block' class='tabcontent'>\n";
+    }else{
+      $chart .= "<div  id ='$ptm_type' style='display:none' class='tabcontent'>\n";
+    }
+    if ($ptm_obs->{$ptm_type}){
+      $chart .= qq~<div style="width: 80vw" id="protPTM_div$counter"></div>\n~;
+    }else{
+      $chart .= qq~<div style="width: 80vw;display:none" id="protPTM_div$counter"></div>\n~;
+    }
+    $chart .= qq~$ptm_table_help\n<TABLE width='100%'>$PTM_table_Display</TABLE>\n~;
+     $counter++;
+    $chart .= "</div>";
+
+  }
+	$chart = $sbeams->make_toggle_section( neutraltext => "PTM Summary",
+	             sticky => 1,
+	             name => "getprotein_ptm_summary_div",
+	             barlink => 1,
+	             visible => 1,
+	             content => $chart);
+  $chart .=  qq~
      <!-- Latest compiled and minified plotly.js JavaScript -->
      <script type="text/javascript" src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-     <div style="width: 80vw"><div id="protPTM_div"></div></div>
-    <script type="text/javascript" charset="utf-8">
+     <script type="text/javascript" charset="utf-8">
+			function openPTM(evt, Name) {
+				var i, tabcontent, ptmtablinks;
+				tabcontent = document.getElementsByClassName("tabcontent");
+				for (i = 0; i < tabcontent.length; i++) {
+					tabcontent[i].style.display = "none";
+				}
+				ptmtablinks = document.getElementsByClassName("ptmtablinks");
+				for (i = 0; i < ptmtablinks.length; i++) {
+					ptmtablinks[i].className = ptmtablinks[i].className.replace(" active", "");
+				}
+				document.getElementById(Name).style.display = "block";
+				evt.currentTarget.className += " active";
+			}
       $plot_js
-    </script>
+     </script>
   ~;
+  
   return $chart;
 
 }
