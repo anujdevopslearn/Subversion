@@ -255,6 +255,7 @@ sub get_build_nobs {
   die  "Missing required parameter build_id" unless $opts{build_id};
   die  "Illegal value for build_id" unless $opts{build_id} =~ /^\d+$/;
 
+  my $msg = $sbeams->update_PA_table_variables($opts{build_id});
   my $build_sql = qq~;
   SELECT DISTINCT MPI.n_observations, modified_peptide_sequence, peptide_charge
   FROM $TBAT_PEPTIDE P 

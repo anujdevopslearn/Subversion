@@ -47,8 +47,8 @@ sub returnTableInfo {
   my $sql_query;
   my $result;
   my @ids = $self->getSBEAMS()->getAccessibleProjects();
+ 
   my $project_string = join( ",", @ids ) || '0';
-
 
    ###############################################################################
    #
@@ -197,7 +197,6 @@ sub returnTableInfo {
       return \%projectSQL
     } 
   } elsif ( uc($table_name) eq 'AT_PASS_SUBMITTER' ) {
-      
     if ($info_key eq "BASICQuery") {
       return( <<"      END_QUERY" ); 
      	SELECT submitter_id, firstName, lastName, emailAddress,
@@ -215,7 +214,6 @@ sub returnTableInfo {
     }
 
   } elsif ( uc($table_name) eq 'AT_PASS_DATASET' ) {
-      
     if ($info_key eq "BASICQuery") {
       return( <<"      END_QUERY" ); 
      	SELECT dataset_id, submitter_id, datasetIdentifier, datasetType,
@@ -225,7 +223,25 @@ sub returnTableInfo {
       WHERE record_status!='D'
       END_QUERY
     }
-
+  }elsif(uc($table_name) eq 'AT_PUBLIC_DATA_REPOSITORY'){
+    if ($info_key eq "BASICQuery") {
+     return( <<"      END_QUERY" );
+      SELECT dataset_id,
+							dataset_identifier,
+							source_repository,
+							species,
+							classfication,
+							pa_sample_accession,
+							local_data_location,
+							datasetTitle,
+							datasetType,
+							instrument,
+							contributor,
+							publication
+      FROM $TBAT_PUBLIC_DATA_REPOSITORY
+      WHERE record_status!='D'
+      END_QUERY
+    }
   } elsif ( uc($table_name) eq 'AT_DOMAIN_PROTEIN_LIST' ) {
     if ($info_key eq "BASICQuery") {
       return( <<"      END_QUERY" ); 

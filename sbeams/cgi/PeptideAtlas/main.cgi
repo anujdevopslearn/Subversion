@@ -190,7 +190,7 @@ sub handle_request {
     LEFT JOIN $TBAT_DEFAULT_ATLAS_BUILD DAB 
       ON DAB.atlas_build_id = AB.atlas_build_id
     WHERE AB.project_id IN ( $accessible_project_ids )
-		AND AB.atlas_build_id IN ( SELECT DISTINCT atlas_build_id FROM $TBAT_PEPTIDE_INSTANCE )
+		--AND AB.atlas_build_id IN ( SELECT DISTINCT atlas_build_id FROM $TBAT_PEPTIDE_INSTANCE )
     AND ( DAB.record_status IS NULL OR DAB.record_status != 'D' )
     AND AB.record_status != 'D'
     AND BS.record_status != 'D'

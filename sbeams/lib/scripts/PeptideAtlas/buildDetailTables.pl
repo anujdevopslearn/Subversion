@@ -4,8 +4,8 @@
 # generate buildDetail tables 
 ###############################################################################
 use strict;
-$| =1;
-use lib qw (../../lib/perl);
+use IO::Handle;
+use lib "$ENV{SBEAMS}/lib/perl";
 
 #use CGI::Carp qw(fatalsToBrowser croak);
 use vars qw($PROGRAM_FILE_NAME);
@@ -14,9 +14,6 @@ use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::DataTable;
-use SBEAMS::Connection::GoogleVisualization;
-use SBEAMS::Connection::TabMenu;
-
 
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
@@ -28,7 +25,6 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 my $atlas = new SBEAMS::PeptideAtlas;
 $atlas->setSBEAMS($sbeams);
 
-
 use Getopt::Long;
 
 my %OPTIONS;
@@ -39,10 +35,13 @@ my $build_id = $OPTIONS{build_id} || die "need build_id\n";
 my $build_path = get_build_path( build_id => $build_id );
 my ($organism, $organism_id) = getBuildOrganism( build_id => $build_id );
 
+$sbeams->update_PA_table_variables($build_id);
+
 my $fh;
 open ($fh, ">$build_path/analysis/build_detail_tables.tsv") or die "cannot open $build_path/analysis/build_detail_tables.tsv\n";
+$fh->autoflush;
 
-##Build Overview
+###Build Overview
 print "getting build_overview table\n";
 get_build_overview ($fh, $build_id );
 
@@ -55,7 +54,7 @@ if ($what_is_new){
 	print $fh "what_is_new|sample_ids\t", join(",", @$new_sample_ids) ."\n";
 }
 
-print "getting proteome coverge\n";
+print "getting proteome coverage\n";
 my $proteomeComponentOrder_file = "$PHYSICAL_BASE_DIR/lib/conf/PeptideAtlas/ProteomeComponentOrder.txt";
 my @patterns =();
 if (open (O, "<$proteomeComponentOrder_file")){
@@ -84,6 +83,10 @@ foreach my $row (@$proteome_coverage){
 print "getting Experiment Contribution table\n";
 my $exp_contrib_table = get_sample_info( $build_id );
 foreach my $row (@$exp_contrib_table){
+  if ($organism !~ /(human|Arabidopsis|Maize)/i){
+		 pop @$row;
+		 pop @$row;
+  } 
   print $fh "exp_contrib_table|".  join("\t", @$row) ."\n";
 }
 
@@ -105,8 +108,7 @@ my $dataset_spec_protein_info =  get_dataset_spec_protein_info( build_id => $bui
 foreach my $row (@$dataset_spec_protein_info){
   print $fh "dataset_spec_protein_info|".  join("\t", @$row) ."\n";
 }
-
-
+print $fh "\n";
 if ($organism =~ /(human|Arabidopsis)/i){ 
   print "getting plot Peptide Identification by Sample Category data\n";
 
@@ -188,6 +190,7 @@ sub get_dataset_spec_protein_info {
    GROUP BY A.repository_id, A.NAME
    order by cnt DESC  
   ~;
+
   my @rows = $sbeams->selectSeveralColumns($sql);
   return [] if (@rows < 1);
   my %unique_prot2dataset_cnt;
@@ -202,7 +205,7 @@ sub get_dataset_spec_protein_info {
   ## older builds
   return [] if ($possibly_distinguished > 0);
 
-  my @level_names = ('canonical','indistinguishable representative'  ,'representative'
+  my @level_names = ('canonical','noncore-canonical','indistinguishable representative'  ,'representative'
                      ,'marginally distinguished','weak','insufficient evidence','indistinguishable','subsumed');
   $sql =qq~;
     SELECT LEVEL_NAME AS NAME, PROTEIN_PRESENCE_LEVEL_ID AS ID
@@ -381,7 +384,7 @@ sub get_build_overview {
   ON BS.biosequence_id = PID.biosequence_id
   WHERE PID.atlas_build_id = $build_id
   AND PPL.level_name in 
-      ('canonical', 'indistinguishable representative', 
+      ('canonical', 'noncore-canonical', 'indistinguishable representative', 
        'marginally distinguished', 'representative',
        'possibly_distinguished','weak', 'insufficient evidence')
   AND BS.biosequence_name NOT LIKE 'DECOY%'
@@ -403,8 +406,16 @@ sub get_build_overview {
   print $fh "build_overview|pep_count_obs\t$pep_count->{obs}\n";
   print $fh "build_overview|pep_count_cnt\t$pep_count->{cnt}\n";
   foreach my $key (sort {$a cmp $b} keys %prot_count){
-     print $fh "build_overview|Protein Presence Levels|$key\t$prot_count{$key}\n";
+     if ($key =~ /canonical/i){
+       print $fh "build_overview|Protein Presence Levels|$key\t$prot_count{$key}\n";
+     }
   }
+  foreach my $key (sort {$a cmp $b} keys %prot_count){
+     if ($key !~ /canonical/i){
+       print $fh "build_overview|Protein Presence Levels|$key\t$prot_count{$key}\n";
+     }
+  }
+
   foreach my $key (sort {$a cmp $b} keys %$phospho_info){
     print $fh "build_overview|PhosphoProteome Summary|$key\t$phospho_info->{$key}\n";
   }
@@ -576,7 +587,7 @@ sub get_dataset_contrib_info {
       ["n_progressive_peptides", "n_progressive_peptides", "Added Peptides"],
       ["cumulative_n_peptides", "cumulative_n_peptides", "Cumulative Peptides"],
       ["n_canonical_proteins", "n_canonical_proteins", "Distinct Canonical Proteins"],
-      ["n_uniq_contributed_proteins", "n_uniq_contributed_proteins", "Unique Canonical Proteins"],
+      ["n_uniq_contributed_proteins", "n_uniq_contributed_proteins", "Unique All Proteins"],
       ["n_progressive_proteins", "n_progressive_proteins", "Added Canonical Proteins"],
       ["cumulative_n_proteins", "cumulative_n_proteins", "Cumulative Canonical Proteins"]
     );
@@ -618,8 +629,6 @@ sub get_dataset_contrib_info {
   }
   unshift @info, \@column_titles;
   return \@info;
-
-
 }
 
 ##################################################################################
@@ -637,13 +646,13 @@ sub get_dataset_protein_info {
   my %sample_repository_ids = $sbeams->selectTwoColumnHash($sql);
 
   $sql = qq~
-	   SELECT BS.BIOSEQUENCE_NAME, PR.NAME, PI.sample_ids
-     FROM $TBAT_PEPTIDE_INSTANCE PI
-     JOIN $TBAT_PEPTIDE P ON ( PI.PEPTIDE_ID = P.PEPTIDE_ID )
-     JOIN $TBAT_ATLAS_BUILD AB ON ( PI.ATLAS_BUILD_ID = AB.ATLAS_BUILD_ID )
-     LEFT JOIN $TBAT_PEPTIDE_MAPPING PM ON ( PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID )
-     LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS ON ( AB.BIOSEQUENCE_SET_ID = BSS.BIOSEQUENCE_SET_ID )
-     LEFT JOIN $TBAT_BIOSEQUENCE BS ON ( PM.MATCHED_BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID )
+		 SELECT BS.BIOSEQUENCE_NAME, PR.NAME, S.sample_id
+			FROM $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH BIABSB
+			JOIN $TBAT_BIOSEQUENCE BS ON ( BIABSB.BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID )
+			JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
+			ON (ABSB.ATLAS_BUILD_SEARCH_BATCH_ID = BIABSB.ATLAS_BUILD_SEARCH_BATCH_ID
+				 AND ABSB.atlas_build_id = $atlas_build_id )
+			JOIN $TBAT_SAMPLE S ON (S.sample_id = ABSB.sample_id)
      JOIN (	
 			 SELECT A.NAME, A.ID  
 			 FROM (
@@ -663,35 +672,28 @@ sub get_dataset_protein_info {
 				 WHERE 1 = 1
 							 AND atlas_build_id IN ($atlas_build_id)
 			 ) AS A ) PR  ON (PR.ID = BS.biosequence_id) 
-
      WHERE 1 = 1
-          AND PI.atlas_build_id IN ( $atlas_build_id )
+          AND ABSB.atlas_build_id IN ( $atlas_build_id )
           AND BS.BIOSEQUENCE_ID NOT IN (
             SELECT BR.RELATED_BIOSEQUENCE_ID
              FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR
              WHERE RELATIONSHIP_TYPE_ID = 2
           )
-         AND PI.PEPTIDE_INSTANCE_ID NOT IN (
-            SELECT PIA.PEPTIDE_INSTANCE_ID 
-            FROM $TBAT_PEPTIDE_INSTANCE_ANNOTATION PIA 
-            JOIN $TBAT_SPECTRUM_ANNOTATION_LEVEL  SAL  ON  
-            (SAL.SPECTRUM_ANNOTATION_LEVEL_ID = PIA.spectrum_annotation_level_id AND PIA.RECORD_STATUS != 'D' )
-            WHERE  SAL.SPECTRUM_ANNOTATION_LEVEL_ID in (2,3,4)
-         )
   ~;
   my @rows = $sbeams->selectSeveralColumns($sql);
   my %dataset_prot_cnt;
   my $possibly_distinguished = 0;
+  my $noncore_canonical = 0;
   foreach my $row(@rows){
-    my ($bs_name,$protein_level, $sample_ids ) =@$row;
+    my ($bs_name,$protein_level, $sample_id ) =@$row;
     next if ($bs_name =~ /(decoy|contam)/i);
     if ($protein_level =~ /possibly_distinguished/i){
        $possibly_distinguished++;
     }
-    foreach my $sample_id(split(",", $sample_ids)){
-      next if (not defined $sample_repository_ids{$sample_id});
-      $dataset_prot_cnt{$sample_repository_ids{$sample_id}}{$protein_level}{$bs_name} =1;
+    if ($protein_level =~ /noncore/){
+       $noncore_canonical =1;
     }
+    $dataset_prot_cnt{$sample_repository_ids{$sample_id}}{$protein_level}{$bs_name} =1;
   }
   ## older builds, skip
   return [] if ($possibly_distinguished > 0);
@@ -707,6 +709,9 @@ sub get_dataset_protein_info {
 
   my @level_names = ('canonical','indistinguishable representative'  ,'representative'
                      ,'marginally distinguished','weak','insufficient evidence','indistinguishable','subsumed'); 
+  if ($noncore_canonical){
+    splice @level_names, 1, 0, 'noncore-canonical';
+  }
 
   my @headings =('Dataset',@level_names);
   my @sortable=();
@@ -717,7 +722,6 @@ sub get_dataset_protein_info {
     push @align, 'center';
   }
   $align[0] = 'left';
-  my $headings_ref = $atlas->make_sort_headings( headings => \@sortable);
   my @records = ();
   foreach my $repository_id (sort {$a cmp $b} keys %dataset_prot_cnt){
     my @row =();

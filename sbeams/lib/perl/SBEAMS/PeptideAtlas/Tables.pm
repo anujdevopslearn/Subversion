@@ -12,9 +12,11 @@ package SBEAMS::PeptideAtlas::Tables;
 
 
 use strict;
-
+use SBEAMS::Connection ;
+use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::Settings;
-
+use SBEAMS::Connection::Log;
+my $log = SBEAMS::Connection::Log->new();
 
 use vars qw(@ISA @EXPORT 
     $TB_ORGANISM
@@ -180,6 +182,10 @@ use vars qw(@ISA @EXPORT
     $TBAT_NEXTPROT_CHPP_SUMMARY
 );
 
+###############################################################################
+# Global variables
+###############################################################################
+use vars qw($sbeams);
 
 require Exporter;
 @ISA = qw (Exporter);
@@ -461,9 +467,9 @@ $TBAT_PROTEOTYPIC_PEPTIDE_XSPECIES_MAPPING  = "${mod}proteotypic_peptide_xspecie
 $TBAT_PROTEIN_PRESENCE_LEVEL        = "${mod}protein_presence_level";
 $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE = "${mod}biosequence_relationship_type";
 $TBAT_PROTEIN_IDENTIFICATION        = "${mod}protein_identification";
-$TBAT_PROTEIN_IDENTIFICATION_NEXTPROT = "${mod}protein_identification_nextprot";
 $TBAT_BIOSEQUENCE_RELATIONSHIP      = "${mod}biosequence_relationship";
 $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH = "${mod}biosequence_id_atlas_build_search_batch";
+$TBAT_PROTEIN_IDENTIFICATION_NEXTPROT = "${mod}protein_identification_nextprot";
 $TBAT_BIOSEQUENCE_RELATIONSHIP_NEXTPROT = "${mod}biosequence_relationship_nextprot";
 $TBAT_UNIPROT_DB                    = "${mod}uniprot_db";
 $TBAT_UNIPROT_DB_ENTRY              = "${mod}uniprot_db_entry";
@@ -533,4 +539,63 @@ $TBAT_ATLAS_SNPS                    =  "${mod}atlas_snps";
 $TBAT_NEXTPROT_MAPPING              = "${mod}nextprot_mapping";
 $TBAT_NEXTPROT_CHROMOSOME_MAPPING   = "${mod}nextprot_chromosome_mapping";
 $TBAT_NEXTPROT_CHPP_SUMMARY         = "${mod}nextprot_chpp_summary";
+
+
+
+###############################################################################
+## Constructor
+################################################################################
+#sub new {
+#    my $this = shift;
+#    my $class = ref($this) || $this;
+#    my $self = {};
+#    bless $self, $class;
+#    $self->{_nocache_sql} = 1 if !defined $self->{_nocache_sql};
+#    $log->debug( "New" );
+#    return($self);
+#}
+
+################################################################################################
+### check if there is a database for the build. Update table names if there is one.
+################################################################################################
+sub update_PA_table_variables{
+  my $self = shift;
+  my $atlas_build_id = shift;
+  my $sql = qq~
+    SELECT name
+    FROM MASTER..SYSDATABASES
+    WHERE name='PeptideAtlas_build$atlas_build_id'
+  ~;
+  $sbeams = $self->getSBEAMS();
+  my @row = $sbeams->selectOneColumn($sql);
+  if (@row == 1){
+    my $mod = "PeptideAtlas_build$atlas_build_id.dbo.";
+    $TBAT_PEPTIDE_INSTANCE      = "${mod}peptide_instance";
+    $TBAT_PEPTIDE_INSTANCE_SAMPLE  = "${mod}peptide_instance_sample";
+    $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH  = "${mod}peptide_instance_search_batch";
+    $TBAT_MODIFIED_PEPTIDE_INSTANCE    = "${mod}modified_peptide_instance";
+    $TBAT_MODIFIED_PEPTIDE_INSTANCE_SAMPLE  = "${mod}modified_peptide_instance_sample";
+    $TBAT_MODIFIED_PEPTIDE_INSTANCE_SEARCH_BATCH  = "${mod}modified_peptide_instance_search_batch";
+    $TBAT_PEPTIDE_MAPPING       = "${mod}peptide_mapping";
+    $TBAT_SPECTRUM                   = "${mod}spectrum";
+    $TBAT_SPECTRUM_IDENTIFICATION    = "${mod}spectrum_identification";
+    $TBAT_SPECTRUM_PTM_IDENTIFICATION    = "${mod}spectrum_ptm_identification";
+    $TBAT_SPECTRA_DESCRIPTION_SET = "${mod}spectra_description_set";
+    $TBAT_PROTEIN_IDENTIFICATION        = "${mod}protein_identification";
+    $TBAT_BIOSEQUENCE_RELATIONSHIP      = "${mod}biosequence_relationship";
+    $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH = "${mod}biosequence_id_atlas_build_search_batch";
+    $TBAT_PTM_SUMMARY                   =  "${mod}ptm_summary";
+    return "use PeptideAtlas_build$atlas_build_id and $DBPREFIX{PeptideAtlas}. Table names updated\n";
+  }else{
+    return "use $DBPREFIX{PeptideAtlas}\n";;
+  }
+
+}
+###############################################################################
+# getSBEAMS: Provide the main SBEAMS object
+###############################################################################
+sub getSBEAMS {
+    my $self = shift;
+    return $sbeams || SBEAMS::Connection->new();
+} # end getSBEAMS
 

@@ -151,7 +151,7 @@ sub handleRequest {
   if ($atlas_build_name)
   {
       $ATLAS_BUILD_ID = get_atlas_build_id(atlas_build_name=>$atlas_build_name);
-
+      my $msg = $sbeams->update_PA_table_variables($ATLAS_BUILD_ID);
       if ($update) 
       {
           update_atlas_search_batch_records( atlas_build_id=>$ATLAS_BUILD_ID);

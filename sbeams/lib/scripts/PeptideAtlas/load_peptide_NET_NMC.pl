@@ -59,9 +59,7 @@ EOU
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
         "atlas_build_id:s", 
     )) {
-
     die "\n$USAGE";
-
 }
 
 $VERBOSE = $OPTIONS{"verbose"} || 0;
@@ -69,7 +67,9 @@ $QUIET = $OPTIONS{"quiet"} || 0;
 $DEBUG = $OPTIONS{"debug"} || 0;
 $TESTONLY = $OPTIONS{"testonly"} || 0;
 $atlas_build_id = $OPTIONS{"atlas_build_id"} || die "need atlas_build_id";
-   
+  
+my $msg = $sbeams->update_PA_table_variables($atlas_build_id);
+ 
 ###############################################################################
 # Set Global Variables and execute main()
 ###############################################################################
@@ -103,28 +103,44 @@ sub main
   open (IN, "<$file") or die "cannot open $file\n";
 
   print "updating PEPTIDE_MAPPING table\n";
-  my $cnt =0;
+  $sql = qq~
+      SELECT BS.BIOSEQUENCE_NAME, 
+             P.peptide_accession, 
+             PI.PEPTIDE_INSTANCE_ID, 
+             PM.PEPTIDE_MAPPING_ID
+      FROM $TBAT_PEPTIDE_MAPPING PM
+      JOIN $TBAT_PEPTIDE_INSTANCE PI ON (PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID)
+      JOIN $TBAT_PEPTIDE P ON (PI.PEPTIDE_ID = P.PEPTIDE_ID)
+      JOIN $TBAT_BIOSEQUENCE BS ON (BS.BIOSEQUENCE_ID = PM.MATCHED_BIOSEQUENCE_ID)
+      WHERE 1=1
+      AND PI.ATLAS_BUILD_ID = $atlas_build_id
+    ~;
+  my %peptide_mapping =();
+  @rows = $sbeams->selectSeveralColumns($sql);
+    
+  foreach my $row (@rows){
+     my ($prot,$pepacc,$pi_id, $pm_id) = @$row;
+     $pepacc =~ s/PAp0+//;
+     $peptide_mapping{$prot}{$pepacc}{pi_id} = $pi_id;
+     push @{$peptide_mapping{$prot}{$pepacc}{pm_id}}, $pm_id;
+  }
+
+  my $cnt = 0;
+  my $commit_interval = 1000;
+
+  $sbeams->initiate_transaction();
   while (my $line = <IN>){
     chomp $line;
     my ($pepacc, $pepseq, $prot, 
-        $best_enzyme_prot, $highest_n_enzymatic_termini_prot, $lowest_n_missed_cleavages_prot, 
-        $best_enzyme, $highest_n_enzymatic_termini, $lowest_n_missed_cleavages) = split("\t", $line);
-    $sql = qq~
-			SELECT PI.PEPTIDE_INSTANCE_ID, PM.PEPTIDE_MAPPING_ID
-			FROM $TBAT_PEPTIDE_MAPPING PM 
-			JOIN $TBAT_PEPTIDE_INSTANCE PI ON (PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID)
-			JOIN $TBAT_PEPTIDE P ON (PI.PEPTIDE_ID = P.PEPTIDE_ID)
-			JOIN $TBAT_BIOSEQUENCE BS ON (BS.BIOSEQUENCE_ID = PM.MATCHED_BIOSEQUENCE_ID)
-			WHERE BS.BIOSEQUENCE_NAME = '$prot'
-			AND PI.ATLAS_BUILD_ID = $atlas_build_id 
-			AND P.PEPTIDE_ACCESSION = '$pepacc' 
-    ~;
-    my @rows = $sbeams->selectSeveralColumns($sql);
-  
-    foreach my $row (@rows){
-      my ($pi_id, $pm_id ) = @$row;
+        $enzyme_prot, $highest_n_enzymatic_termini_prot, $lowest_n_missed_cleavages_prot, 
+        $enzyme, $highest_n_enzymatic_termini, $lowest_n_missed_cleavages) = split("\t", $line);
+    $pepacc =~ s/PAp0+//;
+    my $pi_id = $peptide_mapping{$prot}{$pepacc}{pi_id};
+    $cnt++;
+
+    foreach my $pm_id (@{$peptide_mapping{$prot}{$pepacc}{pm_id}}){
       my %rowdata = (
-        protease_ids => $best_enzyme_prot, 
+        protease_ids => $enzyme_prot, 
         highest_n_enzymatic_termini => $highest_n_enzymatic_termini_prot, 
         lowest_n_missed_cleavages => $lowest_n_missed_cleavages_prot, 
       );
@@ -138,19 +154,22 @@ sub main
 					testonly=>$TESTONLY,
   			);
 
-			$values{$pi_id}{best_enzyme} = $best_enzyme;
+       #$sbeams->executeSQL("update $TBAT_PEPTIDE_MAPPING set protease_ids='$enzyme_prot', highest_n_enzymatic_termini=$highest_n_enzymatic_termini_prot, lowest_n_missed_cleavages=$lowest_n_missed_cleavages_prot where peptide_mapping_id=$pm_id" );	
+ 
+		  $values{$pi_id}{enzyme} = $enzyme;
 			$values{$pi_id}{highest_n_enzymatic_termini} = $highest_n_enzymatic_termini;
 			$values{$pi_id}{lowest_n_missed_cleavages} = $lowest_n_missed_cleavages;
     }
-    print "$cnt..." if ($cnt %1000 == 0);
-    $cnt++;
+    print "$cnt..." if ($cnt % $commit_interval == 0);
+    $sbeams->commit_transaction() if($cnt % $commit_interval==0);
   }
 
   $cnt = 0;
   print "updating PEPTIDE_INSTANCE\n";
   foreach my $id (keys %values){
+    $cnt++;
     my %rowdata = (
-      protease_ids => $values{$id}{best_enzyme},
+      #protease_ids => $values{$id}{enzyme},
       highest_n_enzymatic_termini => $values{$id}{highest_n_enzymatic_termini}, 
       lowest_n_missed_cleavages => $values{$id}{lowest_n_missed_cleavages},
     );
@@ -164,9 +183,11 @@ sub main
         verbose=>$VERBOSE,
         testonly=>$TESTONLY,
     );
-    print "$cnt..." if ($cnt %1000 == 0);
-    $cnt++;
+    print "$cnt..." if ($cnt % $commit_interval == 0);
+    $sbeams->commit_transaction() if ($cnt % $commit_interval==0);
   }
+  $sbeams->commit_transaction() if ($cnt % $commit_interval>0);
+  $sbeams->reset_dbh();
 }
 
 ##############################################################################################
@@ -176,6 +197,7 @@ sub calculate_peptide_nterm {
   my $build_path = $args{build_path};
 
 	my %regex = (
+    0 => '[X]|[X]',      # no enzyme
 		1 => '[KR][^P]',     # trypsin
 		2 => '[K][^P]' ,     # lysc
 		3 => '[DE][^P]',     # gluc
@@ -188,6 +210,8 @@ sub calculate_peptide_nterm {
 		11 => '[KR][^P]',    # ArgC and LysC
 		12 => '[KR][^P]',    # Trypsin and ArgC
 		13 => '[A-Z]',       # nonSpecific
+    14 => '[KR]',        # Lysarginase
+    15 => '[KR][^P]',    # Lysarginase or Trypsin 
 	);
 
 
@@ -207,15 +231,20 @@ sub calculate_peptide_nterm {
 	while (my $line = <IN>){
 		chomp $line;
 		my @tmp = split("\t", $line);
-		my $enzyme_id = $sample_enzyme{$tmp[0]};
+		my $enzyme_id ;
+    if ($sample_enzyme{$tmp[0]}){
+      $enzyme_id = $sample_enzyme{$tmp[0]};
+    }else{
+      $enzyme_id = 1;
+    }
 		my $pepacc = $tmp[2];
 		$identifications{$pepacc}{$enzyme_id} =1;
 	}
 
 	open (MAP, "<$peptide_mapping_file") or die "cannot open $peptide_mapping_file\n";
 	open (OUT, ">$build_path/peptide_NET_NMC.tsv") ;
-	print OUT "peptide_accession\tpeptide\tprot\tbest_enzyme\thighest_n_enzymatic_termini\tlowest_n_missed_cleavages\t".
-						"\tbest_enzyme\thighest_n_enzymatic_termini\tlowest_n_missed_cleavages\n";
+	print OUT "peptide_accession\tpeptide\tprot\tenzyme\thighest_n_enzymatic_termini\tlowest_n_missed_cleavages\t".
+						"\tenzyme\thighest_n_enzymatic_termini\tlowest_n_missed_cleavages\n";
 	my %peptide_n_term = ();
 	my @list = ();
 	my $preacc = '';
@@ -228,7 +257,7 @@ sub calculate_peptide_nterm {
 		my %peptide_n_term_prot =();
 
 		if ($preacc ne $pepacc && !$first){
-			my $best_enzyme_id = get_best_enzyme_id(peptide_n_term => \%peptide_n_term);
+			my $enzyme_id = get_enzyme_id(peptide_n_term => \%peptide_n_term);
 			#if ($preacc eq 'PAp03155327'){
 			#	foreach my $e (keys %peptide_n_term){
 			#		print "2: $e $peptide_n_term{$e}{highest_n_enzymatic_termini} $peptide_n_term_prot{$e}{lowest_n_missed_cleavages}\n";
@@ -236,9 +265,9 @@ sub calculate_peptide_nterm {
 			#}
 
 			foreach my $line (@list){
-				print OUT "$line\t$best_enzyme_id\t". #$regex{$best_enzyme_id}\t".
-									"$peptide_n_term{$best_enzyme_id}{highest_n_enzymatic_termini}\t".
-									$peptide_n_term{$best_enzyme_id}{lowest_n_missed_cleavages} ."\n";
+				print OUT "$line\t$enzyme_id\t". #$regex{$enzyme_id}\t".
+									"$peptide_n_term{$enzyme_id}{highest_n_enzymatic_termini}\t".
+									$peptide_n_term{$enzyme_id}{lowest_n_missed_cleavages} ."\n";
 			}
 			@list = ();
 			%peptide_n_term=();
@@ -248,7 +277,8 @@ sub calculate_peptide_nterm {
 			# trypsin, GluC, LysC, and CNBr clip Cterminally
 			my $term = 'C';
 			# AspN is the outlier
-			$term = 'N' if ($enzyme_id == 4 || $enzyme_id == 8);
+			$term = 'N' if ($enzyme_id == 4 || $enzyme_id == 8 || $enzyme_id == 14);
+      $term = 'NC' if ($enzyme_id == 15);
 			my $n_term = 0;
 			if ($start == 1){
 				$n_term++;
@@ -258,11 +288,13 @@ sub calculate_peptide_nterm {
 					$n_term++;
 				}elsif ($term eq 'N' && $two_aas =~ /$pat$/){
 					$n_term++;
-				}
+				}elsif ($term eq 'NC' && ($two_aas =~ /^$pat/ || $two_aas =~ /$pat$/)){ 
+          $n_term++;
+        }
 				#print "1: n_term $n_term pat  $pat $preAA.$pep.$folAA\n"; 
 			}
 		 
-			if($folAA eq '-'){
+			if($folAA eq '-' or $folAA eq '*'){
 				$n_term++;
 			}else{
 				my $two_aas = $pepaas[$#pepaas].$folAA; 
@@ -295,6 +327,9 @@ sub calculate_peptide_nterm {
 				## for current two n-terminal enzymes, this works, but might not work for others.
 				@matches = ($pep =~ /\w$pat/g); 
 			}
+      if ($enzyme_id eq '13'){
+        @matches = ();
+      }
 
 			if (not defined $peptide_n_term_prot{$enzyme_id}{lowest_n_missed_cleavages}){
 				 $peptide_n_term_prot{$enzyme_id}{lowest_n_missed_cleavages} = scalar @matches;
@@ -315,17 +350,17 @@ sub calculate_peptide_nterm {
 		}
 
 		### find highest_n_enzymatic_termini and lowest_n_missed_cleavages for this protein mapping
-		my $best_enzyme_id = get_best_enzyme_id(peptide_n_term => \%peptide_n_term_prot);
+		my $enzyme_id = get_enzyme_id(peptide_n_term => \%peptide_n_term_prot);
 		#if ($pep eq 'KPATPAEDDEDDDIDLFGSDNEEED'){
 		#  foreach my $e (keys %peptide_n_term_prot){
 		#    print "$prot: $e $peptide_n_term_prot{$e}{highest_n_enzymatic_termini} $peptide_n_term_prot{$e}{lowest_n_missed_cleavages}\n";
 		#  }
 		#}
 
-		push @list , "$pepacc\t$preAA.$pep.$folAA\t$prot\t". #$best_enzyme_id\t".#"$regex{$best_enzyme_id}\t" .
+		push @list , "$pepacc\t$preAA.$pep.$folAA\t$prot\t". #$enzyme_id\t".#"$regex{$enzyme_id}\t" .
                  join(",", keys %peptide_n_term_prot) ."\t".
-								 "$peptide_n_term_prot{$best_enzyme_id}{highest_n_enzymatic_termini}\t".
-								 $peptide_n_term_prot{$best_enzyme_id}{lowest_n_missed_cleavages};
+								 "$peptide_n_term_prot{$enzyme_id}{highest_n_enzymatic_termini}\t".
+								 $peptide_n_term_prot{$enzyme_id}{lowest_n_missed_cleavages};
 
 		$preacc = $pepacc; 
 		$first = 0; 
@@ -333,12 +368,12 @@ sub calculate_peptide_nterm {
 
 	}
 
-	my $best_enzyme_id = get_best_enzyme_id(peptide_n_term => \%peptide_n_term);
+	my $enzyme_id = get_enzyme_id(peptide_n_term => \%peptide_n_term);
 	foreach my $line (@list){
-		print OUT "$line\t". #\t$best_enzyme_id\t" .#$regex{$best_enzyme_id}\t".
+		print OUT "$line\t". #\t$enzyme_id\t" .#$regex{$enzyme_id}\t".
               join(",", keys %peptide_n_term) ."\t".
-							"$peptide_n_term{$best_enzyme_id}{highest_n_enzymatic_termini}\t".
-							$peptide_n_term{$best_enzyme_id}{lowest_n_missed_cleavages} ."\n";
+							"$peptide_n_term{$enzyme_id}{highest_n_enzymatic_termini}\t".
+							$peptide_n_term{$enzyme_id}{lowest_n_missed_cleavages} ."\n";
   }
   close OUT;
 }
@@ -346,7 +381,7 @@ sub calculate_peptide_nterm {
 
 ##############################################################################################
 
-sub get_best_enzyme_id {
+sub get_enzyme_id {
   my %args = @_;
   my $peptide_n_term = $args{peptide_n_term};
   my %peptide_n_term = %$peptide_n_term;

@@ -63,6 +63,7 @@ my $UPDATE = $OPTIONS{"update"} || 0;
 my $file = $OPTIONS{"infile"} || die $USAGE;
 my $atlas_build_id = $OPTIONS{"atlas_build_id"} || die $USAGE;
 
+$sbeams->update_PA_table_variables ($atlas_build_id);
 
 main();
 exit;
@@ -94,6 +95,8 @@ sub purge_table {
   my %args  = @_;
   my $atlas_build_id = $args{atlas_build_id};
   my $sql = "DELETE FROM $TBAT_PTM_SUMMARY WHERE ATLAS_BUILD_ID = $atlas_build_id"; 
+  print "$sql\n";
+
   $sbeams->do( $sql);
 } 
 sub get_biosequence_ids{
@@ -132,17 +135,18 @@ sub load_table{
 
   while ($line = <IN>){
     chomp $line;
-    my @cols = split("\t", $line);
+    my @cols = split("\t", $line, -1);
     my $protein = $cols[0];
     my $biosequence_id;
-    next if ($cols[3] < 1); 
+    my $str = join (",", @cols[2..$#cols]); 
+    next if ($str !~ /[1-9]/);
     if (defined $biosequence_ids->{$protein}){
       $biosequence_id = $biosequence_ids->{$protein};
     }else{
       print "WARNING: cannot find biosequence id for $protein\n";
       next;
     }
-    if (! $cols[16]){
+    if ($cols[3] > 0 && ! $cols[20]){
       die "$protein $cols[1] peptide empty\n";
     }    
     my %rowdata = (
@@ -161,9 +165,14 @@ sub load_table{
 				nP95 => $cols[11],
 				nP99 => $cols[12],
 				nP100    => $cols[13],
-				isInUniProt   => $cols[14],
-				isInNeXtProt => $cols[15],
-        most_observed_ptm_peptide => $cols[16],
+        noChoice =>$cols[14],
+        enrichedWithMod => $cols[15],
+        enrichedNonMod => $cols[16],
+        nonEnriched => $cols[17],
+				isInUniProt   => $cols[18],
+				isInNeXtProt => $cols[19],
+        most_observed_ptm_peptide => $cols[20],
+        ptm_type => $cols[21],
     );
     my $offset = $cols[1];
     my $success;

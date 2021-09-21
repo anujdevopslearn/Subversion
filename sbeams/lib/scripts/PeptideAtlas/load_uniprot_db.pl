@@ -89,7 +89,7 @@ $opts{is_nextprot} ||= 'N';
 if ( $opts{'load'} || $opts{'test'} || $opts{'update'}|| $opts{'purge'}) {
     unless ($opts{path} && $opts{biosequence_set_id}) {
         print "\n$USAGE\n";
-        print "Need --path \n";
+        print "Need --path --biosequence_set_id \n";
         exit(0);
     }
     if ( $opts{nextprot_update} ) {

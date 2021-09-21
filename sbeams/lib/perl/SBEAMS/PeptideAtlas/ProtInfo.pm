@@ -1,4 +1,4 @@
-;package SBEAMS::PeptideAtlas::ProtInfo;
+package SBEAMS::PeptideAtlas::ProtInfo;
 
 ###############################################################################
 # Class       : SBEAMS::PeptideAtlas::ProtInfo
@@ -45,6 +45,8 @@ our @EXPORT = qw(
  is_uniprot_identifier
 );
 
+our $fhs;
+our $pk_counter;
 
 ###############################################################################
 # Constructor
@@ -52,6 +54,8 @@ our @EXPORT = qw(
 sub new {
     # TMF: forgive my self-tutorial comments below.
     my $this = shift;  #either this package, or a reference to it.
+    $fhs = shift;
+    $pk_counter = shift;
     my $class = ref($this) || $this;  #if a ref, deref it.
     my $self = {};  # a hash ref to an empty hash
     bless $self, $class; # assoc a class with the hash: this is the magic! now we can call methods on self. 
@@ -152,14 +156,14 @@ sub loadBuildProtInfo {
   while ($line = <IDENTFILE>) {
     chomp ($line);
     my ($protein_group_number,
-	$biosequence_name,
-	$probability,
-	$confidence,
+				$biosequence_name,
+				$probability,
+				$confidence,
         $n_observations,
         $n_distinct_peptides,
-	$level_name,
-	$represented_by_biosequence_name,
-	$subsumed_by_biosequence_name,
+				$level_name,
+				$represented_by_biosequence_name,
+				$subsumed_by_biosequence_name,
         $estimated_ng_per_ml,
         $abundance_uncertainty,
         $is_covering,
@@ -167,18 +171,13 @@ sub loadBuildProtInfo {
         $norm_PSMs_per_100K,
 	  ) = split(",", $line, $nfields);
 
-
-#    if (! $subsumed_by_biosequence_name) {
-#      $subsumed_by_biosequence_name = '';
-#    }
-    if ($estimated_ng_per_ml eq '') {
-      $estimated_ng_per_ml = 'NULL';
-    }
-#    if (! $abundance_uncertainty) {
-#      $abundance_uncertainty = '';
-#    }
-    if ($norm_PSMs_per_100K  =~ /^\s+$/) {
-      $norm_PSMs_per_100K  = 'NULL';
+    if (! $fhs->{protein_identification}){
+			if ($estimated_ng_per_ml eq '') {
+				$estimated_ng_per_ml = 'NULL';
+			}
+			if ($norm_PSMs_per_100K  =~ /^\s+$/) {
+				$norm_PSMs_per_100K  = 'NULL';
+			}
     }
     # I don't know what to do with nan. Let's set it to zero.
     if ($probability eq "nan") {
@@ -225,14 +224,11 @@ sub loadBuildProtInfo {
 
     if ($inserted) {
       $loaded++;
-    } else {
-      $already_in_db++;
     }
   }
 
   if ( 1 || $VERBOSE ) {
     print "$loaded entries loaded into protein_identification table.\n";
-    print "$already_in_db protIDs were already in table so not loaded.\n";
     print "$unmapped UNMAPPED entries ignored.\n";
     print "$unmapped_represented_by entries with UNMAPPED represented_by".
 	   " identifiers ignored.\n";
@@ -248,8 +244,6 @@ sub loadBuildProtInfo {
   $unmapped = 0;
   my $unmapped_reference = 0;
   $loaded = 0;
-  $already_in_db = 0;
-
   # Input is PA.protRelationships file
   # Process one line at a time
   $line = <RELFILE>;  #throw away header line
@@ -275,33 +269,30 @@ sub loadBuildProtInfo {
        relationship_name => $relationship_name,
     );
 
-
     if ($inserted) {
       $loaded++;
-    } else {
-      $already_in_db++;
-    }
+    } 
   }
 
   if ( 1 || $VERBOSE ) {
     print "$loaded entries loaded into biosequence_relationship table.\n";
-    print "$already_in_db relationships were already in table so not loaded.\n";
     print "$unmapped UNMAPPED entries ignored.\n";
     print "$unmapped_reference entries with UNMAPPED reference".
 	   " identifiers ignored.\n";
   }
   ## add sample_specific_id to proteins that id in one sample only
-  print "Labeling sample_specific and dataset_specific proteins\n";
-  $self->update_protInfo_sampleSpecific ( 
-    atlas_build_id => $atlas_build_id
-  );
+  if ($fhs->{protein_identification}){
+		print "Labeling sample_specific and dataset_specific proteins\n";
+		$self->update_protInfo_sampleSpecific ( 
+		  atlas_build_id => $atlas_build_id
+		);
 
-  ## fill biosequence_id_atlas_build_search_batch table
-  print "Mapping biosequence id and atlas_build_search_batch_id\n";
-  $self->insert_biosequence_id_atlas_build_search_batch (
-    atlas_build_id => $atlas_build_id
-  );
-
+		## fill biosequence_id_atlas_build_search_batch table
+		print "Mapping biosequence id and atlas_build_search_batch_id\n";
+		$self->insert_biosequence_id_atlas_build_search_batch (
+		  atlas_build_id => $atlas_build_id
+		);
+  }
 } # end loadBuildProtInfo
 ############################################
 #insert_biosequence_id_atlas_build_search_batch
@@ -320,7 +311,7 @@ sub insert_biosequence_id_atlas_build_search_batch{
        JOIN $TBAT_PEPTIDE_MAPPING PM ON ( PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID )
        JOIN $TBAT_BIOSEQUENCE BS ON ( PM.MATCHED_BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID )
        WHERE PI.ATLAS_BUILD_ID = $atlas_build_id 
-       AND BS.biosequence_name not like 'DECOY^%'
+       AND BS.biosequence_name not like 'DECOY%'
        AND BS.biosequence_name not like 'CONTAM%'
   ~;
 
@@ -348,9 +339,9 @@ sub insert_biosequence_id_atlas_build_search_batch{
   }
   if ($insert_str){
     my $sql = qq~
-	INSERT INTO $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH (biosequence_id, atlas_build_search_batch_id)
-	VALUES
-	$insert_str;
+			INSERT INTO $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH (biosequence_id, atlas_build_search_batch_id)
+			VALUES
+			$insert_str;
 		~;
 
     my $result = $sbeams->executeSQL($sql);
@@ -390,14 +381,12 @@ sub update_protInfo_sampleSpecific{
             (SAL.SPECTRUM_ANNOTATION_LEVEL_ID = PIA.spectrum_annotation_level_id AND PIA.RECORD_STATUS != 'D' )
      WHERE  SAL.SPECTRUM_ANNOTATION_LEVEL_ID in (2,3,4))
   ~;
-
-  my @rows = $sbeams->selectSeveralColumns($sql);
   my %result = ();
-  foreach my $row (@rows){
-    my ($bsid, $sample_id ) = @$row;
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    my ($bsid, $sample_id ) = @row;
     $result{$bsid}{$sample_id} =1;
   }
-
   my %unique =();
   foreach my $bsid (keys %result){
     my @samples = keys %{$result{$bsid}};
@@ -541,22 +530,23 @@ sub insertProteinIdentification {
   );
 
   #### Check to see if this protein_identification is in the database
-  my $protein_identification_id = $self->get_protein_identification_id(
-    biosequence_id => $biosequence_id,
-    atlas_build_id => $atlas_build_id,
-  );
+  if (! $fhs->{protein_identification}){
+		my $protein_identification_id = $self->get_protein_identification_id(
+			biosequence_id => $biosequence_id,
+			atlas_build_id => $atlas_build_id,
+		);
 
 
-  #### If not, INSERT it
-  if ($protein_identification_id) {
-    if ($VERBOSE) {
-      print STDERR "WARNING: Identification info for $biosequence_name".
-                 " ($biosequence_id) already in database\n";
-    }
-    return ('');
-  } else {
-
-    $protein_identification_id = $self->insertProteinIdentificationRecord(
+	 #### If not, INSERT it
+	 if ($protein_identification_id) {
+			if ($VERBOSE) {
+				print STDERR "WARNING: Identification info for $biosequence_name".
+									 " ($biosequence_id) already in database\n";
+			}
+			return ('');
+		} 
+   }
+   my $protein_identification_id = $self->insertProteinIdentificationRecord(
       biosequence_id => $biosequence_id,
       atlas_build_id => $atlas_build_id,
       protein_group_number => $protein_group_number,
@@ -574,8 +564,6 @@ sub insertProteinIdentification {
       norm_PSMs_per_100K => $norm_PSMs_per_100K,
     );
     return ($protein_identification_id);
-  }
-
 
 } # end insertProteinIdentification
 
@@ -611,36 +599,57 @@ sub insertProteinIdentificationRecord {
   my $seq_unique_prots_in_group = $args{seq_unique_prots_in_group};
   my $norm_PSMs_per_100K = $args{norm_PSMs_per_100K};
   my $table_name = $TBAT_PROTEIN_IDENTIFICATION;
-  my $rowdata = {};
-  #### Define the attributes to insert
-    $rowdata = {
-     biosequence_id => $biosequence_id,
-     atlas_build_id => $atlas_build_id,
-     protein_group_number => $protein_group_number,
-     presence_level_id => $presence_level_id,
-     represented_by_biosequence_id => $represented_by_biosequence_id,
-     probability => $probability,
-     confidence => $confidence,
-     n_observations => $n_observations,
-     n_distinct_peptides => $n_distinct_peptides,
-     subsumed_by_biosequence_id => $subsumed_by_biosequence_id,
-     estimated_ng_per_ml => $estimated_ng_per_ml,
-     abundance_uncertainty => $abundance_uncertainty,
-     is_covering => $is_covering,
-     seq_unique_prots_in_group => $seq_unique_prots_in_group,
-     norm_PSMs_per_100K => $norm_PSMs_per_100K,
-   };
+  # no value
+  #observed_in_origenetube    varchar(20) NULL,
+  #origenetube_empai          float NULL,
+  #sequence_coverage          float NULL,
+  #sample_specific_id         int NULL,
+  #dataset_specific_id        varchar(100) NULL,
 
-  #### Insert protein identification record
-  my $protein_identification_id = $sbeams->updateOrInsertRow(
-    insert => 1,
-    table_name => $table_name,
-    rowdata_ref => $rowdata,
-    PK => 'protein_identification_id',
-    return_PK => 1,
-    verbose=>$VERBOSE,
-    testonly=>$TESTONLY,
-  );
+  my $protein_identification_id;
+  if ($fhs->{protein_identification}){
+		my $fh = $fhs->{protein_identification};
+		print $fh "$pk_counter->{protein_identification}\t$biosequence_id\t$atlas_build_id\t".
+							"$protein_group_number\t$presence_level_id\t$represented_by_biosequence_id\t".
+							"$probability\t$confidence\t$subsumed_by_biosequence_id\t$n_observations\t".
+							"$n_distinct_peptides\t$estimated_ng_per_ml\t$abundance_uncertainty\t$seq_unique_prots_in_group\t".
+							"$is_covering\t$norm_PSMs_per_100K\t\t\t\t\t\n";   
+
+		$protein_identification_id=$pk_counter->{protein_identification};
+
+		$pk_counter->{protein_identification}++;           
+  }else{
+		#### Define the attributes to insert
+		my	$rowdata = {
+			 biosequence_id => $biosequence_id,
+			 atlas_build_id => $atlas_build_id,
+			 protein_group_number => $protein_group_number,
+			 presence_level_id => $presence_level_id,
+			 represented_by_biosequence_id => $represented_by_biosequence_id,
+			 probability => $probability,
+			 confidence => $confidence,
+			 n_observations => $n_observations,
+			 n_distinct_peptides => $n_distinct_peptides,
+			 subsumed_by_biosequence_id => $subsumed_by_biosequence_id,
+			 estimated_ng_per_ml => $estimated_ng_per_ml,
+			 abundance_uncertainty => $abundance_uncertainty,
+			 is_covering => $is_covering,
+			 seq_unique_prots_in_group => $seq_unique_prots_in_group,
+			 norm_PSMs_per_100K => $norm_PSMs_per_100K,
+		 };
+
+		#### Insert protein identification record
+		$protein_identification_id = $sbeams->updateOrInsertRow(
+			insert => 1,
+			table_name => $table_name,
+			rowdata_ref => $rowdata,
+			PK => 'protein_identification_id',
+			return_PK => 1,
+			verbose=>$VERBOSE,
+			testonly=>$TESTONLY,
+		);
+
+  }
 
   return($protein_identification_id);
 
@@ -687,22 +696,25 @@ sub insertBiosequenceRelationship {
   );
 
   
-  #### Check to see if this biosequence_relationship is in the database
-  my $biosequence_relationship_id = $self->get_biosequence_relationship_id(
-    atlas_build_id => $atlas_build_id,
-    reference_biosequence_id => $reference_biosequence_id,
-    related_biosequence_id => $related_biosequence_id,
-  );
+  if (! $fhs->{biosequence_relationship}){
+		#### Check to see if this biosequence_relationship is in the database
+		my $biosequence_relationship_id = $self->get_biosequence_relationship_id(
+			atlas_build_id => $atlas_build_id,
+			reference_biosequence_id => $reference_biosequence_id,
+			related_biosequence_id => $related_biosequence_id,
+		);
 
-  #### If not, INSERT it
-  if ($biosequence_relationship_id) {
-    if ($VERBOSE) {
-      print STDERR "WARNING: Relationship between $reference_biosequence_name".
-                 "and $related_biosequence_name already in database\n";
-    }
-    return ('');
-  } else {
-    $biosequence_relationship_id = $self->insertBiosequenceRelationshipRecord(
+		#### If not, INSERT it
+		if ($biosequence_relationship_id) {
+			if ($VERBOSE) {
+				print STDERR "WARNING: Relationship between $reference_biosequence_name".
+									 "and $related_biosequence_name already in database\n";
+			}
+			return ('');
+		}
+  }
+
+  my $biosequence_relationship_id = $self->insertBiosequenceRelationshipRecord(
       atlas_build_id => $atlas_build_id,
       protein_group_number => $protein_group_number,
       reference_biosequence_id => $reference_biosequence_id,
@@ -710,7 +722,6 @@ sub insertBiosequenceRelationship {
       relationship_type_id => $relationship_type_id,
     );
     return ($biosequence_relationship_id);
-  }
 
 
 } # end insertBiosequenceRelationship
@@ -738,28 +749,36 @@ sub insertBiosequenceRelationshipRecord {
     or die("ERROR[$METHOD]:Parameter relationship_type_id not passed");
   my $table_name = $TBAT_BIOSEQUENCE_RELATIONSHIP;
 
-  #### Define the attributes to insert
-  my $rowdata = {
-     atlas_build_id => $atlas_build_id,
-     protein_group_number => $protein_group_number,
-     reference_biosequence_id => $reference_biosequence_id,
-     related_biosequence_id => $related_biosequence_id,
-     relationship_type_id => $relationship_type_id,
-  };
+  my $biosequence_relationship_id='';
+  if ($fhs->{biosequence_relationship}){
+		my $fh = $fhs->{biosequence_relationship};
+		print $fh "$pk_counter->{biosequence_relationship}\t$atlas_build_id\t$protein_group_number\t".
+							"$reference_biosequence_id\t$related_biosequence_id\t$relationship_type_id\t\t\n";
+		$biosequence_relationship_id=$pk_counter->{biosequence_relationship};
+		$pk_counter->{biosequence_relationship}++;
+  }else{
+		#### Define the attributes to insert
+		my $rowdata = {
+			 atlas_build_id => $atlas_build_id,
+			 protein_group_number => $protein_group_number,
+			 reference_biosequence_id => $reference_biosequence_id,
+			 related_biosequence_id => $related_biosequence_id,
+			 relationship_type_id => $relationship_type_id,
+		};
 
-  #### Insert protein identification record
-  my $biosequence_relationship_id = $sbeams->updateOrInsertRow(
-    insert => 1,
-    table_name => $table_name,
-    rowdata_ref => $rowdata,
-    PK => 'biosequence_relationship_id',
-    return_PK => 1,
-    verbose=>$VERBOSE,
-    testonly=>$TESTONLY,
-  );
-
-  return($biosequence_relationship_id);
-
+		#### Insert protein identification record
+		$biosequence_relationship_id = $sbeams->updateOrInsertRow(
+			insert => 1,
+			table_name => $table_name,
+			rowdata_ref => $rowdata,
+			PK => 'biosequence_relationship_id',
+			return_PK => 1,
+			verbose=>$VERBOSE,
+			testonly=>$TESTONLY,
+		);
+  }
+	return($biosequence_relationship_id);
+  
 } # end insertBiosequenceRelationshipRecord
 
 

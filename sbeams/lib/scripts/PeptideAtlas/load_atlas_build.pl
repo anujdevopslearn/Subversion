@@ -260,7 +260,10 @@ sub handleRequest {
 
   ## get ATLAS_BUILD_ID:
   $ATLAS_BUILD_ID = get_atlas_build_id(atlas_build_name=>$atlas_build_name);
-
+  
+  ## check build database and update table names
+  my $msg = $sbeams->update_PA_table_variables ($ATLAS_BUILD_ID);
+ 
 
   ## handle --purge:
   # (if also --prot_info, handled later -- will purge only prot_info.)
@@ -307,7 +310,7 @@ sub handleRequest {
       organism_abbrev => $organism_abbrev,
     );
   }
-    if ($OPTIONS{"ptmspectra"}) {
+  if ($OPTIONS{"ptmspectra"}) {
     use SBEAMS::PeptideAtlas::Spectrum;
     my $spectra = new SBEAMS::PeptideAtlas::Spectrum;
     my $atlas_build_directory = get_atlas_build_directory(
@@ -351,6 +354,10 @@ sub handleRequest {
         $prot_info->update_protInfo_sampleSpecific(
           atlas_build_id => $ATLAS_BUILD_ID,
         );
+        $prot_info->insert_biosequence_id_atlas_build_search_batch(
+          atlas_build_id => $ATLAS_BUILD_ID,
+        );
+
       }
     }
   }
@@ -626,6 +633,7 @@ sub removeAtlas {
    purgeProteinIdentificationInfo(
      atlas_build_id => $atlas_build_id,
    );
+   print "database_name=$database_name\n";
 
    # then, recursively delete the child records of the atlas build
    if ($keep_parent_record) {
@@ -1021,25 +1029,23 @@ sub get_search_batch_and_sample_id_hash
 									 JOIN $TBPR_SEARCH_BATCH SB ON (SB.SEARCH_BATCH_ID = ASB.PROTEOMICS_SEARCH_BATCH_ID)
 									 JOIN $TBPR_PROTEOMICS_EXPERIMENT PE ON (PE.EXPERIMENT_ID = SB.EXPERIMENT_ID)
 									 JOIN $TB_PROJECT P ON (P.PROJECT_ID = PE.PROJECT_ID)
-									 LEFT JOIN $TBAT_SAMPLE_PUBLICATION SP ON (SP.sample_id = S.sample_id)
+									 JOIN $TBAT_SAMPLE_PUBLICATION SP ON (SP.sample_id = S.sample_id)
 									WHERE S.sample_id = $sample_id 
 								~;
                 my ($pid_str1,$pid_str2) ='';
-                my @result1 = $sbeams->selectOneColumn($sql);
+                my @result1 = $sbeams->selectOneColumn($query1);
                 $pid_str1 = join(",", @result1) if (@result1);
                 my $query2= qq~
                     select sample_publication_ids
                     from $TBAT_SAMPLE
-                    where S.sample_id = $sample_id
+                    where sample_id = $sample_id
                 ~;
-                my @result2 = $sbeams->selectOneColumn($sql);
-                $pid_str2 = $result2[0] if (@result2);
+                my @result2 = $sbeams->selectOneColumn($query2);
+                $pid_str2 = $result2[0] if (@result2); 
                 $pid_str2 =~ s/\s+//;
-
                 if ($pid_str1 ne $pid_str2){
-                  print "Update publcation record for sample $sample_id, $pid_str1\n";
+                  print "Update publcation record for sample_id=$sample_id sample_publication_ids=$pid_str1\n";
                   $sbeams->executeSQL("delete from $TBAT_SAMPLE_PUBLICATION where sample_id = $sample_id");
-                  $sbeams->executeSQL("update $TBAT_SAMPLE set sample_publication_ids='$pid_str1' where sample_id = $sample_id");
                   foreach my $pid (@result1){
                      my %rowdata = (publication_id => $pid,
                                         sample_id => $sample_id);
@@ -1474,7 +1480,7 @@ sub create_atlas_search_batch_parameter_recs
 
 
     #### Make a list of guesses for params files
-    my @params_files = ( "$search_batch_path/sequest.params",
+    my @params_files = ( "$search_batch_path/msfragger.params",
       "$search_batch_path/../sequest.params", "$search_batch_path/comet.def",
       "$search_batch_path/tandem.params", "$search_batch_path/tandem.xml",
       "$search_batch_path/spectrast.params",
@@ -2821,7 +2827,6 @@ if (! -e $outfile){
             n_protein_mappings => $data[10],
             is_subpeptide_of => $peptideAccession_subPeptide{$tmp_pep_acc},
         );
-
         my $success = $sbeams->updateOrInsertRow(
             update=>1,
             table_name=>$TBAT_PEPTIDE_INSTANCE,
@@ -3398,7 +3403,6 @@ sub insert_peptide_instance {
     verbose=>$VERBOSE,
     testonly=>$TESTONLY,
   );
-
   return($peptide_instance_id);
 
 } # end insert_peptide_instance

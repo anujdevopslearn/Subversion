@@ -332,6 +332,7 @@ sub get_table_help {
                  { key => 'Probability threshold', value => 'iProphet probability threshold applied to each experiment in this build' },
                  { key => 'PSM FDR threshold', value => 'PSM (peptide-spectrum match) level FDR threshold applied to each experiment in this build' },
                  { key => 'Canonical Proteins', value => 'Minimally redunant set of proteins required to explain (virtually) all non-decoy peptides observed in build (<a target=_termdefs href="http://www.peptideatlas.org/docs/protein_ident_terms.php">more info</a>)' },
+                 { key => 'Noncore-Canonical', value => 'Noncore canonical means that there are uniquely mapping peptides to this protein that do not map to a protein that is considered part of the core proteome of a species. A non-core canonical protein might be an isoform, contaminant, or protein missing from the core reference proteome.'},
                  { key => 'Indistinguishable Representative Protein', value=>'Indistinguishable representative means that there are peptides that map uniquely to a set of non-canonical proteins, thereby indicating that at least one of the proteins in the set must be present, but it cannot be determined which it is.'},
                  { key => 'Marginally Distinguished Proteins', value=>'Marginally distinguished means that this protein has peptides that are shared with a canonical peptide, but it also has a small number of peptides that appear to distinguish it from the canonical identification.'},
                  { key => 'Representative Proteins', value=>'Representative means that there are peptides that map uniquely to a set of non-canonical proteins, thereby indicating that at least one of the proteins in the set must be present, but it cannot be determined which it is.'},
@@ -439,7 +440,7 @@ sub get_dataset_spec_protein_info {
   ## older builds
   return '' if ($possibly_distinguished > 0);
 
-  my @level_names = ('canonical','indistinguishable representative'  ,'representative'
+  my @level_names = ('canonical','noncore-canonical','indistinguishable representative'  ,'representative'
                      ,'marginally distinguished','weak','insufficient evidence','indistinguishable','subsumed');
   $sql =qq~;
     SELECT LEVEL_NAME AS NAME, PROTEIN_PRESENCE_LEVEL_ID AS ID
@@ -729,7 +730,18 @@ sub build_overview_html {
 				       value => $sbeams->commifyNumber($build_info->{pep_count}->{cnt}), align => 'right' ) . "\n";
 
   $table .= $atlas->encodeSectionItem( key   => 'Protein Presence Levels', tr_info => $tr, value => '', align => 'right' ) . "\n";
-  foreach my $key (sort {$a cmp $b} keys %{$build_info->{prot_count}}){
+
+  my @levels = sort {$a cmp $b} keys %{$build_info->{prot_count}};
+  my @idx = grep {$levels[$_] ~~ 'noncore-canonical'} 0 .. $#levels;
+  if (@idx){
+    #move noncore-canonical to second
+    my $i = $idx[0];
+    my $val = $levels[$i];
+    splice @levels, $i, 1;
+    splice @levels, 1, 0, $val;
+  }
+
+  foreach my $key (@levels){
      my $level = $key;
      $level =~ s/\_/ /g;
      $level =~ s/(\w+)/\u$1/g; 
@@ -1180,7 +1192,7 @@ sub get_dataset_protein_info {
   ~;
   my %protein_level_ids = $sbeams->selectTwoColumnHash($sql);
 
-  my @level_names = ('canonical','indistinguishable representative'  ,'representative'
+  my @level_names = ('canonical','noncore-canonical','indistinguishable representative'  ,'representative'
                      ,'marginally distinguished','weak','insufficient evidence','indistinguishable','subsumed'); 
 
   my @headings =('Dataset',@level_names);
@@ -1647,7 +1659,7 @@ sub add_url {
   my %protein_level_ids = $sbeams->selectTwoColumnHash($sql);
 
   for (my $idx=0; $idx < $n; $idx++){ 
-    if ($column_name_ref->[$idx] =~ /(Dataset|Experiment Tag|Pubmed|^Canonical$|Indistinguish|Representative|Marginally|Weak|Insufficient|Subsumed|Unique All Proteins|Unique Canonical Proteins)/i){
+    if ($column_name_ref->[$idx] =~ /(Dataset|Experiment Tag|Pubmed|^Canonical$|noncore|Indistinguish|Representative|Marginally|Weak|Insufficient|Subsumed|Unique All Proteins|Unique Canonical Proteins)/i){
 			$cols{$idx} = $column_name_ref->[$idx];
     }
     if ($column_name_ref->[$idx] =~ /Experiment ID/){
@@ -1681,12 +1693,12 @@ sub add_url {
 						}
 					}
           $row->[$i] =~ s/,$//;
-        }elsif ($cols{$i} =~ /(^Canonical$|Indistinguish|Representative|Marginally|Weak|Insufficient|Subsumed)/i){
+        }elsif ($cols{$i} =~ /(^Canonical$|noncore|Indistinguish|Representative|Marginally|Weak|Insufficient|Subsumed)/i){
           my $level_id = $protein_level_ids{lc($cols{$i})};
           my $level_name = $cols{$i};
 					my $constraint = '';
 					if($level_name =~ /^indistinguishable$/i){
-							$constraint = "redundanmy cy_constraint=1";
+							$constraint = "redundancy_constraint=1";
 					}elsif ($level_name =~ /(subsumbed_by|identical)/i){
 							$constraint = "redundancy_constraint=$level_id";
 					}else{

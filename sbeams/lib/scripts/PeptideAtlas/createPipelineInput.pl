@@ -469,12 +469,13 @@ sub pepXML_start_element {
   if ($localname eq 'interprophet_result') {
     $self->{pepcache}->{scores}->{probability} = $attrs{probability};
   }
-  ### ptm result. only parse PTMProphet_STY result.
+  ### ptm result.
   if ($localname eq 'ptmprophet_result'){
     #prior="0.285714" ptm="PTMProphet_STY79.9663"
     #ptm_peptide="AY(0.000)VY(0.000)ADWVEHAT(0.026)S(0.026)EIEPGT(0.961)T(0.493)T(0.493)VLR">
-    if ($attrs{ptm} =~ /79\.9/){
-      $self->{pepcache}->{ptm_peptide} = $attrs{ptm_peptide};
+    ## phospho, Acetylation, Methylation
+    if ($attrs{ptm} =~ /:79\.9/ || $attrs{ptm} =~ /:42\.01/ || $attrs{ptm} =~ /:14\.01/){
+      $self->{pepcache}->{ptm_peptide}{$attrs{ptm}} = $attrs{ptm_peptide};
     }
   }
 
@@ -684,22 +685,6 @@ sub pepXML_end_element {
       my $prepend_charge = 0;
       my $charge = $self->{pepcache}->{charge};
 
-      if ($self->{pepcache}->{ptm_peptide}){
-        my @ss1 =  split(/\)/, $self->{pepcache}->{ptm_peptide});
-        my $pos = 0;
-        foreach my $s (@ss1){
-          if ($s =~ /(.*)\(([\d\.]+)/){
-            $pos += length($1);
-            if ($self->{pepcache}->{modifications}{$pos}){
-               $self->{pepcache}->{modifications}{$pos} .= "($2)";
-             }else{
-               $self->{pepcache}->{modifications}{$pos} = "($2)";
-             }
-          }else{
-            $pos += length($1);
-          }
-        }
-      }
       $peptide_sequence =~ s/[\r\n]//g;
 
       my $modified_peptide = modified_peptide_string($self, $peptide_sequence, $charge,
@@ -721,28 +706,44 @@ sub pepXML_end_element {
       );
 
       #### Store the information for this peptide into an array for caching
-      push(@{ $self->{pep_identification_list} },
-          [$self->{search_batch_id},
-					 $self->{pepcache}->{spectrum},
-					 $peptide_accession,
-					 $peptide_sequence,
-					 $self->{pepcache}->{peptide_prev_aa},
-					 $modified_peptide,
-					 $self->{pepcache}->{peptide_next_aa},
-					 $charge,
+      my $chimera_level='';
+			if ($self->{pepcache}->{spectrum} =~ /^([^\.]+?)((\_rs)+)(\.\d+)\.\d+\.\d+/){
+				my $root = $1;
+				my $rs = $2;
+				my $scan = $4;
+				$root = $root.$scan;
+				my @n = $rs=~ /\_rs/g;
+				$chimera_level = 1 + scalar @n;
+      }
+      my @tmp  = ($self->{search_batch_id},
+           $self->{pepcache}->{spectrum},
+           $peptide_accession,
+           $peptide_sequence,
+           $self->{pepcache}->{peptide_prev_aa},
+           $modified_peptide,
+           $self->{pepcache}->{peptide_next_aa},
+           $charge,
            $probability,
            $self->{pepcache}->{massdiff},
-           #need to store protein_name in case no protXML info
-           #$self->{pepcache}->{protein_name},
            $protein_name,
            $self->{pepcache}->{precursor_intensity},
            $self->{pepcache}->{total_ion_current},
            $self->{pepcache}->{signal_to_noise},
            $self->{pepcache}->{retention_time_sec},
-					]
-      );
-    }
+           $chimera_level, 
+           );
 
+       if ($self->{pepcache}->{ptm_peptide}){
+         my @ptm_peptides =();
+         foreach my $type (sort {$a cmp $b} keys %{$self->{pepcache}->{ptm_peptide}}){
+           push @ptm_peptides, "[$type]$self->{pepcache}->{ptm_peptide}{$type}";
+         }
+         push @tmp, join(",", @ptm_peptides);
+       }else{
+         push @tmp, '';
+       }
+       push(@{ $self->{pep_identification_list}},[@tmp]);
+    }
 
     #### Clear out the cache
     delete($self->{pepcache});
@@ -1259,7 +1260,9 @@ sub main {
                           protXML_n_sibling_peptides
                           precursor_intensity
                           total_ion_current
-                          signal_to_noise );
+                          signal_to_noise
+                          chimera_level
+                          ptm );
 
   unless ($APD_only) {
     #### If a list of search_batch_ids was provided, find the corresponding
@@ -1293,7 +1296,7 @@ sub main {
       chomp($line);
       next if ($line =~ /^\s*#/);   #comment
       next if ($line =~ /^\s*$/);   #empty line
-      my ($search_batch_id,$path) = split(/\s+/,$line);
+      my ($search_batch_id,$path) = split(/\s+/,$line,-1);
       my $filepath = $path;
 
       # Modified to use library method, found in SearchBatch.pm.  New file
@@ -1481,11 +1484,7 @@ sub main {
 
 					unless (-e $proteinProphet_filepath) {
 					#### Hard coded funny business for Novartis
-						if ($proteinProphet_filepath =~ /Novartis/) {
-							if ($proteinProphet_filepath =~ /interact-prob_\d/) {
-								$proteinProphet_filepath =~ s/prob_\d/prob_all/;
-							}
-						}
+             $proteinProphet_filepath =~ s/interact.*/interact-ipro.prot.xml/;
 					}
 					#### Hard coded correction for filename convention introduced
 					#### early 2009: iProphet output is interact-ipro.prot.xml,
@@ -2148,10 +2147,10 @@ sub main {
       #### This is info on any protein that any atlas peptide maps to.
       my $prot_identlist_file = "DATA_FILES/PeptideAtlasInput.PAprotlist";
       writeProtIdentificationListFile(
-	output_file => $prot_identlist_file,
-	ProteinProphet_prot_data => $CONTENT_HANDLER->{ProteinProphet_prot_data},
-	  # hashes protID to group. Group contains all protein info.
-	ProteinProphet_group_data =>
+				output_file => $prot_identlist_file,
+				ProteinProphet_prot_data => $CONTENT_HANDLER->{ProteinProphet_prot_data},
+					# hashes protID to group. Group contains all protein info.
+				ProteinProphet_group_data =>
 		   $CONTENT_HANDLER->{ProteinProphet_group_data},
       );
 
@@ -2160,45 +2159,6 @@ sub main {
       my $temp_file = "temp.PAidentlist";
       my %PAidentlist_prots;
       my $n_PSMs;
-      # for each of the two files
-      ## get chimera_level
-      open (IN, "<$combined_identlist_file");
-      my %chimera_level =();
-      my $flag =0;
-			while (my $line =<IN>){
-				chomp $line;
-				my @columns = split("\t", $line);
-				my $spectrum_name = $columns[1];
-				my $id = $columns[0];
-				$spectrum_name =~ /^(.*\.\d+)\.\d+\.\d+$/;
-				$id = "$id-$1";
-				$chimera_level{"$id"}  = '';
-				if ($spectrum_name =~ /^([^\.]+?)((\_rs)+)(\.\d+)\.\d+\.\d+/){
-					my $root = $1;
-					my $rs = $2;
-					my $scan = $4;
-					$root = $root.$scan;
-					my @n = $rs=~ /\_rs/g;
-					$chimera_level{"$id"} = 1 + scalar @n;
-          $flag =1;
-				}
-			}
-			foreach my $spec (keys %chimera_level){
-				if ($spec =~ /\_rs\./){
-					$spec =~ /^([^\.]+)((\_rs)+)(\.\d+)$/;
-					$spec = $1.$4;
-					if (defined $chimera_level{$spec}){
-						$chimera_level{$spec} = 1;
-					}
-				}else{
-           if ($flag){
-             $chimera_level{$spec} = 0;
-           }
-        }
-			}
-			
-        
-
       for my $file ( $combined_identlist_file, $sorted_identlist_file ) {
 				if ( -e $file ) {
 					open (IDENTLISTFILE, $file) ||
@@ -2212,51 +2172,39 @@ sub main {
 					print OUTFILE $line;
 					while ($line = <IDENTLISTFILE>) {
 						chomp ($line);
-						my @fields = split("\t", $line);
+						my @fields = split("\t", $line,-1);
 						my $pepseq = $fields[3];
 						my $identlist_protid = $fields[10];
-						my $spectrum_name = $fields[1];
-						my $id = $fields[0];
-						$spectrum_name =~ /^(.*\.\d+)\.\d+\.\d+$/;
-						$id = "$id-$1";
-						#if (scalar @fields == 11 ){
-					  #	push @fields, ("", "", "");
-						#}elsif(scalar @fields == 12){
-						#	push @fields, ("", "");
-						#}
-						push @fields, $chimera_level{$id};
-
-						# Replace field 11 (index 10) if this peptide (or one
 						# indistinguishable from it) is in our hash.
 						my $pep_protlist_aref = $CONTENT_HANDLER->{ProteinProphet_prot_data}->
 							 {pep_prot_hash}->{$pepseq};
 						if (! defined $pep_protlist_aref ) {
 							my @indis = get_leu_ile_indistinguishables($pepseq);
 							for my $indis (@indis) {
-					$pep_protlist_aref = $CONTENT_HANDLER->
-						 {ProteinProphet_prot_data}->{pep_prot_hash}->{$indis};
-					if ( defined $pep_protlist_aref ) {
-						last;
+								$pep_protlist_aref = $CONTENT_HANDLER->
+									 {ProteinProphet_prot_data}->{pep_prot_hash}->{$indis};
+								if ( defined $pep_protlist_aref ) {
+									last;
+								}
+	            }
+	         }
+					 if ( defined $pep_protlist_aref ) {
+							my @pep_protlist = @{$pep_protlist_aref};
+							my $covering_prot = $pep_protlist[0];
+							$PAidentlist_prots{$covering_prot} = 1;
+							if ($identlist_protid ne $covering_prot) {
+								$fields[10] = $covering_prot;
+							}
+					  } else {
+							$peps_not_found{$pepseq} = 1;
+					  }
+						# re-write line into temp file
+						print OUTFILE join("\t",@fields)."\n";
+						$n_PSMs++;
 					}
-	      }
-	    }
-	    if ( defined $pep_protlist_aref ) {
-	      my @pep_protlist = @{$pep_protlist_aref};
-	      my $covering_prot = $pep_protlist[0];
-	      $PAidentlist_prots{$covering_prot} = 1;
-	      if ($identlist_protid ne $covering_prot) {
-		$fields[10] = $covering_prot;
-	      }
-	    } else {
-	      $peps_not_found{$pepseq} = 1;
-	    }
-	    # re-write line into temp file
-	    print OUTFILE join("\t",@fields)."\n";
-	    $n_PSMs++;
-	  }
-	  # copy new file into old name
-	  system ("mv $temp_file $file");
-	} else {
+					# copy new file into old name
+					system ("mv $temp_file $file");
+				} else {
           print "WARNING: $file doesn't exist; can't update its protids.\n";
         }
       }
@@ -2545,7 +2493,9 @@ sub writePepIdentificationListFile {
                           precursor_intensity  
                           total_ion_current 
                           signal_to_noise
-                          retention_time_sec );
+                          retention_time_sec
+                          chimera_level
+                          ptm );
 
   print OUTFILE join("\t",@column_names)."\n";
 
@@ -2570,6 +2520,7 @@ sub writePepIdentificationListFile {
     chomp $line;
     my @columns = split(/\t/,$line, -1);
     my $identification = \@columns; 
+    my $spectrum_name = $identification->[1];
     my $charge = $identification->[7];
     my $peptide_sequence = $identification->[3];
     my $modified_peptide = $identification->[5];
@@ -2583,6 +2534,7 @@ sub writePepIdentificationListFile {
     my $pep_key = '';
     my $diff_is_great=0;
     my $protinfo_protxml;
+
     if ($OPTIONS{master_ProteinProphet_file} && !$OPTIONS{per_expt_pipeline}) {
       $protinfo_protxml = "master protXML"
     } else {
@@ -2636,75 +2588,30 @@ sub writePepIdentificationListFile {
       $adjusted_probability = $info->{nsp_adjusted_probability};
       $n_adjusted_observations = $info->{n_adjusted_observations};
       $n_sibling_peptides = $info->{n_sibling_peptides};
-      #push(@{$identification},$adjusted_probability,$n_adjusted_observations,$n_sibling_peptides);
-      $extra_cols_array[$idx] = "$identification->[8],$identification->[9],$identification->[10],".
-                                "$adjusted_probability,$n_adjusted_observations,$n_sibling_peptides".
-                                ",$identification->[11],$identification->[12],$identification->[13],$identification->[14]";
+      $extra_cols_array[$idx] = "$identification->[8];$identification->[9];$identification->[10];".
+                                "$adjusted_probability;$n_adjusted_observations;$n_sibling_peptides;".
+                                join(";", @{$identification}[11,12,13,14,15,16]);
       if ($initial_probability) {
 				$probability_adjustment_factor = $adjusted_probability / $initial_probability;
       }
     }else{
-      $extra_cols_array[$idx] = "$identification->[8],$identification->[9],$identification->[10],,,".
-                                ",$identification->[11],$identification->[12],$identification->[13],$identification->[14]";
+      $extra_cols_array[$idx] = "$identification->[8];$identification->[9];$identification->[10];;;;".
+                                join(";", @{$identification}[11,12,13,14,15,16]);
     }
     #### If there is spectral library information, look at that
-    #print "spectral_library_data = $spectral_library_data\n";
-    #print "spectrast_formatted_sequence = $spectrast_formatted_sequence\n";
     if ($spectral_library_data && $spectrast_formatted_sequence) {
       if ($spectral_library_data->{$spectrast_formatted_sequence}) {
-        #print "$peptide_sequence\t$initial_probability\t$spectral_library_data->{$peptide_sequence}\n";
 				# This adds a 15th column, which gums up the works during the load
 				#	    $identification->[14] = $spectral_library_data->{$spectrast_formatted_sequence};
 				push @{$consensus_lib{found}}, $spectrast_formatted_sequence;
       } else {
-        # print "$peptide_sequence\t$initial_probability\t($spectrast_formatted_sequence)\t not in lib \n";
 				push @{$consensus_lib{missing}}, $spectrast_formatted_sequence;
         #### If it's not in the library, kill it
         #### (tmf: maybe should kill some more sure way)
         $initial_probability = 0.5;
       }
     }
-
     #### If we are operating with a master_ProteinProphet_file, then
-    #### try a radical thing. Multiply the PepPro and ProPro probability.
-    #### This probably really isn't correct, but maybe it'll be close.
-    #### (Eric's radical idea disabled by 2009.)
-    if ($OPTIONS{master_ProteinProphet_file} &&
-          !$OPTIONS{per_expt_pipeline}) {
-      my $probability = $identification->[8];
-      my $adjusted_probability = $identification->[11];
-      if ($adjusted_probability && $probability_adjustment_factor) {
-				#### Depresses probabilities too much
-				#$probability = $probability * $adjusted_probability;
-				#### If the adjusted probability is 1.0, then give probabilities a big boost
-				#if ($adjusted_probability > 0.9999) {
-				#  $probability = 1.0 - ( ( 1.0 - $probability ) / 3.0 );
-				#  #### Although don't let it be less the adjustment to the top one
-				#  if ( $probability < $probability * $probability_adjustment_factor) {
-				#    $probability = $probability * $probability_adjustment_factor;
-				#  }
-				##### Else just apply the adjustment factor given to the top one
-				#} else {
-				#  $probability = $probability * $probability_adjustment_factor;
-				#}
-				#### Apply the adjustment factor given to the top one
-				$probability = $probability * $probability_adjustment_factor;
-				#### Newer ProteinProphet downgrades initial_probability 1.000 to 0.999
-				#### to help adjustment code. Because of this, sometimes probabilities
-				#### here can drift slightly over 1.000. Don't allow that.
-				$probability = 1 if ($probability > 1);
-				$identification->[8] = $probability;
-        $extra_cols_array[$idx] = "$identification->[8],$identification->[9],$identification->[10],".
-                                    "$identification->[11],$identification->[12],$identification->[13],$identification->[14]"; 
-				### tmf debugging 12/08
-				if ($diff_is_great)
-					 { print "Final adj prob = $probability: REJECTED!!!\n"; }
-			} else {
-				 $extra_cols_array[$idx] = "$identification->[8],$identification->[9],$identification->[10],".
-											"$identification->[11],$identification->[12],$identification->[13],$identification->[14]";
-				 print "WARNING: No adjusted probability for $charge-$modified_peptide\n";
-			}
-    }
     push @prob_array, [($identification->[8], $idx)];
     $idx++;
   }
@@ -2776,11 +2683,11 @@ sub writePepIdentificationListFile {
   $line = <INFILE>;
   while ($line = <INFILE>){
     chomp $line;
-    my @columns = split("\t", $line);
+    my @columns = split("\t", $line,-1);
     if($extra_cols_array[$idx]){
       #splice(@columns,$#columns-6,7);
       splice(@columns, 8, $#columns);
-      push @columns, split(",", $extra_cols_array[$idx],-1);
+      push @columns, split(";", $extra_cols_array[$idx],-1);
     }else{
       print "WARINING: only 7 columns\n";
     }
@@ -2797,7 +2704,6 @@ sub writePepIdentificationListFile {
     }
     $idx++;
   }
-
 
   print "\n  - wrote $counter peptides to identification list file.\n";
 
@@ -3754,7 +3660,7 @@ sub writePepIdentificationListTemplateFile {
   my @column_names = qw ( search_batch_id spectrum_query peptide_accession
     peptide_sequence preceding_residue modified_peptide_sequence
     following_residue charge probability massdiff protein_name 
-    precursor_intensity total_ion_current signal_to_noise retention_time_sec);
+    precursor_intensity total_ion_current signal_to_noise retention_time_sec chimera_level ptm);
 
   print OUTFILE join("\t",@column_names)."\n";
 
@@ -3798,7 +3704,7 @@ sub readIdentificationListTemplateFile {
   $line = <INFILE>; # throw away header line
   while ($line = <INFILE>) {
     chomp($line);
-    my @columns = split(/\t/,$line);
+    my @columns = split(/\t/,$line,-1);
 		my @ids = ();
 		push @ids,\@columns;
 		if (!$best_probs_from_protxml) {

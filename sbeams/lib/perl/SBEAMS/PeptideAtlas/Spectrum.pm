@@ -123,7 +123,7 @@ sub loadBuildSpectra {
   #### We now support two different file types
   #### First try to find the PAidentlist file
   my $filetype = 'PAidentlist';
-  my $expected_n_columns = 15;
+  my $expected_n_columns = 20;
   my $peplist_file = "$atlas_build_directory/".
     "PeptideAtlasInput_concat.PAidentlist";
 
@@ -186,7 +186,7 @@ sub loadBuildSpectra {
 			#		"This is likely missing ProteinProphet information, which is bad, but we will allow it until this bug is fixed.\n";
       #} 
       #18 retention_time_sec
-      if (scalar(@columns) == 19 || scalar(@columns) == 18 || scalar(@columns) == 17) {
+      if (scalar(@columns) == 20 || scalar(@columns) == 21 || scalar(@columns) == 19) {
 				
       } else {
 				die("ERROR: Unexpected number of columns (".
@@ -222,18 +222,12 @@ sub loadBuildSpectra {
 				$total_ion_current,
 				$signal_to_noise,
         $retention_time_sec,
-				$chimera_level) = @columns;
+				$chimera_level,
+        $ptm_sequence) = @columns;
       #### Correction for occasional value '+-0.000000'
       $massdiff =~ s/\+\-//;
     } else {
       die("ERROR: Unexpected filetype '$filetype'");
-    }
-    
-    $ptm_sequence = '';
-    if ($modified_sequence =~ /\(/){
-      $ptm_sequence = $modified_sequence;
-      $modified_sequence =~ s/\([\d\.]+\)//g;
-      $ptm_sequence =~ s/\[[\d\.]+\]//g;
     }
 
     $self->insertSpectrumIdentification(
@@ -260,6 +254,7 @@ sub loadBuildSpectra {
     $pre_search_batch_id = $search_batch_id;
     #print "$spec_counter... " if ($spec_counter %10000 == 0);
   }
+  close $spectrum_identifications;
 	my $commit_interval = 1000;
   open (IN, "<spectrum_identifications.txt"); 
 	print  localtime() .": insert spectrum_identifications\n";
@@ -308,7 +303,7 @@ sub loadBuildPTMSpectra {
   #### We now support two different file types
   #### First try to find the PAidentlist file
   my $filetype = 'PAidentlist';
-  my $expected_n_columns = 17;
+  my $expected_n_columns = 20;
   my $peplist_file = "$atlas_build_directory/".
     "PeptideAtlasInput_concat.PAidentlist";
 
@@ -349,13 +344,8 @@ sub loadBuildPTMSpectra {
     #  next;
     #}
     @columns = split("\t",$line,-1);
-    unless (scalar(@columns) == $expected_n_columns) {
-      if (scalar(@columns) == 19 || scalar(@columns) == 18 || scalar(@columns) == 17) {
-				
-      } else {
-				die("ERROR: Unexpected number of columns (".
-				scalar(@columns)."!=$expected_n_columns) in\n$line");
-      }
+    unless (scalar(@columns) == 20 || scalar(@columns) == 21 || scalar(@columns) == 19 ){
+      die("ERROR: Unexpected number of columns (scalar(@columns)) !=$expected_n_columns) in\n$line\n");
     }
 
     my ($search_batch_id,$spectrum_name,$peptide_accession,$peptide_sequence,
@@ -447,6 +437,7 @@ sub loadBuildPTMSpectra {
     print "$spec_counter... " if ($spec_counter %10000 == 0);
  
   }
+  close $ptm_spectrum_identifications;
 	my $commit_interval = 1000;
   open (IN, "<ptm_spectrum_identifications.txt"); 
 	print  localtime() .": insert ptm_spectrum_identifications\n";
@@ -1569,9 +1560,13 @@ sub insertSpectrumPTMIdentificationRecord {
     or die("ERROR[$METHOD]: Parameter ptm_sequence not passed");
 
   #### Define the attributes to insert
+  $ptm_sequence =~ /\[(\S+)\](.*)/;
+  my $ptm_type = $1;
+  $ptm_sequence = $2;
   my %rowdata = (
     ptm_sequence => $ptm_sequence,
     spectrum_identification_id => $spectrum_identification_id,
+    ptm_type => $ptm_type,
   );
 
   #### Insert spectrum PTM identification record
@@ -1676,19 +1671,19 @@ sub loadSpectrum_Fragmentation_Type {
             }
             my %fragmentation_types =();
             foreach my $line(<F>){
-              if ($line =~ /unknown/){
+              if ($line =~ /unknown/i){
                  my $type = $directories{$dir};
 								 if ($type && $type !~/,/){
 									 $self->updateSpectrum_Fragmentation_Type(   scan2spectrum_id =>[values %{$scan2spectrum_id{$specfile}}],
-																															 fragmentation_type_id => $type);
-                   last;
+                                                               fragmentation_type_id => $type);
 								 }else{
 									 print "WARNING: no update for $data_directory\n";
 								 }
+                 last;
               }
               if ($line =~ /^\*\s+(.*)/){
                 my $type = $1;
-                die "ERROR no fragmentation_type_id found for type '$type'\n" if (not defined $fragmentation_type_ids{$type});
+                die "ERROR $line\n\tno fragmentation_type_id found for type '$type'\n" if (not defined $fragmentation_type_ids{$type});
                 $self->updateSpectrum_Fragmentation_Type(   scan2spectrum_id =>[values %{$scan2spectrum_id{$specfile}}],
                                                      fragmentation_type_id => $fragmentation_type_ids{$type});
                 last;
@@ -1696,7 +1691,7 @@ sub loadSpectrum_Fragmentation_Type {
                  $line =~ /^(\d+)\s+(.*)$/;
                  my $scan = $1;
                  my $type = $2;
-                 die "ERROR no fragmentation_type_id found for type '$type'\n" if (not defined $fragmentation_type_ids{$type});      
+                 die "ERROR $line\n\tno fragmentation_type_id found for type '$type'\n" if (not defined $fragmentation_type_ids{$type});      
                  next if (not defined $scan2spectrum_id{$specfile}{$scan});
                   
                  $fragmentation_types{$fragmentation_type_ids{$type}}{$scan2spectrum_id{$specfile}{$scan}} =1;

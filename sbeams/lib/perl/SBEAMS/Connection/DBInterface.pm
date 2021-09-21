@@ -18,7 +18,7 @@ package SBEAMS::Connection::DBInterface;
 
 use strict;
 use vars qw(@ERRORS $dbh $sth $q $resultset_ref $rs_params_ref
-            $SORT_COLUMN $SORT_TYPE $timing_info
+            $SORT_COLUMN $SORT_TYPE $timing_info 
            );
 use CGI::Carp qw(croak);
 use URI::Escape;
@@ -44,7 +44,9 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::DataTable;
 use SBEAMS::Connection::Log;
 use SBEAMS::Connection::TableInfo;
-use SBEAMS::Connection::Utilities;
+
+use SBEAMS::PeptideAtlas::Tables;
+
 
 my $log = SBEAMS::Connection::Log->new();
 
@@ -1764,31 +1766,48 @@ sub executeSQL {
 
     #### If the prepare() succeeds, execute
     if ($sth) {
-
       my $rows = '';
-      eval {
-           $rows  = $sth->execute();
-           };
-      if ( $@ ) {
-        $log->error( "Caught error: $@" );
-        $log->error( "DBI errorstring is $DBI::errstr" );
-      }
+      my $n_try = 1;
+      while ($n_try <= 5){
+				eval {
+						 $rows  = $sth->execute();
+						 };
+				if ( $@ ) {
+					$log->error( "Caught error: $@" );
+					$log->error( "DBI errorstring is $DBI::errstr" );
+				}
 
-      if ($rows) {
-        if (ref($return_error)) {
-          $$return_error = '';
-        }
-        return $rows;
-      } elsif ($return_error) {
-        if (ref($return_error)) {
-          $$return_error = $dbh->errstr;
-        }
-        return 0;
-      } else {
-        $log->error( "Error on execute DBI errorstring is $DBI::errstr" );
-        die("ERROR on SQL execute():\n$sql\n\n".$dbh->errstr);
+				if ($rows) {
+					if (ref($return_error)) {
+						$$return_error = '';
+					}
+					return $rows;
+				} elsif ($return_error) {
+					if (ref($return_error)) {
+						$$return_error = $dbh->errstr;
+					}
+          if ($n_try == 5){
+				  	return 0;
+          }else{
+            print "Execute try $n_try\n";
+            print "ERROR on SQL execute():\n$sql\n\n".$dbh->errstr;
+            $dbh->disconnect();
+            $dbh = $self->getDBHandle(); 
+            $n_try++;
+          }
+				} else {
+					$log->error( "Error on execute DBI errorstring is $DBI::errstr" );
+          if ($n_try == 5){
+            print "Execute try $n_try.\n";
+						die("ERROR on SQL execute():\n$sql\n\n".$dbh->errstr);
+          }
+          print "Execute try $n_try. Sleep 10sec\n";
+          print "ERROR on SQL execute():\n$sql\n\n".$dbh->errstr;
+          $dbh->disconnect();
+          $dbh = $self->getDBHandle(); 
+          $n_try++;
+				}
       }
-
     #### If the prepare() fails
     } elsif ($return_error) {
       if (ref($return_error)) {
@@ -1798,7 +1817,6 @@ sub executeSQL {
     } else {
       die("ERROR on SQL prepare(): ".$dbh->errstr);
     }
-
 
     #### Return the number of rows affected, or some other non-0 result
     return $rows;
@@ -2095,8 +2113,9 @@ sub deleteRecordsAndChildren {
          if ($VERBOSE);
        print "  (Testing only; not really deleting.)\n" if ($VERBOSE && $TESTONLY);
        print "." unless ($QUIET || $VERBOSE);
+       print "first_element=$first_element n_ids=$n_ids\n$sql\n";
        $self->executeSQL($sql) unless ($TESTONLY);
-
+       print "done\n";
        #### Update the first and last batch block pointers if relevant
        last unless ($delete_batch);
        $first_element += $delete_batch;
@@ -4578,8 +4597,6 @@ sub parseResultSetParams {
 
   #### The user will use a 1-based scheme, but internally switch to 0-based
   $rs_params{page_number} -= 1 if ($rs_params{page_number});
-
-
   #### Return the hash
   return %rs_params;
 
@@ -5089,6 +5106,13 @@ sub parse_input_parameters {
        !($ref_parameters->{action} gt ''))) {
     $ref_parameters->{action} = $ref_parameters->{apply_action};
   }
+
+  if ($ref_parameters->{atlas_build_id}){
+    $self-> update_PA_table_variables($ref_parameters->{atlas_build_id});
+  }elsif($ref_parameters->{build_id}){
+    $self-> update_PA_table_variables($ref_parameters->{build_id});
+  }
+
 
   return $n_params_found;
 
@@ -7992,6 +8016,13 @@ sub getOrganizationID {
 	return $CONFIG_SETTING{DEFAULT_ORGANIZATION_ID} || 1;
 }
 
+sub update_PA_table_variables{
+  my $self = shift;
+  my $atlas_build_id = shift;
+  my $msg = SBEAMS::PeptideAtlas::Tables->update_PA_table_variables($atlas_build_id);
+  return $msg; 
+
+}
 ###############################################################################
 # addProjectComment
 ###############################################################################

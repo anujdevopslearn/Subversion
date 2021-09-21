@@ -60,10 +60,27 @@ Options:
                                 added and no new directories are created.
   --insert                    will insert even there is a same nextprot mapping for the build  
                               (use when the atlasprophet version changed)
+  --update
+  --insertMapping
+  --insertSummary
+  --protein_file_location   
+  --nextprot_mapping_id 
+  --atlas_build_id 
+ $ENV{SBEAMS}/lib/scripts/PeptideAtlas/load_neXtProt_mapping.pl \
+ --nextprot_mapping_id 4 \
+ --protein_file_location /net/db/projects/PeptideAtlas/pipeline/AtlasProphet/2015-10-26/HumanAll/ \
+ --update --verbose --testonly
+
+ $ENV{SBEAMS}/lib/scripts/PeptideAtlas/load_neXtProt_mapping.pl \
+ --nextprot_mapping_id 2 \
+ --protein_file_location /net/db/projects/PeptideAtlas/pipeline/output/Human_UPSP_2014/DATA_FILES --update
+
 EOU
 
 
-GetOptions(\%OPTIONS,"verbose","help","testonly", "insert");
+GetOptions(\%OPTIONS,"verbose","help","testonly", "insert","protein_file_location:s",
+           "nextprot_mapping_id:i","insertMapping","insertSummary","atlas_build_id:i",
+           "update");
 
 if ($OPTIONS{help}){
   print $USAGE;
@@ -72,27 +89,76 @@ if ($OPTIONS{help}){
 $VERBOSE=$OPTIONS{verbose};
 $TESTONLY = $OPTIONS{testonly};
 my $insert = $OPTIONS{insert};
+my $update = $OPTIONS{update};
+my $nextprot_mapping_id = $OPTIONS{nextprot_mapping_id} || '';
+my $insertMapping = $OPTIONS{insertMapping} || 0;
+my $insertSummary = $OPTIONS{insertSummary} || 0;
+my $atlas_build_id = $OPTIONS{atlas_build_id} || '';
 
-my $sql = qq~
+my ($sql,$atlas_build_date,$build_path); 
+
+if (! $atlas_build_id){
+  $sql = qq~
   SELECT DAB.ATLAS_BUILD_ID , AB.BUILD_DATE, AB.DATA_PATH 
   FROM $TBAT_DEFAULT_ATLAS_BUILD DAB, $TBAT_ATLAS_BUILD AB 
   WHERE DEFAULT_ATLAS_BUILD_ID = 4 
   AND DAB.ATLAS_BUILD_ID = AB.ATLAS_BUILD_ID 
  ~;
+}else{
+  $sql = qq~
+  SELECT AB.ATLAS_BUILD_ID , AB.BUILD_DATE, AB.DATA_PATH
+  FROM $TBAT_ATLAS_BUILD AB
+  WHERE AB.ATLAS_BUILD_ID = $atlas_build_id 
+ ~;
+}
 
 my @rows = $sbeams->selectSeveralColumns ($sql);
-my ($atlas_build_id, $atlas_build_date,$build_path) = @{$rows[0]};
+($atlas_build_id, $atlas_build_date,$build_path) = @{$rows[0]};
 
-$build_path = "$build_path/NextProt_SNPs";
-#$build_path = "/net/db/projects/PeptideAtlas/pipeline/AtlasProphet/2015-08-10";
+print "$atlas_build_id, $atlas_build_date,$build_path\n";
 
-$atlas_build_date =~ s/(\d+\-\d+)\-.*/$1/;
+my $msg = $sbeams->update_PA_table_variables($atlas_build_id);
+
+#$build_path = "$build_path/NextProt_SNPs";
+
+#$atlas_build_id = 451;
+#$build_path = "/HumanPublic_201511/DATA_FILES/";
+
+
+my $protein_file_location = $OPTIONS{protein_file_location} || die "need protein file location\n";
+print "protein_file_location $protein_file_location\n";
+
+#$atlas_build_date =~ s/(\d+\-\d+)\-.*/$1/;
 
 use File::stat;
 use POSIX qw(strftime);
-my $mtime = stat("/data/seqdb/nextprot/chr_reports/nextprot_chromosome_1.txt")->mtime;
+
+my $neXtprot_file_loc = "/net/db/projects/PeptideAtlas/species/Human/NextProt/chr_reports/";
+my ($host, $user, $passwd) = ('ftp.nextprot.org', 'anonymous', '');
+my $dir = 'pub/current_release/ac_lists/';
+my $ftp = Net::FTP->new($host) or die qq{Cannot connect to $host: $@};
+$ftp->login($user, $passwd) or die qq{Cannot login: }, $ftp->message;
+$ftp->get("$dir/nextprot_ac_list_all.txt", "$neXtprot_file_loc/nextprot_ac_list_all.txt") or die qq{Cannot download }, $ftp->message;
+$dir = 'pub/current_release/chr_reports/';
+my @ftp_lists=$ftp->ls("$dir/nextprot_chromosome*");
+foreach my $ftp_file(@ftp_lists){
+   print "downloading $ftp_file\n";
+   $ftp_file =~ s/.*\///;
+	 $ftp->get("$dir/$ftp_file", "$neXtprot_file_loc/$ftp_file") or die qq{Cannot download }, $ftp->message;
+   my $time =  $ftp->mdtm("$dir/$ftp_file");
+   utime($time, $time, "$neXtprot_file_loc/$ftp_file");
+}
+print "downloading nextprot_refseq.txt\n";
+$ftp->get("pub/current_release/mapping/nextprot_refseq.txt", "$neXtprot_file_loc/nextprot_refseq.txt") or die qq{Cannot download }, $ftp->message;;
+print "downloading nextprot_ensg.txt\n";
+$ftp->get("pub/current_release/mapping/nextprot_ensg.txt", "$neXtprot_file_loc/nextprot_ensg.txt") or  die qq{Cannot download }, $ftp->message;
+
+
+my $mtime = stat("/net/db/projects/PeptideAtlas/species/Human/NextProt/chr_reports/nextprot_chromosome_1.txt")->mtime;
 my @time = localtime($mtime);
 my $nextprot_release_date  = strftime "%Y-%m-%d", @time;
+
+
 
 if (! $insert){
   $insert = check_version (nextprot_release_date => $nextprot_release_date, 
@@ -100,26 +166,19 @@ if (! $insert){
 }
 
 ## if there is record for the nextprot_release_date and build_id, no action required. 
-if ( ! $insert){
+if ( ! $update && (! $insert && ! $insertMapping && ! $insertSummary)){
   print "There is a record for the nextprot_release_date $nextprot_release_date and build_id $atlas_build_id already.\n"
         ."If you want to add record still, please use --insert option.\n";
   exit;
 }
 
-
-my $acc_file = "/net/db/projects/PeptideAtlas/species/Human/NextProt/chr_reports/nextprot_ac_list_all.txt";
-my ($host, $user, $passwd) = ('ftp.nextprot.org', 'anonymous', '');
-my $dir = 'pub/current_release/ac_lists/';
-my $ftp = Net::FTP->new($host) or die qq{Cannot connect to $host: $@};
-$ftp->login($user, $passwd) or die qq{Cannot login: }, $ftp->message;
-$ftp->cwd($dir) or die qq{Cannot cwd to $dir: }, $ftp->message;
-$ftp->get('nextprot_ac_list_all.txt', $acc_file); 
-
-my $nextprot_mapping_id = insert_NeXtProt_Mapping(atlas_build_id => $atlas_build_id,
+if ($insert && $nextprot_mapping_id eq ''){
+ $nextprot_mapping_id = insert_NeXtProt_Mapping(atlas_build_id => $atlas_build_id,
                                                   nextprot_release_date => $nextprot_release_date);
+}
 
-
-my @files = `ls /data/seqdb/nextprot/chr_reports/nextprot_chromosome_*.txt`;
+#my @files = `ls /data/seqdb/nextprot/chr_reports/nextprot_chromosome_*.txt`;
+my @files = `ls /net/db/projects/PeptideAtlas/species/Human/NextProt/chr_reports/nextprot_chromosome_*.txt`;
 my %pe_level = ();
 my %pe_mapping = (
   'homology' => 3,
@@ -136,49 +195,66 @@ foreach my $file (@files){
       next;
     }
     chomp $line;
-    my @elm = split(/\t/, $line);
-    my $acc = $elm[0];
-    my $level = $elm[2];
-    my $chrominfo = $elm[1];
-    my $name = $elm[8];
+    #my @elm = split(/\t/, $line);
+    my @elm = $line =~ /^(\S+)\s{0,}(NX_\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(forward|reverse|\-)\s+(.*)(yes|no)\s+(yes|no)\s+(yes|no)\s+(yes|no)\s+(\d+)\s+(\d+)\s+(\d+)\s+(.*)$/;
+    #for my $i (0..$#elm){
+    #  print "$i $elm[$i]\n";
+    #}
+    my $acc = $elm[1];
+    my $level = $elm[6];
+    my $chrominfo = $elm[2];
     $level =~ s/\s+$//;
     $level =~ s/^\s+//; 
     $acc =~ s/.*NX_//;
     $acc =~ s/\s+//g;
     $pe_level{$acc} = $pe_mapping{$level};
-    my ($chr,$start,$end) = split(/\s+/, $chrominfo);
+
+    my $start = $elm[3];
+    my $end = $elm[4];
     if ($start =~ /\D/ || $end =~ /\D/){
       next;
     }
     $file =~ /chromosome_(\w+).txt/;
-    $chr = "$1";
+    my $chr = "$1";
     my $mb = int( $start /1000000);
   }
 }
 
 my %bs_name;
-my $biosequence_file = "/net/db/projects/PeptideAtlas/pipeline/output/$build_path/Homo_sapiens.fasta";
+
+my $biosequence_file = "$ENV{PIPELINE}/output/$build_path/Homo_sapiens.fasta";
+if ($protein_file_location){
+  $biosequence_file = "$protein_file_location/Homo_sapiens.fasta";
+}
+
 open (ACC, "<$biosequence_file" ) or die "cannot open $biosequence_file\n";
 while (my $line = <ACC>){
   chomp $line;
-  if ($line =~ />NX_(\S+).*/){
-    my $acc = $1;
-    if($acc =~ /NX_(\w+)\-\d+/){
-      $bs_name{$1} = 0; 
-    }else{
-      if ($line =~ />sp.*PE=(\d+).*/){
-         $pe_level{$acc} = $1;
-         $bs_name{$acc} = 0;
-      }
-    }
-  }elsif($line =~ />(sp\S+)/){
+  next if($line !~ />/);
+  if ($line =~ /nP20K/){
+    $line =~ />(\S+) .*PE=(\d+)/;
+    $pe_level{$1} = $2 if (not defined $pe_level{$1}); 
     $bs_name{$1} = 0;
+  }elsif($line =~ /SPnotNP/i){
+    $line =~ />(\S+) .*/;
+    $bs_name{"sp|$1"} = 0;
+  }elsif($line =~ />(CONTAM\_\S+)/){
+    $bs_name{"CONTAM|$1"} = 0;
+  }elsif($line =~ />(IMGT\_\S+)/){
+    $bs_name{"IMGT|$1"} = 0;
+  }elsif($line =~ />(DECOY\_\S+)/){
+    $bs_name{"DECOY|$1"} = 0;
+  }else{
+    if ($line !~ /(>gi|>ENSP|Uniprot|nPvarsplic)/){
+      $line =~ />(\S+)/;
+      $bs_name{"CONTRIB|$1"} = 0;
+    }
   }
 }
 
 #protein_group_number,reference_biosequence_name,related_biosequence_name,relationship_name
 my %releationship = ();
-my $paprot_releationship_file = "/net/db/projects/PeptideAtlas/pipeline/output/$build_path/PeptideAtlasInput.PAprotRelationships";
+my $paprot_releationship_file = "$protein_file_location/PeptideAtlasInput.PAprotRelationships";
 open (R, "<$paprot_releationship_file") or die "cannot open $paprot_releationship_file\n";
 while (my $line = <R>){
   chomp $line;
@@ -198,7 +274,7 @@ while (my $line = <R>){
 #represented_by_biosequence_name,subsumed_by_biosequence_name,
 #estimated_ng_per_ml,abundance_uncertainty,is_covering,group_size,norm_PSMs_per_100K
 
-my $paprotlist_file = "/net/db/projects/PeptideAtlas/pipeline/output/$build_path/PeptideAtlasInput.PAprotIdentlist";
+my $paprotlist_file = "$protein_file_location/PeptideAtlasInput.PAprotIdentlist";
 open (IN, "<$paprotlist_file") or die "cannot open $paprotlist_file\n";
 
 @rows = ();
@@ -270,17 +346,15 @@ my @rows = $sbeams->selectSeveralColumns($sql);
 
 foreach my $row (@rows){
   my ($prot, $npep, $nobs) = @$row;
+  next if ($prot =~ /DECOY/);
   if ($prot =~ /NX_(\S+)-\d+/){
     $prot = $1;
   }
-
   next if($prot =~ /CONTA/);
   $prot =~ s/.*\|//;
   $prot_obs{$prot} = $npep;
   $pi_obs{$prot} = $nobs;
 }
-
-
 
 my $space = 118;
 my %hash = ();
@@ -303,14 +377,15 @@ foreach my $file (@files){
 			next;
 		}
 		chomp $line;
-		my @elm = split(/\t/, $line);
-		$elm[0] =~ /(\S+)\s+NX_(\S+)/;
-		my $gene = $1;
- 		my $nextprot = $2;
+	  my @m = $line =~ /^(\S+)\s{0,}(NX_\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(forward|reverse|\-)\s+(.*)(yes|no)\s+(yes|no)\s+(yes|no)\s+(yes|no)\s+(\d+)\s+(\d+)\s+(\d+)\s+(.*)$/;
+		my $gene = $m[0];
+ 		my $nextprot = $m[1];
+    $nextprot =~ s/NX_//; 
     $bs_name{$nextprot} = 1;
     my $pe_level = $pe_level{$nextprot} || '?';
     $summary{$chr}{'neXtProt entries'}{$nextprot}++;
     $summary_PE{$pe_level}{'neXtProt entries'}{$nextprot}++;
+    $summary_PE{'Total'}{'neXtProt entries'}{$nextprot}++;
     my $str =  $prot_obs{$nextprot};
     $chr =~ /.*\s+(.*)/;
     my $chr_num = $1;
@@ -319,32 +394,47 @@ foreach my $file (@files){
 				if (defined $present_level{$nextprot}{present}){
 					 $str = "$present_level{$nextprot}{present}\t$str";
 					 my $level =  $present_level{$nextprot}{present} ;
-					 $level =~ s/(to|by).*//;
-					 if ($level =~ /canoni/){
+					 $level =~ s/(into|to|by).*//;
+					 if ($level =~ /canoni/i){
 						 $summary{$chr}{$level}{$nextprot}=1;
              $summary_PE{$pe_level}{$level}{$nextprot}=1;
-					 }elsif($level =~ /(distinguish|weak|insufficient)/){
-             $summary{$chr}{'uncertain'}{$nextprot}=1;
-             $summary_PE{$pe_level}{'uncertain'}{$nextprot}=1;
-           }else{
+             $summary_PE{'Total'}{$level}{$nextprot}=1;
+					 }elsif($level =~ /subsumed/i){
 						 $summary{$chr}{'Redundant relationship'}{$nextprot}=1;
              $summary_PE{$pe_level}{'Redundant relationship'}{$nextprot}=1;
+             $summary_PE{'Total'}{'Redundant relationship'}{$nextprot}=1;
+           }elsif($level =~ /rejected/i){
+             $summary{$chr}{'Not Observed'}{$nextprot}=1;
+             $summary_PE{$pe_level}{'Not Observed'}{$nextprot}=1;
+             $summary_PE{'Total'}{'Not Observed'}{$nextprot}=1;
+
+           }else{## indistinguishable representative, insufficient evidence, marginally distinguished, weak
+             $summary{$chr}{'uncertain'}{$nextprot}=1;
+             $summary_PE{$pe_level}{'uncertain'}{$nextprot}=1;
+             $summary_PE{'Total'}{'uncertain'}{$nextprot}=1;
 					 }
 				}
 			}elsif(defined $releationship{$nextprot}{indistinguishable}){
 					$str = "$releationship{$nextprot}{indistinguishable}\t$str";
 					$summary{$chr}{'Redundant relationship'}{$nextprot}=1;
           $summary_PE{$pe_level}{'Redundant relationship'}{$nextprot}=1;
+          $summary_PE{'Total'}{'Redundant relationship'}{$nextprot}=1;
 			}elsif(defined $releationship{$nextprot}{identical}){
 					$str = "$releationship{$nextprot}{identical}\t$str";
 					$summary{$chr}{'Redundant relationship'}{$nextprot}=1;
           $summary_PE{$pe_level}{'Redundant relationship'}{$nextprot}=1;
+          $summary_PE{'Total'}{'Redundant relationship'}{$nextprot}=1;
+
 			}else{
-				 $str = "not observed\t0";
+				 $str = "not observed\t$str";
+        $summary{$chr}{'Not Observed'}{$nextprot}=1;
+        $summary_PE{$pe_level}{'Not Observed'}{$nextprot}=1;
+        $summary_PE{'Total'}{'Not Observed'}{$nextprot}=1;
 			}
 		}else{
 				$summary{$chr}{'Not Observed'}{$nextprot}=1;
         $summary_PE{$pe_level}{'Not Observed'}{$nextprot}=1;
+        $summary_PE{'Total'}{'Not Observed'}{$nextprot}=1;
 				$str = "not observed\t0";
 		}
     if ($line =~ /([qp][\d\.]+)(\s+-\s+)([qp][\d\.]+)/){
@@ -356,8 +446,7 @@ foreach my $file (@files){
     if ($line =~ /unknownq32.2130146082/){
       $line =~ s/unknownq32.2130146082/unknownq32.21 30146082/;
     }
-		my @m = $line =~ /^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(.*)(yes|no)\s+(yes|no)\s+(yes|no)\s+(yes|no)\s+(\d+)\s+(\d+)\s+(\d+)\s+(.*)$/;
-    $m[5] =~ s/\s+$//;
+    $m[6] =~ s/\s+$//;
  
     if ($m[2] =~ /unknown/i  || $m[2] !~ /[1-22XYMT]/  ){
 			$file =~ /chromosome_(\S+).txt/;
@@ -376,91 +465,51 @@ foreach my $file (@files){
     }
     push @{$hash{$nextprot}{line}},$new_line;
     $hash{$nextprot}{cnt}++;
+
 	}
 }
 foreach my $nextprot (keys %bs_name){
-  if ($bs_name{$nextprot} == 0){
     my $newline = '';
     my $level='';
     my $pe_level = $pe_level{$nextprot} || '?';
-    if($nextprot !~ /^sp/){
-      $summary{'Chromosome ?'}{'neXtProt entries'}{$nextprot}++;
-      $summary_PE{$pe_level}{'neXtProt entries'}{$nextprot}++;
-			if (defined $prot_obs{$nextprot}){
-				if (defined $present_level{$nextprot}){
-					if (defined $present_level{$nextprot}{present}){
-						 $level =  $present_level{$nextprot}{present} ;
-						 $level =~ s/(to|by).*//;
-						 if ($level =~ /(canoni)/){
-							 $summary{'Chromosome ?'}{$level}{$nextprot}=1;
-							 $summary_PE{$pe_level}{$level}{$nextprot}=1;
-						 }elsif($level =~ /(distinguish|weak|insufficient)/){
-               $summary{'Chromosome ?'}{uncertain}{$nextprot}=1;
-               $summary_PE{$pe_level}{uncertain}{$nextprot}=1;
-             }else{
-							 $summary{'Chromosome ?'}{'Redundant relationship'}{$nextprot}=1;
-							 $summary_PE{$pe_level}{'Redundant relationship'}{$nextprot}=1;
-						 }
-					}
-				}elsif(defined $releationship{$nextprot}{indistinguishable}){
-					 $summary{'Chromosome ?'}{'Redundant relationship'}{$nextprot}=1;
-					 $summary_PE{$pe_level}{'Redundant relationship'}{$nextprot}=1;
-					 $level='indistinguishable';
-				}elsif(defined $releationship{$nextprot}{identical}){
-					 $summary{'Chromosome ?'}{'Redundant relationship'}{$nextprot}=1;
-					 $summary_PE{$pe_level}{'Redundant relationship'}{$nextprot}=1;
-					 $level='identical';
-				}else{
-					 $summary{'Chromosome ?'}{'Not Observed'}{$nextprot}=1;
-					 $summary_PE{$pe_level}{'Not Observed'}{$nextprot}=1;
-					 $level = 'Not Observed';
-				}
-				$newline = "\tNX_$nextprot\tNA\t\t\t\t\t\t\t\t\t\t\t$level\t$prot_obs{$nextprot}\t ";
-			}else{
-				 $summary{'Chromosome ?'}{'Not Observed'}{$nextprot}=1;
-				 $summary_PE{$pe_level}{'Not Observed'}{$nextprot}=1;
-				 $level = 'Not Observed';
-				 $newline = "\tNX_$nextprot\tNA\t\t\t\t\t\t\t\t\t\t\t$level\t0\t ";
-			}
-			push @{$hash{$nextprot}{line}},$newline;
-		}else{
-      $summary_PE{sp}{'neXtProt entries'}{$nextprot}++;
-      my $prot = $nextprot;
-      $prot =~ s/.*\|//;
+    next if($nextprot !~ /^(sp|DECOY|CONTAM|CONTRIB|IMGT)/);
+    $nextprot =~ /(\w+)\|(.*)/;
+    my $prot = $2;
+    my $tag = $1;
+    
+    $summary_PE{$tag}{'neXtProt entries'}{$prot}++;
 			if (defined $prot_obs{$prot}){
-				if (defined $present_level{$nextprot}){
-					if (defined $present_level{$nextprot}{present}){
-						 $level =  $present_level{$nextprot}{present} ;
+				if (defined $present_level{$prot}){
+					if (defined $present_level{$prot}{present}){
+						 $level =  $present_level{$prot}{present} ;
 						 $level =~ s/(to|by).*//;
 						 if ($level =~ /(canoni)/){
-							 $summary_PE{sp}{$level}{$nextprot}=1;
+							 $summary_PE{$tag}{$level}{$prot}=1;
 						 }elsif($level =~ /(distinguish|weak|insufficient)/){
-               $summary_PE{sp}{uncertain}{$nextprot}=1;
+               $summary_PE{$tag}{uncertain}{$prot}=1;
              }else{
-							 $summary_PE{sp}{'Redundant relationship'}{$nextprot}=1;
+							 $summary_PE{$tag}{'Redundant relationship'}{$prot}=1;
 						 }
 					}
-				}elsif(defined $releationship{$nextprot}{indistinguishable}){
-					 $summary_PE{sp}{'Redundant relationship'}{$nextprot}=1;
-				}elsif(defined $releationship{$nextprot}{identical}){
-					 $summary_PE{sp}{'Redundant relationship'}{$nextprot}=1;
+				}elsif(defined $releationship{$prot}{indistinguishable}){
+					 $summary_PE{$tag}{'Redundant relationship'}{$prot}=1;
+				}elsif(defined $releationship{$prot}{identical}){
+					 $summary_PE{$tag}{'Redundant relationship'}{$prot}=1;
 				}else{
-					 $summary_PE{sp}{'Not Observed'}{$nextprot}=1;
+					 $summary_PE{$tag}{'Not Observed'}{$prot}=1;
 				}
 			}else{
-				 $summary_PE{sp}{'Not Observed'}{$nextprot}=1;
+				 $summary_PE{$tag}{'Not Observed'}{$prot}=1;
 			}
-		}
-  }
 }
 
 
 ## reading protein mapping files 
 my %mapping = ();
-my $file = "/data/seqdb/nextprot/mapping/nextprot_refseq.txt";
+my $file = "/net/db/projects/PeptideAtlas/species/Human/NextProt/chr_reports/nextprot_refseq.txt";
 get_mapping ( 'f' => $file , 'mapping' => \%mapping, 'type' => 'REFSEQ');
 
-$file =  "/data/seqdb/nextprot/mapping/nextprot_ensg.txt";
+$file =  "/net/db/projects/PeptideAtlas/species/Human/NextProt/chr_reports/nextprot_ensg.txt";
 get_mapping ( 'f' => $file , 'mapping' => \%mapping, 'type' => 'ENSEMBL');
 
 foreach my $nextprot(keys %hash){
@@ -477,19 +526,32 @@ foreach my $nextprot(keys %hash){
   }
 }
 
-insert_NeXtProt_Chromosome_Mapping (
-																		chromosome_mapping  => \%hash,
+if ( ($update && $nextprot_mapping_id) || ($insertMapping && $nextprot_mapping_id) || ($insert && $nextprot_mapping_id)){
+  insert_NeXtProt_Chromosome_Mapping (
+                                    update => $update,
+ 																		chromosome_mapping  => \%hash,
                                     nextprot_mapping_id => $nextprot_mapping_id,
                                    );
-
-insert_NeXtProt_CHPP_Summary (
+}
+if (($update && $nextprot_mapping_id) || (($insertSummary && $nextprot_mapping_id) || ($insert && $nextprot_mapping_id))){
+  insert_NeXtProt_CHPP_Summary (
+                                  update => $update,
                                   summary => \%summary, 
                                   summary_PE => \%summary_PE,
-                                  nextprot_mapping_id => $nextprot_mapping_id,
+                                  nextprot_mapping_id => $nextprot_mapping_id, 
                                   nextprot_release_date => $nextprot_release_date,
-                                  atlas_build_date => $atlas_build_date, 
+                                  #atlas_build_date => $atlas_build_date, 
                                    );
+#  foreach my $key1 (sort {$a cmp $b} %summary_PE){
+#    print "$key1,";
+#    foreach my $key2 (keys %{$summary_PE{$key1}}){
+#      my $n = scalar keys %{$summary_PE{$key1}{$key2}};
+#      print "$key2=$n,";
+#    }
+#    print "\n";
+#  }
 
+}
 
 
 exit;
@@ -531,93 +593,105 @@ sub get_mapping {
 
 sub insert_NeXtProt_CHPP_Summary {
   my %args = @_;
+  my $update = $args{update} || 0;
   my $summary = $args{summary};
   my $summary_PE = $args{summary_PE};
   my $nextprot_mapping_id = $args{nextprot_mapping_id};
   my $nextprot_release_date = $args{nextprot_release_date};
-  my $atlas_build_date = $args{atlas_build_date};
+  #my $atlas_build_date = $args{atlas_build_date};
 
-  my $output_path = "/net/db/projects/PeptideAtlas/species/Human/NextProt";
-  open (S, ">$output_path/PA_C-HPP_SummaryTable.xls") or die "cannot open PA_C-HPP_SummaryTable.xls\n";
-  open (P, ">$output_path/PA_C-HPP_SummaryTable_PE.xls") or die "cannot open PA_C-HPP_SummaryTable_PE.xls\n";
-
- 
-print S qq~
-<p  class="justifiedtext">
-Results based on: <br>
-- neXtProt downloaded $nextprot_release_date <br>
-- PeptideAtlas Build $atlas_build_date <br><br>
-~;
-
-  print S "\nChromosome\tneXtProt entries\tCanonical\t%\t".
-        "Uncertain\t%\t".
-        "Redundant\t%".
-        "\tNot Observed\t%\n";#\tNot in SwissProt DB\t%\n";
-
- 
 	foreach my $m (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,'X','Y','MT','?'){
 		my $chr = "Chromosome $m";
-    my $n = scalar keys %{$summary{$chr}{'neXtProt entries'}};
-		print S "Chr$m\t$n\t";
-		foreach my $c ('canonical','uncertain','Redundant relationship','Not Observed'){ #, 'Not in SwissProt DB') {
-			if (defined $summary{$chr}{$c}){
-				my $i = scalar keys %{$summary{$chr}{$c}};
-				my $j = sprintf("%.1f%", ($i/$n)*100) ;
-				print S "$i\t$j\t";
-			}else{
-				print S "0\t0.0%\t";
-			}
-		}
-    print S "\n";
-
 		my %rowdata = (
 			chromosome => $m, 
 			n_nextprot_entries => scalar keys %{$summary{$chr}{'neXtProt entries'}}, 
 			n_canonical => scalar keys %{$summary{$chr}{'canonical'}},
-			n_possibly_distinguished => scalar keys %{$summary{$chr}{'uncertain'}},
+			n_uncertain => scalar keys %{$summary{$chr}{'uncertain'}},
 			n_redundant  => scalar keys %{$summary{$chr}{'Redundant relationship'}},
 			n_not_observed => scalar keys %{$summary{$chr}{'Not Observed'}},
 			NeXtProt_Mapping_id => $nextprot_mapping_id,
 		);
 		my $id = '';
-    insert_table (rowdata_ref => \%rowdata);
+    if($update){
+      update_summary_table (rowdata_ref => \%rowdata);
+    }else{
+      insert_table (rowdata_ref => \%rowdata);
+    }
   }
-
-
-  print P "PE\tneXtProt entries\tCanonical\t%\t".
-        "Uncertain\t%\t".
-        "Redundant\t%".
-        "\tNot Observed\t%\n";#\tNot in SwissProt DB\t%\n";
-
-	#foreach my $m (qw (1 2 3 4 5 sp ?)){ 
-  foreach my $m (qw (1 2 3 4 5 sp)){
+  foreach my $m (qw (1 2 3 4 5 Total sp IMGT CONTAM CONTRIB DECOY )){
 		my $n = scalar keys %{$summary_PE{$m}{'neXtProt entries'}};
 		next if ($n == 0);
-		#$nNextProt_all += $n;
-		print P "$m\t$n\t";
-		foreach my $c ('canonical','uncertain','Redundant relationship','Not Observed'){ #, 'Not in SwissProt DB') {
-			if (defined $summary_PE{$m}{$c}){
-				my $i = scalar keys %{$summary_PE{$m}{$c}};
-				my $j = sprintf("%.1f%", ($i/$n)*100) ;
-				print P "$i\t$j\t";
-			}else{
-				print P "0\t0.0%\t";
-			}
-		}
-		print P "\n";
-
     my %rowdata = (
       PE => $m,
       n_nextprot_entries => scalar keys %{$summary_PE{$m}{'neXtProt entries'}},
       n_canonical => scalar keys %{$summary_PE{$m}{'canonical'}},
-      n_possibly_distinguished => scalar keys %{$summary_PE{$m}{'uncertain'}},
+      n_uncertain => scalar keys %{$summary_PE{$m}{'uncertain'}},
       n_redundant  => scalar keys %{$summary_PE{$m}{'Redundant relationship'}},
       n_not_observed => scalar keys %{$summary_PE{$m}{'Not Observed'}},
       NeXtProt_Mapping_id => $nextprot_mapping_id,
     );
-    insert_table (rowdata_ref => \%rowdata);
+    if($update){
+      update_summary_table (rowdata_ref => \%rowdata);
+    }else{
+      insert_table (rowdata_ref => \%rowdata);
+    }
 	}
 }
+
+sub update_summary_table {
+  my %args = @_;
+  my $rowdata_ref = $args{rowdata_ref};
+  my $sql;
+  my $nextprot_mapping_id = $rowdata_ref->{NeXtProt_Mapping_id};
+  my ($pe, $chr);
+  if (defined $rowdata_ref->{PE}){
+    $pe = $rowdata_ref->{PE};
+    $sql = qq~
+      SELECT ID
+      FROM $TBAT_NEXTPROT_CHPP_SUMMARY 
+      WHERE NEXTPROT_MAPPING_ID = $nextprot_mapping_id 
+      AND PE='$pe'
+    ~;
+  }else{
+    $chr = $rowdata_ref->{chromosome};
+    $sql = qq~
+      SELECT ID
+      FROM $TBAT_NEXTPROT_CHPP_SUMMARY
+      WHERE NEXTPROT_MAPPING_ID = $nextprot_mapping_id
+      AND chromosome='$chr'
+    ~;
+  }
+
+  my @results = $sbeams->selectOneColumn($sql);
+  if(@results == 1){
+   my $msg = $sbeams->updateOrInsertRow(
+    update =>1,
+    table_name =>$TBAT_NEXTPROT_CHPP_SUMMARY,
+    rowdata_ref=>$rowdata_ref,
+    PK => 'id',
+    return_PK => 1,
+    PK_value => $results[0],
+    verbose=>$VERBOSE,
+    testonly=>$TESTONLY,
+   );
+  }elsif(@results == 0){
+   my $msg = $sbeams->updateOrInsertRow(
+    insert =>1,
+    table_name =>$TBAT_NEXTPROT_CHPP_SUMMARY,
+    rowdata_ref=>$rowdata_ref,
+    PK => 'id',
+    return_PK => 1,
+    verbose=>$VERBOSE,
+    testonly=>$TESTONLY,
+   );
+  }else{
+    print "ERROR: ";
+    print scalar @results ;
+    print " result(s) for nextprot_mapping_id=$nextprot_mapping_id PE/CHR=$pe/$chr\n"; 
+  }
+}
+
+
 sub insert_table { 
   my %args = @_;
   my $rowdata_ref = $args{rowdata_ref}; 
@@ -632,11 +706,12 @@ sub insert_table {
 	 );
 }
 
-
 sub insert_NeXtProt_Chromosome_Mapping{
   my %args = @_;
   my $chromosome_mapping = $args{chromosome_mapping};
   my $nextprot_mapping_id = $args{nextprot_mapping_id};
+  my $update = $args{update} || 0;
+
   foreach my $prot(keys %$chromosome_mapping){
     foreach my $line (@{$chromosome_mapping->{$prot}{line}}){
 			my ($Gene_Name,
@@ -644,6 +719,7 @@ sub insert_NeXtProt_Chromosome_Mapping{
 				$Chromosome,
 				$Start,
 				$Stop,
+        $coding_strand,
 				$Protein_existence,
 				$Proteomics,
 				$AntiBody,
@@ -681,15 +757,59 @@ sub insert_NeXtProt_Chromosome_Mapping{
 				n_neXtProt_entry => $n_neXtProt_entry,
         NeXtProt_Mapping_id => $nextprot_mapping_id,
 	  	);
-     my $pk_id = $sbeams->updateOrInsertRow(
-        insert =>1,
-        table_name =>$TBAT_NEXTPROT_CHROMOSOME_MAPPING,
-        rowdata_ref=>\%rowdata,
-        PK => 'id',
-        return_PK => 1,
-        verbose=>$VERBOSE,
-        testonly=>$TESTONLY,
-    );
+     if ( ! $update){
+			 my $pk_id = $sbeams->updateOrInsertRow(
+					insert =>1,
+					table_name =>$TBAT_NEXTPROT_CHROMOSOME_MAPPING,
+					rowdata_ref=>\%rowdata,
+					PK => 'id',
+					return_PK => 1,
+					verbose=>$VERBOSE,
+					testonly=>$TESTONLY,
+			);
+    }else{
+      if ($Start eq '-'){
+        $Start = 0;
+      }
+      if ($Stop eq '-'){
+        $Stop = 0;
+      }
+
+      my $sql = qq~
+        SELECT ID 
+        FROM $TBAT_NEXTPROT_CHROMOSOME_MAPPING
+        WHERE NEXTPROT_ACCESSION='$neXtProt_Accession'
+        AND CHROMOSOME LIKE '$Chromosome'
+        AND NEXTPROT_MAPPING_ID = $nextprot_mapping_id
+        AND START = $Start
+        AND STOP = $Stop 
+      ~;
+      my @results = $sbeams->selectOneColumn($sql);
+			if(@results >= 1){
+        foreach my $id (@results){
+					 my $msg = $sbeams->updateOrInsertRow(
+						update =>1,
+						table_name =>$TBAT_NEXTPROT_CHROMOSOME_MAPPING,
+						rowdata_ref=>\%rowdata,
+						PK => 'id',
+						PK_value => $id,
+						return_PK => 1,
+						verbose=>$VERBOSE,
+						testonly=>$TESTONLY,
+					 );
+         }
+			}else{
+				 my $msg = $sbeams->updateOrInsertRow(
+					insert =>1,
+					table_name =>$TBAT_NEXTPROT_CHROMOSOME_MAPPING,
+					rowdata_ref=>\%rowdata,
+					PK => 'id',
+					return_PK => 1,
+					verbose=>$VERBOSE,
+					testonly=>$TESTONLY,
+				 );
+      }
+    }
    }
   }
 }
@@ -702,7 +822,9 @@ sub insert_NeXtProt_Mapping {
 	my %rowdata = (
 		atlas_build_id => $atlas_build_id,
 		pa_mapping_date => 'CURRENT_TIMESTAMP', 
-		nextprot_release_date => $nextprot_release_date
+		nextprot_release_date => $nextprot_release_date,
+    is_public => 'N',
+    record_status => 'N'
 	);
 	my $pk_id = $sbeams->updateOrInsertRow(
 			insert =>1,
@@ -713,5 +835,6 @@ sub insert_NeXtProt_Mapping {
 			verbose=>$VERBOSE,
 			testonly=>$TESTONLY,
 	);
+  
   return $pk_id;
 }

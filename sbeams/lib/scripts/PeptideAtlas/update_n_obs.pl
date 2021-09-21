@@ -172,6 +172,8 @@ sub main {
   my $current_username = $sbeams->Authenticate( work_group=>'PeptideAtlas_admin' ) || exit;
 
   my %args = @_;
+  my $build_id = $options{build_id} || die "need build id\n\n";
+  my $msg = $sbeams->update_PA_table_variables($build_id);
 
   # Get sample type map
 	my $sample2type = getSampleType();
