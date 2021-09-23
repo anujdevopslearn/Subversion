@@ -81,7 +81,8 @@ Options:
   --update_timing_info
                       If set, an update of the timing and percent buffer
                       B information will be triggered
-  --update_data_location update data_location in search_batch and atlas_search_batch
+  --update_data_location    update data_location in search_batch and atlas_search_batch
+  --update_experiment_tag   update experiment_tag and sample_tag
   --gradient_program_id=nnn
                       If there is no gradient_program_id already set for
                       this fraction, then set it to this value instead of 1
@@ -129,8 +130,9 @@ Options:
   --pepxml_load       If set, the whole experiment will be loaded from
                       the pepXML file instead of subdirectories with .out files
 
-  --experiment_list_file    Path to the Experiment.list file. If given it will be updated with search id and 
-                             experiment path
+  --experiment_list_file     Path to the Experiment.list file. If given it will be updated with search id and 
+                             experiment path  
+  --experiment_tag_list_file search_batch_id\ttag
 
 
  e.g.:  $PROG_NAME --list_all
@@ -138,7 +140,9 @@ Options:
         $PROG_NAME --experiment_id '12' --check_status ----testonly
         $PROG_NAME --experiment_id '12' --search_subdir 'HsIPI_v4.0' --load
         $PROG_NAME --experiment_id '12' --search_subdir 'HsIPI_v4.0' --interact_fname 'interact-prob.xml' --update_probabilities
-
+        $PROG_NAME --update_data_location --experiment_id
+        $PROG_NAME --update_data_location --experiment_list_file file
+        $PROG_NAME --update_experiment_tag --experiment_tag_list_file  file 
 EOU
 
 
@@ -157,7 +161,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
   "cleanup_archive","delete_search_batch","delete_experiment",
   "delete_fraction:s","force_search_batch","fix_ipi",
   "interact_fname:s", "experiment_id:s","pepxml_load","experiment_list_file:s",
-  "update_data_location", "new_data_location:s",
+  "update_data_location", "experiment_tag_list_file:s", "update_experiment_tag"
   )) {
   print "$USAGE";
   exit;
@@ -237,6 +241,7 @@ sub handleRequest {
   my $pepxml_load = $OPTIONS{"pepxml_load"} || '';
   my $experiment_list_file =$OPTIONS{"experiment_list_file"};
   my $update_data_location = $OPTIONS{"update_data_location"} || 0;
+  my $update_experiment_tag =  $OPTIONS{"update_experiment_tag"} || 0;
 
   $TESTONLY = $OPTIONS{'testonly'} || 0;
   $DATABASE = $DBPREFIX{'Proteomics'};
@@ -294,13 +299,25 @@ sub handleRequest {
   }
 
   if ($update_data_location){
-     if (! $experiment_id){
+     my $experiment_list_file = $OPTIONS{"experiment_list_file"} || '';
+     if (! $experiment_id && ! $experiment_list_file){
         die "ERROR: needs experiment_id to update\n";
      }
-     updateDataLocation( experiment_id=>$experiment_id );
+     if ($experiment_id){
+       updateDataLocation( experiment_id=>$experiment_id);
+     }else{
+       updateDataLocation_list(experiment_list_file=>$experiment_list_file);
+     }
      exit;
   }
 
+  if ($update_experiment_tag){
+     if (! $OPTIONS{"experiment_tag_list_file"} ){
+       die "ERROR: need experiment_tag_list_file\n";
+     }
+     updateExperimentTag(experiment_tag_list_file => $OPTIONS{"experiment_tag_list_file"});
+     exit;
+  }
 
   #### Define a scalar and array of experiment_id's
   my $n_experiment_ids;
@@ -1453,26 +1470,132 @@ sub addSearchBatchEntry {
   return $search_batch_id;
 
 }
+
+sub updateExperimentTag{
+  my %args = @_;
+  my $SUB_NAME = 'updateExperimentTag';
+  my $experiment_tag_list_file = $args{experiment_tag_list_file} || die "ERROR[$SUB_NAME]: experiment_tag_list_file not passed";
+  ## get search_batch ids
+  open (IN, "<$experiment_tag_list_file" ) or die "cannot open $experiment_tag_list_file\n";
+  foreach my $line (<IN>){
+    chomp $line;
+    next if ($line =~ /^#/);
+    next if ($line =~ /^$/);
+    my ($search_batch_id, $tag) = split("\t", $line);
+    my $sql_query = qq~
+      SELECT PE.experiment_id, PE.experiment_tag,S.sample_id, S.sample_tag
+      FROM $TBPR_PROTEOMICS_EXPERIMENT PE
+      JOIN  $TBPR_SEARCH_BATCH SB ON (PE.EXPERIMENT_ID = SB.EXPERIMENT_ID)
+      LEFT JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ( ASB.PROTEOMICS_SEARCH_BATCH_ID  = SB.SEARCH_BATCH_ID)
+      JOIN $TBAT_SAMPLE S ON (S.sample_id = ASB.sample_id)
+      WHERE SB.search_batch_id = $search_batch_id
+    ~;
+    my @results = $sbeams->selectSeveralColumns ($sql_query);
+		foreach my $row(@results){
+	    my ($exp_id, $exp_tag, $sample_id, $sample_tag) = @$row;
+     if ( $exp_id && $exp_tag ne $tag ) {
+        print "experiment_id=$exp_id experiment_tag=$exp_tag\tnew_tag='$tag'\n";    
+        my %rowdata=();
+        $rowdata{experiment_tag} = $tag;
+				my $success = $sbeams->insert_update_row(
+						update=>1,
+						table_name=>$TBPR_PROTEOMICS_EXPERIMENT,
+						rowdata_ref=>\%rowdata,
+						PK=>'experiment_id',
+						PK_value=>$exp_id,
+						verbose=>$VERBOSE,
+						testonly=>$TESTONLY,
+				);
+      }
+      if ($sample_id && $sample_tag ne  $tag ) {
+        print "sample_id=$sample_id\tsample_tag=$sample_tag\tnew_tag='$tag'\n";    
+        my %rowdata=();
+        $rowdata{sample_tag} = $tag;
+        my $success = $sbeams->insert_update_row(
+            update=>1,
+            table_name=>$TBAT_SAMPLE,
+            rowdata_ref=>\%rowdata,
+            PK=>'sample_id',
+            PK_value=>$sample_id,
+            verbose=>$VERBOSE,
+            testonly=>$TESTONLY,
+        );
+
+      }
+		}
+  }
+}
+
+###############################################################################
+#update search_batch data_location
+###############################################################################
+sub updateDataLocation_list{
+  my %args = @_;
+  my $SUB_NAME = 'updateDataLocation';
+  my $experiment_list_file = $args{experiment_list_file} || die "ERROR[$SUB_NAME]: experiment_list_file not passed";
+  ## get search_batch ids
+  open (IN, "<$experiment_list_file" ) or die "cannot open $experiment_list_file\n";
+  foreach my $line (<IN>){
+    chomp $line;
+    next if ($line =~ /^#/);
+    next if ($line =~ /^$/);
+    my ($search_batch_id, $data_loc) = split("\t", $line);
+    my $experiment_path = $data_loc;
+    $data_loc =~ s/\/{0,}$//;
+    $data_loc =~ /.*archive\/(.*)\/.*/; 
+    $experiment_path = $1;
+    print "$line\nupdate\n";
+    my $sql_query = qq~
+      SELECT PE.experiment_id, PE.experiment_path
+      FROM $TBPR_PROTEOMICS_EXPERIMENT PE
+      JOIN  $TBPR_SEARCH_BATCH SB ON (PE.EXPERIMENT_ID = SB.EXPERIMENT_ID)
+      WHERE SB.search_batch_id = $search_batch_id
+    ~;
+    my @results = $sbeams->selectSeveralColumns ($sql_query);
+    my %rowdata=();
+		foreach my $row(@results){
+	    my ($exp_id, $exp_path) = @$row;
+      if ($exp_path ne $experiment_path ) {
+        print "\t$exp_path ->\t$experiment_path\n";
+        $rowdata{experiment_path} = $experiment_path;
+				my $success = $sbeams->insert_update_row(
+						update=>1,
+						table_name=>$TBPR_PROTEOMICS_EXPERIMENT,
+						rowdata_ref=>\%rowdata,
+						PK=>'experiment_id',
+						PK_value=>$exp_id,
+						verbose=>$VERBOSE,
+						testonly=>$TESTONLY,
+				);
+        updateDataLocation(experiment_id=>$exp_id);
+      }
+		}
+  }
+}
+
 ###############################################################################
 #update search_batch data_location
 ###############################################################################
 sub updateDataLocation{
   my %args = @_;
   my $SUB_NAME = 'updateDataLocation';
-  my $experiment_id = $args{experiment_id} || die "ERROR[$SUB_NAME]: experiment_id not passed";
-  ## get search_batch ids 
+  my $experiment_id = $args{experiment_id} || die "ERROR[$SUB_NAME]: experiment_id  not passed"; 
+  ## get search_batch ids
   my $sql_query = qq~
-      SELECT PE.experiment_path, SB.search_batch_id, SB.data_location, ASB.atlas_search_batch_id, ASB.data_location
+      SELECT PE.experiment_id, PE.experiment_path, SB.search_batch_id, SB.data_location, ASB.atlas_search_batch_id, ASB.data_location
       FROM $TBPR_PROTEOMICS_EXPERIMENT PE
       JOIN  $TBPR_SEARCH_BATCH SB ON (PE.EXPERIMENT_ID = SB.EXPERIMENT_ID)
       LEFT JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ( ASB.PROTEOMICS_SEARCH_BATCH_ID  = SB.SEARCH_BATCH_ID)
       WHERE PE.experiment_id = '$experiment_id'
-  ~;
+   ~;
   my @results = $sbeams->selectSeveralColumns ($sql_query);
   my %rowdata=();
   foreach my $row(@results){
-    my ($exp_path, $sb_id, $sb_data_location,$asb_id, $asb_data_location)=@$row;
-    #print "$exp_path, $sb_id, $sb_data_location,$asb_id, $asb_data_location\n";
+    my ($exp_id, $exp_path, $sb_id, $sb_data_location,$asb_id, $asb_data_location)=@$row;
+    if ($exp_path !~ /^\/regis/){
+      $exp_path = "/regis/sbeams/archive/$exp_path";
+    }
+    print "PE.experiment_id=$exp_id\n";
     if ($exp_path ne $sb_data_location){
       print "experiment_path=$exp_path != search_batch data_location=$sb_data_location\n";
       print "set search_batch $sb_id data_location=$exp_path\n\n";
