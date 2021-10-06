@@ -742,10 +742,12 @@ sub purgeProteinIdentificationInfo {
     $sbeams->executeSQL($sql);
 
    my $sql = qq~
+    DECLARE \@count int
+    SET \@count = 10000
     DELETE
     FROM $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH 
     WHERE  ID in (
-      SELECT BIABSB.ID 
+      SELECT TOP (\@count) BIABSB.ID 
       from $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH BIABSB
       JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
       ON (BIABSB.ATLAS_BUILD_SEARCH_BATCH_ID = ABSB.ATLAS_BUILD_SEARCH_BATCH_ID)
@@ -2279,43 +2281,43 @@ sub readCoords_updateRecords_calcAttributes {
     #### where the peptide also maps to a forward protein
     open(INFILE, $infile) or die "ERROR: Unable to open for reading $infile ($!)";
     my $outfile = "${infile}-noDECOYdup";
-if (! -e $outfile){
-    open(OUTFILE, ">$outfile") or die "ERROR: Unable to open for writing $outfile ($!)";
-    print "\nTransforming $infile\n";
-    my $bufferWithDecoys = '';
-    my $bufferWithoutDecoys = '';
-    my $previousPeptideAccession;
-    my $hasNonDecoyMapping = 0;
-    while (my $line = <INFILE>) {
-      my @columns = split(/\t/,$line);
-      my $peptideAccession = $columns[0];
-      if ($previousPeptideAccession && $peptideAccession ne $previousPeptideAccession) {
-				if ($hasNonDecoyMapping) {
-					print OUTFILE $bufferWithoutDecoys;
-				} else {
-					print OUTFILE $bufferWithDecoys;
+    if (! -e $outfile){
+			open(OUTFILE, ">$outfile") or die "ERROR: Unable to open for writing $outfile ($!)";
+			print "\nTransforming $infile\n";
+			my $bufferWithDecoys = '';
+			my $bufferWithoutDecoys = '';
+			my $previousPeptideAccession;
+			my $hasNonDecoyMapping = 0;
+			while (my $line = <INFILE>) {
+				my @columns = split(/\t/,$line);
+				my $peptideAccession = $columns[0];
+				if ($previousPeptideAccession && $peptideAccession ne $previousPeptideAccession) {
+					if ($hasNonDecoyMapping) {
+						print OUTFILE $bufferWithoutDecoys;
+					} else {
+						print OUTFILE $bufferWithDecoys;
+					}
+					$bufferWithDecoys = '';
+					$bufferWithoutDecoys = '';
+					$hasNonDecoyMapping = 0;
 				}
-				$bufferWithDecoys = '';
-				$bufferWithoutDecoys = '';
-				$hasNonDecoyMapping = 0;
-			}
 
-			if ($line =~ /DECOY/) {
-				} else {
-					$hasNonDecoyMapping = 1;
-					$bufferWithoutDecoys .= $line;
-				}
-				$bufferWithDecoys .= $line;
-				$previousPeptideAccession = $peptideAccession;
-		}
-		if ($hasNonDecoyMapping) {
-			print OUTFILE $bufferWithoutDecoys;
-		} else {
-			print OUTFILE $bufferWithDecoys;
-		}
-		close(INFILE);
-		close(OUTFILE);
-}
+				if ($line =~ /DECOY/) {
+					} else {
+						$hasNonDecoyMapping = 1;
+						$bufferWithoutDecoys .= $line;
+					}
+					$bufferWithDecoys .= $line;
+					$previousPeptideAccession = $peptideAccession;
+			}
+			if ($hasNonDecoyMapping) {
+				print OUTFILE $bufferWithoutDecoys;
+			} else {
+				print OUTFILE $bufferWithDecoys;
+			}
+			close(INFILE);
+			close(OUTFILE);
+    }
 
 		$infile = $outfile;
 
@@ -2760,13 +2762,23 @@ if (! -e $outfile){
             WHERE atlas_build_id ='$ATLAS_BUILD_ID'
             GROUP BY PI.peptide_instance_id
        ~;
-    my %existing_mapping_records = $sbeams->selectTwoColumnHash($sql);
-
-
+    my %existing_mapping_record_cnt = $sbeams->selectTwoColumnHash($sql);
+    $sql = qq~
+           SELECT DISTINCT PI.peptide_instance_id,PM.matched_biosequence_id,PM.start_in_biosequence
+             FROM $TBAT_PEPTIDE_INSTANCE PI
+             JOIN $TBAT_PEPTIDE_MAPPING PM ON ( PI.peptide_instance_id = PM.peptide_instance_id )
+            WHERE atlas_build_id ='$ATLAS_BUILD_ID'
+       ~;
+    my @rows = $sbeams->selectSeveralColumns($sql);
+    my %existing_mapping_records=();
+    foreach my $row(@rows){
+      $existing_mapping_records{$row->[0]}{"$row->[1].$row->[2]"} =1;
+    }
+ 
     #### Loop over each row in the input file and insert the records
     my $previous_peptide_accession = 'none';
     my $mapping_record_count = 0;
-
+    my $mapping_record_count_inserted=0;
     # Initiate transaction for this block
     initiate_transaction();
     for (my $row = 0; $row <= $#peptide_accession; $row++){
@@ -2798,13 +2810,14 @@ if (! -e $outfile){
 
       my $tmp_pep_acc = $peptide_accession[$row];
 
-      if( $tmp_pep_acc =~ /(PAp02122881|PAp01657280|PAp00972436|PAp00133923|PAp04626425)/){
-          if ($tmp_pep_acc ne $previous_peptide_accession) {
-            $previous_peptide_accession = $tmp_pep_acc;
-            $mapping_record_count = 0;
-         }
-         next;
-      }
+#      if( $tmp_pep_acc =~ /(PAp02122881|PAp01657280|PAp00972436|PAp00133923|PAp04626425)/){
+#          if ($tmp_pep_acc ne $previous_peptide_accession) {
+#            $previous_peptide_accession = $tmp_pep_acc;
+#            $mapping_record_count = 0;
+#            $mapping_record_count_inserted=0;
+#         }
+#         next;
+#      }
       if(!  $peptides{$tmp_pep_acc} ){ print "$tmp_pep_acc\n";};
 
       my $peptide_id = $peptides{$tmp_pep_acc} ||
@@ -2815,12 +2828,6 @@ if (! -e $outfile){
       my $peptide_instance_id = $peptideAccession_peptideInstanceID{$tmp_pep_acc};
      #### If this is the first row for a peptide, then UPDATE peptide_instance record
       if ($tmp_pep_acc ne $previous_peptide_accession) {
-        #my %rowdata = (   ##   peptide_instance    table attributes
-        #    n_genome_locations => $n_genome_locations[$row],
-        #    is_exon_spanning => $is_exon_spanning[$row],
-        #    n_protein_mappings => $n_protein_mappings[$row],
-        #    is_subpeptide_of => $peptideAccession_subPeptide{$tmp_pep_acc},
-        # );
         my %rowdata = (
             n_genome_locations => $data[11],
             is_exon_spanning =>  $data[12],
@@ -2839,47 +2846,50 @@ if (! -e $outfile){
       }
 
       #### If there are already peptide_mapping records
-      if ($existing_mapping_records{$peptide_instance_id}) {
+      if ($existing_mapping_record_cnt{$peptide_instance_id}) {
         #### If we're finished with the previous peptide, verify the count
         if ($tmp_pep_acc ne $previous_peptide_accession &&
               $previous_peptide_accession ne 'none') {
           unless ($mapping_record_count ==
-            $existing_mapping_records{$peptideAccession_peptideInstanceID{$previous_peptide_accession}}) {
-            die("ERROR: Peptide $previous_peptide_accession had ".
-            $existing_mapping_records{$peptideAccession_peptideInstanceID{$previous_peptide_accession}}.
-            " pre-existing peptide_mapping records, but we would have INSERTed $mapping_record_count. ".
-            "This is a serious problem and may require a complete reload.");
+            $existing_mapping_record_cnt{$peptideAccession_peptideInstanceID{$previous_peptide_accession}}) {
+            print ("\nWARNING: Peptide $previous_peptide_accession had ".
+            $existing_mapping_record_cnt{$peptideAccession_peptideInstanceID{$previous_peptide_accession}}.
+            " pre-existing peptide_mapping records. We have INSERTed $mapping_record_count_inserted new mapping(s).\n")
           }
         }
+     }
 
-        #### If there weren't already records, CREATE peptide_mapping record
-   } else {
-        my %rowdata = (   ##   peptide_mapping      table attributes
-            peptide_instance_id => $peptide_instance_id,
-            matched_biosequence_id => $biosequence_id,
-            start_in_biosequence => $data[2], #$start_in_biosequence[$row],
-            end_in_biosequence => $data[3], #$end_in_biosequence[$row],
-            peptide_preceding_residue => $data[4], #$peptide_preceding_residue[$row],
-            peptide_following_residue => $data[5], #$peptide_following_residue[$row],
-            chromosome => $data[6], #$chromosome[$row],
-            strand => $data[7], #$strand[$row],
-            start_in_chromosome => $data[8], #$start_in_chromosome[$row],
-            end_in_chromosome => $data[9], #$end_in_chromosome[$row],
-        );
-        $sbeams->updateOrInsertRow(
-            insert=>1,
-            table_name=>$TBAT_PEPTIDE_MAPPING,
-            rowdata_ref=>\%rowdata,
-            PK => 'peptide_mapping_id',
-            verbose=>$VERBOSE,
-            testonly=>$TESTONLY,
-        );
-      }
+     #} else {
+        if (! $existing_mapping_records{$peptide_instance_id}{"$biosequence_id.$data[2]"}){
+					my %rowdata = (   ##   peptide_mapping      table attributes
+							peptide_instance_id => $peptide_instance_id,
+							matched_biosequence_id => $biosequence_id,
+							start_in_biosequence => $data[2], #$start_in_biosequence[$row],
+							end_in_biosequence => $data[3], #$end_in_biosequence[$row],
+							peptide_preceding_residue => $data[4], #$peptide_preceding_residue[$row],
+							peptide_following_residue => $data[5], #$peptide_following_residue[$row],
+							chromosome => $data[6], #$chromosome[$row],
+							strand => $data[7], #$strand[$row],
+							start_in_chromosome => $data[8], #$start_in_chromosome[$row],
+							end_in_chromosome => $data[9], #$end_in_chromosome[$row],
+					);
+					$sbeams->updateOrInsertRow(
+							insert=>1,
+							table_name=>$TBAT_PEPTIDE_MAPPING,
+							rowdata_ref=>\%rowdata,
+							PK => 'peptide_mapping_id',
+							verbose=>$VERBOSE,
+							testonly=>$TESTONLY,
+					);
+          $mapping_record_count_inserted++;
+        }
+      #}
 
       #### If this is the first row for a peptide, then update the previous flag (must be done last)
       if ($tmp_pep_acc ne $previous_peptide_accession) {
           $previous_peptide_accession = $tmp_pep_acc;
           $mapping_record_count = 0;
+          $mapping_record_count_inserted =0;
       }
       $mapping_record_count++;
 
