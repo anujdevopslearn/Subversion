@@ -926,7 +926,7 @@ sub get_subset_form {
     <td><input type=text id=prec_min_mz name=prec_min_mz onchange=specify_swath('direct') size=12 value=$prec_min_mz></input></td>
   </tr>
   <tr class=cellblock>
-    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Min precursor mz:</div></i></b></td>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Max precursor mz:</div></i></b></td>
     $title2help->{prec_max_mz}
     <td><input type=text id=prec_max_mz name=prec_max_mz onchange=specify_swath('direct') size=12 value=$prec_max_mz></input></td>
   </tr>
