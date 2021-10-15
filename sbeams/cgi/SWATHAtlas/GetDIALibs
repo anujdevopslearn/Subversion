@@ -1,0 +1,1549 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# $Id$
+#
+# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+###############################################################################
+
+
+###############################################################################
+# Get the script set up with everything it will need
+###############################################################################
+use strict;
+use lib qw (../../lib/perl);
+use Data::Dumper;
+use File::Basename;
+use File::Copy qw( move copy );
+use LWP::UserAgent;
+use HTTP::Request;
+use JSON;
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::DataTable;
+use SBEAMS::Connection::TabMenu;
+
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
+
+###############################################################################
+# Global Variables
+###############################################################################
+my $sbeams = new SBEAMS::Connection;
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+my $atlas = new SBEAMS::PeptideAtlas;
+$atlas->setSBEAMS($sbeams);
+
+my $json = new JSON;
+  
+# Read input parameters
+my $params = process_params();
+
+my $username = $sbeams->Authenticate( allow_anonymous_access => 1) || exit;
+$sbeams->setSessionAttribute( key => 'PA_resource', value => 'DIAAtlas' );
+
+# Get a list of accessible project_ids
+my @project_ids = $sbeams->getAccessibleProjects();
+my $project_ids = join( ",", @project_ids ) || '0';
+
+my $show_image = 0;
+my $tabMenu;
+
+my %basespace = ( basespace_params => '' );
+
+{ # Main 
+
+    # Authenticate or exit
+
+
+    ## get current settings
+    my $project_id = $sbeams->getCurrent_project_id();
+
+
+    if ( $params->{mode} eq 'get_public_libsets' ) {
+      $params->{output_format} ||= 'html';
+      unless ( $params->{output_format} eq 'json' ) {
+	print $sbeams->get_http_header();
+      }
+      get_public_libsets();
+      exit;
+    }
+
+    $params->{action} ||= 'trigger';
+    if ( $params->{appsessionuri} && $params->{authorization_code} ) {
+      $basespace{basespace_params} = qq~
+      <input type=hidden name=appsessionuri value=$params->{appsessionuri}></input>
+      <input type=hidden name=authorization_code value='$params->{authorization_code}' />
+      <input type=hidden name=upload_to_basespace value=yes />
+      ~;
+      $basespace{appsessionuri} = $params->{appsessionuri};
+      $basespace{authorization_code} = $params->{authorization_code};
+      $basespace{url_params} = ";authorization_code=$params->{authorization_code};appsessionuri=$params->{appsessionuri}";
+
+
+      authenticate_to_basespace();
+      get_appsession_properties();
+#      $log->info( "mode is $params->{mode}" );
+      $params->{mode} ||= $basespace{mode};
+      $params->{format} ||= 'peakview';
+#      $log->info( "mode is $params->{mode}" );
+    }
+    $params->{mode} ||= 'download_libs';
+
+    my $program_name = ( $params->{mode} =~ /download/ ) ? 'DIA_library_download' : 'DIA_library_subset';
+    my $page = $sbeams->getGifSpacer( 700 ) . "<BR>\n";
+
+    # Get the HTML to display the tabs
+    $tabMenu = $atlas->getTabMenu(
+      parameters_ref => $params,
+      program_name => $program_name,
+    );
+
+    my $css = $sbeams->printStyleSheet( module_only => 1 );
+
+    $page .=<<"    END";
+     <br>
+    END
+
+#    my $load_script = "set_toggle_box( 'protein_list_table' );sortables_init()";
+    if ( $params->{lib_id} ) {
+      $params->{mode} = 'subset_libs';
+    }
+    $params->{mode} ||= 'download_libs';
+#    die "header coming";
+    $atlas->display_page_header( tracker_type => 'swath' );
+
+    if ( $params->{mode} eq 'subset_libs' ) {
+      my $title = qq~
+      <div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:150%;font-weight:700" id=heading>
+	  <font color =#ff5f00 >|</font> Custom Library Download </div>
+      <br>
+      ~;
+     # $page .= $title;
+      $page .= $tabMenu;
+      $page .= get_status_box("Generating library, may take several minutes") unless $params->{action} eq 'trigger';
+      print $page;
+      $page = get_subset_form();
+
+    } elsif ( $params->{mode} eq 'download_libs' ) {
+      $page .= $tabMenu;
+      if ( $params->{action} eq 'download' ) {
+        $page .= get_status_box( "" );
+        print $page;
+        upload_to_basespace();
+
+        $page = '';
+      }
+      $page .= get_library_table();
+    }
+    $page .= "<BR>";
+
+    # Print what we already have, speed up apparent page loading time.
+		print $page;
+
+		$atlas->display_page_footer();
+    $sbeams->setSessionAttribute( key => 'PA_resource', value => '' );
+
+} # end main
+
+sub get_status_box {
+
+  my $msg = shift || '';
+  my $wait = "<img src='$HTML_BASE_DIR/images/wait_sm.gif'></img>";
+
+  return qq~ 
+      <div id='status' class=info_box width: 400px >$wait $msg</div><br><br>
+      <script type='text/javascript'> 
+      function set_status ( new_status ) {
+        var status = document.getElementById( 'status' );
+        status.innerHTML = new_status;
+        return false;
+      }
+      function update_status ( new_status ) {
+        var status = document.getElementById( 'status' );
+        var curr_status = status.innerHTML;
+        status.innerHTML = curr_status + new_status;
+      }
+      </script>
+    ~;
+}
+
+sub get_help_links {
+
+
+  my %title2text = ( 'Library' => "Source library file to customize. <br><br> <sup>&dagger;</sup> Note that libraries that have already had SWATHS applied can only be filtered by protein list",
+                     'min_num_frags' => "Minimum number of fragment ions to include an assay. <br><br>Must be less than or equal to Max num fragments ",
+                     'max_num_frags' => "Maximum number of fragment ions to use in an assay for a specific precursor. <br><br> Must be greater than or equal to Min num fragments ",
+                     'basename' => "Base name for exported library files (optional). Default is library name. ",
+                     'prec_min_mz' => "Minimum precursor ion m/z value for library entries ",
+                     'prec_max_mz' => "Maximum precursor ion m/z value for library entries ",
+                     'frag_min_mz' => "Minimum fragment ion m/z value for library entries ",
+                     'frag_max_mz' => "Maximum fragment ion m/z value for library entries ",
+                       'cmod_mass' => 'Generate transision with heavy-labeled versions of selected amino acids, Use ctrl-shift for multiple options.',
+                       'cmod_opts' => $q->escape( 'Generate heavy transitions, light and heavy (L & H), or light only (default).  Relevant only if one or more heavy label options are selected.' ),
+                     'swaths_file' => "File of SWATH bins, format is lower mz bound 'tab' upper bound mz 'newline' ",
+                     'no_swaths_file' => "SWATH file not needed, ion library filtered at analysis time (Peakview) ",
+                     'swath_size' => "Size of each SWATH bin, default is 25 Th ",
+                     'swath_overlap' => "Overlap between adjacent SWATH bins, on each side - so 1 Th will result in 2 Th overlap ",
+                     'Proteins' => "File of protein accessions, one per line, with which to filter library. One accession space per organism allowed: Human - Uniprot, Mtb - Tuberculist (Rv)",
+                     'domain_protein_list_id' => "Set of protein accessions from one of the Human Proteome Project Biology/Disease lists <br> Note that this will only work with Human libraries" );
+  my %title2link;
+  for my $title ( keys( %title2text ) ) {
+    my $text = $title2text{$title};
+    $title2link{$title} = qq~<TD BGCOLOR=E0E0E0><span title='$text' class=popup><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' BORDER=0 ONCLICK="popitup('$CGI_BASE_DIR/help_popup.cgi?title=$title;text=$text;email_link=no');"></SPAN></TD>~;
+  }
+  return \%title2link;
+}
+
+sub get_protein_list_selector {
+
+  my $sql =<<"  END";
+  SELECT title, protein_list_id
+  FROM $TBAT_DOMAIN_PROTEIN_LIST DPL
+  JOIN $TB_CONTACT C ON DPL.owner_contact_id = C.contact_id
+  WHERE project_id IN ( $project_ids )
+  ORDER BY title
+  END
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+
+  my $select;
+
+  while( my @row = $sth->fetchrow_array() ) {
+    my $selected = ( $row[1] == $params->{domain_protein_list_id} ) ? 'selected' : '';
+    my $title = $row[0];
+    $title =~ s/known to be associated with human/associated with/g;
+    my $option = "<option value=$row[1] $selected>$title </option>\n";
+    $select .= $option;
+  }
+  $select .= "</select>\n";
+  my $blank = ( $select =~ /selected/ ) ? '' : '<option selected value="">&nbsp;</option>';
+
+  $select = qq~
+  <select name=domain_protein_list_id id=domain_protein_list_id>
+  $blank
+  $select
+  ~;
+
+  return $select;
+}
+
+sub get_table_help {
+  my %args = @_;
+  my $name = $args{table};
+  return '' unless $name;
+  $args{mode} ||= 'section';
+  my @entries;
+  my $hidetext;
+  my $showtext;
+  my $heading;
+  my $description;
+
+  if ( $name eq 'build' ) {  
+    @entries = ( { key => 'Build Name', value => 'The simple name for this build, usually contains organism, prophet cutoff, and other information. ' },
+                 { key => 'Build Description', value => 'More detailed information about build. ' },
+                 { key => 'Reference Database', value => 'Database to which peptides were mapped, generally different than search database.  This mapping is done by running BLAST, and allows the peptides to be mapped the the organism\'s genomic sequence. ' },
+                 { key => 'Build Date', value => 'Date upon which build was finished. ' },
+                 { key => '# Samples', value => 'The number of individual samples which comprise this build.  Each sample contains one or more LCMS/MS runs, and generally corresponds to a single scientific experiment.' } ,
+                 { key => 'Distinct Peptides', value => 'This shows the number of distinct peptide sequences that were seen in this build.  Observations of the peptide in different charge states or with different modifications are coalesced.' } ,
+                 { key => 'Total Observations ', value => 'The total number of spectra that yeilded identifications above the build threshold.  Observations of the same base peptide sequences multiple times or in various charge states/modifications, whould each contribute to the total' }
+        );
+                 
+    $showtext = 'show row descriptions';
+    $hidetext = 'hide row descriptions';
+    $heading = 'Build Overview';
+    $description= 'These values pertain to the atlas build as a whole';
+
+
+  } elsif ( $name eq 'batch' ) {
+    @entries = ( { key => 'ID', value => 'Database ID for this sample (search batch) ' },
+                 { key => 'Sample_Name', value => 'Simple name for this sample/experiment. ' },
+                 { key => '#_Spectra_Searched', value => 'The total number of spectra searched in the sample. ' },
+                 { key => "#_Spectra_ID'd", value => 'The number of spectra identifed with a probability greater than the atlas threshold ' },
+                 { key => '#_Distinct', value => 'The number of distinct peptide sequences, seen more than once (multiobs), in this build that are seen in this sample. ' },
+                 { key => '#_Unique', value => "The number of distinct, multiobs peptides that are seen only in this sample (unique contribution).  This discriminates against smaller samples, and is less useful in atlas' with a large number of samples. " },
+                 { key => '#_Progressive', value => 'Order-dependent unique multiobs peptides contributed by a given sample.  The contribution for each sample is based on the samples that have gone before it, so later samples tend to have a lower progressive contribution. ' },
+                 { key => '#_Cumulative', value => 'Order-dependent cumulative number of unique multiobs peptides contributed to build by this and previous samples. ' },
+                 { key => '#_Proteins', value => 'The number of canonical (highly distinguishable, non-redundant) protein sequences identified from the peptides in this sample.' },
+                 { key => '#_Cum_Prots', value => 'Order-dependent cumulative number of canonical proteins contributed to build by this and previous samples.<br>Counts non-human contaminants, so final tally may be greater than Canonical Proteins count in Build Overview. ' },
+#                 { key => 'Sens', value => 'The sensitivity of the Peptide Prophet model at a probablility of 0.9, the percent of true positives that would be included at that threshold was used as a cutoff. ' },
+                 { key => 'FDR_(%)', value => 'The error rate of peptides above the threshold Peptide Prophet model at a probablility of 0.9, the percent of false positives that would be included at the build threshold. ' },
+                 { key => 'Sample_Date', value => ''},
+        );
+    $heading = 'Sample Overview'; 
+    $description = 'These values pertain to individual samples within the atlas';
+
+  } elsif ( $name eq 'mayu' ) {
+   @entries = ( { key => 'nr_runs', value => 'Number of MS runs contributing to this build '},
+  
+		{ key => 'nr_files', value => 'Always 1 '},
+  
+		{ key => 'mFDR', value => 'Data in current row applies to all data meting this PSM (spectrum) FDR threshold. '},
+		{ key => 'target_PSM', value => 'Number of non-decoy PSMs at this mFDR (counts peptides mappable to protein reference set only)'},
+  
+		{ key => 'decoy_PSM', value => 'Number of decoy PSMs at this mFDR '},
+  
+		{ key => 'FP_PSM', value => 'Number of false positive PSMs predicted by Mayu for this mFDR. Usually near, but not exactly the same as, the number of decoys. '},
+  
+		{ key => 'TP_PSM', value => 'target_PSM - FP_PSM '},
+  
+		{ key => 'target_pepID', value => 'Number of non-decoy unique peptides at this mFDR (counts peptides mappable to protein reference set only) '},
+  
+		{ key => 'decoy_pepID', value => 'Number of decoy unique peptides at this mFDR '},
+  
+		{ key => 'FP_pepID', value => 'Number of false positive unique peptides predicted by Mayu for this mFDR. Usually near, but not exactly the same as, the number of decoys. '},
+  
+		{ key => 'FP_pepID_stdev', value => ' '},
+  
+		{ key => 'TP_pepID', value => 'target_pepID - FP_pepID '},
+  
+		{ key => 'pepFDR', value => 'Peptide FDR (unique peptides)'},
+  
+		{ key => 'target_protID', value => 'Number of non-decoy protein identifications at this mFDR. Applied to the covering set of proteins -- a set that is close to the smallest necessary to explain all the pepIDs. Includes all canonicals and some possibly_distinguished. '},
+  
+		{ key => 'decoy_protID', value => 'Number of decoy protein identifications at this mFDR. '},
+  
+		{ key => 'FP_protID', value => 'Number of false postiive protein identifications predicted by Mayu for this mFDR.  Usually near, but not exactly the same as, the number of decoys. '},
+  
+		{ key => 'FP_protID_stdev', value => ' '},
+  
+		{ key => 'TP_protID', value => 'target_protID - FP_protID '},
+  
+		{ key => 'protFDR', value => 'Protein FDR. The largest value in this column is the protein FDR for the entire build. '},
+		{ key => 'lFDR1, lFDR5, lFDR10,2 lFDR5', value => 'Local protein FDR, computed over the previous step (i.e. between the previous row in the table and the current row), the previous 5 steps, the previous 10 steps, and the previous 25 steps.<br>Often there are fewer than 25 rows in the table, in which case column lFDR25 is uninformative. '},
+  
+		{ key => 'target_protIDs, decoy_protIDs, etc.', value => 'Same as above, except for singleton proteins (those identified by only one PSM) only. '},
+		{ key => 'target_protIDns, decoy_protIDns, etc.', value => 'Same as above, except for multiply-observed proteins only. '},
+  
+        );
+    $heading = 'Mayu'; 
+    $description = 'Reiter L, Claassen M, et al., Protein identification false discovery rates for very large proteomics data sets generated by tandem mass spectrometry, Mol Cell Proteomics. 2009 Nov;8(11):2405-17 ';
+  }
+
+
+  return unless @entries;
+  return \@entries if $args{mode} eq 'entries_only';
+
+  my $help = $atlas->get_table_help_section( name => $name,
+                                             description => $description,
+                                             heading => $heading,
+                                             entries => \@entries,
+                                             showtext => $showtext,
+                                             hidetext => $hidetext  );
+  return $help;
+
+} # end get_table_help
+
+
+sub get_library_table {
+
+  my $build_id = shift;
+
+  my $help = qq~
+   <br>
+   <div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:150%;font-weight:700" id=heading>
+   <font color =#ff5f00 >|</font> Library Download </div>
+  ~;
+#   <div id=help style="width:800px"> Download SWATH/DIA libraries in any of the supported formats. 
+#   <br><br>
+
+  my $format_constraint = '';
+  if ( $params->{format} ) {
+    $format_constraint = "AND file_format = '$params->{format}'";
+  }
+
+  my $sql = qq~
+  SELECT dia_library_id, dia_library_name, set_tag, instrument_type_name,
+  organism_name, DIL.comment, md5sum, file_path, file_format, is_master,
+  px_identifier, contributors, coverage_statement, 
+  publication_url, publication_title, description
+  FROM $TBAT_DIA_LIBRARY DIL 
+  JOIN $TBAT_DIA_LIBRARY_SET DILS ON DILS.dia_library_set_id = DIL.dia_library_set_id
+  JOIN $TBAT_INSTRUMENT_TYPE IT ON IT.instrument_type_id = DIL.instrument_type_id
+  JOIN $TB_ORGANISM O ON O.organism_id = DIL.organism_id
+  WHERE project_id IN ( $project_ids )
+  AND DIL.record_status = 'N'
+  $format_constraint
+  ORDER BY DIL.dia_library_set_id, dia_library_name, instrument_type_name
+  ~;
+# 0 dia_library_id
+# 1 dia_library_name
+# 2 set_tag
+# 3 instrument_type_name
+# 4 organism_name
+# 5 DIL.comment
+# 6 md5sum
+# 7 file_path
+# 8 file_format
+# 9 is_master
+# 10 px_identifier
+# 11 contributors
+# 12 converage_statement
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my %libraries; 
+  my %tag2comment;
+  my %display_format = ( peakview => 'Peakview',
+                         openswath => 'OpenSWATH',
+                         TraML => 'TraML',
+                         sptxt => 'Speclib' );
+
+  my @libs;
+  while( my @row = $sth->fetchrow_array() ) {
+    push @libs, $row[2] unless $libraries{$row[2]};
+    $libraries{$row[2]} ||= [];
+    $row[8] = $display_format{$row[8]} || $row[8]; 
+    push @{$libraries{$row[2]}}, \@row;
+    $tag2comment{$row[2]} = $row[5];
+  }
+  my $content = $help;
+
+#  for my $lib ( sort { $b cmp $a} ( keys( %libraries ) ) ) {
+  for my $lib ( @libs ) {
+    my @lib_data = ( [ qw( Name Accession Instrument Format Size ), 'Get Libraries' ] );
+    for my $lib_file ( @{$libraries{$lib}} ) {
+      my $fname = basename( $lib_file->[7] ); 
+
+      $sbeams->makeSBEAMSTempLink( path => $lib_file->[7],
+                               linkname => $lib_file->[6],
+                               relative => 0 );
+
+      my $dwn = "<a href=$CGI_BASE_DIR/downloadFile.cgi?name=$fname;format=tsv;tmp_file=$lib_file->[6];raw_download=1>Download</a>";
+      if ( $basespace{url_params} ) {
+        $dwn = "<a href=GetDIALibs?mode=download_libs;action=download;name=$fname;tmp_file=$lib_file->[6];$basespace{url_params}>Download</a>";
+      }
+      my $size = -s $lib_file->[7];
+#      if ( !$size ) {
+#        die Dumper( $lib_file ) unless -e $lib_file->[7];
+#      }
+      $size = hr_size( $size, $lib_file->[7] );
+      my $cust = '';
+      if ( $lib_file->[8] =~ /peakview/i ||
+           $lib_file->[8] =~ /openswath/i ||
+           $lib_file->[8] =~ /mprophet/i ) { 
+        if ( $lib_file->[9] eq 'Y' ) {
+          my $basespace_url_params = ";$basespace{url_params}" || '';
+          $cust = "<a href=GetDIALibs?mode=subset_libs;lib_id=$lib_file->[0]$basespace_url_params>Customize</a>" 
+        }
+      }
+      my $accession = 'SAL' . sprintf( "%05i", $lib_file->[0] );
+      $lib_file->[0] = $accession;
+#      $lib_table->addRow( [ @{$lib_file}[1,5,3,8,6], $dwn . '&nbsp;&nbsp;' . $cust ] );
+      push @lib_data, [ @{$lib_file}[1,0,3,8], $size, $dwn . '&nbsp;&nbsp;' . $cust ];
+    }
+
+
+    my ( $tr, $link ) = $sbeams->make_table_toggle( name => $lib_data[1]->[0],
+                                                 visible => 0,
+                                                 tooltip => 'Show/Hide Section',
+                                                 showtext => 'Show library files',
+                                                 hidetext => 'Hide library files',
+                                                 imglink => 1,
+                                                 textlink => 1,
+                                                  sticky => 1 );
+
+
+
+
+    my $lib_table = $atlas->encodeSectionTable( header => 1, 
+                                                 width => '800',
+                                               tr_info => $tr,
+                                                align  => [ qw(left left left left left left center) ],
+                                                  rows => \@lib_data,
+                                           chg_bkg_idx => 3, 
+                                              bg_color => '#EAEAEA',
+                                              sortable => 0,
+                                              table_id => $lib,
+                                           close_table => 1,
+                                            );
+
+#    die Dumper( $lib_table );
+#    die Dumper( $libraries{$lib} );
+
+# 0 dia_library_id
+# 1 dia_library_name
+# 2 set_tag
+# 3 instrument_type_name
+# 4 organism_name
+# 5 DIL.comment
+# 6 md5sum
+# 7 file_path
+# 8 file_format
+# 9 is_master
+# 10 px_identifier
+# 11 contributors
+# 12 converage_statement
+# 13 publication_url
+# 14 publication_title
+# 15 description
+
+    # Hokey way to pull out some set-specific items.
+    my $lib_zero = $libraries{$lib}->[0];
+
+    # Publication info
+    my $publication = '';
+    if ( $lib_zero->[13] && $lib_zero->[14] ) {
+      if ( $lib_zero->[13] =~ /In press/ || $lib_zero->[13] =~ /Submitted/ ) {
+        $publication = "<font color = #ff5f00><b>Publication:</b></font> <i>$lib_zero->[14]</i> ($lib_zero->[13]) <br>";
+      } else {
+        $publication = "<font color = #ff5f00><b>Publication:</b></font> <i>$lib_zero->[14]</i> (<a href='$lib_zero->[13]'>View</a>) <br>";
+      }
+    }
+    my $description = '';
+    if ( $lib_zero->[15] ) {
+      $description = "<font color = #002664>$lib_zero->[15]</font><br>";
+    }
+
+    my $px_link = '';
+    if ( $lib_zero->[10] ) {
+      if ( $lib_zero->[10] =~ /^PXD/ ) {
+        $px_link = "(<a href='http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=$lib_zero->[10]' target=_px title='View dataset $lib_zero->[10] at Proteome Exchange'>$lib_zero->[10]</a>)";
+      } else {
+        $px_link = "(<a href='https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/PASS_View?identifier=$lib_zero->[10]' target=_px title='View dataset $lib_zero->[10] at Proteome Exchange'>$lib_zero->[10]</a>)";
+      }
+
+
+
+    }
+
+    $lib_zero->[12] .= '<br>' if $lib_zero->[12];
+    $content .= qq~
+    <br>
+	 <font color = #002664>
+     <span style="font-family:Barlow, Arial, sans-serif;font-size:110%;font-weight:bold" id=heading> $lib </span><br>
+     $description
+     $lib_zero->[11] $px_link <br>
+     $lib_zero->[12] 
+     $publication
+     $link <table>$lib_table
+	 </font>
+    <br>
+    ~;
+  }
+  return $content;
+
+}
+
+sub hr_size {
+  my $size = shift;
+  if ( !$size ) {
+    my $file = shift;
+    $log->info( "why does $file have no size?" );
+  }
+  my @sfx = ( '', 'KB', 'MB', 'GB', 'TB', 'PB' );
+
+#  $log->info( "in sizer, original size is $size" );
+  my $i = 0;
+  while ( $size > 1024 ) {
+    $size = $size / 1024;
+    $i++;
+  }
+  my $format_size = sprintf( "%.1f", $size ) . " $sfx[$i]";
+#  $log->info( "in sizer, formatted size is $format_size" );
+  return $format_size;
+}
+
+sub get_btxt {
+  my @tags = @_;
+  my $max = 0;
+  for my $tag ( @tags ) {
+    $max = length( $tag ) if length( $tag ) > $max;
+  }
+  my %btxt;
+  for my $tag ( @tags ) {
+    my $len = length( $tag );
+    my $delta = $max - $len;
+    my $pad = 0;
+    if ( $delta ) {
+      $pad = int($delta/2 + 0.5);
+    }
+    my $prepad = '&nbsp;' x $pad; 
+    my $postpad = '&nbsp;' x ($max - $len - $pad); 
+    $btxt{$tag} = $prepad . $tag . $postpad;
+  }
+  return \%btxt; 
+
+}
+
+
+sub get_subset_form {
+
+  # Set this to true if we are in the process of downloading a library
+  my $custom = ( $params->{action} =~ /trigger/i ) ? '0' : 1;
+
+  # Needed this sooner
+  my $swath_overlap = $params->{swath_overlap} || 0;
+
+  my $custom_link = '';
+  if ( $custom ) {
+
+    if ( !$params->{library} || $params->{library} !~ /^\d+$/ ) {
+     print "<script type='text/javascript'> set_status( 'Missing or illegal library ID' ); </script>" ;
+    } else {
+
+      my $format_constraint = '';
+      if ( $params->{format} ) {
+        $format_constraint = "AND file_format = '$params->{format}'";
+      }
+      my $sql = qq~
+      SELECT file_path, file_format 
+      FROM $TBAT_DIA_LIBRARY 
+      WHERE dia_library_id = $params->{library}
+      AND project_id IN ( $project_ids )
+      AND record_status = 'N'
+      ~;
+      my $sth = $sbeams->get_statement_handle( $sql );
+      my $path = '';
+      my $format = '';
+      while ( my @row = $sth->fetchrow_array() ) {
+        $path = $row[0];
+        $format = $row[1];
+        last;
+      }
+      if ( !$path || ! -e $path ) {
+        print "<script type=text/javascript> set_status( 'Missing library path. If you have an access code please enter it at the bottom of <a href=http://www.swathatlas.org>this page</a>' ); </script>" ;
+      } else {
+        my $fname = $sbeams->getRandomString( num_chars => 20 );
+
+#        my $exec = "$PHYSICAL_BASE_DIR/lib/scripts/PeptideAtlas/extract_ionlibrary_subset.pl --in $path --out /tmp/$fname --format $format ";
+	my $exec = "/proteomics/sw/scripts/extract_ionlibrary_subset.pl --in $path --out /tmp/$fname --format $format ";
+        if ( $params->{swaths_file} ) {
+          my $file_name = $q->param( 'swaths_file' );
+          my $sfile = $sbeams->getRandomString( num_chars => 20 );
+          open SWATHS, ">/tmp/$sfile";
+          while ( my $line = <$file_name> ) {
+            print SWATHS $line;
+          }
+          close SWATHS;
+          $exec .= "--swath /tmp/$sfile ";
+        } else {
+          $exec .= "--prec_min $params->{prec_min_mz} --prec_max $params->{prec_max_mz} --width $params->{swath_size} --overlap $swath_overlap --print_swaths ";
+        }
+
+        $exec .= " --frag_min $params->{frag_min_mz} --frag_max $params->{frag_max_mz} ";
+
+        my $pfile = $sbeams->getRandomString( num_chars => 20 );
+        if ( $params->{protein_file} ) {
+          my $file_name = $q->param( 'protein_file' );
+          open PROTS, ">/tmp/$pfile";
+          while ( my $line = <$file_name> ) {
+            print PROTS $line;
+          }
+          close PROTS;
+          $exec .= "--protein /tmp/$pfile ";
+
+          # Yeast library has garbage in uniprot_acc field 
+          if ( $path =~ /Yeast/i ) {
+            $exec .= "--use_protein ";
+          }
+        } elsif ( $params->{domain_protein_list_id} ) {
+
+          my $sql = qq~;
+          SELECT DISTINCT uniprot_accession 
+          FROM $TBAT_DOMAIN_PROTEIN_LIST DPL
+          JOIN $TBAT_DOMAIN_LIST_PROTEIN DLP
+            ON DPL.protein_list_id = DLP.protein_list_id
+          WHERE DLP.protein_list_id = $params->{domain_protein_list_id} 
+            AND project_id IN ( $project_ids )
+          ~;
+          my $sth = $sbeams->get_statement_handle( $sql );
+          open PROTS, ">/tmp/$pfile";
+          while( my @row = $sth->fetchrow_array() ) {
+            print PROTS "$row[0]\n";
+          }
+          $exec .= "--protein /tmp/$pfile ";
+
+          close PROTS;
+#        } else {
+#          die Dumper( $params );
+        }
+        $exec .= "--min_num $params->{min_num_frags} ";
+        $exec .= "--max_num $params->{max_num_frags} ";
+
+        if ( $params->{cmod_mass} && $params->{cmod_opts} ) {
+          $exec .= "--cmod_mass $params->{cmod_mass} --cmod_opts $params->{cmod_opts} ";
+        }
+
+
+        $log->info( $exec );
+#        print "<script type=text/javascript> update_status( '<br>$exec' ); </script>" ;
+        my @status = `$exec`;
+        my $status = join( ' ', @status );
+        $status =~ s/\n/\<br\>/gm;
+        print "<script type=text/javascript> set_status( 'Finished. <br><br>$status' ); </script>" ;
+
+        if ( -e "/tmp/$fname"  ) {
+
+
+          # Command finished successfully. 
+
+          my $result = '';
+          my $base_name = basename( $path );
+          if ( $params->{basename} ) {
+            if ( $params->{basename} =~ /.*(\....)$/ ) {
+              $base_name = $params->{basename};
+            } else {
+              my $suffix = ( $base_name =~ /\.txt$/ ) ? '.txt' :
+                           ( $base_name =~ /\.csv$/ ) ?'.csv' : '.tsv';
+              $base_name = $params->{basename} . $suffix;
+            }
+            
+          }
+
+          my $bs = {};
+          move( "/tmp/$fname", "$PHYSICAL_BASE_DIR/tmp/$fname" );
+          my $full_fname = "$PHYSICAL_BASE_DIR/tmp/$fname";
+          my $tmp_fname = "/tmp/$fname";
+
+          if ( $params->{upload_to_basespace} ) {
+            $bs = upload_to_basespace( basename => $base_name, tmpfile_name => $full_fname, status => $status );
+          }
+
+#          $base_name =~ s/\.csv/\.tsv/;
+#          $base_name =~ s/\.txt/\.tsv/;
+          if ( -e "/tmp/$fname.swaths" ) {
+            move( "/tmp/$fname.swaths", "$PHYSICAL_BASE_DIR/tmp/" );
+            my $swath_file_link = qq~ Download generated <a href=$CGI_BASE_DIR/downloadFile.cgi?raw_download=1;name=swath_windows.txt;format=tsv;tmp_file=$tmp_fname.swaths>SWATH window file</a>.~;
+            print "<script type=text/javascript> update_status( '<br>$swath_file_link' ); </script>" ;
+          }
+
+          if ( -e "$full_fname" ) {
+            $result = qq~ Customized library is ready for download via this <a href=$CGI_BASE_DIR/downloadFile.cgi?raw_download=1;name=$base_name;format=tsv;tmp_file=$tmp_fname>link</a>~;
+          } else {
+            $result = "Library customization failed";
+          }
+          print "<script type=text/javascript> update_status( '<br>$result' ); </script>" ;
+
+        }
+
+      }
+    }
+  }
+  
+  my $title = qq~
+
+     <br>
+      ~;
+	  
+	  
+  my $help = qq~
+  <br>
+   <div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:150%;font-weight:700" id=heading>
+   <font color =#ff5f00 >|</font> Custom Library Download </div>
+   <div id=help style="width:720px; font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700"><br><br> This form allows you to a list of proteins to extract a subset SWATH/DIA library. This can be done with a user-uploaded list, or with any of the 
+   Biology/Disease-driven Human Proteome Project ( <a href="http://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/proteinList?protein_list_id=2"> B/D-HPP </a>) contributed lists.
+  </div>
+  ~;
+
+  my %org2species = ( mtb => 'Mycobacterium tuberculosis',
+                      human => 'Homo sapiens',
+                      ecoli => 'Eschiera coli',
+                      yeast => 'Saccharomyces cerevisie' );
+
+  my %orgs;
+  my %inst;
+  my $format_constraint =  " AND file_format IN ('peakview', 'openswath', 'mprophet' ) ";
+  if ( $params->{format} ) {
+    $format_constraint = "AND file_format = '$params->{format}'";
+  }
+  my $sql = qq~
+  SELECT dia_library_id, dia_library_name, file_path, file_format, is_master,
+         instrument_type_name
+  FROM $TBAT_DIA_LIBRARY DIL 
+  JOIN $TBAT_INSTRUMENT_TYPE IT ON IT.instrument_type_id = DIL.instrument_type_id
+  WHERE project_id IN ( $project_ids )
+  $format_constraint
+--  AND is_master = 'Y'
+  AND DIL.record_status = 'N' 
+  ORDER BY dia_library_tag, dia_library_name 
+  ~;
+# 0 dia_library_id
+# 1 dia_library_name
+# 2 DIL.comment
+# 3 file_path
+# 4 file_format
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my %libraries; 
+
+  my $lib_select;
+  my $lib_size = 0;
+  while ( my @row = $sth->fetchrow_array() ) {
+    if ( $params->{format} ) {
+      next unless $params->{format} =~ /$row[3]/i;
+      next if ( $params->{format} =~ /peakview/i && $row[5] =~ /orbi/i );
+    }
+    $lib_size++;
+    my $selected = '';
+    if ( $row[0] == $params->{lib_id} ) {
+      $selected = 'selected';
+    }
+    $lib_select .= "<option value=$row[0] $selected > $row[1] </option>\n";
+  }
+  $lib_size = 4 if $lib_size > 4;
+  $lib_select .= "</select>\n";
+  $lib_select = "<select size=$lib_size name=library id=library>\n" . $lib_select;
+
+  my $inst_select = "<select name=instrument><option value=''>---</option>";
+  for my $inst ( sort( keys( %inst ) ) ) {
+    $inst_select .= "<option value='$inst' > $inst </option>\n";
+  }
+  $inst_select .= "</select>";
+
+  my $sql =<<"  END";
+  SELECT title, first_name, last_name, protein_list_id
+  FROM $TBAT_DOMAIN_PROTEIN_LIST DPL
+  JOIN $TB_CONTACT C ON DPL.owner_contact_id = C.contact_id
+  ORDER BY title
+  END
+
+  my $title2help = get_help_links();
+  my $or = '~or~';
+
+  my $prec_min_mz = $params->{prec_min_mz} || 400;
+  my $prec_max_mz = $params->{prec_max_mz} || 1200;
+  my $frag_min_mz = $params->{frag_min_mz} || 350;
+  my $frag_max_mz = $params->{frag_max_mz} || 1600;
+  my $swath_size = $params->{swath_size} || 25;
+
+  my $range = $prec_max_mz - $prec_min_mz;
+  my $n_bins = int( $range/$swath_size );
+  $n_bins++ if $range/$swath_size > $n_bins;
+  my $min_num_frags = $params->{min_num_frags} || 6;
+  my $max_num_frags = $params->{max_num_frags} || 6;
+
+  my $domain_protein_list_select = get_protein_list_selector();
+  my $spacer = '&nbsp;' x 30;
+
+  my $no_swaths = '';
+  if ( $params->{format} && $params->{format} =~ /peakview/i ) {
+    $no_swaths = 'checked';
+  }
+
+  my $cmod_mass_select = get_cmod_select( $params->{cmod_mass} );
+  my $cmod_opts_radio = get_cmod_radio( $params->{cmod_opts} );
+
+  my $form = qq~
+  $help
+  <br><br>
+  <script type='text/javascript'>
+  function popitup(url) {
+    newwindow=window.open( url ,'helpwin','height=400,width=300,dependent=yes,screenX=5000,screenY=50,scrollbars=yes,resizable=yes');
+    if (window.focus) {newwindow.focus()}
+    return false;
+  }
+  function specify_swath ( mode ) {
+    var prec_min_mz = document.getElementById( 'prec_min_mz' );
+    var prec_max_mz = document.getElementById( 'prec_max_mz' );
+    var swath_size = document.getElementById( 'swath_size' );
+    var swath_overlap = document.getElementById( 'swath_size' );
+    var swath_cnt = document.getElementById( 'swath_cnt' );
+    if ( mode == 'file' ) {
+      prec_min_mz.value = '';
+      prec_max_mz.value = '';
+      swath_size.value = '';
+      swath_overlap.value = '';
+      swath_cnt.innerHTML = '';
+    } else {
+      var swaths_file = document.getElementById( 'swaths_file' );
+      swaths_file.value = '';
+      var min_val = prec_min_mz.value;
+      var max_val = prec_max_mz.value;
+      var swath_size_val = swath_size.value
+      var swath_overlap_val = swath_overlap.value
+
+      if ( min_val && max_val && swath_size_val ) {
+        var range = max_val - min_val;
+        var n_bins = parseInt( range/swath_size_val );
+        var mod = range % swath_size_val;
+        if ( mod > 0 ) {
+          n_bins = n_bins + 1;
+        }
+        swath_cnt.innerHTML = '(' + n_bins + ' total bins)';
+
+      } else {
+        swath_cnt.innerHTML = '';
+      }
+    }
+  }
+  </script>
+  <style type="text/css">
+   .cellblock_top { border-top:1px solid; border-color:#002664; border-left:1px solid; border-right:1px solid; padding:10px }
+   .cellblock_bottom { border-bottom:thin solid; border-color:#002664; border-left:thin solid; border-right:thin solid; padding:10px }
+   .cellblock { border-color:#002664; border-left:thin solid; border-right:thin solid}
+   .cellblock_complete { border-color:#002664; border-left:thin solid; border-right:thin solid; border-top: thin solid; border-bottom:thin solid }
+  </style>
+
+  <table style="border-collapse: collapse">
+  <form method=post id=customize onSubmit="return check_form()" enctype="multipart/form-data">
+  <input type=hidden name=mode value=subset_libs />
+  <input type=hidden name=action value=download />
+  $basespace{basespace_params}
+   <tr><td colspan=3 align=left><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading><b>Library selection</b></div></td></tr>
+  <tr class=cellblock_top>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Input library</div><sup>&dagger;</sup>:</i></b></td>
+    $title2help->{Library}
+    <td>$lib_select</td>
+  </tr>
+  <tr class=cellblock_bottom>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Output file name:</div></i></b></td>
+    $title2help->{basename}
+    <td><input type=text name=basename id=basename size=36/></td>
+  </tr>
+  <tr>
+    <td colspan=3>&nbsp;</td>
+    <tr><td colspan=3 align=left><b><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading>Protein filtering</div></b></td></tr>
+  </tr>
+  <tr class="cellblock_top">
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Proteins:</div></i></b></td>
+    $title2help->{Proteins}
+    <td><input type=file name=protein_file id=protein_file></input></td>
+  </tr>
+  <tr class=cellblock>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td align=left>$or</td>
+  </tr>
+  <tr class="cellblock_bottom">
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> HPP/BD list:</div></i></b></td>
+    $title2help->{domain_protein_list_id}
+    <td>$domain_protein_list_select</input></td>
+  </tr>
+  <tr>
+    <td colspan=3>&nbsp;</td>
+  </tr>
+  <tr><td colspan=3 align=left><b><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading>M/Z filtering</div></b></td></tr>
+  <tr class=cellblock_top>
+     <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Min precursor mz:</div></i></b></td>
+    $title2help->{prec_min_mz}
+    <td><input type=text id=prec_min_mz name=prec_min_mz onchange=specify_swath('direct') size=12 value=$prec_min_mz></input></td>
+  </tr>
+  <tr class=cellblock>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Max precursor mz:</div></i></b></td>
+    $title2help->{prec_max_mz}
+    <td><input type=text id=prec_max_mz name=prec_max_mz onchange=specify_swath('direct') size=12 value=$prec_max_mz></input></td>
+  </tr>
+  <tr class=cellblock>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Min fragment mz:</div></i></b></td>
+    $title2help->{frag_min_mz}
+    <td><input type=text id=frag_min_mz name=frag_min_mz onchange=specify_swath('direct') size=12 value=$frag_min_mz></input></td>
+  </tr>
+  <tr class=cellblock_bottom>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Max fragment mz:</div></i></b></td>
+    $title2help->{frag_max_mz}
+    <td><input type=text id=frag_max_mz name=frag_max_mz onchange=specify_swath('direct') size=12 value=$frag_max_mz></input></td>
+  </tr>
+  <tr>
+    <td colspan=3>&nbsp;</td>
+  </tr>
+  <tr><td colspan=3 align=left><b><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading>Number of fragment ions</div></b></td></tr>
+
+  <tr class=cellblock_top>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Min num fragments:</div></i></b></td>
+    $title2help->{min_num_frags}
+    <td><input type=text id=min_num_frags name=min_num_frags onchange=check_num_frags() size=12 value=$min_num_frags></input></td>
+  </tr>
+  <tr class=cellblock_bottom>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Max num fragments:</div></i></b></td>
+    $title2help->{max_num_frags}
+    <td><input type=text id=max_num_frags name=max_num_frags onchange=check_num_frags() size=12 value=$max_num_frags></input></td>
+  </tr>
+  <tr>
+    <td colspan=3>&nbsp;</td>
+  </tr>
+
+  <tr><td colspan=3 align=left><b><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading>Isotopic labelling</div></b></td></tr>
+
+  <tr class=cellblock_top>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Heavy isotopes:</div></i></b></td>
+    $title2help->{cmod_mass}
+    <td>$cmod_mass_select</td>
+  </tr>
+  <tr class=cellblock_bottom>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Transition types:</div></i></b></td>
+    $title2help->{cmod_opts}
+    <td>$cmod_opts_radio</td>
+  </tr>
+  <tr>
+    <td colspan=3>&nbsp;</td>
+  </tr>
+
+  <tr><td colspan=3 align=left><b><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading>SWATH Settings</div></b></td></tr>
+
+  <tr class="cellblock_top">
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading>Upload SWATHs file:</div></i></b></td>
+    $title2help->{swaths_file}
+    <td><input type=file name=swaths_file id=swaths_file onchange=specify_swath('file')></input></td>
+  </tr>
+  <tr class=cellblock>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td align=left>$or</td>
+  </tr>
+  <tr class=cellblock>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading>No SWATHs file:</div></b></td>
+    $title2help->{no_swaths_file}
+    <td align=left><input type=checkbox $no_swaths /></td>
+  </tr>
+  <tr class=cellblock>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td align=left>$or</td>
+  </tr>
+  <tr class=cellblock>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> SWATH window size:</div></i></b></td>
+    $title2help->{swath_size}
+    <td white-space:nowrap><input type=text name=swath_size id=swath_size onchange=specify_swath('direct') size=12 value=$swath_size></input><span id=swath_cnt>($n_bins total bins)</span></td>
+  </tr>
+  <tr class=cellblock_bottom>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> SWATH window overlap:</div></i></b></td>
+    $title2help->{swath_overlap}
+    <td white-space:nowrap><input type=text name=swath_overlap id=swath_overlap onchange=specify_swath('direct') size=12 value=$swath_overlap></input></td>
+  </tr>
+  <tr>
+    <td colspan=3>&nbsp;</td>
+  </tr>
+
+
+  <tr>
+    <td>&nbsp;</td>
+    <td colspan=2 align=left><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading><input type=submit value='Generate Custom Library'></input></div></td>
+	
+  </tr>
+  </table>
+  
+  </form>
+  <script type="text/javascript">
+  function check_form() {
+    var prec_min_mz = document.getElementById( 'prec_min_mz' );
+    var prec_max_mz = document.getElementById( 'prec_max_mz' );
+    var swath_size = document.getElementById( 'swath_size' );
+    var swath_cnt = document.getElementById( 'swath_cnt' );
+    var swaths_file = document.getElementById( 'swaths_file' );
+    var library = document.getElementById( 'library' );
+
+    var min_val = prec_min_mz.value;
+    var max_val = prec_max_mz.value;
+    var swath_size_val = swath_size.value
+
+//    if ( library.selectedIndex  ) {
+//      alert( library.selectedIndex.value );
+//      return false;
+//    }
+//    alert( typeof( library.selectedIndex ) );
+
+    var status = true;
+    if ( min_val && max_val && swath_size_val ) {
+      status = true;
+    }
+    if ( swaths_file.value ) {
+      status = true;
+    }
+    if ( ! status ) {
+      alert( "Must provide either a SWATH file, or all of min, max, and SWATH window size" );
+    }
+    var min_frags = document.getElementById( 'min_num_frags' );
+    var max_frags = document.getElementById( 'max_num_frags' );
+    if ( parseInt(min_frags.value) > parseInt(max_frags.value) ) {
+      alert( "Min frags cannot be less than Max frags ");
+      status = false;
+    }
+
+    return status;
+  }
+  </script>
+    <br>
+  <br>
+  ~;
+
+  return $form;
+}
+
+sub process_params {
+  my $params = {};
+  $sbeams->parse_input_parameters( q => $q, parameters_ref => $params );
+  $sbeams->processStandardParameters( parameters_ref => $params );
+  return( $params );
+}
+
+sub get_cmod_select {
+  
+  my $curr_val = shift || '';
+  my %sel = ( K8 => '', R10 => '', K6 => '', R6 => '' );
+  my %seen;
+  for my $curr ( split( ',', $curr_val ) ) {
+    $sel{$curr} = 'SELECTED';
+  }
+
+  my $cmod_sel = qq~
+    <SELECT SIZE=4 MULTIPLE NAME=cmod_mass>
+      <OPTION VALUE='' ></OPTION>
+      <OPTION VALUE=K8 $sel{K8}>Lysine + 8</OPTION>
+      <OPTION VALUE=R10 $sel{R10}>Arginine + 10</OPTION>
+      <OPTION VALUE=K6 $sel{K6}>Lysine + 6</OPTION>
+      <OPTION VALUE=R6 $sel{R6}>Arginine + 6</OPTION>
+    </SELECT>
+  ~;
+  return $cmod_sel;
+}
+
+sub get_cmod_radio {
+  my $curr_val = shift || 'light_only';
+  my %sel = (  light_only => '', 'heavy_only' => '', both => '' );
+  $sel{$curr_val} = 'checked';
+
+  my $cmod_radio = qq~
+  <INPUT TYPE=radio name=cmod_opts $sel{light_only} value=light_only> Light only </INPUT>
+  <INPUT TYPE=radio name=cmod_opts $sel{heavy_only} value=heavy_only> Heavy only </INPUT>
+  <INPUT TYPE=radio name=cmod_opts $sel{both} value=both> L & H </INPUT>
+  ~;
+  return $cmod_radio;
+}
+
+
+
+sub authenticate_to_basespace {
+
+  my $uri = $basespace{appsessionuri};
+  my @appsession = split( /\//, $uri );
+  my $appsession_id = $appsession[$#appsession];
+  $basespace{appsession_id} = $appsession_id;
+
+  # Have we been through authentication in this page?
+  if ( $basespace{access_token} ) {
+#    $log->info( "Already authenticated, returning" );
+    return;
+  }
+
+  # Will need a new user agent for subsequent transactions
+  my $ua = LWP::UserAgent->new();
+  $ua->cookie_jar( {} );
+
+  # Is there a cached value?
+  my $token = $sbeams->getSessionAttribute( key => $basespace{appsessionuri} );
+
+  if ( $token ) {   # Yes, will use to set header
+#    $log->info( "Fetched token from Session Cookie" );
+
+  } else { # No, fetch from bs using client ids and auth_code
+
+    my $client = $CONFIG_SETTING{BASESPACE_IONLIBRARY_CLIENT_ID} || '';
+    my $client_secret = $CONFIG_SETTING{BASESPACE_IONLIBRARY_CLIENT_SECRET_ID} || '';
+    my $redirect = "https://db.systemsbiology.net" . $HTML_BASE_DIR . '/cgi/PeptideAtlas/GetDIALibs';
+
+    my $auth_code = $basespace{authorization_code};
+
+    my $auth_url = 'https://api.basespace.illumina.com/v1pre3/oauthv2/token';
+    my $post_param_ref = { client_id => $client,
+                       client_secret => $client_secret, 
+                                code => $auth_code, 
+                        redirect_uri => $redirect, 
+                          grant_type => 'authorization_code' };
+
+    my $response = $ua->post( $auth_url, $post_param_ref );
+
+    for my $line ( split( "\n", $response->content() ) ) {
+      if ( $line =~ /"access_token":"([^"]+)"/ ) {
+        $token = $1;
+        last;
+      }
+    }
+  }
+
+  if ( !$token ) {
+    $log->warn( "Unable to get authorization from Base Space" );
+  } else {
+
+    # Place access token in default header for user agent
+    # for all subsequent transactions.
+    $ua->default_header( 'x-access-token' => $token );
+    $basespace{ua} = $ua;
+    $basespace{token} = $token;
+
+    # Cache token for subsequent cgi calls with this appsession
+    $sbeams->setSessionAttribute( key => $basespace{appsessionuri}, value => $token );
+  }
+
+} # End authenticate_to_basespace
+
+# Fetch appsession info, includes project name and ID to write to
+sub get_appsession_properties {
+
+  if ( !$basespace{access_token} ) {
+    authenticate_to_basespace();
+  } 
+
+  # User Agent created during authentication
+  my $ua = $basespace{ua} || return;
+
+  my $appsession_url = $basespace{appsession_url} || 'https://api.basespace.illumina.com/' . $basespace{appsessionuri};
+  $basespace{appsession_url} ||= $appsession_url;
+
+  my $response = $ua->get( $appsession_url );
+  my @content = $response->content();
+  my $appsession = $json->decode( $content[0] );
+  $basespace{appsession} = $appsession;
+
+  # Fetch project_id from Response->Properties, as per Illumina. 
+  # Response->References also contains info, but is deprecated.
+  if ( $appsession->{Response} ) {
+    if ( $appsession->{Response}->{Properties} ) {
+      for my $ref ( @{$appsession->{Response}->{Properties}->{Items}} ) {
+        my $name = $ref->{Name};
+        $name =~ s/Input\.//;
+        if ( $ref->{Name} eq 'Input.project-id' ) {
+          $basespace{project} = $ref->{Content}->{Name};
+          $basespace{project_id} = $ref->{Content}->{Id};
+        } else {
+          $basespace{$name} = $ref->{Content};
+        }
+      }
+    }
+  }
+#  $basespace{ua} = '';
+#  $basespace{appsession} = '';
+#  die Dumper( %basespace );
+
+} # End get_appsession_properties
+
+
+sub upload_to_basespace {
+
+  my %args = @_;
+
+  my $tmp_file = $args{tmpfile_name} || "$PHYSICAL_BASE_DIR/tmp/$params->{tmp_file}";
+
+  # If we came from basespace, are downloading an entire peakview file:
+  if (  $params->{format} &&  $params->{format} =~ /peakview/i && $params->{name} &&  $params->{tmp_file} ) {
+    $params->{name} =~ s/.csv$/.txt/;
+    $params->{name} =~ s/.tsv$/.txt/;
+  }
+  my $basename = $args{basename} || $params->{name};
+
+  if ( $basename !~ /\.txt$/ ) {
+    $basename =~ s/\....$/.txt/;
+  }
+  if ( $basename !~ /\.txt$/ ) {
+    $basename .= '.txt';
+  }
+
+  my $status = $args{status} || '';
+
+  if ( ! -e $tmp_file ) {
+    die "No tmp file $tmp_file";
+    $log->warn( "Missing file $tmp_file" );
+    return;
+  }
+
+  if ( !$basespace{appsession} ) {
+    get_appsession_properties();
+  }
+#  set_appsession_status( 'Running' );
+
+  my $project = $basespace{project};
+  my $project_id = $basespace{project_id};
+  my $appsessionuri = $basespace{appsessionuri};
+  my $appsession_id = $basespace{appsession_id};
+  my $ua = $basespace{ua};
+  my $token = $basespace{token};
+  if ( !$token ) {
+    $basespace{ua} = '';
+    $basespace{appsession} = '';
+    die Dumper( %basespace );
+  }
+
+  if ( $project_id && $project ) {
+
+    # We will assume that no App Results called 'SWATHIonLibraries' exists
+    # for this project. Try to create.
+    # Required info: Project.Id, AppResult.Name, .Desc, AppSession.ID 
+    $basespace{ua} = '';
+    $basespace{appsession} = '';
+
+    my $appresult_url = "https://api.basespace.illumina.com/v1pre3/projects/$project_id/appresults";
+#    my $appresult_param_ref = { Name => 'SWATHAtlasIonLibraries.txt',
+    my $appresult_param_ref = { Name => $basename,
+                                Description => "Ion Library $basename from SWATH Atlas for SWATH Analysis",
+                                HrefAppSession => $appsessionuri
+                              };
+
+    my $ar_result = $ua->post( $appresult_url, $appresult_param_ref );
+    my @content = $ar_result->content();
+    my $ar_object = $json->decode( $content[0] );
+    my $HrefFiles = $ar_object->{Response}->{HrefFiles} || die Dumper( $ar_object );
+
+    # TODO validate ar_result?
+    # We have a project, and have created an AppResult. Now upload file
+
+#    $log->info( join( "\t", qw( Auth_code URI Token AppResult Project Project_name basename tmp_file client client_secret ) ) );
+#    $log->info( join( "\t", $auth_code, $appsession_id, $token, 'AppResultId', $project_id, $project, $basename, $tmp_file, $client, $client_secret  ) );
+
+    print_js_status( "Uploading file to Base Space, may take a minute or two. <br>" );
+    my $t0 = time();
+
+    upload_file_multipart( token => $token, tmp_file => $tmp_file, href => $HrefFiles, name => $basename );
+#    upload_file( token => $token, tmp_file => $tmp_file, href => $HrefFiles, name => $basename );
+
+    my $t1 = time();
+    my $tdelta = $t1 - $t0;
+
+    # Set analysis Status to Complete
+    set_appsession_status( 'Complete', $status );
+
+#    if ( $params->{mode} eq 'download_libs' ) {
+#      print_js_status( "Finished upload <br><br>", 1 );
+#    }
+    print_js_status( "File $basename uploaded to project $project in Base Space in $tdelta seconds<br>" );
+    print_js_status( "Returning to Base Space...<br>" );
+    sleep 4;
+    js_redirect( "https://basespace.illumina.com/analyses/$appsession_id/files" );
+    sleep 4;
+
+  } else {
+    print_js_status( "<br>Failure: no Base Space projects to write to" );
+    return;
+  }
+
+}  # End upload_to_basespace
+
+sub upload_file {
+  my %args = @_;
+  my $token = $args{token};
+  my $tmp_file = $args{tmp_file};
+  my $basename = $args{name};
+  my $HrefFiles = $args{href};
+
+#    my $exe = "curl -v -H 'x-access-token: $token' -d '\@$tmp_file' -H 'Content-Type: text/tab-separated-values' 'https://api.basespace.illumina.com/" . $HrefFiles . "?name=$basename'";
+    my $exe = "curl -v -H 'x-access-token: $token' -d '\@$tmp_file' -H 'Content-Type: application/octet-stream' 'https://api.basespace.illumina.com/" . $HrefFiles . "?name=$basename'";
+    my @result = `$exe`;
+#    $log->info( $exe );
+#    $log->info( join( "\n", @result ) );
+}
+
+
+#curl -H 'x-access-token: 20dd0ed0340942a49a5b938a592b6900' -H 'Content-Type: text/tab-separated-values' -X POST https://api.basespace.illumina.com/v1pre3/appresults/16026018/files?name=Frankenfile\&multipart=true
+
+#curl -H 'x-access-token: 20dd0ed0340942a49a5b938a592b6900' -H 'Content-Type: text/tab-separated-values' -X POST -T /tmp/20_parts00 -X PUT https://api.basespace.illumina.com/v1pre3/files/16026108/parts/1
+
+#curl -H 'x-access-token: 20dd0ed0340942a49a5b938a592b6900'  -X PUT https://api.basespace.illumina.com/v1pre3/files/998044314?uploadstatus=Complete
+
+
+sub upload_file_multipart {
+  my %args = @_;
+  my $token = $args{token};
+  my $tmp_file = $args{tmp_file};
+  my $basename = $args{name};
+  my $HrefFiles = $args{href};
+
+# /v1pre3/appresults/XXXXX/files/;
+  my $parts_href = $HrefFiles;
+  $parts_href =~ s/\/files/\/parts/;
+  $parts_href =~ s/\/appresults/\/files/;
+
+  my $finish_href = $HrefFiles;
+  $finish_href =~ s/\/files//;
+  $finish_href =~ s/\/appresults/\/files/;
+
+  my $rdir = $sbeams->getRandomString( num_chars => 20 );
+  `mkdir /tmp/$rdir/`;
+  `split -b10000000 -d $tmp_file /tmp/$rdir/upload_ `;
+
+   # Initiate upload 
+   my $exe = "curl -H 'x-access-token: $token' -H 'Content-Type: text/tab-separated-values' -X POST https://api.basespace.illumina.com/$HrefFiles?name=$basename" . '\&multipart=true';
+   my @results = `$exe`;
+#   $log->info( "started multipart upload" );
+#   $log->info( $exe );
+#   $log->info( $results[0] );
+    
+   my $multipart_upload = $json->decode( $results[0] );
+   my $upload_href = $multipart_upload->{Response}->{Href};
+
+   # Upload the parts
+   opendir DIR, "/tmp/$rdir/";
+   my @files = sort( grep( !/\./, readdir DIR ) );
+   my $part = 1;
+   for my $file ( @files ) {
+     if ( -e $file  ) {
+#       $log->info( $file . " exists" );
+     }
+     $exe = "curl -H 'x-access-token: $token' -H 'Content-Type: text/tab-separated-values' -X POST -T /tmp/$rdir/$file -X PUT https://api.basespace.illumina.com/$upload_href/parts/$part";
+#    $log->info( $exe );
+     @results = `$exe`;
+#     $log->info( "uploaded part $part" );
+#     $log->info( join( "\n", @results ) );
+     $part++;
+   }
+
+   # Finish upload
+# curl -H 'x-access-token: 20dd0ed0340942a49a5b938a592b6900'  -X POST https://api.basespace.illumina.com/v1pre3/files/998044314?uploadstatus=Complete
+   $exe = "curl -H 'x-access-token: $token' -X POST https://api.basespace.illumina.com/$upload_href?uploadstatus=complete";
+   @results = `$exe`;
+#   $log->info( $exe );
+#   $log->info( "finished multipart upload" );
+#   $log->info( join( "\n", @results  ) );
+   `rm -Rf /tmp/$rdir/`;
+
+}
+
+sub set_appsession_status {
+
+  my $new_status = shift || return;
+  my $status_description = shift || '';
+  $status_description =~ s/<br>//gi;
+
+  if ( !$basespace{ua} ) {
+    authenticate_to_basespace();
+  } 
+
+  my $ua = $basespace{ua};
+
+  my $appsession_url = $basespace{appsession_url};
+  $ua->post( $appsession_url, [ Status => $new_status, Statussummary => $status_description ] );
+  $ua->post( "$appsession_url/properties", [ 'Logs.tail' => $status_description ] );
+  $ua->post( "$appsession_url/properties", [ 'Logs' => $status_description ] );
+#  die "$appsession_url/properties";
+
+}
+
+sub js_redirect {
+  my $url = shift || return;
+  print qq~<script type=text/javascript> window.location.replace( "$url" ); </script>~;
+}
+
+sub print_js_status {
+  my $msg = shift or return;
+  my $replace = shift || 0;
+
+  if ( $replace ) {
+    print "<script type=text/javascript> set_status( '$msg' ); </script>" ;
+  } else {
+    print "<script type=text/javascript> update_status( '<br>$msg' ); </script>" ;
+  }
+}
+
+
+sub get_build_path {
+  my %args = @_;
+  return unless $args{build_id};
+  my $path = $atlas->getAtlasBuildDirectory( atlas_build_id => $args{build_id} );
+  $path =~ s/DATA_FILES//;
+  return $path;
+}
+
+sub get_draw_chart_function {
+  my $sample_arrayref = shift || return '';
+
+  my @samples;
+  for my $s ( @{$sample_arrayref} ) {
+    push @samples, [ $s->[1], $s->[4], $s->[7] ];
+  }
+  my $GV = SBEAMS::Connection::GoogleVisualization->new();
+  my ( $chart ) = $GV->setDrawBarChart(  samples => \@samples,
+                                    	data_types => [ 'string', 'number', 'number' ],
+                                      	headings => [ 'Sample', 'Distinct peptides (n_obs > 1)', 'Cumulative peptides (n_obs > 1)' ],
+                                      show_table => 0,
+                                 truncate_labels => 24
+ 	);
+  my $header = $GV->getHeaderInfo();
+  return ( $chart, $header );
+}
+
+
+sub get_public_libsets {
+  my $sql = qq~
+  SELECT set_tag, instrument_type_name,
+  organism_name, px_identifier, contributors, coverage_statement,
+  COUNT(*) AS cnt
+  FROM $TBAT_DIA_LIBRARY DIL 
+  JOIN $TBAT_DIA_LIBRARY_SET DILS ON DILS.dia_library_set_id = DIL.dia_library_set_id
+  JOIN $TBAT_INSTRUMENT_TYPE IT ON IT.instrument_type_id = DIL.instrument_type_id
+  JOIN $TB_ORGANISM O ON O.organism_id = DIL.organism_id
+  WHERE project_id IN ( $project_ids )
+  AND DIL.record_status = 'N'
+  GROUP BY set_tag, instrument_type_name,
+  organism_name, px_identifier, contributors, coverage_statement
+  ORDER BY set_tag, instrument_type_name
+  ~;
+# 0 set_tag
+# 1 instrument_type_name
+# 2 organism_name
+# 3 px_identifier
+# 4 contributors
+# 5 coverage_statement
+# 6 cnt
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my %sets;
+  while ( my @row = $sth->fetchrow_array() ) {
+    if ( $sets{$row[0]} ) {
+      $sets{$row[0]}->{inst} = $row[1] if $row[1] =~ /TripleTOF/;
+      $sets{$row[0]}->{lib_cnt} += $row[6];
+    } else {
+      my $px = ( $row[3] ) ? 
+               ( $row[3] =~ /^PXD/ ) ? "<a href='http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=$row[3]' target='_px'>$row[3]</a>" :
+                                       "<a href='https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/PASS_View?identifier=$row[3]' target='_px'>$row[3]</a>" :
+				       $sbeams->makeInactiveText( 'na' );
+
+      $row[5] =~ s/Proteome Coverage//gi;
+      $sets{$row[0]} = { inst => $row[1],
+                         lib_cnt => $row[6],
+                         px => $px,
+                         org => $row[2],
+                         cov => $row[5],
+                         cont => $row[4] };
+    }
+  }
+
+  if ($params->{output_format} eq 'json') {
+    use JSON;
+    my $json = new JSON;
+    my $jstr = $json->utf8->encode(\%sets);
+    print("Access-Control-Allow-Origin: *\n");
+    print("Content-Type: application/json\n\n");
+    print $jstr;
+    return;
+  }
+
+#  my @lib_data = ( [ qw( Library Organism Instrument Contributors Coverage ProteomeExchange NumFiles ) ] );
+#  my @lib_data = ( [ qw( Library Instrument Contributors Coverage ) ] );
+  my @lib_data = ( [ 'Library', 'Proteome Coverage', 'Contributors' ] );
+  for my $lib ( sort( keys( %sets ) ) ) {
+#    push @lib_data, [ $lib, $sets{$lib}->{org}, $sets{$lib}->{inst}, $sets{$lib}->{cont}, $sets{$lib}->{cov}, $sets{$lib}->{px}, $sets{$lib}->{lib_cnt} ];
+#    push @lib_data, [ $lib, $sets{$lib}->{inst}, $sets{$lib}->{cont}, $sets{$lib}->{cov} ];
+    push @lib_data, [ $lib, $sets{$lib}->{cov}, $sets{$lib}->{cont} ];
+  }
+
+  my $lib_table = $atlas->encodeSectionTable( header => 1, 
+                                               width => '800',
+                                              align  => [ qw(left left left left ) ],
+                                                rows => \@lib_data,
+                                         chg_bkg_idx => 0, 
+                                            bg_color => '#EAEAEA',
+                                            sortable => 0,
+                                              nowrap => [1,2,3],
+                                            table_id => 'libraries',
+                                          table_only => 1,
+                                         close_table => 1,
+                                            );
+
+  print qq~
+    <html>
+    <head></head>
+    <body>
+    $lib_table
+    </body>
+    </html>
+  ~;
+  
+
+
+}
+
+__DATA__

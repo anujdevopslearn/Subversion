@@ -1,0 +1,1122 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# $Id: AssessDIALibrary 5692 2008-07-08 17:17:27Z dcampbel $
+#
+# SBEAMS is Copyright (C) 2000-2016 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+###############################################################################
+
+
+###############################################################################
+# Get the script set up with everything it will need
+###############################################################################
+use strict;
+use lib qw (../../lib/perl);
+use Data::Dumper;
+use File::Basename;
+use File::Copy qw( move copy );
+use LWP::UserAgent;
+use HTTP::Request;
+use JSON;
+use CGI;
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+#use SBEAMS::Connection::SBPage;
+use SBEAMS::Connection::DataTable;
+use SBEAMS::Connection::TabMenu;
+
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
+
+###############################################################################
+# Global Variables
+###############################################################################
+my $sbeams = new SBEAMS::Connection;
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+my $atlas = new SBEAMS::PeptideAtlas;
+$atlas->setSBEAMS($sbeams);
+
+my $max_size = 200000;
+$CGI::POST_MAX = 1024 * $max_size;
+
+my $json = new JSON;
+  
+# Read input parameters
+my $params = process_params();
+      $log->info( "params processed" );
+
+my $username = $sbeams->Authenticate( allow_anonymous_access => 1) || exit;
+$sbeams->setSessionAttribute( key => 'PA_resource', value => 'DIAAtlas' );
+
+# Get a list of accessible project_ids
+my @project_ids = $sbeams->getAccessibleProjects();
+my $project_ids = join( ",", @project_ids ) || '0';
+
+my $show_image = 0;
+my $tabMenu;
+
+my %basespace = ( basespace_params => '' );
+my $page = '';
+
+{ # Main 
+
+    # Authenticate or exit
+
+
+    ## get current settings
+    my $project_id = $sbeams->getCurrent_project_id();
+
+#    print $sbeams->get_http_header();
+    $atlas->display_page_header( tracker_type => 'swath' );
+
+
+    # Get the HTML to display the tabs
+    $tabMenu = $atlas->getTabMenu(
+      parameters_ref => $params,
+      program_name => $0,
+    );
+
+    my $css = $sbeams->printStyleSheet( module_only => 1 );
+
+    $page .=<<"    END";
+     <br>
+       $css
+     <br>
+     <br>
+    END
+
+    if ( 1 ) {
+      my $title = qq~
+      <div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:150%;font-weight:700"  id=heading>
+		<font color =#ff5f00 >|</font> DIA Library Assessment</div>
+	<br>
+      ~;
+    #  $page .= $title;
+      $page .= $tabMenu;
+      $page .= qq~
+    <script>
+    </script>
+
+      ~;
+
+      if ( $params->{ion_library} ) {
+        $page .= get_status_box("Analyzing library, may take several minutes") unless $params->{action} eq 'trigger';
+        print $page;
+        $page = analyze_library();
+        $page .= get_status_box("");
+      } else {
+        $page .= qq~
+        <script type='text/javascript'> 
+        function sizeme () {
+          var ionlib = document.getElementById( 'ion_library' );
+          var libsize = ionlib.files[0].size
+          var maxsize = 1024 * $max_size;
+          var maxsizefriendly = Math.round($max_size/1000)
+          if ( libsize > maxsize ) {
+            alert( "For files larger than " + maxsizefriendly + " MB we request that you run DIALib-QC locally" );
+            ionlib.value="";
+          }
+        };
+//                 //binds to onchange event of your input field
+//                 $('#ion_library').bind('change', function() {
+//                 //this.files[0].size gets the size of your file.
+//                 alert(this.files[0].size);
+//                 });     
+    </script>
+        ~;
+        $page .= get_subset_form();
+      }
+    }
+    $page .= "<BR>";
+
+    # Print what we already have, speed up apparent page loading time.
+		print $page;
+
+		$atlas->display_page_footer();
+    $sbeams->setSessionAttribute( key => 'PA_resource', value => '' );
+
+} # end main
+
+sub get_status_box {
+
+  my $msg = shift || '';
+  my $wait = "\<img\ src=\"$HTML_BASE_DIR/images/wait_sm.gif\"\>\</img\>";
+  if ( $msg ) {
+  return qq~ 
+      <div id='status' class=info_box width: 400px >$wait $msg</div><br><br>
+      <script type='text/javascript'> 
+      function set_status ( new_status ) {
+        var status = document.getElementById( 'status' );
+        status.innerHTML = '$wait' + new_status;
+        return false;
+      }
+      function update_status ( new_status ) {
+        var status = document.getElementById( 'status' );
+        var curr_status = status.innerHTML;
+        status.innerHTML = curr_status + new_status;
+      }
+      function clear_status () {
+        var status = document.getElementById( 'status' );
+        status.remove();
+//        status.innerHTML = "";
+      }
+      </script>
+    ~;
+  } else {
+    return "<script>clear_status()</script>"
+  }
+}
+
+sub get_help_links {
+
+
+  my %title2text = ( 
+                     'ion_library' => "Ion library to be analyzed (required) ",
+                     'pep_file'    => "Mapping file of reference proteome, protein/peptide TSV, one peptide per line. ",
+                     'swaths_file' => "File of SWATH bins, format is lower mz bound, upper bound mz, one per line TAB delimited",
+                     'col_defs' => "Print out definitions for all tests",
+                     'skip_decoys' => "Skip DECOY assess in compiling library statistics",
+                     'alt_decoy' => "Alternate prefix to denote DECOY assays, default is DECOY",
+                     'assess_massdiff' => "Compute difference between assay m/z and theoretical values, report on outliers",
+      );
+
+  my %title2link;
+  for my $title ( keys( %title2text ) ) {
+    my $text = $title2text{$title};
+    $title2link{$title} = qq~<TD BGCOLOR=E0E0E0><span title='$text' class=popup><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' BORDER=0 ONCLICK="popitup('$CGI_BASE_DIR/help_popup.cgi?title=$title;text=$text;email_link=no');"></SPAN></TD>~;
+  }
+  return \%title2link;
+}
+
+sub get_protein_list_selector {
+
+  my $sql =<<"  END";
+  SELECT title, protein_list_id
+  FROM $TBAT_DOMAIN_PROTEIN_LIST DPL
+  JOIN $TB_CONTACT C ON DPL.owner_contact_id = C.contact_id
+  WHERE project_id IN ( $project_ids )
+  ORDER BY title
+  END
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+
+  my $select;
+
+  while( my @row = $sth->fetchrow_array() ) {
+    my $selected = ( $row[1] == $params->{domain_protein_list_id} ) ? 'selected' : '';
+    my $title = $row[0];
+    $title =~ s/known to be associated with human/associated with/g;
+    my $option = "<option value=$row[1] $selected>$title </option>\n";
+    $select .= $option;
+  }
+  $select .= "</select>\n";
+  my $blank = ( $select =~ /selected/ ) ? '' : '<option selected value="">&nbsp;</option>';
+
+  $select = qq~
+  <select name=domain_protein_list_id id=domain_protein_list_id>
+  $blank
+  $select
+  ~;
+
+  return $select;
+}
+
+sub get_table_help {
+  my %args = @_;
+  my $name = $args{table};
+  return '' unless $name;
+  $args{mode} ||= 'section';
+  my @entries;
+  my $hidetext;
+  my $showtext;
+  my $heading;
+  my $description;
+
+  if ( $name eq 'build' ) {  
+    @entries = ( { key => 'Build Name', value => 'The simple name for this build, usually contains organism, prophet cutoff, and other information. ' },
+                 { key => 'Build Description', value => 'More detailed information about build. ' },
+                 { key => 'Reference Database', value => 'Database to which peptides were mapped, generally different than search database.  This mapping is done by running BLAST, and allows the peptides to be mapped the the organism\'s genomic sequence. ' },
+                 { key => 'Build Date', value => 'Date upon which build was finished. ' },
+                 { key => '# Samples', value => 'The number of individual samples which comprise this build.  Each sample contains one or more LCMS/MS runs, and generally corresponds to a single scientific experiment.' } ,
+                 { key => 'Distinct Peptides', value => 'This shows the number of distinct peptide sequences that were seen in this build.  Observations of the peptide in different charge states or with different modifications are coalesced.' } ,
+                 { key => 'Total Observations ', value => 'The total number of spectra that yeilded identifications above the build threshold.  Observations of the same base peptide sequences multiple times or in various charge states/modifications, whould each contribute to the total' }
+        );
+                 
+    $showtext = 'show row descriptions';
+    $hidetext = 'hide row descriptions';
+    $heading = 'Build Overview';
+    $description= 'These values pertain to the atlas build as a whole';
+
+
+  } elsif ( $name eq 'batch' ) {
+    @entries = ( { key => 'ID', value => 'Database ID for this sample (search batch) ' },
+                 { key => 'Sample_Name', value => 'Simple name for this sample/experiment. ' },
+                 { key => '#_Spectra_Searched', value => 'The total number of spectra searched in the sample. ' },
+                 { key => "#_Spectra_ID'd", value => 'The number of spectra identifed with a probability greater than the atlas threshold ' },
+                 { key => '#_Distinct', value => 'The number of distinct peptide sequences, seen more than once (multiobs), in this build that are seen in this sample. ' },
+                 { key => '#_Unique', value => "The number of distinct, multiobs peptides that are seen only in this sample (unique contribution).  This discriminates against smaller samples, and is less useful in atlas' with a large number of samples. " },
+                 { key => '#_Progressive', value => 'Order-dependent unique multiobs peptides contributed by a given sample.  The contribution for each sample is based on the samples that have gone before it, so later samples tend to have a lower progressive contribution. ' },
+                 { key => '#_Cumulative', value => 'Order-dependent cumulative number of unique multiobs peptides contributed to build by this and previous samples. ' },
+                 { key => '#_Proteins', value => 'The number of canonical (highly distinguishable, non-redundant) protein sequences identified from the peptides in this sample.' },
+                 { key => '#_Cum_Prots', value => 'Order-dependent cumulative number of canonical proteins contributed to build by this and previous samples.<br>Counts non-human contaminants, so final tally may be greater than Canonical Proteins count in Build Overview. ' },
+#                 { key => 'Sens', value => 'The sensitivity of the Peptide Prophet model at a probablility of 0.9, the percent of true positives that would be included at that threshold was used as a cutoff. ' },
+                 { key => 'FDR_(%)', value => 'The error rate of peptides above the threshold Peptide Prophet model at a probablility of 0.9, the percent of false positives that would be included at the build threshold. ' },
+                 { key => 'Sample_Date', value => ''},
+        );
+    $heading = 'Sample Overview'; 
+    $description = 'These values pertain to individual samples within the atlas';
+
+  } elsif ( $name eq 'mayu' ) {
+   @entries = ( { key => 'nr_runs', value => 'Number of MS runs contributing to this build '},
+  
+		{ key => 'nr_files', value => 'Always 1 '},
+  
+		{ key => 'mFDR', value => 'Data in current row applies to all data meting this PSM (spectrum) FDR threshold. '},
+		{ key => 'target_PSM', value => 'Number of non-decoy PSMs at this mFDR (counts peptides mappable to protein reference set only)'},
+  
+		{ key => 'decoy_PSM', value => 'Number of decoy PSMs at this mFDR '},
+  
+		{ key => 'FP_PSM', value => 'Number of false positive PSMs predicted by Mayu for this mFDR. Usually near, but not exactly the same as, the number of decoys. '},
+  
+		{ key => 'TP_PSM', value => 'target_PSM - FP_PSM '},
+  
+		{ key => 'target_pepID', value => 'Number of non-decoy unique peptides at this mFDR (counts peptides mappable to protein reference set only) '},
+  
+		{ key => 'decoy_pepID', value => 'Number of decoy unique peptides at this mFDR '},
+  
+		{ key => 'FP_pepID', value => 'Number of false positive unique peptides predicted by Mayu for this mFDR. Usually near, but not exactly the same as, the number of decoys. '},
+  
+		{ key => 'FP_pepID_stdev', value => ' '},
+  
+		{ key => 'TP_pepID', value => 'target_pepID - FP_pepID '},
+  
+		{ key => 'pepFDR', value => 'Peptide FDR (unique peptides)'},
+  
+		{ key => 'target_protID', value => 'Number of non-decoy protein identifications at this mFDR. Applied to the covering set of proteins -- a set that is close to the smallest necessary to explain all the pepIDs. Includes all canonicals and some possibly_distinguished. '},
+  
+		{ key => 'decoy_protID', value => 'Number of decoy protein identifications at this mFDR. '},
+  
+		{ key => 'FP_protID', value => 'Number of false postiive protein identifications predicted by Mayu for this mFDR.  Usually near, but not exactly the same as, the number of decoys. '},
+  
+		{ key => 'FP_protID_stdev', value => ' '},
+  
+		{ key => 'TP_protID', value => 'target_protID - FP_protID '},
+  
+		{ key => 'protFDR', value => 'Protein FDR. The largest value in this column is the protein FDR for the entire build. '},
+		{ key => 'lFDR1, lFDR5, lFDR10,2 lFDR5', value => 'Local protein FDR, computed over the previous step (i.e. between the previous row in the table and the current row), the previous 5 steps, the previous 10 steps, and the previous 25 steps.<br>Often there are fewer than 25 rows in the table, in which case column lFDR25 is uninformative. '},
+  
+		{ key => 'target_protIDs, decoy_protIDs, etc.', value => 'Same as above, except for singleton proteins (those identified by only one PSM) only. '},
+		{ key => 'target_protIDns, decoy_protIDns, etc.', value => 'Same as above, except for multiply-observed proteins only. '},
+  
+        );
+    $heading = 'Mayu'; 
+    $description = 'Reiter L, Claassen M, et al., Protein identification false discovery rates for very large proteomics data sets generated by tandem mass spectrometry, Mol Cell Proteomics. 2009 Nov;8(11):2405-17 ';
+  }
+
+
+  return unless @entries;
+  return \@entries if $args{mode} eq 'entries_only';
+
+  my $help = $atlas->get_table_help_section( name => $name,
+                                             description => $description,
+                                             heading => $heading,
+                                             entries => \@entries,
+                                             showtext => $showtext,
+                                             hidetext => $hidetext  );
+  return $help;
+
+} # end get_table_help
+
+
+sub get_library_table {
+
+  my $build_id = shift;
+
+  my $help = qq~
+   <br>
+   <div style="font-family:Barlow, Arial, sans-serif;font-size:150%;font-weight:bold" id=heading> Library Download </div>
+  </div>
+  ~;
+#   <div id=help style="width:800px"> Download SWATH/DIA libraries in any of the supported formats. 
+#   <br><br>
+
+  my $format_constraint = '';
+  if ( $params->{format} ) {
+    $format_constraint = "AND file_format = '$params->{format}'";
+  }
+
+  my $sql = qq~
+  SELECT dia_library_id, dia_library_name, set_tag, instrument_type_name,
+  organism_name, DIL.comment, md5sum, file_path, file_format, is_master,
+  px_identifier, contributors, coverage_statement, 
+  publication_url, publication_title, description
+  FROM $TBAT_DIA_LIBRARY DIL 
+  JOIN $TBAT_DIA_LIBRARY_SET DILS ON DILS.dia_library_set_id = DIL.dia_library_set_id
+  JOIN $TBAT_INSTRUMENT_TYPE IT ON IT.instrument_type_id = DIL.instrument_type_id
+  JOIN $TB_ORGANISM O ON O.organism_id = DIL.organism_id
+  WHERE project_id IN ( $project_ids )
+  AND DIL.record_status = 'N'
+  $format_constraint
+  ORDER BY DIL.dia_library_set_id, dia_library_name, instrument_type_name
+  ~;
+# 0 dia_library_id
+# 1 dia_library_name
+# 2 set_tag
+# 3 instrument_type_name
+# 4 organism_name
+# 5 DIL.comment
+# 6 md5sum
+# 7 file_path
+# 8 file_format
+# 9 is_master
+# 10 px_identifier
+# 11 contributors
+# 12 converage_statement
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my %libraries; 
+  my %tag2comment;
+  my %display_format = ( peakview => 'Peakview',
+                         openswath => 'OpenSWATH',
+                         TraML => 'TraML',
+                         sptxt => 'Speclib' );
+
+  my @libs;
+  while( my @row = $sth->fetchrow_array() ) {
+    push @libs, $row[2] unless $libraries{$row[2]};
+    $libraries{$row[2]} ||= [];
+    $row[8] = $display_format{$row[8]} || $row[8]; 
+    push @{$libraries{$row[2]}}, \@row;
+    $tag2comment{$row[2]} = $row[5];
+  }
+  my $content = $help;
+
+#  for my $lib ( sort { $b cmp $a} ( keys( %libraries ) ) ) {
+  for my $lib ( @libs ) {
+    my @lib_data = ( [ qw( Name Accession Instrument Format Size ), 'Get Libraries' ] );
+    for my $lib_file ( @{$libraries{$lib}} ) {
+      my $fname = basename( $lib_file->[7] ); 
+
+      $sbeams->makeSBEAMSTempLink( path => $lib_file->[7],
+                               linkname => $lib_file->[6],
+                               relative => 0 );
+
+      my $dwn = "<a href=$CGI_BASE_DIR/downloadFile.cgi?name=$fname;format=tsv;tmp_file=$lib_file->[6];raw_download=1>Download</a>";
+      if ( $basespace{url_params} ) {
+        $dwn = "<a href=GetDIALibs?mode=download_libs;action=download;name=$fname;tmp_file=$lib_file->[6];$basespace{url_params}>Download</a>";
+      }
+      my $size = -s $lib_file->[7];
+#      if ( !$size ) {
+#        die Dumper( $lib_file ) unless -e $lib_file->[7];
+#      }
+      $size = hr_size( $size, $lib_file->[7] );
+      my $cust = '';
+      if ( $lib_file->[8] =~ /peakview/i ||
+           $lib_file->[8] =~ /openswath/i ||
+           $lib_file->[8] =~ /mprophet/i ) { 
+        if ( $lib_file->[9] eq 'Y' ) {
+          my $basespace_url_params = ";$basespace{url_params}" || '';
+          $cust = "<a href=GetDIALibs?mode=subset_libs;lib_id=$lib_file->[0]$basespace_url_params>Customize</a>" 
+        }
+      }
+      my $accession = 'SAL' . sprintf( "%05i", $lib_file->[0] );
+      $lib_file->[0] = $accession;
+#      $lib_table->addRow( [ @{$lib_file}[1,5,3,8,6], $dwn . '&nbsp;&nbsp;' . $cust ] );
+      push @lib_data, [ @{$lib_file}[1,0,3,8], $size, $dwn . '&nbsp;&nbsp;' . $cust ];
+    }
+
+
+    my ( $tr, $link ) = $sbeams->make_table_toggle( name => $lib_data[1]->[0],
+                                                 visible => 0,
+                                                 tooltip => 'Show/Hide Section',
+                                                 showtext => 'Show library files',
+                                                 hidetext => 'Hide library files',
+                                                 imglink => 1,
+                                                 textlink => 1,
+                                                  sticky => 1 );
+
+
+
+
+    my $lib_table = $atlas->encodeSectionTable( header => 1, 
+                                                 width => '800',
+                                               tr_info => $tr,
+                                                align  => [ qw(left left left left left left center) ],
+                                                  rows => \@lib_data,
+                                           chg_bkg_idx => 3, 
+                                              bg_color => '#EAEAEA',
+                                              sortable => 0,
+                                              table_id => $lib,
+                                           close_table => 1,
+                                            );
+
+#    die Dumper( $lib_table );
+#    die Dumper( $libraries{$lib} );
+
+# 0 dia_library_id
+# 1 dia_library_name
+# 2 set_tag
+# 3 instrument_type_name
+# 4 organism_name
+# 5 DIL.comment
+# 6 md5sum
+# 7 file_path
+# 8 file_format
+# 9 is_master
+# 10 px_identifier
+# 11 contributors
+# 12 converage_statement
+# 13 publication_url
+# 14 publication_title
+# 15 description
+
+    # Hokey way to pull out some set-specific items.
+    my $lib_zero = $libraries{$lib}->[0];
+
+    # Publication info
+    my $publication = '';
+    if ( $lib_zero->[13] && $lib_zero->[14] ) {
+      if ( $lib_zero->[13] =~ /In press/ || $lib_zero->[13] =~ /Submitted/ ) {
+        $publication = "Publication: <i>$lib_zero->[14]</i> ($lib_zero->[13]) <br>";
+      } else {
+        $publication = "Publication: <i>$lib_zero->[14]</i> (<a href='$lib_zero->[13]'>View</a>) <br>";
+      }
+    }
+    my $description = '';
+    if ( $lib_zero->[15] ) {
+      $description = "$lib_zero->[15]<br>";
+    }
+
+    my $px_link = '';
+    if ( $lib_zero->[10] ) {
+      if ( $lib_zero->[10] =~ /^PXD/ ) {
+        $px_link = "(<a href='http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=$lib_zero->[10]' target=_px title='View dataset $lib_zero->[10] at Proteome Exchange'>$lib_zero->[10]</a>)";
+      } else {
+        $px_link = "(<a href='https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/PASS_View?identifier=$lib_zero->[10]' target=_px title='View dataset $lib_zero->[10] at Proteome Exchange'>$lib_zero->[10]</a>)";
+      }
+
+
+
+    }
+
+    $lib_zero->[12] .= '<br>' if $lib_zero->[12];
+    $content .= qq~
+    <br>
+     <span style="font-family:Helvetica, Arial, sans-serif;font-size:110%;font-weight:bold" id=heading> $lib </span><br>
+     $description
+     $lib_zero->[11] $px_link <br>
+     $lib_zero->[12] 
+     $publication
+     $link <table>$lib_table
+    <br>
+    ~;
+  }
+  return $content;
+
+}
+
+sub hr_size {
+  my $size = shift;
+  if ( !$size ) {
+    my $file = shift;
+    $log->info( "why does $file have no size?" );
+  }
+  my @sfx = ( '', 'KB', 'MB', 'GB', 'TB', 'PB' );
+
+#  $log->info( "in sizer, original size is $size" );
+  my $i = 0;
+  while ( $size > 1024 ) {
+    $size = $size / 1024;
+    $i++;
+  }
+  my $format_size = sprintf( "%.1f", $size ) . " $sfx[$i]";
+#  $log->info( "in sizer, formatted size is $format_size" );
+  return $format_size;
+}
+
+sub get_btxt {
+  my @tags = @_;
+  my $max = 0;
+  for my $tag ( @tags ) {
+    $max = length( $tag ) if length( $tag ) > $max;
+  }
+  my %btxt;
+  for my $tag ( @tags ) {
+    my $len = length( $tag );
+    my $delta = $max - $len;
+    my $pad = 0;
+    if ( $delta ) {
+      $pad = int($delta/2 + 0.5);
+    }
+    my $prepad = '&nbsp;' x $pad; 
+    my $postpad = '&nbsp;' x ($max - $len - $pad); 
+    $btxt{$tag} = $prepad . $tag . $postpad;
+  }
+  return \%btxt; 
+
+}
+
+
+sub analyze_library {
+
+  $log->info( "in analyze library");
+  die unless $params->{ion_library};
+  $log->info( "params->ion_library exists");
+
+  my $mode = $params->{mode};
+  my $mod_type = $params->{mod_type};
+  $log->info( "Mode is $mode\n");
+  $log->info( "Mod type is $mod_type\n");
+  
+  #my $filebase = $sbeams->getRandomString( num_chars => 20 );
+  my $filebase = "Charu";
+  my $run_dir = $PHYSICAL_BASE_DIR . '/tmp/PeptideAtlas/AssessDIALibrary/';
+  $log->info( $run_dir );
+
+  my $exec = "/regis/sbeams/bin/ionlibrary/assess_swathlib.pl ";
+  my $sfile = $filebase . '.swaths';
+  if ( $params->{swaths_file} ) {
+    open SWATHS, ">$run_dir/$sfile";
+    my $name = $q->param('swaths_file');
+    while ( my $line = <$name> ) {
+      print SWATHS $line;
+    }
+    close SWATHS;
+    $exec .= "--swath $run_dir/$sfile ";
+  }
+
+  my $pfile = $filebase . '.ppeps';
+  if ( $params->{pep_file} ) {
+    open PEPS, ">$run_dir/$pfile";
+    my $name = $q->param('pep_file');
+    while ( my $line = <$name> ) {
+      print PEPS $line;
+    }
+    close PEPS;
+  } else {
+    open PEPS, ">$run_dir/$pfile" || die;
+    close PEPS;
+  }
+  $exec .= " --pep $run_dir/$pfile ";
+  if ( -e "$run_dir/$pfile" ) {
+    $log->info( "created peps file $run_dir/$pfile" );
+  } else {
+    print "Error: Failed to create peps file!\n";
+    $log->info( "failed to create peps" );
+    return '';
+  }
+  if ( $params->{massdiff} ) {
+    $exec .= ' --assess ';
+  }
+  
+  my $libfile = $filebase . '.ionlib';
+  open IONLIB, ">$run_dir/$libfile";
+  $log->info("created libfile");
+  my $name = $q->param('ion_library');
+  while ( my $line = <$name> ) {
+    print IONLIB $line;
+  }
+  close IONLIB;
+  $log->info("populated libfile");
+  $exec .= " --ion $run_dir/$libfile --output $run_dir/$filebase  ";
+
+  if ( $mod_type ) {
+    if ( $mod_type eq 'filter' ) {
+      $exec .= " --filter ";
+    } else {
+      $exec .= " --correct ";
+    }
+  } else {
+    $exec .= " --full_stats --rt_stats --coldef --invert ";
+  }
+
+  if ( !-e "$run_dir/$libfile" ) {
+    print "Error: Failed to create file!\n";
+    return '';
+  }
+  $log->info( $exec );
+  my $lib = $params->{ion_library};
+  
+#  print "Going to execute $exec\n";
+
+  my $result = `$exec 2>&1`;
+  $log->info( $result );
+  if ( -e "$run_dir/$filebase.QC.tsv" ) {
+    
+    my $update_libname = `perl -pi -e 's/$libfile/$lib/gm' "$run_dir/$filebase.QC.tsv"`;
+    $log->info( "QC file found, updated libname from $libfile to $lib: $update_libname\n" );
+  } else {
+    $log->info( "QC file not found, stopping\n");
+    return;
+  }
+  open QC, "$run_dir/$filebase.QC.tsv";
+  my $return = '';
+  my $format;
+  my @data = ( [ qw( Attribute Value Definition ) ] );
+  while ( my $line = <QC> ) {
+    chomp $line;
+    my @line = split( /\t/, $line );
+    if ( $line[0] eq 'library' ) {
+      $line[1] = $lib;
+    } elsif ( $line[0] eq 'format' ) {
+      $format = $line[1];
+    }
+    $return .= "<tr><td><b>$line[0]</b></td><td align=right>$line[1]</td><td>$line[2]</td></tr>\n";
+    push @data, \@line;
+  }
+  close QC;
+  $return .= "</table>\n";
+  exec `rm -f $run_dir/$libfile $run_dir/$pfile $run_dir/$sfile`;
+
+  if ( $mod_type ) {
+    `rm -f $run_dir/$filebase.QC.tsv`;
+  } else { # no plots in filter mode
+    print_js_status("Finished analysis, plotting results...", 1);
+    my $exec = "/regis/sbeams/bin/ionlibrary/DIALib-QC_RPlot.pl $run_dir/$filebase.fullstats $run_dir/$filebase.RT ";
+    $log->info( $exec );
+    my $pdf_out = `$exec 2>&1`;
+    $log->info( $pdf_out );
+  }
+
+   my ( $html, $rs_name ) = $atlas->encodeSectionTable( header => 1, 
+                                                        width => '600',
+#                                                      tr_info => $args{tr},
+                                                       align  => [ qw(left right left) ],
+                                                  rs_headings => [ qw( Attribute Value Definition ) ],
+                                                         rows => \@data,
+                                                 rows_to_show => 200,
+                                                      colspan => 3,
+                                                     max_rows => 2500,
+                                               manual_widgets => 1,
+#                                                    help_text => $help_text,
+                                                  chg_bkg_idx => 0, 
+#                                                 set_download => 'Download analysis', 
+#                                                download_form => $download_select, 
+                                                    rs_params => { set_name => 'changeme' },
+                                                  file_prefix => 'DIA_Lib_Analysis', 
+#                                                     bg_color => '#EAEAEA',
+                                                     sortable => 1,
+                                                     table_id => 'pabst',
+                                                  close_table => 1,
+                                                     );
+
+
+
+  my $downloads = qq~
+  <table style="border-collapse: collapse" border=0 width=500>
+  <tr>
+    <td colspan=2 align=left><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:150%;font-weight:700" id=heading><font color =#ff5f00 >|</font><b> Download Files</b></div></td>
+  </tr>
+  <tr></tr>
+  <tr class="cellblock_top"> 
+    <td>&nbsp;</td> 
+    <td>&nbsp;</td> 
+  </tr>
+  ~;
+
+  my %type2download = ( pdf => 'Graphical depiction of library characteristics (PDF) and Library summary statistics (TSV)',
+                        tsv =>  'Library summary statistics, also depicted in table below (TSV)',
+                        mz_corrected => "Input library with m/z values re-computed ($format)",
+                        clean => "Input library with problem assays filtered out ($format)",
+                        problem => "Problem assays filtered from input library ($format)" );
+
+  my $lib_base = $lib;
+  $lib_base =~ s/\.[^\.]+$//;
+  if ( -e "$PHYSICAL_BASE_DIR/tmp/PeptideAtlas/AssessDIALibrary/$filebase.pdf" ) {
+
+    
+    my $ln_out = `cp $PHYSICAL_BASE_DIR/tmp/PeptideAtlas/AssessDIALibrary/$filebase.pdf $PHYSICAL_BASE_DIR/tmp/PeptideAtlas/AssessDIALibrary/$lib_base.pdf`;
+    $log->info( $ln_out );
+    
+    $downloads .= qq~
+      <tr class=cellblock>
+        <td align=left> <a href=$HTML_BASE_DIR/tmp/PeptideAtlas/AssessDIALibrary/$lib_base.pdf> $lib_base.pdf </a> &nbsp;&nbsp;</td>
+        <td align=left><i>&nbsp; $type2download{pdf}</i></td>
+      </tr>
+    ~;
+  }
+  for my $type ( qw( QC.tsv mz_corrected clean problem ) ) {
+    my $fname = $lib_base . '.' . $type;
+    my $path_dir = "$PHYSICAL_BASE_DIR/tmp/PeptideAtlas/AssessDIALibrary/";
+    my $rel_path_dir = '/tmp/PeptideAtlas/AssessDIALibrary/';
+    my $path =  $path_dir . '/' . $filebase . '.' . $type;
+    my $rel_path =  $rel_path_dir . '/' . $filebase . '.' . $type;
+
+    if ( !-e $path ) {
+      $path = $run_dir . '/' . $filebase . '.ionlib.' . $type;
+      next unless -e $path;
+      $rel_path =  $rel_path_dir . '/' . $filebase . '.ionlib.' . $type;
+    }
+    $sbeams->makeSBEAMSTempLink( path => $path,
+                             linkname => $fname,
+                             relative => 0 );
+
+    my $dwn = "<a href=$CGI_BASE_DIR/downloadFile.cgi?name=$fname;format=tsv;tmp_file=$rel_path;raw_download=1>$fname</a>";
+                        
+    my $link = qq~  
+    <tr class=cellblock>
+      <td align=left>$dwn &nbsp;&nbsp;</td>
+      <td align=left><i>&nbsp; $type2download{$type}</i></td>
+    </tr>
+    ~;
+    $downloads .= $link;
+  }
+
+  $downloads .= qq~
+  <tr class=cellblock_bottom>
+    <td colspan=2>&nbsp;</td>
+  </tr>
+  </table>
+  ~;
+  $html = '' if $mod_type;
+
+  return "$downloads  <br><br><table>$html</table>";
+}
+  
+sub get_subset_form {
+  
+  my $help = qq~
+  <br>
+   <div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:150%;font-weight:700" id=heading>
+	  <font color =#ff5f00 >|</font> DIA Library Assessment</div>
+   <div id=help style="width:720px; font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700"><br><br> This form allows you to assess various properties of a DIA library in OpenSWATH, Spectronaut, or Peakview formats.
+  </div>
+  ~;
+  
+  my $title2help = get_help_links();
+
+  my $form = qq~
+  $help
+  <script type=text/javascript>
+  function check_form(mode) {
+    if ( mode == "submit" ) {
+      var ionlib = document.getElementById( 'ion_library' );
+      if ( ionlib.value.length == 0 ) {
+        alert( "You must provide an ion library to use this feature" );
+        return false;
+      }
+      return true;
+    } else if ( mode == "assess" ) {
+      var correct_cell = document.getElementById( 'correct_cell' );
+      correct_cell.className = 'inactive_text';
+      var filter_cell = document.getElementById( 'filter_cell' );
+      filter_cell.className = 'inactive_text';
+      var csubmit_cell = document.getElementById( 'correct_submit' );
+      csubmit_cell.className = 'inactive_text';
+      var correct = document.getElementById( 'correct' );
+      correct.checked = false;
+      var filter = document.getElementById( 'filter' );
+      filter.checked = false;
+      var asubmit = document.getElementById( 'assess_submit' );
+      asubmit.className = 'active_text';
+    } else if ( mode == "correct" ) {
+      var correct_cell = document.getElementById( 'correct_cell' );
+      correct_cell.className = 'active_text';
+      var filter_cell = document.getElementById( 'filter_cell' );
+      filter_cell.className = 'active_text';
+      var csubmit = document.getElementById( 'correct_submit' );
+      csubmit.className = 'active_text';
+      var asubmit = document.getElementById( 'assess_submit' );
+      asubmit.className = 'inactive_text';
+    } else if ( mode == "blur" ) {
+      if ( document.getElementById( "analyze" ).checked ) {
+        var correct = document.getElementById( 'correct' );
+        correct.checked = false;
+        var filter = document.getElementById( 'filter' );
+        filter.checked = false;
+      }
+    } else if ( mode == "correct_submit" ) {
+      if ( document.getElementById( "analyze" ).checked ) {
+        return false;
+      }
+      var correct = document.getElementById( 'correct' );
+      var filter = document.getElementById( 'filter' );
+      if ( correct.checked == false && filter.checked == false ) {
+        alert( "Must select either filter or mz_correct" );
+        return false;
+      }
+    } else if ( mode == "assess_submit" ) {
+      if ( document.getElementById( "update" ).checked ) {
+        return false;
+      }
+    } else {
+      alert( mode );
+    }
+  }
+  function popitup(url) {
+    newwindow=window.open( url ,'helpwin','height=400,width=300,dependent=yes,screenX=5000,screenY=50,scrollbars=yes,resizable=yes');
+    if (window.focus) {newwindow.focus()}
+    return false;
+  }
+
+  </script>
+  <br><br>
+
+  <table style="border-collapse: collapse" border=0 width=500>
+  <form method=post id=assess onSubmit="return check_form('submit')" enctype="multipart/form-data">
+  <br>
+  <div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:150%;font-weight:700" id=heading>Input data</div>
+  <tr class="cellblock_top">
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+  <tr class=cellblock>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Ion Library:</div></i></b></td>
+    $title2help->{ion_library}
+    <td><input type=file name=ion_library id=ion_library onchange="sizeme()"></input></td>
+  </tr>
+  <tr class=cellblock>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> SWATHs definition file (optional):</div></i></b></td>
+    $title2help->{swaths_file}
+    <td><input type=file name=swaths_file id=swaths_file></input></td>
+  </tr>
+  <tr class=cellblock>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Proteome mapping file (optional):</div></i></b></td>
+    $title2help->{pep_file}
+    <td><input type=file name=pep_file id=pep_file></input></td>
+  </tr>
+  <tr class="cellblock_bottom">
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+  <tr><td/></tr>
+  <tr><td/></tr>
+  <tr><td/></tr>
+  <tr><td/></tr>
+  <tr><td colspan=3 align=left><b><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:150%;font-weight:700" id=heading><input type=radio id=analyze value=analyze name=mode checked onclick=check_form('assess')>Analyze Library</b></div></td></tr>
+  <tr class="cellblock_top">
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+  <tr class=cellblock>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Assess mass diffs(optional):</div></i></b></td>
+    $title2help->{assess_massdiff}
+    <td>Yes<input type=radio name=massdiff checked=yes>&nbsp;No<input type=radio name=massdiff></td>
+  </tr>
+  <tr class=cellblock>
+    <td align=right><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Print definitions for each test(optional):</div></i></b></td>
+    $title2help->{col_defs}
+    <td>Yes<input type=radio name=coldefs checked=yes>&nbsp;No<input type=radio name=coldefs></td>
+  </tr>
+  <tr class=cellblock>
+    <td>&nbsp;</td>
+    <td colspan=2 align=left><input type=submit value='Assess Ion Library' id=assess_submit class=active_text onclick="return check_form('assess_submit')"></input></td>
+  </tr>
+  <tr class="cellblock_bottom">
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+  <tr><td/></tr>
+  <tr><td/></tr>
+  <tr><td/></tr>
+  <tr><td/></tr>
+
+  <tr><td colspan=3 align=left><b><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:150%;font-weight:700" id=heading><input type=radio id=update value=correct name=mode onclick=check_form('correct') >Correct Library</b></div></td></tr>
+  <tr class="cellblock_top">
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+  <tr class=cellblock>
+    <td align=right class=inactive_text id=filter_cell><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Filter problem assays:</div></i></b></td>
+    $title2help->{assess_massdiff}
+    <td><input type=radio name=mod_type id=filter value=filter onclick=check_form('blur') >&nbsp;</td>
+  </tr>
+  <tr class=cellblock>
+    <td align=right class="inactive_text" id=correct_cell><b><i><div style="font-family:Barlow, Arial, sans-serif;color: #002664; font-size:100%;font-weight:700" id=heading> Re-compute m/z values:</div></i></b></td>
+    $title2help->{assess_massdiff}
+    <td><input type=radio name=mod_type id=correct value=correct onclick=check_form('blur')>&nbsp;</td>
+  </tr>
+  <tr class=cellblock>
+    <td>&nbsp;</td>
+    <td colspan=2 align=left><input id=correct_submit type=submit value='Repair Ion Library' class=inactive_text onclick="return check_form('correct_submit')"></input></td>
+  </tr>
+  <tr class="cellblock_bottom">
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+  </table>
+  
+  </form>
+  <br>
+  <br>
+  ~;
+
+
+
+  return $form;
+  my $extra = qq~
+
+  <tr class=cellblock>
+    <td align=right><b><i>Skip DECOYs(optional):</i></b></td>
+    $title2help->{skip_decoys}
+    <td>Yes<input type=radio name=skip_decoy checked=no>&nbsp;No<input checked=yes type=radio name=skip_decoy></td>
+  </tr>
+  <tr class=cellblock>
+    <td align=right><b><i>Alternate DECOY string (optional):</i></b></td>
+    $title2help->{alt_decoy}
+    <td>Yes<input type=text length=25></td>
+  </tr>
+
+  ~;
+
+
+}
+
+sub process_params {
+  my $params = {};
+#  for my $p ( qw( skip_decoy swaths_file massdiff ion_library coldefs ) ) {
+#    $params->{$p} = $q->param( $p );
+#  }
+#  $log->info( $params );
+$q = new CGI;
+  $sbeams->parse_input_parameters( q => $q, parameters_ref => $params );
+  $sbeams->processStandardParameters( parameters_ref => $params );
+  return( $params );
+}
+
+
+sub js_redirect {
+  my $url = shift || return;
+  print qq~<script type=text/javascript> window.location.replace( "$url" ); </script>~;
+}
+
+sub print_js_status {
+  my $msg = shift or return;
+  $log->info( $msg );
+  my $replace = shift || 0;
+
+  if ( $replace ) {
+    print "<script type=text/javascript> set_status( '$msg' ); </script>" ;
+  } else {
+    print "<script type=text/javascript> update_status( '<br>$msg' ); </script>" ;
+  }
+}
+
+
+sub get_build_path {
+  my %args = @_;
+  return unless $args{build_id};
+  my $path = $atlas->getAtlasBuildDirectory( atlas_build_id => $args{build_id} );
+  $path =~ s/DATA_FILES//;
+  return $path;
+}
+
+sub get_draw_chart_function {
+	my $sample_arrayref = shift || return '';
+
+	my @samples;
+	for my $s ( @{$sample_arrayref} ) {
+		push @samples, [ $s->[1], $s->[4], $s->[7] ];
+	}
+	my $GV = SBEAMS::Connection::GoogleVisualization->new();
+  my ( $chart ) = $GV->setDrawBarChart(  samples => \@samples,
+                                    	data_types => [ 'string', 'number', 'number' ],
+                                      	headings => [ 'Sample', 'Distinct peptides (n_obs > 1)', 'Cumulative peptides (n_obs > 1)' ],
+                                      show_table => 0,
+                                 truncate_labels => 24
+ 	);
+	my $header = $GV->getHeaderInfo();
+  return ( $chart, $header );
+}
+
+
+sub get_public_libsets {
+
+  my $sql = qq~
+  SELECT set_tag, instrument_type_name,
+  organism_name, px_identifier, contributors, coverage_statement,
+  COUNT(*) AS cnt
+  FROM $TBAT_DIA_LIBRARY DIL 
+  JOIN $TBAT_DIA_LIBRARY_SET DILS ON DILS.dia_library_set_id = DIL.dia_library_set_id
+  JOIN $TBAT_INSTRUMENT_TYPE IT ON IT.instrument_type_id = DIL.instrument_type_id
+  JOIN $TB_ORGANISM O ON O.organism_id = DIL.organism_id
+  WHERE project_id IN ( $project_ids )
+  AND DIL.record_status = 'N'
+  GROUP BY set_tag, instrument_type_name,
+  organism_name, px_identifier, contributors, coverage_statement
+  ORDER BY set_tag, instrument_type_name
+  ~;
+# 0 set_tag
+# 1 instrument_type_name
+# 2 organism_name
+# 3 px_identifier
+# 4 contributors
+# 5 coverage_statement
+# 6 cnt
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my %sets;
+  while ( my @row = $sth->fetchrow_array() ) {
+    if ( $sets{$row[0]} ) {
+      $sets{$row[0]}->{inst} = $row[1] if $row[1] =~ /TripleTOF/;
+      $sets{$row[0]}->{lib_cnt} += $row[6];
+    } else {
+      my $px = ( $row[3] ) ? 
+               ( $row[3] =~ /^PXD/ ) ? "<a href='http://groteomecentral.proteomexchange.org/cgi/GetDataset?ID=$row[3]' target=_px>$row[3]</a>" :
+                                       "<a href='https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/PASS_View?identifier=$row[3]' target=_px>$row[3]</a>" :
+               $sbeams->makeInactiveText( 'na' );
+        
+        $sbeams->makeInactiveText( 'na' );
+      $row[5] =~ s/Proteome Coverage//gi;
+      $sets{$row[0]} = { inst => $row[1],
+                         lib_cnt => $row[6],
+                         px => $px,
+                         org => $row[2],
+                         cov => $row[5],
+                         cont => $row[4] };
+    }
+  }
+  use JSON;
+  my $json = new JSON;
+  my $jstr = $json->encode( \%sets );
+
+#  my @lib_data = ( [ qw( Library Organism Instrument Contributors Coverage ProteomeExchange NumFiles ) ] );
+#  my @lib_data = ( [ qw( Library Instrument Contributors Coverage ) ] );
+  my @lib_data = ( [ 'Library', 'Proteome Coverage', 'Contributors' ] );
+  for my $lib ( sort( keys( %sets ) ) ) {
+#    push @lib_data, [ $lib, $sets{$lib}->{org}, $sets{$lib}->{inst}, $sets{$lib}->{cont}, $sets{$lib}->{cov}, $sets{$lib}->{px}, $sets{$lib}->{lib_cnt} ];
+#    push @lib_data, [ $lib, $sets{$lib}->{inst}, $sets{$lib}->{cont}, $sets{$lib}->{cov} ];
+    push @lib_data, [ $lib, $sets{$lib}->{cov}, $sets{$lib}->{cont} ];
+  }
+
+  my $lib_table = $atlas->encodeSectionTable( header => 1, 
+                                               width => '800',
+                                              align  => [ qw(left left left left ) ],
+                                                rows => \@lib_data,
+                                         chg_bkg_idx => 0, 
+                                            bg_color => '#EAEAEA',
+                                            sortable => 0,
+                                              nowrap => [1,2,3],
+                                            table_id => 'libraries',
+                                          table_only => 1,
+                                         close_table => 1,
+                                            );
+
+  print qq~
+    <html>
+    <head></head>
+    <body>
+    $lib_table
+    </body>
+    </html>
+  ~;
+  
+
+
+}
+
+__DATA__
