@@ -557,8 +557,6 @@ a.blue_button:active{
     #	th   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt; font-weight: bold; background-color: #A0A0A0;}
     #	pre    {  font-family: Courier; font-size: ${FONT_SIZE}pt}
 
-
-
 }
 
 
@@ -968,7 +966,7 @@ sub printCGIParams {
 
 sub getMainPageTabMenu {
   my $self = shift;
-	my $tabmenu = $self->getMainPageTabMenuObj( @_ );
+  my $tabmenu = $self->getMainPageTabMenuObj( @_ );
   my $HTML = "$tabmenu";
   return \$HTML;
 }
@@ -977,8 +975,17 @@ sub getMainPageTabMenuObj {
   my $self = shift;
   my %args = @_;
 
-  # Create new tabmenu item.
-  my $tabmenu = SBEAMS::Connection::TabMenu->new( cgi => $args{cgi} );
+  # Create new tabmenu item
+  my $tabmenu = SBEAMS::Connection::TabMenu->
+      new( %args,
+	   cgi => $args{cgi},
+	   activeColor   => 'ffffff',
+	   inactiveColor => 'd3d1c4',
+	   hoverColor => 'f3f1e4',
+	   atextColor => '5e6a71', # ISB gray
+	   itextColor => 'ff0000', # red
+	   boxContent => 1, # If true draw line around content
+      );
 
   # Add tabs
   $tabmenu->addTab( label    => 'Current Project', 
@@ -992,12 +999,14 @@ sub getMainPageTabMenuObj {
   $tabmenu->addTab( label    => 'Related Files',
                     helptext => 'Add/View files of any type associated with this project' );
 
+  $tabmenu->setDefaultTab(1);
+
   my $content = ''; # Scalar to hold content.
 
-  # conditional block to exec code based on selected tab.
+  # conditional block to exec code based on selected tab
 
-  if (  $tabmenu->getActiveTabName() eq 'Current Project' )  { 
-
+  if (  $tabmenu->getActiveTabName() eq 'Current Project' )  {
+    
     my $project_id = $self->getCurrent_project_id();
     if ( $project_id ) {
       $content = $self->getProjectDetailsTable( project_id => $project_id ); 
@@ -1031,8 +1040,7 @@ sub getMainPageTabMenuObj {
   }
 
   $tabmenu->addContent( $content );
-	return($tabmenu);
-
+  return($tabmenu);
 }
 
 
@@ -1063,11 +1071,11 @@ sub reportException {
     }
     return;
   } else {
-		print STDERR "going to handle the error\n";
+    print STDERR "going to handle the error\n";
     $self->handle_error( state => $args{state}, 
-                   error_type  => lc($args{type}),
-                       message => $args{message},
-                  force_header => $force );
+			 error_type  => lc($args{type}),
+			 message => $args{message},
+			 force_header => $force );
   }
 
 
@@ -1288,21 +1296,21 @@ sub get_http_header {
     $log->debug( "Addr is $ENV{REMOTE_ADDR}" ) if $ENV{REMOTE_ADDR};
     $self->{_host_logged}++;
   }
-	my $host = $ENV{REMOTE_HOST} || $ENV{REMOTE_ADDR};
+  my $host = $ENV{REMOTE_HOST} || $ENV{REMOTE_ADDR};
 
   my @dhost;
 	my %dhost;
 	for my $hoststring ( split( ",", $CONFIG_SETTING{DELAYED_RESPONSE_HOST} ) ) {
-		my ( $dhost, $dtime ) = split( "::::", $hoststring );
-		push @dhost, $dhost;
-		$dhost{$dhost} = $dtime;
+	  my ( $dhost, $dtime ) = split( "::::", $hoststring );
+	  push @dhost, $dhost;
+	  $dhost{$dhost} = $dtime;
 	}
 
 	if ( !$self->{_delay_imposed} && grep /^$host$/, @dhost ) {
  	  $log->warn( "Access delayed by policy for $host, agent $HTTP_USER_AGENT" );
-		sleep $dhost{$host};
+	  sleep $dhost{$host};
  	  $log->warn( "Slept $dhost{$host} seconds" );
-		$self->{_delay_imposed}++;
+	  $self->{_delay_imposed}++;
 	}
 
   # explicit content type

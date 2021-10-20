@@ -728,6 +728,16 @@ sub asCSSHTML2021 {
   }
   $list .= "</div>\n";
 
+  my $border = '';
+  if ( $this->{boxContent} ) {
+    $border = 'border:1px solid #5e6a71;';
+  }
+
+  if ( $this->{_content} ) {
+    $list .= "<br clear='both'><div style='min-height:200px; padding:0px 10px; $border'>$this->{_content}</div>\n";
+  }
+
+
   return ( <<"  END" );
   <!-- Begin TabMenu --> 
     <!-- CSS definitions -->
@@ -788,6 +798,7 @@ sub asCSSHTML2021 {
     
   <!-- End TabMenu -->
   END
+
 }
 
 
