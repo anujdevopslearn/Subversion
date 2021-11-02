@@ -1408,13 +1408,12 @@ sub getPeptideSampleDisplay {
 	  JOIN $TBAT_PEPTIDE P ON P.peptide_id = PI.peptide_id
 	  LEFT JOIN $TBPR_INSTRUMENT I ON S.instrument_model_id = I.instrument_id 
 	  LEFT JOIN $TBAT_PROTEASES ENZ ON ENZ.id = S.protease_id
-    LEFT JOIN $TBAT_SAMPLE_PUBLICATION SP ON SP.sample_id = S.sample_id  
+    LEFT JOIN $TBAT_SAMPLE_PUBLICATION SP ON (SP.sample_id = S.sample_id and SP.record_status != 'D') 
     LEFT JOIN $TBAT_PUBLICATION PUB ON PUB.publication_id = SP.publication_id  
     WHERE S.sample_id IN ( $in )
     $args{build_clause}
     $args{peptide_clause}
     AND S.record_status != 'D'
-    AND SP.record_status != 'D'
     ORDER BY S.sample_id
   ~;
   my @rows = $sbeams->selectSeveralColumns($sql);
