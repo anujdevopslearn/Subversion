@@ -790,9 +790,17 @@ sub get_coverage_hash_db {
     my @aas = split(//, $peptide);
     if (defined $peptide_coords->{$peptide}){
       foreach my $start(@{$peptide_coords->{$peptide}}){
-        if ($start <= $args{pos} && $start + length($peptide)>= $args{pos}){
-          my $idx = $args{pos} - $start;
-          push @posn, $start if ($aas[$idx] eq $alt_aa);
+        if ($alt_aa ne '*'){
+					if ($start <= $args{pos} && $start + length($peptide)>= $args{pos}){
+						my $idx = $args{pos} - $start;
+						push @posn, $start if ($aas[$idx] eq $alt_aa);
+					}
+        }else{
+          if (($start <= $args{pos} && $start + length($peptide) == $args{pos}) || 
+               ($start == $args{pos}) ){
+            my $idx = $args{pos} - $start;
+            push @posn, $start;;
+          }
         }
       }
 			for my $p ( @posn ) {
@@ -804,7 +812,6 @@ sub get_coverage_hash_db {
 			}
     } 
   }
-
   return $coverage;
 }
 #+
@@ -847,8 +854,6 @@ sub get_coverage_hash {
     my $posn = $self->get_site_positions( pattern => $peptide,
 					  seq => $seq,
             ); 
-    
-
 #    die Dumper $posn if $peptide eq 'CQSFLDHMK';
     for my $p ( @$posn ) {
       $coverage->{pep}{$peptide} =1;
@@ -1951,14 +1956,14 @@ sub get_html_seq_vars {
       push @global_clustal, [ $pepname, $entry->{seq}];
       ## if sequence in dat file same as the one in the db. use coor in db
       if ( $type eq 'VARIANT' && $seq eq  $swiss->{fasta_seq}){
-        $entry->{info} =~ /\w\s+\-\>\s+(\w)/; 
+        $entry->{info} =~ /\w\s+\-\>\s+(\S)/; 
         my $alt_aa = $1;
         if ($alt_aa){
           $coverage_coords{$pepname} = $self->get_coverage_hash_db(peptide_coords => \%peptide_coordinate_db,
 								   peptides => $peps,
 								   pos => $entry->{start},
 								   alt => $alt_aa);
-        }else{
+       }else{
           $coverage_coords{$pepname} = $self->get_coverage_hash( seq => $entry->{seq},
 								 peptides => $peps,
 								 offset => 0,
@@ -1975,19 +1980,14 @@ sub get_html_seq_vars {
       my ( $vtype, $vnum ) = split( /_/, $pepname );
       if ( $type eq 'VARIANT' ) {
         my %sorted;
-#        for my $key ( keys( %coverage_coords ) ) {
-#          $sorted{$key} ||= [];
-#          for my $skey ( sort { $a <=> $b } keys %{$coverage_coords{$key}} ) {
-#						push @{$sorted{$key}}, { $skey => $coverage_coords{$key}->{$skey} };
-#					}
-#				}
-	my $skey = $entry->{start} - 1;
-	if ( $coverage_coords{$pepname}->{$skey} ) {
-	  push @obs, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info}, 'seen' ];
-	  $obs_snps{$pepname} = $entry;
-	} else {
-	  push @unobs, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info}, 'notseen' ];
-	}
+				my $skey = $entry->{start} - 1;
+
+				if ( $coverage_coords{$pepname}->{$skey} ) {
+					push @obs, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info}, 'seen' ];
+					$obs_snps{$pepname} = $entry;
+				} else {
+					push @unobs, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info}, 'notseen' ];
+				}
       } else {
         push @{$return{variant_list}}, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info} ];
       }
@@ -2025,7 +2025,8 @@ sub get_html_seq_vars {
     # First see which peptides map to primary sequence
     for my $pep ( keys( %{$pnobs} ) ) {
       my $posn = $self->get_site_positions( seq => $args{seq},
-					    pattern => $pep, 
+					    pattern => $pep,
+              index_base => 1, 
 					    l_agnostic => 1 );
 
       if ( scalar( @{$posn} ) ) {
@@ -2426,14 +2427,8 @@ sub get_uniprot_variant_seq {
   } elsif ( $args{type} eq 'SIGNAL' ) { # Sequence is signal start->end 
     my $seqend = ( $seqlen < $context_len ) ? $seqlen : $context_len;
     $seq->{seq} = substr( $args{fasta_seq}, 0, $args{end} ) . '-' x ( $seqlen - $args{end} );
-
   } else { # Should never get here...
-#    die Dumper( %args );
   }
-#  for my $arg ( keys( %args ) ) {
-#    $seq->{$arg} ||= $args{$arg};
-#  }
-#  $log->info( Dumper( $seq ) );
   return $seq;
 }
 
@@ -3819,6 +3814,12 @@ sub fetchResultHTMLTable{
   }
 }
 
+sub get_current_timestamp{
+  my $self = shift;
+  use POSIX; 
+  my $time = strftime "%Y-%m-%d %H:%M:%S", localtime time;
+  return $time;
+}
 1;
 
 
