@@ -1535,10 +1535,13 @@ sub getPTMTableDisplay {
     push @align, 'center';
   }
   my $table = $self->encodeSectionTable( header => 1,
+                                         unified_widgets => 1,
+                                         set_download => 1,
                                          align  => [@align],
-					 bkg_interval => 3,
+																				 bkg_interval => 3,
                                          rows_to_show => $args{rows_to_show},
                                          max_rows => $args{max_rows},
+                                         file_prefix => 'ptm_',
                                          rows => \@rows );
   return $table;
 }
