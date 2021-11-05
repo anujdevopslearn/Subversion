@@ -1516,8 +1516,8 @@ sub getPTMTableDisplay {
 					my $link = "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?".
 										 "atlas_build_id=$self_build_id&searchWithinThis=Peptide+Sequence&searchForThis=".
 										 "$vals->[18]&apply_action=QUERY"; 
-					$vals->[18] = $self->make_pa_tooltip( tip_text => "Get peptide sequence covering this site",
-																								link_text => "<a href='$link'>$vals->[18]</a>" );
+					$vals->[0] = $self->make_pa_tooltip( tip_text => "Get peptide sequence covering this site",
+																								link_text => "<a href='$link' target='_blank'>$vals->[0]</a>" );
 				}
 				foreach my $i (0..$n_cols-2){ 
 					if ( $vals->[$i] eq '0' ||  $vals->[$i] eq 'no'){
