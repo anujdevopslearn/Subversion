@@ -1748,42 +1748,6 @@ sub handle_request {
     print "</DIV>" if $htmlmode;  ## close section!
 
 
-
-    #############################################################################
-    #### Display selected peptides - Experimental
-    #############################################################################
-
-    #### Widget to allow show/hide of section
-#    my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_bestpeptideslist',
-#      visible => 0,
-#      tooltip => 'Show/Hide Section',
-#      imglink => 1,
-#      sticky => 1,
-#     );
-
-    #### Display the section header
-#    my $bestPeptidesHeader = $sbeamsMOD->encodeSectionHeader(
-#      text => 'Best Peptides',
-#      link => $link
-#    );
-
-#    print qq~ <TABLE width="100%">$bestPeptidesHeader</TABLE><TABLE><TR $tr><TD COLSPAN=2>~ if $htmlmode;
-    #### Display the best peptide information
-#    my $samples = $bestPeptideSelector->getBestPeptidesDisplay(
-#      atlas_build_id => $atlas_build_id,
-#      best_peptide_information  => $best_peptide_information,
-#      query_parameters_ref=>\%parameters,
-#      column_titles_ref=>\@column_titles,
-#      link => $link,
-#      base_url=>$base_url,
-#      tr_info => $tr,
-#    );
-    #print "<TABLE width='100%'>$samples</TABLE>" if $htmlmode;
-#    print "</TD></TR></TABLE>" if $htmlmode;
-
-
-
-
     #############################################################################
     #### Display synthetic peptide info
     #############################################################################
@@ -3444,7 +3408,6 @@ sub displayAnnotatedSequence {
   if ( $html_seq->{clustal_display} ) { # If we have any annotations
     my $variant_list = '';
     my $cnt;
-
     my $source = ( $use_nextprot ) ? 'neXtProt ' : 'Swiss Prot ';
     $q->delete( 'use_nextprot' );
     my $self_url = $q->self_url();
@@ -3509,19 +3472,17 @@ sub displayAnnotatedSequence {
           push @{$var}, "<a href='GetVariantEvidence?type=init_met;protein_name=$biosequence->{biosequence_name};atlas_build_id=$args{atlas_build_id};action=GO' title='View evidence for Initiator Methionine cleavage in $biosequence->{biosequence_name}'><img src=$HTML_BASE_DIR/images/search_icon_small.png /></a>";
 
         }
-	my $v1num = $var->[1];
+				my $v1num = $var->[1];
         if ( $var->[5] eq 'seen' ) {
           my $skey = $var->[0] . '_' . $var->[1];
           my $nobs = $html_seq->{site_nobs};
           my $site = $nobs->{$skey}->{site};
           my $post_aa = $nobs->{$skey}->{post_aa};
           my $post_cnt = $nobs->{$skey}->{$post_aa} || 0;
-          my $total = $nobs->{total}->{$site} || 0;
-
+          my $total = $nobs->{total}->{$skey} || 0;
           if ( $total ) {
             my $opep = join( '_', keys( %{$nobs->{$skey}->{opeptides}} ) ) || 'na';
             my $spep = join( '_', keys( %{$nobs->{$skey}->{peptides}} ) ) || 'na';
-
             my $spep_str = '';
             my @spep_str = sort( keys( %{$nobs->{$skey}->{peptides}} ) );
             if ( scalar( @spep_str ) > 9 ) {
@@ -3530,7 +3491,6 @@ sub displayAnnotatedSequence {
             } else {
               $spep_str = join( ",<br>", @spep_str );
             }
-
             my $perc = ( $total ) ? sprintf( "%0.1f", 100*$post_cnt/$total ) : 0;
             my $observations = '';
             my $class = 'pa_snp_obs_font';
@@ -3553,8 +3513,8 @@ sub displayAnnotatedSequence {
             $var->[4] = qq~<span class=$class onMouseout="hideTooltip()" onMouseover="showTooltip(event,'$title')">Obs $perc ~ . '% (' . "$post_cnt/$total) $uniq </span> $var->[4] ";
 
 	    #  $var->[1] = "<span class=pa_ title='observed SNP'>$var->[1]</span>";
-	  }
-	}
+	        }
+      	}
         my $prot = $biosequence->{biosequence_name};
         $seqHTML .= "<script type='text/javascript'>check_mupit( '$prot', $var->[3], $v1num )</script>\n" unless $v1num eq 'Num'; #  if $class eq 'visible';
         $class = ( $class eq 'hidden' ) ? 'hidden' : 'hidden';
@@ -3563,7 +3523,11 @@ sub displayAnnotatedSequence {
         $mupit_link = '' if $var->[3] eq 'End';
         $mupit_link = '' unless $var->[0] eq 'VARIANT';
         my $div_id = $prot . '_' . $var->[1];
-        $variant_list .= join( "\t", @{$var}[0..4] ) . "<div class=$class id=$div_id>$mupit_link</div>" . "\n";
+        if ($var->[4] =~ /[IL]\s{0,}->\s{0,}[IL]\s+/){
+           $variant_list .= join( "\t", @{$var}[0..4] ) . "<b style='color:orange' >(I/L indistinguishable)</b><div class=$class id=$div_id>$mupit_link</div>" . "\n";
+        }else{
+          $variant_list .= join( "\t", @{$var}[0..4] ) . "<div class=$class id=$div_id>$mupit_link</div>" . "\n";
+        }
       }
       my $var_toggle_link = '';
       if ( $cnt > 16 ) {
