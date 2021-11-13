@@ -244,7 +244,7 @@ sub displayGuestPageHeader {
       my $sep = ( $url =~ /\?/ ) ? ';' : '?';
       $url = $url . $sep . 'force_login=yes' unless $url =~ /force_login/;
       my $site_url = $_;
-      $site_url =~ s/^(.*HREF=")[^"]+(".*$)/$1$url$2/g;
+      $site_url =~ s/^(.*HREF=")[^"]+(".*$)/$1$url$2/ig;
       $skin .= $site_url;
       next;
     }
