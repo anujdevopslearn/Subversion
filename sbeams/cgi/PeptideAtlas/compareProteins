@@ -50,7 +50,6 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
   # Authenticate or exit
   $current_username = $sbeams->Authenticate(allow_anonymous_access=>1) || exit;
-
   #### Read in the default input parameters
   my %params;
   $sbeams->parse_input_parameters( q=>$q, parameters_ref=>\%params );
@@ -90,13 +89,14 @@ sub get_alignment_display {
 
   # Content scalar to return
   my $curr_bid = $sbeamsMOD->getCurrentAtlasBuildID( parameters_ref => \%args );
-
+  my $msg = $sbeams->update_PA_table_variables($curr_bid);
+  
   my @select = $sbeamsMOD->GetBuildSelect( set_onchange => 1,
 					   build_id => $curr_bid,
 					   form_name => 'compareProteins' );
   my $clustal_display = $select[1];
-
   $clustal_display .= "<br><p><form method='post' name='compareProteins'>\n";
+
   for my $arg ( keys( %args ) ) {
     next if $arg =~ /atlas_build_id/;
     $clustal_display .= "<input type='hidden' name='$arg' value='$args{$arg}'>\n";
@@ -130,7 +130,6 @@ sub get_alignment_display {
     if ( $args{exclude_ens} ) {
       $excl .= "AND biosequence_name NOT LIKE 'ENS%'\n";
     }
-
 
     my $sql = qq~
       (
