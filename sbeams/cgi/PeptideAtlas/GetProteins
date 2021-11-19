@@ -909,9 +909,14 @@ sub handle_request {
 			column_titles_ref=>\@column_titles
       );
   }
-  ## remove biosequence_id column
-  shift @column_titles;
 
+  ## remove biosequence_id column
+  delete $colnameidx{biosequence_id};
+  foreach my $key (keys %colnameidx){
+    $colnameidx{$key} -=1 
+  }
+  shift @column_titles;
+  
   my @pre_joins;
   my @post_joins;
 
