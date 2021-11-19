@@ -1085,14 +1085,14 @@ sub handle_request {
   
   if ($parameters{dataset_id}){
     $sql .= qq~
-      JOIN (
+      WHERE PROT.biosequence_id in (
 			SELECT BIABSB.BIOSEQUENCE_ID
 			FROM $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH BIABSB
 			JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
-			ON (ABSB.ATLAS_BUILD_SEARCH_BATCH_ID = BIABSB.ATLAS_BUILD_SEARCH_BATCH_ID AND ABSB.atlas_build_id = $parameters{atlas_build_id})
+			ON (ABSB.ATLAS_BUILD_SEARCH_BATCH_ID = BIABSB.ATLAS_BUILD_SEARCH_BATCH_ID AND ABSB.atlas_build_id = $atlas_build_id)
 			JOIN $TBAT_SAMPLE S ON (S.sample_id = ABSB.sample_id)
 			WHERE S.repository_identifiers = '$parameters{dataset_id}'
-      ) RID ON (RID.BIOSEQUENCE_ID = PROT.BIOSEQUENCE_ID)
+      ) 
 	 ~;
   }
   $sql .= qq~
