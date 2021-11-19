@@ -681,6 +681,7 @@ sub handle_request {
 
   #### This query is a union of multiple sub-queries. Define stuff specific
   #### to each sub-query.
+  my @biosequence_id_sql;
   my @biosequence_name_sql;
   my @is_covering_sql;
   my @presence_level_sql;
@@ -705,36 +706,20 @@ sub handle_request {
   my @biosequence_description_sql;
   my @sample_specific_id_clause;
   my @dataset_specific_id_clause;
-
   # Define subqueries for protein properties; they are the same for
   # all clauses of the union.
-  my $is_keratin_sql_all=qq~
-	      ( CASE WHEN ( SELECT SUM (
-		      CAST (BPS_SIBLING.is_keratin AS INTEGER)) FROM
-		  $TBAT_PROTEIN_IDENTIFICATION  PID_SIBLING
-		  LEFT JOIN  $TBAT_BIOSEQUENCE_PROPERTY_SET BPS_SIBLING
-		  ON ( BPS_SIBLING.biosequence_id =
-		    PID_SIBLING.biosequence_id )
-		  WHERE ( PID_SIBLING.represented_by_biosequence_id =
-		    PID.represented_by_biosequence_id )
-		  AND BPS_SIBLING.is_keratin = '1'
-		)  > 0 THEN 'ker' ELSE '' END)
-    ~;
-  my $is_immunoglobulin_sql_all=qq~
-	      ( CASE WHEN ( SELECT SUM (
-		      CAST (BPS_SIBLING.is_immunoglobulin AS INTEGER)) FROM
-		  $TBAT_PROTEIN_IDENTIFICATION  PID_SIBLING
-		  LEFT JOIN  $TBAT_BIOSEQUENCE_PROPERTY_SET BPS_SIBLING
-		  ON ( BPS_SIBLING.biosequence_id =
-		    PID_SIBLING.biosequence_id )
-		  WHERE ( PID_SIBLING.represented_by_biosequence_id =
-		    PID.represented_by_biosequence_id )
-		  AND BPS_SIBLING.is_immunoglobulin = '1'
-		)  > 0 THEN 'Ig' ELSE '' END)
-    ~;
-   
+  my $is_keratin_or_immunoglobulin_sql=qq~
+		SELECT  
+			PID.BIOSEQUENCE_ID,
+			CASE WHEN SUM(CAST (BPS.IS_KERATIN AS INTEGER)) OVER (PARTITION BY PID.REPRESENTED_BY_BIOSEQUENCE_ID) > 0  THEN 'ker' ELSE '' END AS "is_keratin",
+			CASE WHEN SUM (CAST (BPS.is_immunoglobulin AS INTEGER)) OVER (PARTITION BY PID.REPRESENTED_BY_BIOSEQUENCE_ID) > 0  THEN 'Ig' ELSE '' END AS "is_immunoglobulin"
+		FROM PEPTIDEATLAS_2.DBO.PROTEIN_IDENTIFICATION  PID
+		LEFT JOIN PEPTIDEATLAS_2.DBO.BIOSEQUENCE_PROPERTY_SET BPS ON (BPS.BIOSEQUENCE_ID = PID.BIOSEQUENCE_ID ) 
+		WHERE PID.ATLAS_BUILD_ID =$atlas_build_id
+  ~;
 
   # Define SQL specific for displaying protein identifications
+  $biosequence_id_sql[0] = "BS_REF.biosequence_id";
   $biosequence_name_sql[0] = "BS_REF.biosequence_name";
   $is_covering_sql[0] = "(CASE WHEN PID.is_covering=1 THEN 'C' ELSE '' END)";
   $presence_level_sql[0] = "PPL.level_phrase";
@@ -754,16 +739,16 @@ sub handle_request {
   $represented_by_biosequence_sql[0] = "BS_REP.biosequence_name";
   $group_number_sql[0] = "PID.protein_group_number";
   $seq_unique_prots_sql[0] = "PID.seq_unique_prots_in_group";
-  $is_keratin_sql[0]=$is_keratin_sql_all;
-  $is_immunoglobulin_sql[0]=$is_immunoglobulin_sql_all;
-  $biosequence_description_sql[0] =
-        "CAST(BS_REF.biosequence_desc AS varchar(255))";
+  $is_keratin_sql[0]="NULL";
+  $is_immunoglobulin_sql[0]="NULL";
+  $biosequence_description_sql[0] = "CAST(BS_REF.biosequence_desc AS varchar(255))";
   $sample_specific_id_clause[0]  = "AND PID.sample_specific_id in ($parameters{sample_specific_id})" if (defined $parameters{sample_specific_id});
   $dataset_specific_id_clause[0]  = "AND PID.dataset_specific_id in ('$parameters{dataset_specific_id}')" if (defined $parameters{dataset_specific_id});
  
 
   # Define SQL specific for displaying indistinguishables, identicals
   # relative to protein identifications
+  $biosequence_id_sql[1] = "BS_REL.biosequence_id";
   $biosequence_name_sql[1] = "BS_REL.biosequence_name";
   $is_covering_sql[1] = "NULL";
   $presence_level_sql[1] = "NULL";
@@ -783,15 +768,15 @@ sub handle_request {
   $represented_by_biosequence_sql[1] = "BS_REP.biosequence_name";
   $group_number_sql[1] = "PID.protein_group_number";
   $seq_unique_prots_sql[1] = "PID.seq_unique_prots_in_group";
-  $is_keratin_sql[1]=$is_keratin_sql_all;
-  $is_immunoglobulin_sql[1]=$is_immunoglobulin_sql_all;
-  $biosequence_description_sql[1] =
-        "CAST(BS_REL.biosequence_desc AS varchar(255))";
+  $is_keratin_sql[1]="NULL";
+  $is_immunoglobulin_sql[1]="NULL";
+  $biosequence_description_sql[1] = "CAST(BS_REL.biosequence_desc AS varchar(255))";
   $sample_specific_id_clause[1]  = "AND BR.sample_specific_id in ($parameters{sample_specific_id})" if (defined $parameters{sample_specific_id});
   $dataset_specific_id_clause[1]  = "AND BR.dataset_specific_id in ('$parameters{dataset_specific_id}')" if (defined $parameters{dataset_specific_id});
 
   # Define SQL specific for displaying biosequences identical to
   # indistinguishables
+  $biosequence_id_sql[2] = "BS_INDIS.biosequence_id";
   $biosequence_name_sql[2] = "BS_INDIS.biosequence_name";
   $is_covering_sql[2] = "NULL";
   $presence_level_sql[2] = "NULL";
@@ -811,8 +796,8 @@ sub handle_request {
   $represented_by_biosequence_sql[2] = "BS_REP.biosequence_name";
   $group_number_sql[2] = "PID.protein_group_number";
   $seq_unique_prots_sql[2] = "PID.seq_unique_prots_in_group";
-  $is_keratin_sql[2]=$is_keratin_sql_all;
-  $is_immunoglobulin_sql[2]=$is_immunoglobulin_sql_all;
+  $is_keratin_sql[2]="NULL";
+  $is_immunoglobulin_sql[2]="NULL";
   $biosequence_description_sql[2] =
         "CAST(BS_INDIS.biosequence_desc AS varchar(255))";
   $sample_specific_id_clause[2]  = "AND BR_INDIS.sample_specific_id in ($parameters{sample_specific_id})" if (defined $parameters{sample_specific_id});
@@ -867,6 +852,7 @@ sub handle_request {
     }
 
      my  @column_array =(
+        ["biosequence_id",$biosequence_id_sql[$i],"Biosequence ID"],
         ["biosequence_name",$biosequence_name_sql[$i],"Biosequence Name"],
         ["is_covering",$is_covering_sql[$i],"Cover ing Set"],
         ["presence_level",$presence_level_sql[$i],"Presence Level"],
@@ -888,7 +874,7 @@ sub handle_request {
         ["seq_unique_prots_in_group","$seq_unique_prots_sql[$i]", "Seq Uniq Prots in Grp"],
         @GO_columns,
         ["protein_group_seq_align_link","NULL","Protein Group Seq Alignmt"],
-        ["is_keratin",$is_keratin_sql[$i],"Ker atin"],
+        ["is_keratin",$is_keratin_sql[$i],"Keratin"],
         ["is_immunoglobulin",$is_immunoglobulin_sql[$i],"Ig"],
         ["biosequence_description",$biosequence_description_sql[$i],"Protein Description"],
         ["biosequence_accessor","DBX.accessor","biosequence_accessor"],
@@ -923,6 +909,8 @@ sub handle_request {
 			column_titles_ref=>\@column_titles
       );
   }
+  ## remove biosequence_id column
+  shift @column_titles;
 
   my @pre_joins;
   my @post_joins;
@@ -939,18 +927,14 @@ sub handle_request {
  
   if ( $parameters{display_options} =~ /ShowGOColumns/ ){
     $GO_join = qq~
-        LEFT JOIN $TBAT_BIOSEQUENCE_ANNOTATED_GENE AG
-             ON ( BS_REF.biosequence_id = AG.biosequence_id )
-        LEFT JOIN $TBBL_GENE_ANNOTATION MFA
-             ON ( AG.annotated_gene_id = MFA.annotated_gene_id
+        LEFT JOIN $TBAT_BIOSEQUENCE_ANNOTATED_GENE AG ON ( BS_REF.biosequence_id = AG.biosequence_id )
+        LEFT JOIN $TBBL_GENE_ANNOTATION MFA ON ( AG.annotated_gene_id = MFA.annotated_gene_id
                    AND MFA.gene_annotation_type_id = 1 AND MFA.idx = 0
                    AND MFA.hierarchy_level = '$parameters{gene_annotation_level_constraint}' )
-        LEFT JOIN $TBBL_GENE_ANNOTATION BPA
-             ON ( AG.annotated_gene_id = BPA.annotated_gene_id
+        LEFT JOIN $TBBL_GENE_ANNOTATION BPA ON ( AG.annotated_gene_id = BPA.annotated_gene_id
                    AND BPA.gene_annotation_type_id = 2 AND BPA.idx = 0
                    AND BPA.hierarchy_level = '$parameters{gene_annotation_level_constraint}' )
-        LEFT JOIN $TBBL_GENE_ANNOTATION CCA
-             ON ( AG.annotated_gene_id = CCA.annotated_gene_id
+        LEFT JOIN $TBBL_GENE_ANNOTATION CCA ON ( AG.annotated_gene_id = CCA.annotated_gene_id
                    AND CCA.gene_annotation_type_id = 3 AND CCA.idx = 0
                    AND CCA.hierarchy_level = '$parameters{gene_annotation_level_constraint}' )
     ~;
@@ -961,54 +945,39 @@ sub handle_request {
   $pre_joins[0] = qq~
   ~;
   $post_joins[0] = qq~
-       LEFT JOIN $TBAT_BIOSEQUENCE BS_SUBSUMED_BY
-          ON ( BS_SUBSUMED_BY.biosequence_id = PID.subsumed_by_biosequence_id )
-         AND ( BS_SUBSUMED_BY.biosequence_set_id = BSS.biosequence_set_id)
-       LEFT JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPS
-	    ON ( BPS.biosequence_id = PID.biosequence_id )
+		 LEFT JOIN $TBAT_BIOSEQUENCE BS_SUBSUMED_BY ON ( BS_SUBSUMED_BY.biosequence_id = PID.subsumed_by_biosequence_id )
+		 AND ( BS_SUBSUMED_BY.biosequence_set_id = BSS.biosequence_set_id)
+		 LEFT JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPS ON ( BPS.biosequence_id = PID.biosequence_id )
   ~;
 
   # Define joins specific for indistinguishables, identicals
   # relative to protein identifications
   $pre_joins[1] = qq~
-       INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BR
-            ON ( BR.reference_biosequence_id = PID.biosequence_id AND
-                 BR.atlas_build_id = PID.atlas_build_id )
+		 INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BR ON ( BR.reference_biosequence_id = PID.biosequence_id 
+					 AND BR.atlas_build_id = PID.atlas_build_id )
   ~;
   $post_joins[1] = qq~
-       INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT
-            ON ( BRT.biosequence_relationship_type_id =
-                    BR.relationship_type_id )
-       LEFT JOIN $TBAT_BIOSEQUENCE BS_REL
-            ON ( BS_REL.biosequence_id = BR.related_biosequence_id )
-           AND ( BS_REL.biosequence_set_id = BSS.biosequence_set_id )
-	 LEFT JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPS
-	      ON ( BPS.biosequence_id = BS_REL.biosequence_id )
+	 INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT ON ( BRT.biosequence_relationship_type_id = BR.relationship_type_id )
+	 LEFT JOIN $TBAT_BIOSEQUENCE BS_REL ON ( BS_REL.biosequence_id = BR.related_biosequence_id )
+				AND ( BS_REL.biosequence_set_id = BSS.biosequence_set_id )
+	 LEFT JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPS ON ( BPS.biosequence_id = BS_REL.biosequence_id )
   ~;
 
   # Define joins specific for biosequences identical to
   # indistinguishables
   $pre_joins[2] = qq~
-       INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BR
-            ON ( BR.reference_biosequence_id = PID.biosequence_id AND
-                 BR.atlas_build_id = PID.atlas_build_id )
-       INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BR_INDIS
-            ON ( BR_INDIS.reference_biosequence_id = BR.related_biosequence_id 
-                   AND
-                 BR_INDIS.atlas_build_id = PID.atlas_build_id )
+		INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BR ON ( BR.reference_biosequence_id = PID.biosequence_id
+					 AND BR.atlas_build_id = PID.atlas_build_id )
+		INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BR_INDIS ON ( BR_INDIS.reference_biosequence_id = BR.related_biosequence_id 
+					 AND BR_INDIS.atlas_build_id = PID.atlas_build_id )
   ~;
   $post_joins[2] = qq~
-       INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT
-            ON ( BRT.biosequence_relationship_type_id =
-                    BR_INDIS.relationship_type_id )
-       LEFT JOIN $TBAT_BIOSEQUENCE BS_INDIS
-            ON ( BR_INDIS.related_biosequence_id = BS_INDIS.biosequence_id )
-              AND ( BS_INDIS.biosequence_set_id = BSS.biosequence_set_id)
-       LEFT JOIN $TBAT_BIOSEQUENCE BS_REL
-            ON ( BS_REL.biosequence_id = BR_INDIS.reference_biosequence_id  )
-           AND ( BS_REL.biosequence_set_id = BSS.biosequence_set_id)
-	 LEFT JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPS
-	      ON ( BPS.biosequence_id = BS_INDIS.biosequence_id )
+	 INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT ON ( BRT.biosequence_relationship_type_id = BR_INDIS.relationship_type_id )
+	 LEFT JOIN $TBAT_BIOSEQUENCE BS_INDIS ON ( BR_INDIS.related_biosequence_id = BS_INDIS.biosequence_id )
+				AND ( BS_INDIS.biosequence_set_id = BSS.biosequence_set_id)
+	 LEFT JOIN $TBAT_BIOSEQUENCE BS_REL ON ( BS_REL.biosequence_id = BR_INDIS.reference_biosequence_id  )
+  			AND ( BS_REL.biosequence_set_id = BSS.biosequence_set_id)
+	 LEFT JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPS ON ( BPS.biosequence_id = BS_INDIS.biosequence_id )
   ~;
 
   my @special_clauses;
@@ -1022,23 +991,15 @@ sub handle_request {
      ( SELECT $limit_clause $columns_clause[$i]
        FROM $TBAT_PROTEIN_IDENTIFICATION PID
          $pre_joins[$i] 
-	 INNER JOIN $TBAT_ATLAS_BUILD AB
-	      ON ( AB.atlas_build_id = PID.atlas_build_id )
-	 INNER JOIN $TBAT_BIOSEQUENCE_SET BSS
-	      ON ( BSS.biosequence_set_id = AB.biosequence_set_id )
-	 INNER JOIN $TB_ORGANISM O
-	      ON ( O.organism_id = BSS.organism_id )
-	 INNER JOIN $TBAT_BIOSEQUENCE BS_REF
-	      ON ( BS_REF.biosequence_id = PID.biosequence_id )
-              AND ( BS_REF.biosequence_set_id = BSS.biosequence_set_id)
-	 INNER JOIN $TBAT_BIOSEQUENCE BS_REP
-	      ON ( BS_REP.biosequence_id = PID.represented_by_biosequence_id )
-              AND ( BS_REP.biosequence_set_id = BSS.biosequence_set_id)
-         LEFT JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPP
-              ON ( BPP.biosequence_id = PID.biosequence_id )
+	 INNER JOIN $TBAT_ATLAS_BUILD AB ON ( AB.atlas_build_id = PID.atlas_build_id )
+	 INNER JOIN $TBAT_BIOSEQUENCE_SET BSS ON ( BSS.biosequence_set_id = AB.biosequence_set_id )
+	 INNER JOIN $TB_ORGANISM O ON ( O.organism_id = BSS.organism_id )
+	 INNER JOIN $TBAT_BIOSEQUENCE BS_REF ON ( BS_REF.biosequence_id = PID.biosequence_id )
+         AND ( BS_REF.biosequence_set_id = BSS.biosequence_set_id)
+	 INNER JOIN $TBAT_BIOSEQUENCE BS_REP ON ( BS_REP.biosequence_id = PID.represented_by_biosequence_id )
+         AND ( BS_REP.biosequence_set_id = BSS.biosequence_set_id)
 	 LEFT JOIN $TB_DBXREF DBX ON ( DBX.dbxref_id = BS_REF.dbxref_id )
-	 INNER JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL
-	      ON ( PPL.protein_presence_level_id = PID.presence_level_id )
+	 INNER JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL ON ( PPL.protein_presence_level_id = PID.presence_level_id )
          $post_joins[$i]
          $GO_join
        WHERE 1 = 1
@@ -1069,37 +1030,70 @@ sub handle_request {
 
   #### Define the SQL statement
   # ordering could be improved
+  $sql = qq~
+   SELECT
+		PROT.biosequence_name,
+		PROT.is_covering,
+		PROT.presence_level,
+		PROT.probability,
+		PROT.confidence,
+		PROT.n_observations,
+		PROT.norm_PSMs_per_100K,
+		PROT.n_distinct_peptides,
+		PROT.chromosome,
+		PROT.genetic_locus,
+		PROT.start_in_chromosome,
+		PROT.end_in_chromosome,
+		PROT.strand,
+		PROT.relationship_phrase,
+		PROT.reference_biosequence,
+		PROT.represented_by_biosequence_id,
+		PROT.group_number,
+		PROT.seq_unique_prots_in_group,
+		PROT.protein_group_seq_align_link,
+		IS_KER_IG.is_keratin,
+		IS_KER_IG.is_immunoglobulin,
+		PROT.biosequence_description,
+		PROT.biosequence_accessor,
+		PROT.biosequence_accessor_suffix,
+		PROT.biosequence_accession,
+		PROT.organism_full_name,
+		PROT.ppl_sort_order,
+		PROT.brt_sort_order 
+		~;
+
   if (! $parameters{presence_level_constraint} && $parameters{dataset_specific_id}){
-    $sql = qq~
+    $sql .= qq~
+      FROM (
       $select_clause[1]
          UNION
       $select_clause[2]
+      )PROT 
     ~;
   }else{
-		$sql = qq~
+		$sql .= qq~
+      FROM (
 			$select_clause[0]
 				 UNION
 			$select_clause[1]
 				 UNION
 			$select_clause[2]
+      ) PROT 
 		~;
   }
-
+  $sql .= "LEFT JOIN ($is_keratin_or_immunoglobulin_sql)IS_KER_IG ON (IS_KER_IG.biosequence_id = PROT.biosequence_id)";
+  
   if ($parameters{dataset_id}){
-     $sql = qq~
-        SELECT * 
-        FROM ($sql) A
-        WHERE A.BIOSEQUENCE_NAME IN (
-					SELECT BS.BIOSEQUENCE_NAME
-					FROM $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH BIABSB
-					JOIN $TBAT_BIOSEQUENCE BS ON ( BIABSB.BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID )
-					JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
-					ON (ABSB.ATLAS_BUILD_SEARCH_BATCH_ID = BIABSB.ATLAS_BUILD_SEARCH_BATCH_ID
-						 AND ABSB.atlas_build_id = $parameters{atlas_build_id})
-					JOIN $TBAT_SAMPLE S ON (S.sample_id = ABSB.sample_id)
-					WHERE S.repository_identifiers = '$parameters{dataset_id}'
-        )
-     ~;
+    $sql .= qq~
+      JOIN (
+			SELECT BIABSB.BIOSEQUENCE_ID
+			FROM $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH BIABSB
+			JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
+			ON (ABSB.ATLAS_BUILD_SEARCH_BATCH_ID = BIABSB.ATLAS_BUILD_SEARCH_BATCH_ID AND ABSB.atlas_build_id = $parameters{atlas_build_id})
+			JOIN $TBAT_SAMPLE S ON (S.sample_id = ABSB.sample_id)
+			WHERE S.repository_identifiers = '$parameters{dataset_id}'
+      ) RID ON (RID.BIOSEQUENCE_ID = PROT.BIOSEQUENCE_ID)
+	 ~;
   }
   $sql .= qq~
      ORDER BY
