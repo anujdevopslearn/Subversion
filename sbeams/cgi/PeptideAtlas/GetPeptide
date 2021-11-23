@@ -371,6 +371,7 @@ sub handle_request {
   if ( $parameters{searchForThis} ) {
     $alt_link = "<A HREF='Summarize_Peptide?searchForThis=$parameters{searchForThis};query=QUERY'>View a summary </A> for this peptide across all accessible builds";
   }
+  
 
   my $protein_list_sql = '';
   if ( $parameters{atlas_build_id} && $parameters{searchWithinThis} && $parameters{searchForThis}  ) {
@@ -420,7 +421,8 @@ sub handle_request {
 
   # Cache in case we go out of scope later.
   $current_page->{atlas_build_id} = $atlas_build_id;
-
+ 
+  my $msg = $sbeams->update_PA_table_variables($atlas_build_id);
   # If we've gotten this far, user must have access to specified build
   my ( $extra_project ) = $sbeams->selectrow_array( "Select project_id FROM $TBAT_ATLAS_BUILD WHERE atlas_build_id = $atlas_build_id" );
   $project_string .= ", $extra_project";
@@ -454,16 +456,6 @@ sub handle_request {
     ~;
     exit;
   }
-
-  # Get peptide_instance_id for this atlas build and peptide sequence
-  $sql = qq~
-  select pi.peptide_instance_id
-  from $TBAT_PEPTIDE_INSTANCE pi
-  join $TBAT_PEPTIDE p
-  on p.peptide_id = pi.peptide_id
-  where pi.atlas_build_id = $atlas_build_id
-    and p.peptide_sequence = 
-  ~;
 
   # Cache values
   if ($atlas_build_name) {
@@ -677,6 +669,7 @@ sub handle_request {
             $atlas_project_clause
         ORDER BY PM.chromosome, BS.biosequence_name, PM.start_in_chromosome
     ~;
+
   unless ( $peptide_name_clause || $peptide_sequence_clause ) {
     $sbeams->display_sql(sql=>$sql);
     print qq~
@@ -1787,7 +1780,6 @@ sub handle_request {
 
       my $peptide_clause = $peptide_name_clause || $peptide_sequence_clause || '';
       $atlas_build_clause =~ s/AB/PI/g;
-
       my $tHTML = $sbeamsMOD->getPeptideSampleDisplay( sample_ids => $table_samples,
 							build_clause => $atlas_build_clause,
 							peptide_clause => $peptide_clause,
