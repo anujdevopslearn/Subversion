@@ -713,8 +713,8 @@ sub handle_request {
 			PID.BIOSEQUENCE_ID,
 			CASE WHEN SUM(CAST (BPS.IS_KERATIN AS INTEGER)) OVER (PARTITION BY PID.REPRESENTED_BY_BIOSEQUENCE_ID) > 0  THEN 'ker' ELSE '' END AS "is_keratin",
 			CASE WHEN SUM (CAST (BPS.is_immunoglobulin AS INTEGER)) OVER (PARTITION BY PID.REPRESENTED_BY_BIOSEQUENCE_ID) > 0  THEN 'Ig' ELSE '' END AS "is_immunoglobulin"
-		FROM PEPTIDEATLAS_2.DBO.PROTEIN_IDENTIFICATION  PID
-		LEFT JOIN PEPTIDEATLAS_2.DBO.BIOSEQUENCE_PROPERTY_SET BPS ON (BPS.BIOSEQUENCE_ID = PID.BIOSEQUENCE_ID ) 
+		FROM $TBAT_PROTEIN_IDENTIFICATION  PID
+		LEFT JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPS ON (BPS.BIOSEQUENCE_ID = PID.BIOSEQUENCE_ID ) 
 		WHERE PID.ATLAS_BUILD_ID =$atlas_build_id
   ~;
 
@@ -831,7 +831,7 @@ sub handle_request {
 			["published_ng_per_ml",$published_ng_per_ml_sql[$i],"Published plasma ng/ml"],
 			["pub_ng_ml_source",$pub_ng_ml_source_sql[$i],"Source"],
 			["estimated_ng_per_ml",$estimated_ng_per_ml_sql[$i],"Estimated ng/ml"],
-			["abundance uncertainty",$abundance_uncertainty_sql[$i],"Uncertainty ng/ml"],
+			["abundance_uncertainty",$abundance_uncertainty_sql[$i],"Uncertainty ng/ml"],
       );
     } else {
       @abundance_columns = ();
@@ -909,14 +909,6 @@ sub handle_request {
 			column_titles_ref=>\@column_titles
       );
   }
-
-  ## remove biosequence_id column
-  delete $colnameidx{biosequence_id};
-  foreach my $key (keys %colnameidx){
-    $colnameidx{$key} -=1 
-  }
-  shift @column_titles;
-  
   my @pre_joins;
   my @post_joins;
 
@@ -1035,37 +1027,19 @@ sub handle_request {
 
   #### Define the SQL statement
   # ordering could be improved
-  $sql = qq~
-   SELECT
-		PROT.biosequence_name,
-		PROT.is_covering,
-		PROT.presence_level,
-		PROT.probability,
-		PROT.confidence,
-		PROT.n_observations,
-		PROT.norm_PSMs_per_100K,
-		PROT.n_distinct_peptides,
-		PROT.chromosome,
-		PROT.genetic_locus,
-		PROT.start_in_chromosome,
-		PROT.end_in_chromosome,
-		PROT.strand,
-		PROT.relationship_phrase,
-		PROT.reference_biosequence,
-		PROT.represented_by_biosequence_id,
-		PROT.group_number,
-		PROT.seq_unique_prots_in_group,
-		PROT.protein_group_seq_align_link,
-		IS_KER_IG.is_keratin,
-		IS_KER_IG.is_immunoglobulin,
-		PROT.biosequence_description,
-		PROT.biosequence_accessor,
-		PROT.biosequence_accessor_suffix,
-		PROT.biosequence_accession,
-		PROT.organism_full_name,
-		PROT.ppl_sort_order,
-		PROT.brt_sort_order 
-		~;
+  my $sql = 'SELECT ';
+  ## remove biosequence_id column
+  delete $colnameidx{biosequence_id};
+  foreach my $key (sort {$colnameidx{$a} <=> $colnameidx{$b}}keys %colnameidx){
+    if ($key !~ /(is_keratin|is_immunoglobulin)/){
+      $sql .="PROT.$key,\n";
+    }else{
+      $sql .="IS_KER_IG.$key,\n";
+    }
+    $colnameidx{$key} -=1 
+  }
+  $sql =~ s/,$//g;
+  shift @column_titles;
 
   if (! $parameters{presence_level_constraint} && $parameters{dataset_specific_id}){
     $sql .= qq~
