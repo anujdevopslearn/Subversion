@@ -1088,7 +1088,6 @@ sub getSampleMapDisplay {
   my $html = '';
   my $trinfo = $args{tr_info} || '';
 
-
   my $sql = qq~     
   	SELECT DISTINCT SB.atlas_search_batch_id, sample_tag, 
 		PISB.n_observations, $args{peptide_field},
@@ -2021,74 +2020,88 @@ sub get_proteome_coverage_new {
   my $sql = '';
   my $obs_sql = '';
   my @names = ();
-  my $union = '';
+  my %biosqeuences = ();
+  my %entry_cnt = ();
+  my %obs=();
+  my $sql = qq~
+		  SELECT B.BIOSEQUENCE_ID,B.BIOSEQUENCE_NAME, B.BIOSEQUENCE_Desc
+			FROM $TBAT_ATLAS_BUILD AB
+			JOIN $TBAT_BIOSEQUENCE B ON B.BIOSEQUENCE_SET_ID = AB.BIOSEQUENCE_SET_ID
+			WHERE atlas_build_id = $build_id
+  ~;
+  my @rows = $sbeams->selectSeveralColumns($sql);
+  foreach my $row(@rows){
+    my ($id, $name, $desc) = @$row;
+    $biosqeuences{$id}{accession} = $name;
+    $biosqeuences{$id}{desc} = $desc;
+  }
+  
+  print "biosqeuence id=". scalar keys %biosqeuences;
+  print "\n";
+
+  my $obs_sql = qq~
+		SELECT DISTINCT B2.BIOSEQUENCE_ID
+		FROM $TBAT_PEPTIDE_INSTANCE PI
+		JOIN $TBAT_PEPTIDE_MAPPING PM ON (PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID)
+		JOIN $TBAT_BIOSEQUENCE B2 ON (B2.biosequence_id = PM.matched_biosequence_id)
+		WHERE PI.atlas_build_id = $build_id
+		--AND B2.BIOSEQUENCE_NAME LIKE 'CONTAM%' 
+   ~;
+  my @biosqeuence_id_obs = $sbeams->selectOneColumn($obs_sql);
+  print "observed biosqeuence id=" . scalar @biosqeuence_id_obs;
+  print "\n";
+
+  
   foreach my $line (@patterns){
     my ($org_id, $name, $type, $pat_str)  = split(/,/, $line);
     my @pats = split(/;/, $pat_str);
-    my $contraint = '';
     my $or = '';
     push @names, $name;
-    if ($type =~ /accession/i){
-      foreach my $pat (@pats){
-	$contraint .= "$or B2.BIOSEQUENCE_NAME LIKE '$pat%' ";
-	$or = 'OR';
-      } 
-
-    }elsif($type =~ /description/i){
-       foreach my $pat (@pats){
-         $contraint .= "$or B2.BIOSEQUENCE_Desc LIKE '%$pat%' ";
-         $or = 'OR';
-       }
-     }
-    $sql .= qq~
-	$union
-	 (SELECT COUNT(DISTINCT B2.BIOSEQUENCE_ID) AS CNT,
-		 '$name' AS Name, 
-		 B2.BIOSEQUENCE_SET_ID AS SETID
-		FROM $TBAT_ATLAS_BUILD AB2
-		JOIN $TBAT_BIOSEQUENCE B2 ON B2.BIOSEQUENCE_SET_ID = AB2.BIOSEQUENCE_SET_ID
-		WHERE atlas_build_id = $build_id
-		AND ($contraint) 
-		GROUP BY B2.BIOSEQUENCE_SET_ID 
-	 )
-	 ~;
-    $obs_sql .= qq~
-	 $union
-	(SELECT COUNT(DISTINCT B2.BIOSEQUENCE_ID) AS CNT,
-				 '$name' AS CAT,
-				 B2.BIOSEQUENCE_SET_ID AS SETID
-		FROM $TBAT_BIOSEQUENCE B2
-		JOIN $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH A
-			ON A.BIOSEQUENCE_ID = B2.BIOSEQUENCE_ID
-		JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
-			ON (A.ATLAS_BUILD_SEARCH_BATCH_ID = ABSB.ATLAS_BUILD_SEARCH_BATCH_ID)
-		WHERE ABSB.atlas_build_id = $build_id
-		AND ($contraint)
-		GROUP BY B2.BIOSEQUENCE_SET_ID
-	)
-	 ~;
-    $union = 'UNION';
+    foreach my $id (keys %biosqeuences){
+      my $flag = 0;
+			if ($type =~ /accession/i){
+				foreach my $pat (@pats){
+          if ($biosqeuences{$id}{accession} =~ /^$pat/){
+            $flag =1;
+            last;
+          }
+				} 
+			}elsif($type =~ /description/i){
+				foreach my $pat (@pats){
+          if ($biosqeuences{$id}{desc} =~ /$pat/){
+            $flag =1;
+            last;
+          }
+				}
+			}
+      if ($flag){
+        $entry_cnt{$name}++;
+      }
+    }
+    foreach my $id (@biosqeuence_id_obs){
+      my $flag = 0;
+      if ($type =~ /accession/i){
+        foreach my $pat (@pats){
+          if ($biosqeuences{$id}{accession} =~ /^$pat/){
+            $flag =1;
+            last;
+          }
+        }
+      }elsif($type =~ /description/i){
+        foreach my $pat (@pats){
+          if ($biosqeuences{$id}{desc} =~ /$pat/){
+            $flag =1;
+            last;
+          }
+        }
+      }
+      if ($flag){
+        $obs{$name}++;
+      }
+    }
   }
 
-  $sql = qq~
-  select * 
-  FROM 
-  (
-    $sql
-  ) As A 
-  ~;
   #$log->error($sql);
-
-  my $sth = $sbeams->get_statement_handle( $sql );
-  my %entry_cnt = ();
-  while ( my @row = $sth->fetchrow_array() ) {
-    $entry_cnt{$row[1]} = $row[0];
-  }
-  my $obssth = $sbeams->get_statement_handle( $obs_sql );
-  my %obs;
-  while ( my @row = $obssth->fetchrow_array() ) {
-    $obs{$row[1]} = $row[0];
-  }
   my @headings;
   my %head_defs = ( Database => 'Name of database, which collectively form the reference database for this build',
                     N_Prots => 'Total number of entries in subject database',
@@ -3281,21 +3294,22 @@ sub get_dataset_url{
 
   foreach my $id(@ids){
     $id =~ s/\s+//g;
+    my $link;
     if ($id =~ /PXD/){
-      $url = "http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=";
+      $link = "http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=";
     }elsif($id =~ /PASS/){
-      $url = "http://www.peptideatlas.org/PASS/";
+      $link= "http://www.peptideatlas.org/PASS/";
     }elsif($id =~ /^S\d+/){
-      $url = "https://cptac-data-portal.georgetown.edu/study-summary/";
+      $link= "https://cptac-data-portal.georgetown.edu/study-summary/";
     }
-    if ($url){
-      $url= "<a href='$url$id' target='_blank'>$id</a>";
+    if ($link){
+      $url .= "<a href='$link$id' target='_blank'>$id</a>";
       if (defined $dataset_annotation{$id}){
         $annotation_url = "<a href='http://www.peptideatlas.org/datasets/annotation.php?dataset_id=$id' target='_blank'>annot</a>";
       }
       $url .= ",";
     }else{
-      $url = "$id,";
+      $url .= "$id,";
     }
   }
   $url =~ s/,$//;
