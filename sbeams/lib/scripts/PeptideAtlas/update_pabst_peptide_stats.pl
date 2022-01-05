@@ -50,7 +50,7 @@ for my $build ( sort( keys(  %{$build_info} ) ) ) {
   my $t1 = time();
   my $delta = $t1 - $t0;
   print STDERR "Lookup took $delta seconds\n";
-  my @sql_stmts = ( "DELETE FROM peptideatlas.dbo.pabst_build_statistics WHERE build_id = $build;" );
+  my @sql_stmts = ( "DELETE FROM $TBAT_PABST_BUILD_STATISTICS WHERE build_id = $build;" );
   my $bcnt = $build_info->{$build}->{bioseq_cnts}; 
   my $bid = $build_info->{$build}->{bioseq_id}; 
   for my $instr ( keys( %{$build_info->{$build}->{counts}} ) ) {
@@ -63,7 +63,7 @@ for my $build ( sort( keys(  %{$build_info} ) ) ) {
     my $cov_string = join( ",", @cov{ qw( 0 1 2 3 4 5 any)} ); 
 
     my $insert = qq~
-      INSERT INTO peptideatlas.dbo.pabst_build_statistics 
+      INSERT INTO $TBAT_PABST_BUILD_STATISTICS 
         ( build_id, ref_db, ref_db_cnt, instrument_id, cov_0, cov_1, cov_2, cov_3, cov_4, cov_5, cov_any )
       VALUES ( $build, $bid, $bcnt, $instr,$cov_string ); 
       ~;
@@ -96,18 +96,18 @@ sub get_build_peptide_counts {
   # Original way, slow-ish
   $sql = qq~
   select DISTINCT PTI.source_instrument_type_id, PP.pabst_peptide_id, PM.biosequence_id
-  FROM PeptideAtlas.dbo.pabst_tmp_peptide PP
-  JOIN PeptideAtlas.dbo.pabst_tmp_peptide_ion PI
+  FROM $TBAT_PABST_TMP_PEPTIDE PP
+  JOIN $TBAT_PABST_TMP_PEPTIDE_ION PI
     ON PP.pabst_peptide_id = PI.pabst_peptide_id
-  JOIN PeptideAtlas.dbo.pabst_tmp_peptide_ion_instance PII
+  JOIN $TBAT_PABST_TMP_PEPTIDE_ION_INSTANCE PII
     ON PII.pabst_peptide_ion_id = PI.pabst_peptide_ion_id
-  JOIN peptideatlas.dbo.pabst_tmp_transition PT 
+  JOIN $TBAT_PABST_TMP_TRANSITION PT 
     ON PI.pabst_peptide_ion_id = PT.pabst_peptide_ion_id
-  JOIN peptideatlas.dbo.pabst_tmp_transition_instance PTI 
+  JOIN $TBAT_PABST_TMP_TRANSITION_INSTANCE PTI 
     ON PTI.pabst_transition_id = PT.pabst_transition_id
-  JOIN PeptideAtlas.dbo.pabst_tmp_peptide_mapping PM
+  JOIN $TBAT_PABST_TMP_PEPTIDE_MAPPING PM
     ON PP.pabst_peptide_id = PM.pabst_peptide_id
-  JOIN peptideatlas.dbo.biosequence B 
+  JOIN $TBAT_BIOSEQUENCE B 
     ON B.biosequence_id = PM.biosequence_id
   WHERE pabst_build_id = $build_id 
   AND $build_info->{$build_id}->{bioseq_clause}
@@ -122,14 +122,14 @@ sub get_build_peptide_counts {
 
   my $trans_sql = qq~
   select PTI.source_instrument_type_id, PP.peptide_sequence
-  FROM PeptideAtlas.dbo.pabst_tmp_peptide PP
-  JOIN PeptideAtlas.dbo.pabst_tmp_peptide_ion PI
+  FROM $TBAT_PABST_TMP_PEPTIDE PP
+  JOIN $TBAT_PABST_TMP_PEPTIDE_ION PI
     ON PP.pabst_peptide_id = PI.pabst_peptide_id
-  JOIN PeptideAtlas.dbo.pabst_tmp_peptide_ion_instance PII
+  JOIN $TBAT_PABST_TMP_PEPTIDE_ION_INSTANCE PII
     ON PII.pabst_peptide_ion_id = PI.pabst_peptide_ion_id
-  JOIN peptideatlas.dbo.pabst_tmp_transition PT 
+  JOIN $TBAT_PABST_TMP_TRANSITION PT 
     ON PI.pabst_peptide_ion_id = PT.pabst_peptide_ion_id
-  JOIN peptideatlas.dbo.pabst_tmp_transition_instance PTI 
+  JOIN $TBAT_PABST_TMP_TRANSITION_INSTANCE PTI 
     ON PTI.pabst_transition_id = PT.pabst_transition_id
   WHERE pabst_build_id = $build_id 
   AND is_predicted = 'N'
@@ -154,10 +154,10 @@ sub get_build_peptide_counts {
 
   my $map_sql = qq~
   select DISTINCT PP.peptide_sequence, PM.biosequence_id
-  FROM PeptideAtlas.dbo.pabst_tmp_peptide PP
-  JOIN PeptideAtlas.dbo.pabst_tmp_peptide_mapping PM
+  FROM $TBAT_PABST_TMP_PEPTIDE PP
+  JOIN $TBAT_PABST_TMP_PEPTIDE_MAPPING PM
     ON PP.pabst_peptide_id = PM.pabst_peptide_id
-  JOIN peptideatlas.dbo.biosequence B 
+  JOIN $TBAT_BIOSEQUENCE B 
     ON B.biosequence_id = PM.biosequence_id
   WHERE pabst_build_id = $build_id 
   AND $build_info->{$build_id}->{bioseq_clause}

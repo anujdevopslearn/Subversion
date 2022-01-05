@@ -43,7 +43,8 @@ use SBEAMS::PeptideAtlas::Tables;
 #use SBEAMS::PeptideAtlas::ConsensusSpectrum;
 use SBEAMS::PeptideAtlas::ModificationHelper;
 
-#use SBEAMS::Proteomics::Tables;
+use SBEAMS::BioLink::Tables;
+use SBEAMS::Proteomics::Tables;
 
 
 # Global vars
@@ -429,24 +430,24 @@ sub get_passel_resultset {
   S.sample_id,
   stripped_peptide_sequence,
   SELE.SEL_experiment_id
-  FROM PeptideAtlas.dbo.SEL_transition_group SELTG
-  LEFT JOIN PeptideAtlas.dbo.SEL_chromatogram SELC
+  FROM $TBAT_SEL_TRANSITION_GROUP SELTG
+  LEFT JOIN $TBAT_SEL_CHROMATOGRAM SELC
         ON ( SELC.SEL_transition_group_id = SELTG.SEL_transition_group_id )
-  LEFT JOIN PeptideAtlas.dbo.SEL_peak_group SELPG
+  LEFT JOIN $TBAT_SEL_PEAK_GROUP SELPG
         ON ( SELPG.SEL_chromatogram_id = SELC.SEL_chromatogram_id )
-  LEFT JOIN PeptideAtlas.dbo.SEL_peptide_ion SELPI
+  LEFT JOIN $TBAT_SEL_PEPTIDE_ION SELPI
         ON ( SELPI.SEL_peptide_ion_id = SELTG.SEL_peptide_ion_id )
-  LEFT JOIN PeptideAtlas.dbo.SEL_peptide_ion_protein SELPIP
+  LEFT JOIN $TBAT_SEL_PEPTIDE_ION_PROTEIN SELPIP
         ON ( SELPIP.SEL_peptide_ion_id = SELPI.SEL_peptide_ion_id )
-  LEFT JOIN PeptideAtlas.dbo.SEL_run SELR
+  LEFT JOIN $TBAT_SEL_RUN SELR
         ON ( SELR.SEL_run_id = SELTG.SEL_run_id )
-  LEFT JOIN PeptideAtlas.dbo.SEl_experiment SELE
+  LEFT JOIN $TBAT_SEL_EXPERIMENT SELE
         ON ( SELE.SEL_experiment_id = SELR.SEL_experiment_id )
-  LEFT JOIN PeptideAtlas.dbo.sample S
+  LEFT JOIN $TBAT_SAMPLE S
         ON ( S.sample_id = SELE.sample_id )
-  LEFT JOIN sbeams.dbo.organism O
+  LEFT JOIN $TB_ORGANISM O
         ON ( S.organism_id = O.organism_id )
-  LEFT JOIN Proteomics.dbo.instrument I
+  LEFT JOIN $TBPR_INSTRUMENT I
         ON ( I.instrument_id = S.instrument_model_id )
   WHERE 1 = 1
   AND ( stripped_peptide_sequence LIKE '$params->{peptide}' )
@@ -802,7 +803,7 @@ sub get_abundance_plot {
   my $sql = qq~
     SELECT  distinct 
     PI.n_observations, AB.atlas_build_name, 
-    ( SELECT SUM (n_searched_spectra) 
+    ( SELECT SUM (cast(n_searched_spectra as bigint)) 
     FROM $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
     JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id
     WHERE ABSB.atlas_build_id = AB.atlas_build_id

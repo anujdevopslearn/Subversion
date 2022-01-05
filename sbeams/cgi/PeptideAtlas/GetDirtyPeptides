@@ -368,7 +368,7 @@ sub fetch_peptides {
   SELECT distinct sequence, plate, status , 
          CASE WHEN QQQ_data = 1 THEN 'Yes' ELSE 'No' END QQQ,
          CASE WHEN QTOF_data = 1 THEN 'Yes' ELSE 'No' END QTOF
-  FROM peptideatlas.dbo.dirty_peptides
+  FROM $TBAT_DIRTY_PEPTIDES
   ~;
   my $dp_sth = $sbeams->get_statement_handle( $dp_sql );
 

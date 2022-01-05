@@ -759,7 +759,7 @@ sub purgeProteinIdentificationInfo {
 
    print "Purging caching\n";
    $sql = qq~
-     DELETE FROM sbeams.dbo.cached_resultset WHERE key_value = $atlas_build_id
+     DELETE FROM $TB_CACHED_RESULTSET WHERE key_value = $atlas_build_id
    ~;
    $sbeams->executeSQL($sql);
 
@@ -1045,7 +1045,7 @@ sub get_search_batch_and_sample_id_hash
                 my @result2 = $sbeams->selectOneColumn($query2);
                 $pid_str2 = $result2[0] if (@result2); 
                 $pid_str2 =~ s/\s+//;
-                if ($pid_str1 ne $pid_str2){
+                if ($pid_str1 && $pid_str1 ne $pid_str2){
                   print "Update publcation record for sample_id=$sample_id sample_publication_ids=$pid_str1\n";
                   $sbeams->executeSQL("delete from $TBAT_SAMPLE_PUBLICATION where sample_id = $sample_id");
                   foreach my $pid (@result1){
@@ -1105,7 +1105,6 @@ sub get_search_batch_and_sample_id_hash
                 my ($sb_id, $exp_name, $exp_tag, $d_l, $p_id, $pub_id,$protease_id,$organism_id,
                     $cell_line,$tissue_cell_type,$disease,$treatment_physiological_state,
                     $sample_preparation,$sample_category_id) = @{$row};
-
                 ## create [sample] record if it doesn't exist:
                 if ($sample_exists eq "false")
                 {
@@ -1130,8 +1129,8 @@ sub get_search_batch_and_sample_id_hash
                     );
 
                     $sample_id = insert_sample( rowdata_ref => \%rowdata );
-                    print "#######insert  $sample_id $exp_tag $exp_name\n";
-                    insert_sample_publications($sample_id, $pub_id) if ($pub_id);
+                    #print "#######insert  $sample_id $exp_tag $exp_name\n";
+                    #insert_sample_publications($sample_id, $pub_id) if ($pub_id);
 
                 }
 
@@ -1700,6 +1699,7 @@ sub insert_sample
     ## insert sample publication 
     my @pids = split(",", $rowdata{sample_publication_ids});
     foreach my $pid (@pids){
+      next if ($pid eq '' || $pid == 0);
       print "INFO[$METHOD]: insert publication $pid for sample $sample_id\n";
 		  %rowdata = (    publication_id     =>  $pid,
 										sample_id => $sample_id);

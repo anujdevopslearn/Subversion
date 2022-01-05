@@ -196,9 +196,6 @@ sub mk_plot {
       $fjust = 0.5;
     }
 
-    $TBAT_CONSENSUS_LIBRARY_SPECTRUM = 'peptideatlas_test.dbo.consensus_library_spectrum';
-    $TBAT_CONSENSUS_LIBRARY = 'peptideatlas_test.dbo.consensus_library';
-
     my $sql = qq~
        SELECT sequence,charge,mz_exact,protein_name,
        protein_name_alt,modified_sequence, consensus_library_name, file_path, entry_idx

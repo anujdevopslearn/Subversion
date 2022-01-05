@@ -232,8 +232,8 @@ sub mk_plot {
       $fjust = 0.5;
     }
 
-    $TBAT_CONSENSUS_LIBRARY_SPECTRUM = 'peptideatlas.dbo.consensus_library_spectrum';
-    $TBAT_CONSENSUS_LIBRARY = 'peptideatlas.dbo.consensus_library';
+    $TBAT_CONSENSUS_LIBRARY_SPECTRUM = '$TBAT_CONSENSUS_LIBRARY_SPECTRUM';
+    $TBAT_CONSENSUS_LIBRARY = '$TBAT_CONSENSUS_LIBRARY';
 
     my $sql = qq~
        SELECT sequence,charge,mz_exact,protein_name,
@@ -287,6 +287,7 @@ sub mk_plot {
     $modification_helper = new SBEAMS::PeptideAtlas::ModificationHelper();
 
     if ( !$parameters{spectrum} ) {
+
       my $peaks = $consensus->get_spectrum_peaks( %parameters, denormalize => 0, strip_unknowns => 1 );
       $peaks->{mz} = $results{mz};
       $peaks->{modified_sequence} = $results{modified_sequence};

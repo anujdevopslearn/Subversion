@@ -115,25 +115,25 @@ sub export_build {
     my $sql = qq~
     SELECT DISTINCT  
     $col_string, PTI.is_predicted
-    FROM PeptideAtlas.dbo.pabst_tmp_peptide PP 
+    FROM $TBAT_PABST_TMP_PEPTIDE PP 
   
-    JOIN PeptideAtlas.dbo.pabst_tmp_peptide_ion PI 
+    JOIN $TBAT_PABST_TMP_PEPTIDE_ION PI 
     ON PP.pabst_peptide_id = PI.pabst_peptide_id
   
-    JOIN PeptideAtlas.dbo.pabst_tmp_peptide_ion_instance PII 
+    JOIN $TBAT_PABST_TMP_PEPTIDE_ION_INSTANCE PII 
     ON PI.pabst_peptide_ion_id = PII.pabst_peptide_ion_id
     
-    JOIN PeptideAtlas.dbo.pabst_tmp_transition PT 
+    JOIN $TBAT_PABST_TMP_TRANSITION PT 
     ON PT.pabst_peptide_ion_id = PI.pabst_peptide_ion_id 
     
-    JOIN PeptideAtlas.dbo.pabst_tmp_transition_instance PTI 
+    JOIN $TBAT_PABST_TMP_TRANSITION_INSTANCE PTI 
     ON PT.pabst_transition_id = PTI.pabst_transition_id 
     
-    JOIN PeptideAtlas.dbo.instrument_type IT 
+    JOIN $TBAT_INSTRUMENT_TYPE IT 
     ON ( IT.instrument_type_id = PTI.source_instrument_type_id  AND
          IT.instrument_type_id = PII.source_instrument_type_id ) 
     
-    JOIN PeptideAtlas.dbo.pabst_tmp_source_priority PSP 
+    JOIN $TBAT_PABST_TMP_SOURCE_PRIORITY PSP 
     ON ( PSP.source_instrument_type_id = PTI.source_instrument_type_id )
     
     WHERE  PP.pabst_build_id IN ( $args{build_id} )
@@ -345,25 +345,25 @@ sub export_build {
     my $sql = qq~
     SELECT DISTINCT  
     $col_string, PTI.is_predicted
-    FROM PeptideAtlas.dbo.pabst_tmp_peptide PP 
+    FROM $TBAT_PABST_TMP_PEPTIDE PP 
   
-    JOIN PeptideAtlas.dbo.pabst_tmp_peptide_ion PI 
+    JOIN $TBAT_PABST_TMP_PEPTIDE_ION PI 
     ON PP.pabst_peptide_id = PI.pabst_peptide_id
   
-    JOIN PeptideAtlas.dbo.pabst_tmp_peptide_ion_instance PII 
+    JOIN $TBAT_PABST_TMP_PEPTIDE_ION_INSTANCE PII 
     ON PI.pabst_peptide_ion_id = PII.pabst_peptide_ion_id
     
-    JOIN PeptideAtlas.dbo.pabst_tmp_transition PT 
+    JOIN $TBAT_PABST_TMP_TRANSITION PT 
     ON PT.pabst_peptide_ion_id = PI.pabst_peptide_ion_id 
     
-    JOIN PeptideAtlas.dbo.pabst_tmp_transition_instance PTI 
+    JOIN $TBAT_PABST_TMP_TRANSITION_INSTANCE PTI 
     ON PT.pabst_transition_id = PTI.pabst_transition_id 
     
-    JOIN PeptideAtlas.dbo.instrument_type IT 
+    JOIN $TBAT_INSTRUMENT_TYPE IT 
     ON ( IT.instrument_type_id = PTI.source_instrument_type_id  AND
          IT.instrument_type_id = PII.source_instrument_type_id ) 
     
-    JOIN PeptideAtlas.dbo.pabst_tmp_source_priority PSP 
+    JOIN $TBAT_PABST_TMP_SOURCE_PRIORITY PSP 
     ON ( PSP.source_instrument_type_id = PTI.source_instrument_type_id )
     
     WHERE  PP.pabst_build_id IN ( $args{build_id} )

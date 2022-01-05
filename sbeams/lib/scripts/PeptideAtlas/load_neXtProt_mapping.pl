@@ -27,7 +27,8 @@ $|++;
 
 use lib "$ENV{SBEAMS}/lib/perl";
 use vars qw ($sbeams $sbeamsMOD $VERBOSE $TESTONLY $USAGE $PROG_NAME); 
-use Net::FTP;
+use LWP::UserAgent;
+
 use File::Listing qw(parse_dir);
 use File::stat;
 use File::Copy;
@@ -110,6 +111,7 @@ if (! $atlas_build_id){
   FROM $TBAT_ATLAS_BUILD AB
   WHERE AB.ATLAS_BUILD_ID = $atlas_build_id 
  ~;
+
 }
 
 my @rows = $sbeams->selectSeveralColumns ($sql);
@@ -131,34 +133,63 @@ print "protein_file_location $protein_file_location\n";
 #$atlas_build_date =~ s/(\d+\-\d+)\-.*/$1/;
 
 use File::stat;
-use POSIX qw(strftime);
-
 my $neXtprot_file_loc = "/net/db/projects/PeptideAtlas/species/Human/NextProt/chr_reports/";
-my ($host, $user, $passwd) = ('ftp.nextprot.org', 'anonymous', '');
-my $dir = 'pub/current_release/ac_lists/';
-my $ftp = Net::FTP->new($host) or die qq{Cannot connect to $host: $@};
-$ftp->login($user, $passwd) or die qq{Cannot login: }, $ftp->message;
-$ftp->get("$dir/nextprot_ac_list_all.txt", "$neXtprot_file_loc/nextprot_ac_list_all.txt") or die qq{Cannot download }, $ftp->message;
-$dir = 'pub/current_release/chr_reports/';
-my @ftp_lists=$ftp->ls("$dir/nextprot_chromosome*");
-foreach my $ftp_file(@ftp_lists){
-   print "downloading $ftp_file\n";
-   $ftp_file =~ s/.*\///;
-	 $ftp->get("$dir/$ftp_file", "$neXtprot_file_loc/$ftp_file") or die qq{Cannot download }, $ftp->message;
-   my $time =  $ftp->mdtm("$dir/$ftp_file");
-   utime($time, $time, "$neXtprot_file_loc/$ftp_file");
+my $ua = LWP::UserAgent->new;
+my $host="https://download.nextprot.org/pub/current_release";
+my $url = "$host/ac_lists/nextprot_ac_list_all.txt";
+
+my $req = HTTP::Request->new(GET => $url);
+my $response = $ua->request($req);
+
+my $localfile = "$neXtprot_file_loc/nextprot_ac_list_all.txt";
+open (OUT, ">$localfile") or die "cannot open $localfile\n";
+if ($response->is_success){
+	print OUT $response->content;
+}else{
+	die "cannot download $url\n";
 }
-print "downloading nextprot_refseq.txt\n";
-$ftp->get("pub/current_release/mapping/nextprot_refseq.txt", "$neXtprot_file_loc/nextprot_refseq.txt") or die qq{Cannot download }, $ftp->message;;
-print "downloading nextprot_ensg.txt\n";
-$ftp->get("pub/current_release/mapping/nextprot_ensg.txt", "$neXtprot_file_loc/nextprot_ensg.txt") or  die qq{Cannot download }, $ftp->message;
 
+my $dir="chr_reports";
+my @chrs = ();
+for my $i (1..22){
+  push @chrs, $i;
+}
+@chrs = (@chrs, 'X', 'Y', 'MT', 'unknown');
+foreach my $chr (@chrs){
+  my $url = "$host/$dir/nextprot_chromosome_$chr.txt";
+  my $localfile = "$neXtprot_file_loc/nextprot_chromosome_$chr.txt";
+  open (OUT, ">$localfile") or die "cannot open $localfile\n";
+  my $req = HTTP::Request->new(GET => $url);
+  $response = $ua->request($req);
+  if ($response->is_success){
+		print OUT $response->content;
+	}else{
+		die "cannot download $url\n";
+	}
+   #utime($time, $time, "$neXtprot_file_loc/$ftp_file");
+}
 
-my $mtime = stat("/net/db/projects/PeptideAtlas/species/Human/NextProt/chr_reports/nextprot_chromosome_1.txt")->mtime;
-my @time = localtime($mtime);
-my $nextprot_release_date  = strftime "%Y-%m-%d", @time;
+$dir = "mapping";
+foreach my $file (qw(nextprot_refseq.txt nextprot_ensg.txt)){
+  my $url = "$host/$dir/$file";
+  my $localfile = "$neXtprot_file_loc/$file";
+  open (OUT, ">$localfile") or die "cannot open $localfile\n";
+  my $req = HTTP::Request->new(GET => $url);
+  $response = $ua->request($req);
+  if ($response->is_success){
+    print OUT $response->content;
+  }else{
+    die "cannot download $url\n";
+  }
+   #utime($time, $time, "$neXtprot_file_loc/$ftp_file");
+}
 
-
+#nextprot_ac_list_all.txt</a></td><td class="indexcollastmod">2021-11-19
+my $str = `wget -S -O- https://download.nextprot.org/pub/current_release/ac_lists/`;
+$str =~ /nextprot_ac_list_all.txt.*indexcollastmod">([\d\-]+) /;
+my $nextprot_release_date  = $1; 
+print "nextprot_release_date=$nextprot_release_date\n";
+die if ($nextprot_release_date eq '');
 
 if (! $insert){
   $insert = check_version (nextprot_release_date => $nextprot_release_date, 
@@ -330,7 +361,7 @@ $sql = qq~
 				ON ( PI.atlas_build_id = AB.atlas_build_id )
 	LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
 				ON ( AB.biosequence_set_id = BSS.biosequence_set_id )
-	LEFT JOIN sbeams.dbo.organism O
+	LEFT JOIN $TB_ORGANISM O
 				ON ( BSS.organism_id = O.organism_id )
 	LEFT JOIN $TBAT_BIOSEQUENCE BS
 				ON ( PM.matched_biosequence_id = BS.biosequence_id )

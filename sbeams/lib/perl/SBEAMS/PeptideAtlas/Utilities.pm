@@ -3856,6 +3856,25 @@ sub get_current_timestamp{
   my $time = strftime "%Y-%m-%d %H:%M:%S", localtime time;
   return $time;
 }
+
+sub get_build_organism {
+  my $self = shift;
+  my %args = @_;
+  my $atlas_build_id = $args{atlas_build_id} || die "need atlas_build_id\n";
+  my $sbeams = $self->getSBEAMS();
+
+  my $sql = qq~
+             SELECT O.organism_name, O.organism_id
+             FROM $TBAT_ATLAS_BUILD AB
+             JOIN $TBAT_BIOSEQUENCE_SET BS ON (AB.biosequence_set_id = BS.biosequence_set_id)
+             JOIN $TB_ORGANISM O on (BS.organism_id = O.organism_id)
+             WHERE AB.atlas_build_id = $atlas_build_id 
+
+   ~;;
+  my @row = $sbeams->selectSeveralColumns($sql);
+  if (! @row){
+    die "cannot find organism id for build=$atlas_build_id\n";
+  }
+  return @{$row[0]};
+}
 1;
-
-

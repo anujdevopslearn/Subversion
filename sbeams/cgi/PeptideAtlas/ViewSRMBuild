@@ -276,7 +276,7 @@ sub get_build_list {
   # Get and cache all build stats
   my $stats_sql = qq~
   SELECT PBS.* 
-  FROM peptideatlas.dbo.pabst_build_statistics PBS
+  FROM $TBAT_PABST_BUILD_STATISTICS PBS
   JOIN $TBAT_PABST_BUILD PB
     ON PB.pabst_build_id = PBS.build_id
   WHERE project_id IN ( $accessible_project_ids )

@@ -111,24 +111,24 @@ $dbh->{RaiseError}++;
     foreach my $prot (keys %prot_seq){
 			my $sql = qq~
 				 SELECT BS.biosequence_name, MPI.modified_peptide_sequence, S.spectrum_name 
-				 FROM  PeptideAtlas.dbo.spectrum S
-				 INNER JOIN  PeptideAtlas.dbo.spectrum_identification SI
+				 FROM  $TBAT_SPECTRUM S
+				 INNER JOIN  $TBAT_SPECTRUM_IDENTIFICATION SI
 							 ON (SI.spectrum_id = S.spectrum_id )
-				 INNER JOIN PeptideAtlas.dbo.modified_peptide_instance MPI 
+				 INNER JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI 
 							 ON ( MPI.modified_peptide_instance_id = SI.modified_peptide_instance_id)
-				 INNER JOIN PeptideAtlas.dbo.peptide_instance PI 
+				 INNER JOIN $TBAT_PEPTIDE_INSTANCE PI 
 							 ON (PI.peptide_instance_id = MPI.peptide_instance_id)
-				 INNER JOIN PeptideAtlas.dbo.peptide_mapping PM
+				 INNER JOIN $TBAT_PEPTIDE_MAPPING PM
 							 ON ( PI.peptide_instance_id = PM.peptide_instance_id )
-				 INNER JOIN PeptideAtlas.dbo.atlas_build AB
+				 INNER JOIN $TBAT_ATLAS_BUILD AB
 							 ON ( PI.atlas_build_id = AB.atlas_build_id )
-				 INNER JOIN PeptideAtlas.dbo.biosequence_set BSS
+				 INNER JOIN $TBAT_BIOSEQUENCE_SET BSS
 							 ON ( AB.biosequence_set_id = BSS.biosequence_set_id )
 				 INNER JOIN sbeams.dbo.organism O
 							 ON ( BSS.organism_id = O.organism_id )
-				 INNER JOIN PeptideAtlas.dbo.biosequence BS
+				 INNER JOIN $TBAT_BIOSEQUENCE BS
 							 ON ( PM.matched_biosequence_id = BS.biosequence_id )
-				 INNER JOIN PeptideAtlas.dbo.protein_identification PID
+				 INNER JOIN $TBAT_PROTEIN_IDENTIFICATION PID
 							 ON (BS.biosequence_id = PID.biosequence_id and PID.atlas_build_id = AB.atlas_build_id)
 				 WHERE 1 = 1 AND AB.atlas_build_id IN ( $atlas_build_id)
 					 AND BS.biosequence_name = '$prot'

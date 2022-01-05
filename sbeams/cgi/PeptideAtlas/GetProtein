@@ -43,9 +43,6 @@ use SBEAMS::BioLink::Tables;
 my $biolink = SBEAMS::BioLink->new();
 $biolink->setSBEAMS($sbeams);
 
-use SBEAMS::BioLink;
-my $biolink = new SBEAMS::BioLink;
-
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
@@ -301,11 +298,11 @@ sub handle_request {
     $protein_list_sql = qq~
     SELECT DISTINCT AB.atlas_build_id
     FROM $TBAT_ATLAS_BUILD AB
-    JOIN peptideatlas.dbo.protein_list_build PLB
+    JOIN $TBAT_PROTEIN_LIST_BUILD PLB
       ON AB.atlas_build_id = PLB.atlas_build_id
-    JOIN peptideatlas.dbo.protein_list PL
+    JOIN $TBAT_PROTEIN_LIST PL
       ON PL.protein_list_id = PLB.protein_list_id
-    JOIN peptideatlas.dbo.protein_list_protein PLP
+    JOIN $TBAT_PROTEIN_LIST_PROTEIN PLP
       ON PL.protein_list_id = PLP.protein_list_id
     JOIN $TBAT_BIOSEQUENCE B ON ( B.biosequence_set_id = AB.biosequence_set_ID
                             AND B.biosequence_name = PLP.protein_name )
@@ -945,7 +942,7 @@ sub handle_request {
     my $sp_sql = qq~
        SELECT BS.biosequence_id, signal_end, signal_start
        FROM $TBAT_BIOSEQUENCE BS
-       JOIN peptideatlas.dbo.swiss_prot_annotation SPA
+       JOIN $TBAT_SWISS_PROT_ANNOTATION SPA
          ON BS.biosequence_name = SPA.accession
        WHERE BS.biosequence_id = $biosequence_id
     ~;
@@ -2015,7 +2012,7 @@ sub get_ortholog_information {
   return unless $biosequence->{biosequence_name};
   my $sql =<<"  END";
   SELECT ortholog_group
-  FROM biolink.dbo.ortholog
+  FROM $TBBL_ORTHOLOG
   WHERE entry_accession = '$biosequence->{biosequence_name}'
   END
   my $link = '';
@@ -2028,7 +2025,7 @@ sub get_ortholog_information {
 
   $sql =<<"  END";
   SELECT ortholog_group
-  FROM biolink.dbo.ortholog O
+  FROM $TBBL_ORTHOLOG O
   JOIN $TBAT_SEARCH_KEY SK ON SK.search_key_name = O.entry_accession
   JOIN $TBAT_BIOSEQUENCE B ON B.biosequence_name = SK.resource_name
   WHERE B.biosequence_name = '$biosequence->{biosequence_name}'

@@ -34,6 +34,7 @@ use SBEAMS::PeptideAtlas::TableInfo;
 use SBEAMS::PeptideAtlas::Tables;
 
 use SBEAMS::Proteomics::Tables;
+use SBEAMS::BioLink::Tables;
 
 ###############################################################################
 # printPageHeader
@@ -2035,9 +2036,6 @@ sub get_proteome_coverage_new {
     $biosqeuences{$id}{accession} = $name;
     $biosqeuences{$id}{desc} = $desc;
   }
-  
-  print "biosqeuence id=". scalar keys %biosqeuences;
-  print "\n";
 
   my $obs_sql = qq~
 		SELECT DISTINCT B2.BIOSEQUENCE_ID
@@ -2048,8 +2046,6 @@ sub get_proteome_coverage_new {
 		--AND B2.BIOSEQUENCE_NAME LIKE 'CONTAM%' 
    ~;
   my @biosqeuence_id_obs = $sbeams->selectOneColumn($obs_sql);
-  print "observed biosqeuence id=" . scalar @biosqeuence_id_obs;
-  print "\n";
 
   
   foreach my $line (@patterns){
@@ -2162,7 +2158,7 @@ sub get_proteome_coverage {
 		SELECT COUNT(*) AS CNT, B.DBXREF_ID AS ID , DBXREF_NAME AS NAME , B.BIOSEQUENCE_SET_ID AS SETID
 		FROM $TBAT_ATLAS_BUILD AB
 		JOIN $TBAT_BIOSEQUENCE B ON B.biosequence_set_id = AB.biosequence_set_id
-		JOIN biolink.dbo.dbxref DX ON DX.dbxref_id = B.dbxref_id
+		JOIN $TBBL_DBXREF DX ON DX.dbxref_id = B.dbxref_id
 		WHERE atlas_build_id = $build_id
 		AND B.dbxref_id IS NOT NULL
 		GROUP BY B.dbxref_id, dbxref_name, B.biosequence_set_id

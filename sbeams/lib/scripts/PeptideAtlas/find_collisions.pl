@@ -355,6 +355,7 @@ sub process_args {
 sub fetch_peptide_counts {
 
   return {} unless $args->{build_id};
+  my $msg = $sbeams->update_PA_table_variables($args->{build_id});
 
   my $sql = qq~
   SELECT consensus_library_spectrum_id, MPI.n_observations 
@@ -398,11 +399,11 @@ sub getTransitions {
   PI.n_samples, PI.n_protein_mappings, PI.n_genome_locations, PI.preceding_residue,
   PI.following_residue, MPA.q1_mz, MPA.q3_mz, MPA.peptide_charge, MPA.q3_peak_intensity, 
   MPA.q3_ion_label, P.peptide_sequence
-  FROM PeptideAtlas.dbo.peptide P 
-  JOIN PeptideAtlas.dbo.peptide_instance PI ON (PI.peptide_id = P.peptide_id)
-  JOIN PeptideAtlas.dbo.peptide_mapping PM ON PM.peptide_instance_id = PI.peptide_instance_id
-  JOIN PeptideAtlas.dbo.biosequence BS ON BS.biosequence_id = PM.matched_biosequence_id
-  JOIN PeptideAtlas.dbo.modified_peptide_annotation MPA ON MPA.peptide_sequence = P.peptide_sequence
+  FROM $TBAT_PEPTIDE P 
+  JOIN $TBAT_PEPTIDE_INSTANCE PI ON (PI.peptide_id = P.peptide_id)
+  JOIN $TBAT_PEPTIDE_MAPPING PM ON PM.peptide_instance_id = PI.peptide_instance_id
+  JOIN $TBAT_BIOSEQUENCE BS ON BS.biosequence_id = PM.matched_biosequence_id
+  JOIN $TBAT_MODIFIED_PEPTIDE_ANNOTATION MPA ON MPA.peptide_sequence = P.peptide_sequence
   WHERE PI.atlas_build_id IN ( 123 )
   AND biosequence_name LIKE 'Y%'
   ORDER BY biosequence_name, P.peptide_sequence, q3_peak_intensity DESC

@@ -279,7 +279,7 @@ sub get_list_overview {
 
   my $list_sql = qq~
   SELECT protein_list_id, protein_list_name, contributor_name, protein_list_description, project_id 
-  FROM peptideatlas.dbo.protein_list 
+  FROM $TBAT_PROTEIN_LIST 
   WHERE protein_list_id = $list_id
   AND project_id IN ( $project_ids )
   ORDER BY protein_list_id DESC
@@ -289,7 +289,7 @@ sub get_list_overview {
       
   my $prot_count = $sbeams->selectrow_hashref( <<"  PEP" );
   SELECT COUNT(*) cnt, COUNT(DISTINCT key_accession) dist
-  FROM   peptideatlas.dbo.protein_list_protein
+  FROM   $TBAT_PROTEIN_LIST_PROTEIN
   WHERE protein_list_id = $list_id
   PEP
 
