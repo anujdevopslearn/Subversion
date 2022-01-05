@@ -2369,6 +2369,7 @@ sub get_what_is_new {
     AND AB.ATLAS_BUILD_ID != $build_id
   ~;
   @row = $sbeams->selectSeveralColumns($sql);
+  
   return if (! @row);
   my ($previous_build_id, $previous_build_name, $previous_bsset_desc) = @{$row[0]};
 
@@ -2446,15 +2447,18 @@ sub get_what_is_new {
   $sql = qq~
     SELECT SAMPLE_ID
     FROM $TBAT_SAMPLE 
-    WHERE SAMPLE_ID 
+    WHERE REPOSITORY_IDENTIFIERS 
     IN ( 
-      SELECT A.SAMPLE_ID FROM $TBAT_ATLAS_BUILD_SAMPLE A 
+      SELECT SA.REPOSITORY_IDENTIFIERS 
+      FROM $TBAT_ATLAS_BUILD_SAMPLE A 
+      JOIN $TBAT_SAMPLE SA ON (A.sample_id = SA.sample_id)
       WHERE A.ATLAS_BUILD_ID IN ($build_id)
     ) 
-    AND SAMPLE_ID 
+    AND REPOSITORY_IDENTIFIERS
     NOT IN ( 
-      SELECT B.SAMPLE_ID 
-      FROM $TBAT_ATLAS_BUILD_SAMPLE B 
+      SELECT SB.REPOSITORY_IDENTIFIERS 
+      FROM $TBAT_ATLAS_BUILD_SAMPLE B
+      JOIN $TBAT_SAMPLE SB ON (B.sample_id = SB.sample_id) 
       WHERE B.ATLAS_BUILD_ID IN ($previous_build_id)
     ) 
   ~;
