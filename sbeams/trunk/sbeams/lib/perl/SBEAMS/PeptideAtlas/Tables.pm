@@ -139,6 +139,7 @@ use vars qw(@ISA @EXPORT
     $TBAT_PROTEIN_LIST
     $TBAT_PROTEIN_LIST_PROTEIN
     $TBAT_PROTEIN_LIST_BUILD
+    $TBAT_PROTEIN_LIST_PEPTIDE
 
     $TBAT_DOMAIN_PROTEIN_LIST
     $TBAT_DOMAIN_LIST_PROTEIN
@@ -321,6 +322,7 @@ require Exporter;
     $TBAT_PROTEIN_LIST
     $TBAT_PROTEIN_LIST_PROTEIN
     $TBAT_PROTEIN_LIST_BUILD
+    $TBAT_PROTEIN_LIST_PEPTIDE
 
     $TBAT_DOMAIN_PROTEIN_LIST
     $TBAT_DOMAIN_LIST_PROTEIN
@@ -504,6 +506,7 @@ $TBAT_CHROMATOGRAM_SOURCE_FILE      = "${mod}chromatogram_source_file";
 $TBAT_PROTEIN_LIST                  = "${mod}protein_list";
 $TBAT_PROTEIN_LIST_PROTEIN          = "${mod}protein_list_protein";
 $TBAT_PROTEIN_LIST_BUILD            = "${mod}protein_list_build";
+$TBAT_PROTEIN_LIST_PEPTIDE          = "${mod}protein_list_peptide";
 
 $TBAT_DOMAIN_PROTEIN_LIST           = "${mod}domain_protein_list";
 $TBAT_DOMAIN_LIST_PROTEIN           = "${mod}domain_list_protein";
