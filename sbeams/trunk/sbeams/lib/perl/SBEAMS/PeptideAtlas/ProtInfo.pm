@@ -224,8 +224,10 @@ sub loadBuildProtInfo {
 
     if ($inserted) {
       $loaded++;
+      print "$loaded..." if ($loaded %1000 ==1);
     }
   }
+  print "\n";
 
   if ( 1 || $VERBOSE ) {
     print "$loaded entries loaded into protein_identification table.\n";
@@ -271,6 +273,8 @@ sub loadBuildProtInfo {
 
     if ($inserted) {
       $loaded++;
+      print "$loaded..." if ($loaded %1000 ==1);
+
     } 
   }
 
@@ -1486,7 +1490,7 @@ sub update_protInfo{
   }
   #print "Purging caching\n";
   $sql = qq~
-     DELETE FROM sbeams.dbo.cached_resultset 
+     DELETE FROM $TB_CACHED_RESULTSET 
      WHERE key_field = 'atlas_build_id' 
            AND key_value = $atlas_build_id
            AND query_name like '%GetProteins%'

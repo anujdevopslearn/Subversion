@@ -677,6 +677,7 @@ sub getCurrentAtlasOrganism {
   ~;
 
   my @rows = $sbeams->selectrow_array($sql);
+
   die "Couldn't find specified organism: $sql" if !scalar(@rows);
 
   if ( $args{type} && $args{type} eq 'kegg' ) {
@@ -711,7 +712,7 @@ sub getDefaultProteinListID {
 
   my $sql = qq~
   SELECT protein_list_id, protein_list_name, contributor_name protein_list_description, project_id
-  FROM peptideatlas.dbo.protein_list
+  FROM $TBAT_PROTEIN_LIST
   WHERE project_id IN ( $projects )
   ORDER BY protein_list_id DESC
   ~;
@@ -728,12 +729,12 @@ sub getProteinListBuild {
 
   my $sql = qq~
   SELECT MAX( SRMA_build_id )
-  FROM peptideatlas.dbo.protein_list PL
-  JOIN  peptideatlas.dbo.protein_list_build PLB
+  FROM $TBAT_PROTEIN_LIST PL
+  JOIN  $TBAT_PROTEIN_LIST_BUILD PLB
     ON PL.protein_list_id = PLB.protein_list_id
   JOIN $TB_CONTACT C ON C.contact_id = PL.contributor_contact_id
   JOIN $TB_USER_LOGIN UL ON C.contact_id = UL.contact_id
-  LEFT JOIN  peptideatlas.dbo.protein_list_peptide PLPEP
+  LEFT JOIN  $TBAT_PROTEIN_LIST_PEPTIDE PLPEP
     ON PL.protein_list_id = PLPEP.protein_list_id
  WHERE username = '$username'
   ~;
@@ -767,16 +768,16 @@ sub getProteinListInfo {
 
   my $sql = qq~
   SELECT PLP.protein_list_id, protein_name, peptide_sequence, PB.build_name
-  FROM peptideatlas.dbo.protein_list PL
-  JOIN peptideatlas.dbo.protein_list_protein PLP 
+  FROM $TBAT_PROTEIN_LIST PL
+  JOIN $TBAT_PROTEIN_LIST_PROTEIN PLP 
     ON PL.protein_list_id = PLP.protein_list_id
-  JOIN  peptideatlas.dbo.protein_list_build PLB
+  JOIN  $TBAT_PROTEIN_LIST_BUILD PLB
     ON PL.protein_list_id = PLB.protein_list_id
   JOIN  $TBAT_PABST_BUILD PB
     ON PLB.SRMA_build_id = PB.pabst_build_id
   JOIN $TB_CONTACT C ON C.contact_id = PL.contributor_contact_id
   JOIN $TB_USER_LOGIN UL ON C.contact_id = UL.contact_id
-  LEFT JOIN  peptideatlas.dbo.protein_list_peptide PLPEP
+  LEFT JOIN  $TBAT_PROTEIN_LIST_PEPTIDE PLPEP
     ON PL.protein_list_id = PLPEP.protein_list_id
   WHERE SRMA_build_id = $build_id
     AND  username = '$username'

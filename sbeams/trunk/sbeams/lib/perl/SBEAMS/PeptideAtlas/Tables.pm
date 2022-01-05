@@ -138,6 +138,7 @@ use vars qw(@ISA @EXPORT
 
     $TBAT_PROTEIN_LIST
     $TBAT_PROTEIN_LIST_PROTEIN
+    $TBAT_PROTEIN_LIST_BUILD
 
     $TBAT_DOMAIN_PROTEIN_LIST
     $TBAT_DOMAIN_LIST_PROTEIN
@@ -180,6 +181,9 @@ use vars qw(@ISA @EXPORT
     $TBAT_NEXTPROT_MAPPING
     $TBAT_NEXTPROT_CHROMOSOME_MAPPING
     $TBAT_NEXTPROT_CHPP_SUMMARY
+
+    $TBAT_INITIATOR_METHIONINE_EVIDENCE
+    $TBAT_DIRTY_PEPTIDES
 );
 
 ###############################################################################
@@ -316,6 +320,7 @@ require Exporter;
 
     $TBAT_PROTEIN_LIST
     $TBAT_PROTEIN_LIST_PROTEIN
+    $TBAT_PROTEIN_LIST_BUILD
 
     $TBAT_DOMAIN_PROTEIN_LIST
     $TBAT_DOMAIN_LIST_PROTEIN
@@ -358,6 +363,8 @@ require Exporter;
     $TBAT_NEXTPROT_CHROMOSOME_MAPPING
     $TBAT_NEXTPROT_CHPP_SUMMARY
 
+    $TBAT_INITIATOR_METHIONINE_EVIDENCE
+    $TBAT_DIRTY_PEPTIDES
 );
 
 
@@ -496,6 +503,7 @@ $TBAT_CHROMATOGRAM_SOURCE_FILE      = "${mod}chromatogram_source_file";
 
 $TBAT_PROTEIN_LIST                  = "${mod}protein_list";
 $TBAT_PROTEIN_LIST_PROTEIN          = "${mod}protein_list_protein";
+$TBAT_PROTEIN_LIST_BUILD            = "${mod}protein_list_build";
 
 $TBAT_DOMAIN_PROTEIN_LIST           = "${mod}domain_protein_list";
 $TBAT_DOMAIN_LIST_PROTEIN           = "${mod}domain_list_protein";
@@ -540,7 +548,9 @@ $TBAT_NEXTPROT_MAPPING              = "${mod}nextprot_mapping";
 $TBAT_NEXTPROT_CHROMOSOME_MAPPING   = "${mod}nextprot_chromosome_mapping";
 $TBAT_NEXTPROT_CHPP_SUMMARY         = "${mod}nextprot_chpp_summary";
 
+$TBAT_INITIATOR_METHIONINE_EVIDENCE = "${mod}initiator_methionine_evidence";
 
+$TBAT_DIRTY_PEPTIDES                = "${mod}dirty_peptides";
 
 ###############################################################################
 ## Constructor

@@ -483,8 +483,8 @@ sub getConsensusLinksSAVE {
   }
 
   # Force production for now
-  $TBAT_CONSENSUS_LIBRARY_SPECTRUM = 'peptideatlas.dbo.consensus_library_spectrum';
-  $TBAT_CONSENSUS_LIBRARY = 'peptideatlas.dbo.consensus_library';
+  $TBAT_CONSENSUS_LIBRARY_SPECTRUM = '$TBAT_CONSENSUS_LIBRARY_SPECTRUM';
+  $TBAT_CONSENSUS_LIBRARY = '$TBAT_CONSENSUS_LIBRARY';
 
   my %libs = ( it => {}, qtof => {}, qtrap => {}, CE => {}, qqq => {},
           low => {}, mlow => {}, medium => {}, mhigh => {}, high=> {} );
@@ -551,7 +551,7 @@ sub getConsensusLinksSAVE {
 	my $libs = join( ',', keys( %libmap ));
   my $ce_sql = qq~
   SELECT modified_sequence, consensus_library_spectrum_id, charge, consensus_library_id
-  FROM peptideatlas.dbo.consensus_library_spectrum 
+  FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM 
   WHERE consensus_library_id IN ( $libs ) 
   $seq_and
   ~;
@@ -645,8 +645,8 @@ sub getConsensusLinks {
 
 
   # Force production for now
-  $TBAT_CONSENSUS_LIBRARY_SPECTRUM = 'peptideatlas.dbo.consensus_library_spectrum';
-  $TBAT_CONSENSUS_LIBRARY = 'peptideatlas.dbo.consensus_library';
+  $TBAT_CONSENSUS_LIBRARY_SPECTRUM = '$TBAT_CONSENSUS_LIBRARY_SPECTRUM';
+  $TBAT_CONSENSUS_LIBRARY = '$TBAT_CONSENSUS_LIBRARY';
 
   my %libs = ( it => {}, qtof => {}, qtrap => {}, CE => {}, qqq => {}, hcd => {}, ttof => {}, qstar => {},
           low => {}, mlow => {}, medium => {}, mhigh => {}, high=> {} );
@@ -739,7 +739,7 @@ sub getConsensusLinks {
 
   my $ce_sql = qq~
   SELECT modified_sequence, consensus_library_spectrum_id, charge, consensus_library_id
-  FROM peptideatlas.dbo.consensus_library_spectrum 
+  FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM 
   WHERE consensus_library_id IN ( $libs ) 
   $seq_and
   ~;

@@ -38,9 +38,6 @@ my $sbeams = new SBEAMS::Connection;
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 my $atlas = new SBEAMS::PeptideAtlas;
 $atlas->setSBEAMS($sbeams);
-my $TBAT_PTM_LIST = 'peptideatlas.dbo.ptm_list';
-my $TBAT_PTM_LIST_ENTRY = 'peptideatlas.dbo.ptm_list_entry';
-
 
 # Read input parameters
 my $params = process_params();

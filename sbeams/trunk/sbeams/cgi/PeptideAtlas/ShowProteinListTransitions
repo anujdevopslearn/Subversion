@@ -557,7 +557,7 @@ sub getConsensus {
 
   my $qtof_sql = qq~
   SELECT modified_sequence, consensus_library_spectrum_id, charge
-  FROM peptideatlas.dbo.consensus_library_spectrum 
+  FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM 
   WHERE consensus_library_id = 279
   ~;
   my $sth = $sbeams->get_statement_handle( $qtof_sql );
@@ -567,7 +567,7 @@ sub getConsensus {
 
   my $qtrap_sql = qq~
   SELECT modified_sequence, consensus_library_spectrum_id, charge
-  FROM peptideatlas.dbo.consensus_library_spectrum 
+  FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM 
   WHERE consensus_library_id = 282
   ~;
   my $sth = $sbeams->get_statement_handle( $qtrap_sql );
@@ -577,7 +577,7 @@ sub getConsensus {
 
   my $qqq_sql = qq~
   SELECT modified_sequence, consensus_library_spectrum_id, charge
-  FROM peptideatlas.dbo.consensus_library_spectrum 
+  FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM 
   WHERE consensus_library_id = 293
   ~;
   my $sth = $sbeams->get_statement_handle( $qqq_sql );
@@ -596,7 +596,7 @@ sub getConsensus {
 	my $libs = join( ',', keys( %libmap ));
   my $ce_sql = qq~
   SELECT modified_sequence, consensus_library_spectrum_id, charge, consensus_library_id
-  FROM peptideatlas.dbo.consensus_library_spectrum 
+  FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM 
   WHERE consensus_library_id IN ( $libs ); 
   ~;
   my $sth = $sbeams->get_statement_handle( $ce_sql );
@@ -615,10 +615,10 @@ sub getProtList {
   my $contact_id = $sbeams->getCurrent_contact_id();
   my $sql = qq~ 
     SELECT DISTINCT protein_name, atlas_build_id, build_name 
-    FROM peptideatlas.dbo.protein_list PL
-    JOIN peptideatlas.dbo.protein_list_protein PLP
+    FROM $TBAT_PROTEIN_LIST PL
+    JOIN $TBAT_PROTEIN_LIST_PROTEIN PLP
       ON PL.protein_list_id = PLP.protein_list_id
-    JOIN peptideatlas.dbo.protein_list_build PLB
+    JOIN $TBAT_PROTEIN_LIST_BUILD PLB
       ON PL.protein_list_id = PLB.protein_list_id
     WHERE PL.contributor_contact_id = $contact_id
   ~;

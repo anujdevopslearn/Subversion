@@ -173,15 +173,18 @@ sub handle_request {
     SELECT peptide_sequence, precursor_mz, titr_min, titr_max, r_sq, lod, loq, 
            linear_min, linear_max, fail_mode, conc, slope, intercept, n_points,
            repl_num, area, product_mz
-    FROM peptideatlas.dbo.quant_info
+    FROM $TBAT_QUANT_INFO
     WHERE peptide_sequence = '$parameters{peptide_sequence}'
     AND precursor_mz BETWEEN $pre_min AND $pre_max
     ORDER BY precursor_mz DESC, product_mz ASC, conc DESC
     ~;
 	  my @all_rows = $sbeams->selectSeveralColumns($sql);
-    my $global_vals = shift @all_rows;
 
-		my @quant = @{$global_vals};
+    my @quant = ();
+    if (@all_rows){
+      my $global_vals = shift @all_rows;
+		  @quant = @{$global_vals};
+    }
     my %line_info = ( Sum => { slope => $quant[11], 
                              intercept => $quant[12], 
                                 points => $quant[13] 

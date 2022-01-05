@@ -31,6 +31,7 @@ use SBEAMS::PeptideAtlas::Tables;
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
+
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 if (! $ENV{user} || ! $ENV{password}){
@@ -43,6 +44,7 @@ my $cmd = "$FindBin::Bin/../../scripts/Core/runsql.pl -u $ENV{user} -p $ENV{pass
 
  
 open (IN, "<$file" ) or die "cannot open $file \n";
+
 
 my $module = $sbeams->getSBEAMS_SUBDIR();
 my $database =  $DBPREFIX{$module};

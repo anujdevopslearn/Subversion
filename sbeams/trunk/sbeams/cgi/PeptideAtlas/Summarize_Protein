@@ -43,8 +43,8 @@ use SBEAMS::PeptideAtlas::Tables;
 #use SBEAMS::PeptideAtlas::ConsensusSpectrum;
 use SBEAMS::PeptideAtlas::ModificationHelper;
 
-#use SBEAMS::Proteomics::Tables;
-
+use SBEAMS::BioLink::Tables;
+use SBEAMS::Proteomics::Tables;
 
 # Global vars
 $sbeams = new SBEAMS::Connection;
@@ -533,26 +533,26 @@ sub get_passel_resultset {
   S.sample_tag AS "sample",
   O.organism_name AS "organism",
   S.sample_id AS "sample_id"
-  FROM PeptideAtlas.dbo.SEL_transition_group SELTG
-  LEFT JOIN PeptideAtlas.dbo.SEL_chromatogram SELC
+  FROM $TBAT_SEL_TRANSITION_GROUP SELTG
+  LEFT JOIN $TBAT_SEL_CHROMATOGRAM SELC
         ON ( SELC.SEL_transition_group_id = SELTG.SEL_transition_group_id )
-  LEFT JOIN PeptideAtlas.dbo.SEL_peak_group SELPG
+  LEFT JOIN $TBAT_SEL_PEAK_GROUP SELPG
         ON ( SELPG.SEL_chromatogram_id = SELC.SEL_chromatogram_id )
-  LEFT JOIN PeptideAtlas.dbo.SEL_peptide_ion SELPI
+  LEFT JOIN $TBAT_SEL_PEPTIDE_ION SELPI
         ON ( SELPI.SEL_peptide_ion_id = SELTG.SEL_peptide_ion_id )
-  LEFT JOIN PeptideAtlas.dbo.SEL_peptide_ion_protein SELPIP
+  LEFT JOIN $TBAT_SEL_PEPTIDE_ION_PROTEIN SELPIP
         ON ( SELPIP.SEL_peptide_ion_id = SELPI.SEL_peptide_ion_id )
-  LEFT JOIN PeptideAtlas.dbo.SEL_transition SELT
+  LEFT JOIN $TBAT_SEL_TRANSITION SELT
         ON ( SELT.SEL_transition_group_id = SELTG.SEL_transition_group_id )
-  LEFT JOIN PeptideAtlas.dbo.SEL_run SELR
+  LEFT JOIN $TBAT_SEL_RUN SELR
         ON ( SELR.SEL_run_id = SELTG.SEL_run_id )
-  LEFT JOIN PeptideAtlas.dbo.SEl_experiment SELE
+  LEFT JOIN $TBAT_SEL_EXPERIMENT SELE
         ON ( SELE.SEL_experiment_id = SELR.SEL_experiment_id )
-  LEFT JOIN PeptideAtlas.dbo.sample S
+  LEFT JOIN $TBAT_SAMPLE S
         ON ( S.sample_id = SELE.sample_id )
-  LEFT JOIN sbeams.dbo.organism O
+  LEFT JOIN $TB_ORGANISM O
         ON ( S.organism_id = O.organism_id )
-  LEFT JOIN Proteomics.dbo.instrument I
+  LEFT JOIN $TBPR_INSTRUMENT I
         ON ( I.instrument_id = S.instrument_model_id )
   WHERE 1 = 1
 

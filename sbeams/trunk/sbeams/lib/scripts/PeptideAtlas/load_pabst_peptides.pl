@@ -518,7 +518,7 @@ sub insert_src_path {
   };
  
   $sbeams->updateOrInsertRow( insert => 1,
-                         table_name  => 'peptideatlas.dbo.pabst_tmp_source_path',
+                         table_name  => '$TBAT_PABST_TMP_SOURCE_PATH',
                          rowdata_ref => $rowdata,
                              verbose => $args->{verbose},
                              verbose => 0,
@@ -1414,7 +1414,7 @@ sub getOrganismID {
 #
   my $sql = qq~
   SELECT organism_id 
-  FROM peptideatlas.dbo.biosequence_set
+  FROM $TBAT_BIOSEQUENCE_SET
   WHERE biosequence_set_id = $bioseq_set_id
   ~;
   my $sth = $sbeams->get_statement_handle( $sql );
@@ -1433,7 +1433,7 @@ sub getBioseqInfo {
 #
   my $sql = qq~
   SELECT biosequence_id, biosequence_name
-  FROM peptideatlas.dbo.biosequence
+  FROM $TBAT_BIOSEQUENCE
   WHERE biosequence_set_id = $bioseq_set_id
   ~;
   my $sth = $sbeams->get_statement_handle( $sql );
@@ -1455,7 +1455,7 @@ sub getPATRPeptides {
     # srm{peptide_sequence}->{charge} == pep seq, pep seq, q1 mz, q1 charge, q3 mz, q3 charge, ion series, ion number, CE, intensity, lib_type
 
   # DELETEME
-  $TBAT_SRM_TRANSITION = 'peptideatlas.dbo.srm_transition';
+  $TBAT_SRM_TRANSITION = '$TBAT_SRM_TRANSITION';
 
   my $sql = qq~
   SELECT * FROM ( 

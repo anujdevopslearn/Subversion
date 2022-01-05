@@ -35,6 +35,8 @@ use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TabMenu;
 
+use SBEAMS::BioLink::Tables;
+
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
@@ -512,25 +514,25 @@ sub handle_request {
 		(SELECT  AB.atlas_build_id as "atlas_build_id",
 						 BS_REF.biosequence_name AS "biosequence_name",
 						 PPL.level_phrase AS "presence_level"
-		 FROM PeptideAtlas.dbo.protein_identification PID
-		 INNER JOIN PeptideAtlas.dbo.atlas_build AB
+		 FROM $TBAT_PROTEIN_IDENTIFICATION PID
+		 INNER JOIN $TBAT_ATLAS_BUILD AB
 					ON ( AB.atlas_build_id = PID.atlas_build_id )
-		 INNER JOIN PeptideAtlas.dbo.biosequence_set BSS
+		 INNER JOIN $TBAT_BIOSEQUENCE_SET BSS
 					ON ( BSS.biosequence_set_id = AB.biosequence_set_id )
-		 INNER JOIN sbeams.dbo.organism O
+		 INNER JOIN $TB_ORGANISM O
 					ON ( O.organism_id = BSS.organism_id )
-		 INNER JOIN PeptideAtlas.dbo.biosequence BS_REF
+		 INNER JOIN $TBAT_BIOSEQUENCE BS_REF
 					ON ( BS_REF.biosequence_id = PID.biosequence_id )
 								AND ( BS_REF.biosequence_set_id = BSS.biosequence_set_id)
-		 INNER JOIN PeptideAtlas.dbo.biosequence BS_REP
+		 INNER JOIN $TBAT_BIOSEQUENCE BS_REP
 					ON ( BS_REP.biosequence_id = PID.represented_by_biosequence_id )
 								AND ( BS_REP.biosequence_set_id = BSS.biosequence_set_id)
-		 INNER JOIN PeptideAtlas.dbo.protein_presence_level PPL
+		 INNER JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL
 					ON ( PPL.protein_presence_level_id = PID.presence_level_id )
-		 LEFT JOIN PeptideAtlas.dbo.biosequence BS_SUBSUMED_BY
+		 LEFT JOIN $TBAT_BIOSEQUENCE BS_SUBSUMED_BY
 					ON ( BS_SUBSUMED_BY.biosequence_id = PID.subsumed_by_biosequence_id )
 					AND ( BS_SUBSUMED_BY.biosequence_set_id = BSS.biosequence_set_id)
-		 LEFT JOIN PeptideAtlas.dbo.biosequence_property_set BPS
+		 LEFT JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPS
 				  ON ( BPS.biosequence_id = PID.biosequence_id )
 		 WHERE 1 = 1
 					 AND AB.atlas_build_id IN ( $atlas_build_ids )
@@ -541,33 +543,33 @@ sub handle_request {
 					 BS_REL.biosequence_name AS "biosequence_name", 
 					 BRT.relationship_phrase  + ' ' + 
 					 BS_REF.biosequence_name AS "presence_level" 
-			 FROM PeptideAtlas.dbo.protein_identification PID
-			 INNER JOIN PeptideAtlas.dbo.biosequence_relationship BR
+			 FROM $TBAT_PROTEIN_IDENTIFICATION PID
+			 INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BR
 						ON ( BR.reference_biosequence_id = PID.biosequence_id AND
 								 BR.atlas_build_id = PID.atlas_build_id )
-			 INNER JOIN PeptideAtlas.dbo.atlas_build AB
+			 INNER JOIN $TBAT_ATLAS_BUILD AB
 						ON ( AB.atlas_build_id = PID.atlas_build_id )
-			 INNER JOIN PeptideAtlas.dbo.biosequence_set BSS
+			 INNER JOIN $TBAT_BIOSEQUENCE_SET BSS
 						ON ( BSS.biosequence_set_id = AB.biosequence_set_id )
-			 INNER JOIN sbeams.dbo.organism O
+			 INNER JOIN $TB_ORGANISM O
 						ON ( O.organism_id = BSS.organism_id )
-			 INNER JOIN PeptideAtlas.dbo.biosequence BS_REF
+			 INNER JOIN $TBAT_BIOSEQUENCE BS_REF
 						ON ( BS_REF.biosequence_id = PID.biosequence_id )
 									AND ( BS_REF.biosequence_set_id = BSS.biosequence_set_id)
-			 INNER JOIN PeptideAtlas.dbo.biosequence BS_REP
+			 INNER JOIN $TBAT_BIOSEQUENCE BS_REP
 						ON ( BS_REP.biosequence_id = PID.represented_by_biosequence_id )
 									AND ( BS_REP.biosequence_set_id = BSS.biosequence_set_id)
-			 LEFT JOIN PeptideAtlas.dbo.biosequence_property_set BPP
+			 LEFT JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPP
 									ON ( BPP.biosequence_id = PID.biosequence_id )
-			 INNER JOIN PeptideAtlas.dbo.protein_presence_level PPL
+			 INNER JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL
 						ON ( PPL.protein_presence_level_id = PID.presence_level_id )
-			 INNER JOIN PeptideAtlas.dbo.biosequence_relationship_type BRT
+			 INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT
 						ON ( BRT.biosequence_relationship_type_id =
 												BR.relationship_type_id )
-			 LEFT JOIN PeptideAtlas.dbo.biosequence BS_REL
+			 LEFT JOIN $TBAT_BIOSEQUENCE BS_REL
 						ON ( BS_REL.biosequence_id = BR.related_biosequence_id )
 						AND ( BS_REL.biosequence_set_id = BSS.biosequence_set_id )
-			 LEFT JOIN PeptideAtlas.dbo.biosequence_property_set BPS
+			 LEFT JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPS
 						ON ( BPS.biosequence_id = BS_REL.biosequence_id )
 			 WHERE 1 = 1
 								AND AB.atlas_build_id IN ( $atlas_build_ids )
@@ -580,39 +582,39 @@ sub handle_request {
 					 BS_INDIS.biosequence_name AS "biosequence_name",
 					 BRT.relationship_phrase   + ' ' +
 					 BS_REL.biosequence_name AS "presence_level"  
-			 FROM PeptideAtlas.dbo.protein_identification PID
-			 INNER JOIN PeptideAtlas.dbo.biosequence_relationship BR
+			 FROM $TBAT_PROTEIN_IDENTIFICATION PID
+			 INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BR
 						ON ( BR.reference_biosequence_id = PID.biosequence_id AND
 								 BR.atlas_build_id = PID.atlas_build_id )
-			 INNER JOIN PeptideAtlas.dbo.biosequence_relationship BR_INDIS
+			 INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BR_INDIS
 						ON ( BR_INDIS.reference_biosequence_id = BR.related_biosequence_id 
 									 AND
 								 BR_INDIS.atlas_build_id = PID.atlas_build_id )
-			 INNER JOIN PeptideAtlas.dbo.atlas_build AB
+			 INNER JOIN $TBAT_ATLAS_BUILD AB
 						ON ( AB.atlas_build_id = PID.atlas_build_id )
-			 INNER JOIN PeptideAtlas.dbo.biosequence_set BSS
+			 INNER JOIN $TBAT_BIOSEQUENCE_SET BSS
 						ON ( BSS.biosequence_set_id = AB.biosequence_set_id )
-			 INNER JOIN sbeams.dbo.organism O
+			 INNER JOIN $TB_ORGANISM O
 						ON ( O.organism_id = BSS.organism_id )
-			 INNER JOIN PeptideAtlas.dbo.biosequence BS_REF
+			 INNER JOIN $TBAT_BIOSEQUENCE BS_REF
 						ON ( BS_REF.biosequence_id = PID.biosequence_id )
 									AND ( BS_REF.biosequence_set_id = BSS.biosequence_set_id)
-			 INNER JOIN PeptideAtlas.dbo.biosequence BS_REP
+			 INNER JOIN $TBAT_BIOSEQUENCE BS_REP
 						ON ( BS_REP.biosequence_id = PID.represented_by_biosequence_id )
 									AND ( BS_REP.biosequence_set_id = BSS.biosequence_set_id)
-			 LEFT JOIN BioLink.dbo.dbxref DBX ON ( DBX.dbxref_id = BS_REF.dbxref_id )
-			 INNER JOIN PeptideAtlas.dbo.protein_presence_level PPL
+			 LEFT JOIN $TBBL_DBXREF DBX ON ( DBX.dbxref_id = BS_REF.dbxref_id )
+			 INNER JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL
 						ON ( PPL.protein_presence_level_id = PID.presence_level_id )
-			 INNER JOIN PeptideAtlas.dbo.biosequence_relationship_type BRT
+			 INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT
 						ON ( BRT.biosequence_relationship_type_id =
 										BR_INDIS.relationship_type_id )
-			 LEFT JOIN PeptideAtlas.dbo.biosequence BS_INDIS
+			 LEFT JOIN $TBAT_BIOSEQUENCE BS_INDIS
 						ON ( BR_INDIS.related_biosequence_id = BS_INDIS.biosequence_id )
 							AND ( BS_INDIS.biosequence_set_id = BSS.biosequence_set_id)
-			 LEFT JOIN PeptideAtlas.dbo.biosequence BS_REL
+			 LEFT JOIN $TBAT_BIOSEQUENCE BS_REL
 						ON ( BS_REL.biosequence_id = BR_INDIS.reference_biosequence_id  )
 					 AND ( BS_REL.biosequence_set_id = BSS.biosequence_set_id)
-			 LEFT JOIN PeptideAtlas.dbo.biosequence_property_set BPS
+			 LEFT JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPS
 						ON ( BPS.biosequence_id = BS_INDIS.biosequence_id )
 					 WHERE 1 = 1
 								AND AB.atlas_build_id IN ( $atlas_build_ids )

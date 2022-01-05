@@ -75,7 +75,7 @@ $dbh->{RaiseError}++;
                       elution_time_set => '' };
 
       my $id = $sbeams->updateOrInsertRow( insert => 1,
-                                      table_name  => 'peptideatlas.dbo.elution_time',
+                                      table_name  => '$TBAT_ELUTION_TIME',
                                       rowdata_ref => $rowdata,
                                       verbose     => $args->{verbose},
                                      return_PK    => 1,

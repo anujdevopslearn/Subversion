@@ -1193,7 +1193,7 @@ sub get_dirty_peptide_display {
               WHEN Status = 'P' THEN 'Predicted_order_2010-05'    
               ELSE 'Unknown' END as Status
   FROM $TBAT_BIOSEQUENCE B
-  JOIN peptideatlas.dbo.dirty_peptides DP 
+  JOIN $TBAT_DIRTY_PEPTIDES DP 
   ON B.biosequence_name = DP.P_mapped
   WHERE B.biosequence_id = $args{biosequence_id}
   ORDER BY N_obs_ident DESC, N_obs_Orbi DESC
@@ -1300,7 +1300,7 @@ sub get_pabst_static_peptide_display {
               WHEN Status = 'S' THEN 'Re-pooled'    
               ELSE 'Unknown' END as Status
   FROM $TBAT_BIOSEQUENCE B
-  JOIN peptideatlas.dbo.dirty_peptides DP 
+  JOIN $TBAT_DIRTY_PEPTIDES DP 
   ON B.biosequence_name = DP.P_mapped
   WHERE B.biosequence_id = $args{biosequence_id}
   ~;
@@ -2034,7 +2034,6 @@ sub get_pabst_multibuild_observed_peptides_depr {
 
   # array of bioseq names for which to fetch peptides
   my $name_in = $args{protein_in_clause} || '';
-
   # minimum n_obs to consider as observed
   my $nobs_and = $args{min_nobs_clause} || ''; 
 
@@ -2250,7 +2249,6 @@ sub get_pabst_multibuild_observed_peptides {
 
   # array of bioseq names for which to fetch peptides
   my $name_in = $args{protein_in_clause} || '';
-
   # minimum n_obs to consider as observed
   my $nobs_and = $args{min_nobs_clause} || ''; 
 
@@ -2307,9 +2305,8 @@ sub get_pabst_multibuild_observed_peptides {
   my %peptides;
 
   my %peptide_values;
-
   while( my @row = $sth->fetchrow_array() ) {
-
+   
 # 0 biosequence_name, 
 # 1 preceding_residue,
 # 2 peptide_sequence,
@@ -2465,7 +2462,6 @@ sub get_pabst_observed_peptides {
   $name_like
   ORDER BY biosequence_name, suitability_score DESC
   END
-
   $self->{_cached_acc} ||= {};
 
   my $sth = $sbeams->get_statement_handle( $pepsql );
@@ -2569,7 +2565,8 @@ sub get_pabst_theoretical_peptides {
   }
   # Gnu School, explicit build_id
 
-  my $where = "WHERE BS.biosequence_set_id = $args{bioseq_set}";
+  #my $where = "WHERE BS.biosequence_set_id = $args{bioseq_set}";
+  my $where = "WHERE 1=1 ";
 
   my $name_in = $args{protein_in_clause} || '';
   my $name_like = $args{name_like_clause} || '';
@@ -2600,7 +2597,8 @@ sub get_pabst_theoretical_peptides {
                   'n/a' as best_probability,
                   0 as n_observations,
                   '' as annotations,
-                  '' as atlas_build
+                  '' as atlas_build,
+                  BS.biosequence_set_id
   FROM $TBAT_PROTEOTYPIC_PEPTIDE PP
   JOIN $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING PM ON ( PP.proteotypic_peptide_id = PM.proteotypic_peptide_id )
   JOIN $TBAT_BIOSEQUENCE BS ON ( PM.source_biosequence_id = BS.biosequence_id )
@@ -2609,7 +2607,6 @@ sub get_pabst_theoretical_peptides {
   $name_like
   ORDER BY biosequence_name, suitability_score DESC
   END
-
   my $sth = $sbeams->get_statement_handle( $pepsql );
   # Big hash of proteins
   my $pep_cnt;

@@ -732,18 +732,18 @@ BS.biosequence_name,
 MPA.peptide_sequence  ,  peptide_charge    , q1_mz     ,q3_mz 
 ,MPA.modified_peptide_sequence, q3_ion_label, transition_suitability_level_id
 
---FROM peptideatlas.dbo.consensus_library_spectrum NLS
---JOIN peptideatlas.dbo.consensus_library_spectrum_peak NLSP ON (NLSP.consensus_library_spectrum_id = NLS.consensus_library_spectrum_id)
---JOIN peptideatlas.dbo.consensus_library NL ON (NLS.consensus_library_id = NL.consensus_library_id)
-FROM peptideatlas.dbo.peptide P -- ON (P.peptide_sequence = NLS.sequence)
-JOIN peptideatlas.dbo.peptide_instance PI ON (PI.peptide_id = P.peptide_id)
---JOIN peptideatlas.dbo.modified_peptide_annotation MPA ON MPA.peptide_id = p.peptide_id
-JOIN peptideatlas.dbo.modified_peptide_annotation MPA ON MPA.peptide_sequence = p.peptide_sequence
---JOIN peptideatlas.dbo.consensus_spectrum_type NST ON (NST.consensus_spectrum_type_id = NLS.consensus_spectrum_type_id)
-JOIN peptideatlas.dbo.peptide_mapping PM    ON ( PI.peptide_instance_id = PM.peptide_instance_id )
-JOIN peptideatlas.dbo.biosequence BS    ON (BS.biosequence_id = PM.matched_biosequence_id)  
---JOIN peptideatlas.dbo.biosequence_set BSS    ON (BS.biosequence_set_id = BSS.biosequence_set_id)
-JOIN peptideatlas.dbo.atlas_build AB ON AB.biosequence_set_id = BS.biosequence_set_id
+--FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM NLS
+--JOIN $TBAT_CONSENSUS_LIBRARY_SPECTRUM_PEAK NLSP ON (NLSP.consensus_library_spectrum_id = NLS.consensus_library_spectrum_id)
+--JOIN $TBAT_CONSENSUS_LIBRARY NL ON (NLS.consensus_library_id = NL.consensus_library_id)
+FROM $TBAT_PEPTIDE P -- ON (P.peptide_sequence = NLS.sequence)
+JOIN $TBAT_PEPTIDE_INSTANCE PI ON (PI.peptide_id = P.peptide_id)
+--JOIN $TBAT_MODIFIED_PEPTIDE_ANNOTATION MPA ON MPA.peptide_id = p.peptide_id
+JOIN $TBAT_MODIFIED_PEPTIDE_ANNOTATION MPA ON MPA.peptide_sequence = p.peptide_sequence
+--JOIN $TBAT_CONSENSUS_SPECTRUM_TYPE NST ON (NST.consensus_spectrum_type_id = NLS.consensus_spectrum_type_id)
+JOIN $TBAT_PEPTIDE_MAPPING PM    ON ( PI.peptide_instance_id = PM.peptide_instance_id )
+JOIN $TBAT_BIOSEQUENCE BS    ON (BS.biosequence_id = PM.matched_biosequence_id)  
+--JOIN $TBAT_BIOSEQUENCE_SET BSS    ON (BS.biosequence_set_id = BSS.biosequence_set_id)
+JOIN $TBAT_ATLAS_BUILD AB ON AB.biosequence_set_id = BS.biosequence_set_id
 --WHERE NL.consensus_library_id IN ( 28 )
   WHERE PI.atlas_build_id IN ( 123 ) 
 --AND ( NLSP.peak_label LIKE 'y%' OR   NLSP.peak_label LIKE 'b%' )                                         

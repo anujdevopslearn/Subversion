@@ -42,8 +42,8 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 $PROG_NAME = basename( $0 );
 ## Set up environment
 
-my $TBAT_PTM_LIST = 'peptideatlas.dbo.ptm_list';
-my $TBAT_PTM_LIST_ENTRY = 'peptideatlas.dbo.ptm_list_entry';
+my $TBAT_PTM_LIST = '$TBAT_PTM_LIST';
+my $TBAT_PTM_LIST_ENTRY = '$TBAT_PTM_LIST_ENTRY';
 
 my $opts = get_options();
 
