@@ -232,9 +232,6 @@ sub mk_plot {
       $fjust = 0.5;
     }
 
-    $TBAT_CONSENSUS_LIBRARY_SPECTRUM = '$TBAT_CONSENSUS_LIBRARY_SPECTRUM';
-    $TBAT_CONSENSUS_LIBRARY = '$TBAT_CONSENSUS_LIBRARY';
-
     my $sql = qq~
        SELECT sequence,charge,mz_exact,protein_name,
        protein_name_alt,modified_sequence, consensus_library_name, file_path, entry_idx
