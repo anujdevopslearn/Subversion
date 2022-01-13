@@ -483,9 +483,6 @@ sub getConsensusLinksSAVE {
   }
 
   # Force production for now
-  $TBAT_CONSENSUS_LIBRARY_SPECTRUM = '$TBAT_CONSENSUS_LIBRARY_SPECTRUM';
-  $TBAT_CONSENSUS_LIBRARY = '$TBAT_CONSENSUS_LIBRARY';
-
   my %libs = ( it => {}, qtof => {}, qtrap => {}, CE => {}, qqq => {},
           low => {}, mlow => {}, medium => {}, mhigh => {}, high=> {} );
 
@@ -613,7 +610,7 @@ sub getConsensusSources {
   my $sql = qq~
   SELECT DISTINCT instrument_type_name, IT.instrument_type_id, resource_id
   FROM $TBAT_PABST_BUILD_RESOURCE PBR
-  JOIN $TBAT_CONSENSUS_LIBRARY CL ON CL.consensus_library_id = PBR.resource_id
+  JOIN $TBAT_CONSENSUS_LIBRARY  CL ON CL.consensus_library_id = PBR.resource_id
   JOIN $TBAT_INSTRUMENT_TYPE IT on IT.instrument_type_id = PBR.instrument_type_id
   WHERE resource_type = 'spectral_lib'
   AND pabst_build_id = $args{pabst_build_id}
@@ -645,9 +642,6 @@ sub getConsensusLinks {
 
 
   # Force production for now
-  $TBAT_CONSENSUS_LIBRARY_SPECTRUM = '$TBAT_CONSENSUS_LIBRARY_SPECTRUM';
-  $TBAT_CONSENSUS_LIBRARY = '$TBAT_CONSENSUS_LIBRARY';
-
   my %libs = ( it => {}, qtof => {}, qtrap => {}, CE => {}, qqq => {}, hcd => {}, ttof => {}, qstar => {},
           low => {}, mlow => {}, medium => {}, mhigh => {}, high=> {} );
 
