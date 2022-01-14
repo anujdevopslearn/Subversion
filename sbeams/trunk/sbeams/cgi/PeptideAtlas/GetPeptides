@@ -767,6 +767,7 @@ sub handle_request {
         $biosequence_desc_clause
 				$peptide_name_clause
 				$peptide_sequence_clause
+				$modified_peptide_sequence_clause
         $best_probability_clause
         $n_observations_clause
         $n_samples_clause
