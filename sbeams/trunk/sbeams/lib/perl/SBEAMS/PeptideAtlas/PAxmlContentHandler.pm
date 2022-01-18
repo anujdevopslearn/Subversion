@@ -233,7 +233,7 @@ sub start_element {
 								 "$self->{pk_counter}{peptide_instance}\t$atlas_search_batch_id\t". 
 								 $sbeamsMOD->get_current_timestamp() ."\t$self->{current_contact_id}\t". 
 								 $sbeamsMOD->get_current_timestamp() ."\t$self->{current_contact_id}\t" .
-								 "$self->{current_work_group_id}\tN\t\n";
+								 "$self->{current_work_group_id}\tN\t$self->{inst_obs}{$attrs{peptide_sequence}}{$atlas_search_batch_id}\n";
 			  $self->{pk_counter}{peptide_instance_search_batch}++;
       }
 			$self->{pk_counter}{peptide_instance}++;
@@ -373,7 +373,7 @@ sub start_element {
 										"\t$self->{current_contact_id}\t".
 										$sbeamsMOD->get_current_timestamp() .
 										"\t$self->{current_contact_id}\t" .
-										"$self->{current_work_group_id}\tN\t\n";
+										"$self->{current_work_group_id}\tN\t$self->{inst_obs}{$attrs{peptide_string}}{$atlas_search_batch_id}\n";
 				 $self->{pk_counter}{modified_peptide_instance_search_batch}++;   
 			}
 			$self->{pk_counter}{modified_peptide_instance}++;
@@ -505,8 +505,8 @@ sub insert_modified_peptide_instance {
 						"$modified_peptide_sequence\t$peptide_charge\t".
 						"$rowdata_ref->{monoisotopic_peptide_mass}\t".
 						"$rowdata_ref->{average_peptide_mass}\t".
-						"$rowdata_ref->{average_parent_mz}\t".
 						"$rowdata_ref->{monoisotopic_parent_mz}\t".
+						"$rowdata_ref->{average_parent_mz}\t".
 						"$rowdata_ref->{best_probability}\t".
 						"$rowdata_ref->{best_adjusted_probability}\t" .
 						"$rowdata_ref->{n_observations}\t" .
