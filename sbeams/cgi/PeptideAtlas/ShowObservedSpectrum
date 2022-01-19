@@ -421,7 +421,7 @@ sub processRequest {
 
       #### Then also find the mass modifications
       my $sql = qq~
-            SELECT peptide_sequence,peptide_charge,monoisotopic_parent_mz,
+            SELECT peptide_sequence,peptide_charge,monoisotopic_parent_mz,massdiff,
                    MPI.modified_peptide_sequence,
 	           S.spectrum_id, S.spectrum_name, S.start_scan, S.fragmentation_type_id
               FROM $TBAT_SPECTRUM_IDENTIFICATION SI
@@ -439,10 +439,10 @@ sub processRequest {
       my @rows = $sbeams->selectSeveralColumns($sql);
 
       foreach my $row (@rows) {
-	my ($seq, $chg, $mz, $mod_seq, $spectrum_id, $spectrum_name, $start_scan,$fragmentation_type_id) = @{$row};
+	my ($seq, $chg, $mz, $massdiff, $mod_seq, $spectrum_id, $spectrum_name, $start_scan,$fragmentation_type_id) = @{$row};
 	$peptidoform = $mod_seq unless ( $peptidoform );
 	$charge = $chg;
-	$observedPrecursorMz = $mz;
+	$observedPrecursorMz = int( ( $mz + $massdiff/$chg ) *10000 + 0.5) / 10000;
 	$parameters{'spectrum_id'} = $spectrum_id;
 	$spectrumName = $spectrum_name;
 	$scanNumber = $start_scan;
