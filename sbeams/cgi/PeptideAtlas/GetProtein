@@ -1233,30 +1233,28 @@ sub handle_request {
     ["best_probability","STR(PI.best_probability,7,3)","<SPAN TITLE='Highest PeptideProphet probability for this observed sequence'>Best Prob</SPAN>"],
     ["best_adjusted_probability","STR(PI.best_adjusted_probability,7,3)","<SPAN TITLE='Highest iProphet-adjusted probablity for this observed sequence'>Best Adj Prob</SPAN>"],
   );
-  my $group_by_clause .= "GROUP BY P.peptide_accession,PI.preceding_residue,P.peptide_sequence,PI.following_residue,PI.best_probability,PI.best_adjusted_probability,"
-     if $parameters{'ann'};;
+  my $group_by_clause .= "GROUP BY P.peptide_accession, PM.start_in_biosequence, PI.preceding_residue,P.peptide_sequence,PI.following_residue,PI.best_probability,PI.best_adjusted_probability,";
+    
   if($tube_pattern){
     push @column_array, (["n_observations","PI2.n_observations","<SPAN TITLE='Total number of observations in all modified forms and charge states'>N Obs</SPAN>"]);
-    $group_by_clause .= "PI2.n_observations," if $parameters{'ann'};
+    $group_by_clause .= "PI2.n_observations,"; 
   }else{
     push @column_array, (["n_observations","PI.n_observations","<SPAN TITLE='Total number of observations in all modified forms and charge states'>N Obs</SPAN>"]);
-    $group_by_clause .= "PI.n_observations," if $parameters{'ann'};
+    $group_by_clause .= "PI.n_observations,"; 
   }
   push @column_array, (
     ["empirical_proteotypic_score","STR(PI.empirical_proteotypic_score,7,2)","<SPAN TITLE='Empirical Observability Score'>EOS</SPAN>"],
     ["SSRCalc_relative_hydrophobicity","STR(P.SSRCalc_relative_hydrophobicity,7,2)","<SPAN TITLE='SSRCalc Relative Hydrophobicity score'>SSRT</SPAN>"],
     ["n_protein_mappings","PI.n_protein_mappings","<SPAN TITLE='Number of proteins in the reference database to which this peptide maps'>N Prot Map</SPAN>"],
     ["n_genome_locations","PI.n_genome_locations","<SPAN TITLE='Number of discrete genome locations which encode this amino acid sequence'>N Gen Loc</SPAN>"],
-    ["sample_ids","PI.sample_ids","N Experiments"],
+    ["sample_ids","PISB.atlas_search_batch_id","N Experiments"],
     #["sample_ids","PI.sample_ids","<SPAN TITLE='Samples in which this sequence was seen'>Sample IDs</SPAN>"],
     #["is_subpeptide_of","PI.is_subpeptide_of","<SPAN TITLE='Observed peptides of which this peptide is a subsequence'>Parent Peptides</SPAN>"],
     ["is_subpeptide_of","PI.is_subpeptide_of",'Subpep of'],
     ["peptide_instance_id","PI.peptide_instance_id","peptide_instance_id"],
   );
-  push @column_array,
-  ["SAL_level_probability","AVG(SAL.level_probability)","Avg Eval"]
-     if $parameters{'ann'};
-  $group_by_clause .= "PI.empirical_proteotypic_score,P.SSRCalc_relative_hydrophobicity,PI.n_protein_mappings,PI.n_genome_locations,PI.sample_ids,PI.is_subpeptide_of,PI.peptide_instance_id" if $parameters{'ann'};
+  push @column_array, ["SAL_level_probability","AVG(SAL.level_probability)","Avg Eval"] if $parameters{'ann'};
+  $group_by_clause .= "PI.empirical_proteotypic_score,P.SSRCalc_relative_hydrophobicity,PI.n_protein_mappings,PI.n_genome_locations,PI.is_subpeptide_of,PI.peptide_instance_id, PISB.atlas_search_batch_id";
 
 
   #### Build the columns part of the SQL statement
@@ -1292,6 +1290,8 @@ sub handle_request {
   $sql = qq~
      SELECT DISTINCT $columns_clause
      FROM $TBAT_PEPTIDE_INSTANCE PI
+     JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB 
+    ON (PISB.peptide_instance_id = PI.peptide_instance_id)
     INNER JOIN $TBAT_PEPTIDE P
           ON ( PI.peptide_id = P.peptide_id )
      LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
@@ -1318,12 +1318,12 @@ sub handle_request {
 	  $group_by_clause
     ORDER BY P.peptide_accession
   ~;
-
   #### Define the hypertext links for columns that need them
   %url_cols = (
     'Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
   );
 #  \%$colnameidx{biosequence_gene_name}V&
+
 
   %hidden_cols = (
 #    'Suitability Score' => 1,
@@ -1332,6 +1332,8 @@ sub handle_request {
 #		'is_subpeptide_of' => 1,
 #		'sample_ids' => 1
   );
+
+
 
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
@@ -1349,6 +1351,15 @@ sub handle_request {
         sql_query=>$sql,
         resultset_ref=>$resultset_ref,
       );
+
+        #### Post process the resultset
+        postProcessResultset(
+          rs_params_ref=>\%rs_params,
+          resultset_ref=>$resultset_ref,
+          query_parameters_ref=>\%parameters,
+          atlas_build_id => $atlas_build_id,
+          column_titles_ref=>\@column_titles,
+        );
 
       #### Store the resultset and parameters to disk resultset cache
       $rs_params{set_name} = "SETME";
@@ -1666,57 +1677,55 @@ sub handle_request {
       push @pa_accessions, $row->[0];
       my $ntt = 0;
       if ( defined $row->[$ntt_idx] && $row->[$ntt_idx] ne '') {
-	$ntt = $row->[$ntt_idx];
-      } else {
-	if ( $row->[$pre_idx] =~ /[-RK]/ ) {
-	  $ntt++;
-	}
-	if ( $row->[$fol_idx] =~ /[RK]$/ || $row->[$fol_idx] eq '-' ) {
-	  $ntt++;
-	}
+				$ntt = $row->[$ntt_idx];
+						} else {
+				if ( $row->[$pre_idx] =~ /[-RK]/ ) {
+					$ntt++;
+				}
+				if ( $row->[$fol_idx] =~ /[RK]$/ || $row->[$fol_idx] eq '-' ) {
+					$ntt++;
+				}
       }
       $row->[$ntt_idx] = $ntt if !defined $row->[$ntt_idx];
 
       my $mc = 0;
       if ( defined $row->[$mc_idx] && $row->[$mc_idx] ne '') {
-	$mc = $row->[$mc_idx];
-      } elsif ( $row->[$seq_idx] =~ /[RK][^P]/ ) {
-	$mc++;
-      }
-      $row->[$mc_idx] = $mc if !defined $row->[$mc_idx];
+				$mc = $row->[$mc_idx];
+						} elsif ( $row->[$seq_idx] =~ /[RK][^P]/ ) {
+				$mc++;
+						}
+						$row->[$mc_idx] = $mc if !defined $row->[$mc_idx];
 
-      my $mgl = 0;
-      if ( $row->[$ngl_idx] > 1 ) {
-	$mgl++;
+						my $mgl = 0;
+						if ( $row->[$ngl_idx] > 1 ) {
+				$mgl++;
       }
 
       push @sample_list, [ $row->[0], $row->[$resultset_ref->{column_hash_ref}{'sample_ids'}] ];
 
       for my $idx ($resultset_ref->{column_hash_ref}{'sample_ids'},
 		   $resultset_ref->{column_hash_ref}{'is_subpeptide_of'} ) {
-	$row->[$idx] =~ s/\s//g;
-	my @samples = split( /,/, $row->[$idx] );
-	if ( $idx == $resultset_ref->{column_hash_ref}{'sample_ids'} ) {
-	  my $cnt = scalar( @samples );
-	  $row->[$idx] = ( $htmlmode ) ? "<A HREF='$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$row->[0]&action=QUERY#samples' TITLE='$row->[$idx]'> $cnt </A>" : $cnt;
-	} else {
-	  $row->[$idx] = scalar( @samples );
-	}
+				$row->[$idx] =~ s/\s//g;
+				my @samples = split( /,/, $row->[$idx] );
+				if ( $idx == $resultset_ref->{column_hash_ref}{'sample_ids'} ) {
+					my $cnt = scalar( @samples );
+					$row->[$idx] = ( $htmlmode ) ? "<A HREF='$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$row->[0]&action=QUERY#samples' TITLE='$row->[$idx]'> $cnt </A>" : $cnt;
+				} else {
+					$row->[$idx] = scalar( @samples );
+				}
       }
-
-      my %sample_list = @sample_list;
 
       $row->[0] =  ( $htmlmode ) ? "<A HREF='$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$row->[0]&action=QUERY'>$row->[0] </A>" :$row->[0];
 
       my @errs;
 #      if($is_trypsin_build eq 'Y'){
-      push @errs, 'mc' if $mc;
-      push @errs, 'et'.$ntt if $ntt < 2;
-#      }
-      push @errs, 'mgl' if $mgl;
-      my $annot = '';
-      if ( @errs) {
-	$annot = '[' . join( ',', @errs ) . ']';
+					push @errs, 'mc' if $mc;
+					push @errs, 'et'.$ntt if $ntt < 2;
+		#      }
+					push @errs, 'mgl' if $mgl;
+					my $annot = '';
+					if ( @errs) {
+			$annot = '[' . join( ',', @errs ) . ']';
 #			} else {
 #        $instance_ids{$row->[14]}++;
       }
@@ -4412,5 +4421,51 @@ sub displayOrigeneAnnotatedSequence {
 	}
 LABEL:
 
+}
+sub postProcessResultset {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $resultset_ref = $args{'resultset_ref'};
+  my $rs_params_ref = $args{'rs_params_ref'};
+  my $query_parameters_ref = $args{'query_parameters_ref'};
+  my $column_titles_ref = $args{'column_titles_ref'};
+  my $atlas_build_id = $args{'atlas_build_id'}; 
+
+  my %rs_params = %{$rs_params_ref};
+  my %parameters = %{$query_parameters_ref};
+  my $n_rows = scalar(@{$resultset_ref->{data_ref}});
+  my $cols = $resultset_ref->{column_hash_ref};
+
+  my @data =();
+  my %peptide_samples =();
+   
+  my $sql = qq~
+    SELECT ASB.atlas_search_batch_id, S.SAMPLE_ID
+     FROM $TBAT_SAMPLE S
+     JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON (S.SAMPLE_ID = ASB.SAMPLE_ID)
+     JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON (ABSB.atlas_search_batch_id = ASB.atlas_search_batch_id)
+     WHERE ABSB.ATLAS_BUILD_ID = $atlas_build_id
+  ~;
+  my %asb2sample_id=$sbeams->selectTwoColumnHash($sql);
+ 
+  #$resultset_ref->{data_ref}->[$i]->[$cols->{sample_ids}] = join(",", keys %{$pi_samples->{$peptide_accession}});
+  for (my $i=0; $i<$n_rows; $i++) {
+    my $peptide_accession = $resultset_ref->{data_ref}->[$i]->[$cols->{peptide_accession}];
+    my $asb_id = $resultset_ref->{data_ref}->[$i]->[$cols->{sample_ids}];
+    $peptide_samples{$peptide_accession}{$asb2sample_id{$asb_id}} =1;
+  }
+
+  my %processed = ();
+  for (my $i=0; $i<$n_rows; $i++) {
+    my $peptide_accession = $resultset_ref->{data_ref}->[$i]->[$cols->{peptide_accession}];
+    $resultset_ref->{data_ref}->[$i]->[$cols->{sample_ids}] = join(",", keys %{$peptide_samples{$peptide_accession}});
+    my $values = join(",", @{$resultset_ref->{data_ref}->[$i]});
+    if (! $processed{$values}){
+      push @data, $resultset_ref->{data_ref}->[$i];
+      $processed{$values} = 1;
+    }
+  }
+  $resultset_ref->{data_ref} = \@data;
 }
 
