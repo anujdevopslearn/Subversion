@@ -1433,23 +1433,18 @@ sub handle_request {
 					   'index' => 1,
 					    symbol => '*' );
       $motif_params{$motif} = $pred;
-#    my $pred = $sbeamsMOD->getGlycoPeptides( seq => 'MSGASVKVAVRVRPFNSRETSKESKCIIQMQGNSTSIINPKNPKEAPKSFSFDYSYWSHTSPEDPCFASQNRVYNDIGKEMLLHAFEGYNVCIFAYGQTGAGKSYTMMGKQEESQAGIIPQLCEELFETNHDNCNEEMSYSVEVSYMEIYCERVRDLLNPKNKGNLRVRDHPLRGPYVEDLSKLAVTSYTDIADLMDAGNKARTVAATNMNETSSRSHVVYTIVFTQKKHDNETILATVKVSKTSLVDLAGSDRAASTGAKGTRLKEGAIINKSLTTLGK' );
-#    for my $k ( keys( %$pred ) ) { $log->debug( "PREDICTED $k => $pred->{$k}" ); }
     }
 
     # Fetch theoretical peptides (tryptic)
-#  my $likely =  $sbeamsMOD->assess_protein_peptides( build_id => $atlas_build_id, accession => 'P50750' );
+    #############################################################################
+    ### got info from dat file. Need to load the dat file   
+    #############################################################################
     my $likely =  $sbeamsMOD->assess_protein_peptides( %parameters,
 						       build_id => $atlas_build_id,
 						       swiss => $swiss,
 						       accession => $biosequence->{biosequence_name},
-	);
+	  );
 
-#  https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetProtein_new?atlas_build_id=442&protein_name=P32297&apply_action=&action=GO;min_ssr=38;max_ssr=40;use_ssr=0;use_len=0;use_sig=0;use_tm=0
-#  print Dumper( $likely->{likely_str} );
-#  my @seq = split( /\*/, $biosequence->{biosequence_seq} );
-#  print Dumper( length( $seq[0] ) );
-#  die Dumper( length( $biosequence->{biosequence_seq} ) );
     my %graphic_params = ( build_id => $atlas_build_id,
 			   protein_data  => $biosequence,
 			   obs_color => $parameters{obs_color} );
@@ -1513,7 +1508,6 @@ sub handle_request {
     } else {
       $parameters{show_clustal} = $sbeams->getSessionAttribute( key => 'GetProtein_ShowVars' );
     }
-
     displayAnnotatedSequence( %parameters,
                             peptides => $peptides,
                         peptide_nobs => $pep_nobs,
@@ -1596,7 +1590,7 @@ sub handle_request {
 					       opendiv => 1,
 					       visible => 1,
 					       content => $obs_help
-	) if $htmlmode;
+		) if $htmlmode;
 
 
     #### Since we don't display the controls, make the default page size
@@ -1672,6 +1666,7 @@ sub handle_request {
     my $ntt_idx = $resultset_ref->{column_hash_ref}->{highest_n_enzymatic_termini};
     my $mc_idx = $resultset_ref->{column_hash_ref}->{lowest_n_missed_cleavages};
     my $ngl_idx = $resultset_ref->{column_hash_ref}->{n_genome_locations};
+    my $ess_idx = $resultset_ref->{column_hash_ref}->{suitability_score};
 
     for my $row ( @{$resultset_ref->{data_ref}} ) {
       push @pa_accessions, $row->[0];
@@ -1691,11 +1686,10 @@ sub handle_request {
       my $mc = 0;
       if ( defined $row->[$mc_idx] && $row->[$mc_idx] ne '') {
 				$mc = $row->[$mc_idx];
-						} elsif ( $row->[$seq_idx] =~ /[RK][^P]/ ) {
+		  } elsif ( $row->[$seq_idx] =~ /[RK][^P]/ ) {
 				$mc++;
-						}
+		  }
 						$row->[$mc_idx] = $mc if !defined $row->[$mc_idx];
-
 						my $mgl = 0;
 						if ( $row->[$ngl_idx] > 1 ) {
 				$mgl++;
@@ -1718,22 +1712,18 @@ sub handle_request {
       $row->[0] =  ( $htmlmode ) ? "<A HREF='$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$row->[0]&action=QUERY'>$row->[0] </A>" :$row->[0];
 
       my @errs;
-#      if($is_trypsin_build eq 'Y'){
-					push @errs, 'mc' if $mc;
-					push @errs, 'et'.$ntt if $ntt < 2;
-		#      }
-					push @errs, 'mgl' if $mgl;
-					my $annot = '';
-					if ( @errs) {
-			$annot = '[' . join( ',', @errs ) . ']';
-#			} else {
-#        $instance_ids{$row->[14]}++;
+			push @errs, 'mc' if $mc;
+			push @errs, 'et'.$ntt if $ntt < 2;
+			push @errs, 'mgl' if $mgl;
+			my $annot = '';
+			if ( @errs) {
+			  $annot = '[' . join( ',', @errs ) . ']';
       }
 
       if ($sbeams->output_mode() eq 'html') {
-	$annot = "<FONT COLOR=RED><SUP>$annot</SUP></FONT>";
+				$annot = "<FONT COLOR=RED><SUP>$annot</SUP></FONT>";
       }
-      $row->[$ntt_idx] = sprintf( "%0.2f", $row->[$ntt_idx] ) . " $annot";
+      $row->[$ess_idx] = sprintf( "%0.2f", $row->[$ess_idx] ) . " $annot";
       my $cnt = 0;
     }
 
@@ -2159,6 +2149,7 @@ sub get_sequence_graphic {
   if ($tm_sigp_source =~ /(SignalP\s[\d\.]+)/){
      $sigp_source = $1;
   }
+
   # Define color mapping for various features.
   my %colors = ( Signal => 'cornflowerblue',
                  Anchor => 'lightskyblue',
@@ -2230,13 +2221,6 @@ sub get_sequence_graphic {
                                          -pad_left  => 10,
                                          -pad_right => 50 );
 
-#  open( FIL, ">/tmp/colors.html" );
-#  print FIL "<HTML><HEAD></HEAD><BODY><TABLE WIDTH=100%>\n";
-#  my @c = $panel->color_names();
-#  for my $c ( @c ) { print FIL "<TR><TD BGCOLOR=$c WIDTH=5%>$sp</TD><TD>$c$sp$sp</TD></TR>\n"; }
-#  print FIL "</TABLE></BODY></HTML>\n";
-#  close FIL;
-
   my $ruler = Bio::SeqFeature::Generic->new( -end => $protlen,
                                            -start => 2,
                                     -display_name => 'Sequence Position');
@@ -2244,9 +2228,6 @@ sub get_sequence_graphic {
   my $sequence = Bio::SeqFeature::Generic->new( -end => $protlen,
                                               -start => 1,
                                        -display_name => 'Sequence Position');
-
-
-
 
 
   my $peptide_instance_constraint = $args{peptide_instance_constraint} || '';
@@ -2280,9 +2261,7 @@ sub get_sequence_graphic {
   ~;
   my @rows = $sbeams->selectSeveralColumns( $sql );
 
-
   ## Generate observed peptide tracks ##
-
   # color peptides based on n_obs
   my $max = 1;
   my $threshold = 200000;
@@ -2330,7 +2309,6 @@ sub get_sequence_graphic {
     }
     my $n_obs  =  $args{pep_info}->{$seq}->{nobs} || 'n/d';
     $pep_info{$ugly_key} = "$start - $stop, $acc: $seq ($n_obs obs)";
-#    push @peptides, $f;
 
     # Record the coverage for this peptide
     for my $idx ( $start..$stop ) { $coverage{$idx}++; }
@@ -2341,36 +2319,19 @@ sub get_sequence_graphic {
     } else {
       $multi++;
     }
-
-#    $pep_info{$ugly_key} = "$start - $stop, $seq ($row->[5] obs)";
   }
 
-#                                              mappings => $peptide_mappings,
-#                                              pep_info => $pep_info
-#                                              mappings => $peptide_mappings,
-#                                              counts => $pep_nobs,
-#                                              seq2acc => $seq2accession
   my $cnt = 0;
   foreach my $seq ( sort { $args{mappings}->{$a}->[0] <=> $args{mappings}->{$b}->[0] ||
                            $args{pep_info}->{$b}->{nobs} <=> $args{pep_info}->{$a}->{nobs}
                          } ( keys( %{$args{pep_info}} ) ) ) {
-#  foreach my $seq ( sort { $args{pep_info}->{$b}->{nobs} <=> $args{pep_info}->{$a}->{nobs} } ( keys( %{$args{pep_info}} ) ) ) {
-#  foreach my $seq ( sort(keys %{$args{pep_info}}) ) {
-#    last if $cnt++ > 100;
     my $acc  =  $args{pep_info}->{$seq}->{acc};
-
     my $val = 0;
     my $n_obs  =  $args{pep_info}->{$seq}->{nobs};
     if ($n_obs){
       $val = log($n_obs);
     }
     my $score = ( $n_obs <= $threshold ) ? sprintf( "%0.1f", ($val/$lten) + .7 ) : $max;
-#    $score = 0 unless ( $args{pep_info}->{$seq}->{n_gen} && $args{pep_info}->{$seq}->{n_gen} < 2 );
-
-#    if ( !scalar( @{$args{mappings}->{$seq}}) ) {
-#      die Dumper( "$seq is a SNP" );
-#    }
-
 
     for my $start_0 ( @{$args{mappings}->{$seq}} ) {
       my $start =  $start_0 + 1;
@@ -2382,10 +2343,10 @@ sub get_sequence_graphic {
                                -end => $stop,
                            -primary => $acc,
                       -display_name => $ugly_key,
- -score => $score
+														 -score => $score
                              );
 
-    push @peptides, $f;
+			push @peptides, $f;
 
     # Record the coverage for this peptide
       for my $idx ( $start..$stop ) { $coverage{$idx}++; }
@@ -2396,7 +2357,6 @@ sub get_sequence_graphic {
       } else {
         $multi++;
       }
-#      $pep_info{$ugly_key} = "$start - $stop, $acc: $seq ($n_obs obs)";
     }
   }
 
@@ -2404,8 +2364,6 @@ sub get_sequence_graphic {
 
 ###############
   ## Generate Signal P related tracks ##
-
-
   my @signalp;
   my $seqtype = '';
 
@@ -2413,21 +2371,22 @@ sub get_sequence_graphic {
   my $signal_peptide_coords = {};
 
   # FIXME short-circuiting swiss-prot annotation primacy
+  # if no SIGNAL info in swiss, use info in BPS table
 #  my $sp_info = scalar( @sp_rows );
   my $sp_info = ( $swiss->{success} ) ? 1 : 0;
-  if ( $args{protein_data}->{has_signal_peptide} || $sp_info ) {
-    if ( $args{protein_data}->{signal_peptide_is_cleaved} =~ /y/i || $sp_info ) {
+
+  if ( $args{protein_data}->{has_signal_peptide} && ! $swiss->{SIGNAL} ) {
+    if ( $args{protein_data}->{signal_peptide_is_cleaved} =~ /y/i  ) {
       $seqtype = 'Signal';
       $signal++;
     } else {
       $seqtype = 'Anchor';
       $anchor++;
     }
-    my $end = ( $sp_info ) ? $sp_rows[1] : $args{protein_data}->{signal_peptide_length};
+    my $end =  $args{protein_data}->{signal_peptide_length};
+
     $sp_rationale = '';
-    if ($sp_info){
-      $sp_rationale = 'Signal peptide annoted in SwissProt';
-    }elsif ($sigp_source !~ /signal/i) {
+    if ($sigp_source !~ /signal/i) {
       $sp_rationale = "Signal sequence annoted in $sigp_source";
     }elsif ($sigp_source =~ /signal/i){
       $sp_rationale ="Signal sequence predicted by $sigp_source, cleaved in mature protein";
@@ -2446,16 +2405,11 @@ sub get_sequence_graphic {
                                     -display_name => $seqtype ,
                                            -label => 0
                                          );
-
     push @signalp, $f;
-
   }
-
-
   ## End Signal P related tracks ##
 
   ## Generate Glyco motif related tracks ##
-
   my @glyco;
   if ( $args{glyco} ) {
 
@@ -2562,8 +2516,6 @@ sub get_sequence_graphic {
   my @sig;
   my @likely;
   for my $pep ( @{$likely->{peptides}} ) {
-
-
     my $status = 1;
     if ( $likely->{passing}->{$pep->{seq}} ) {
       my $f =  Bio::SeqFeature::Generic->new( -start   => $pep->{start},
@@ -2606,7 +2558,6 @@ sub get_sequence_graphic {
       $status = 0;
     }
   }
-
 
   # Keep track of how much sequence might be hard to observe
   my @unlikely_to_observe; # Cache and return to caller for seq annotation
@@ -2683,9 +2634,10 @@ sub get_sequence_graphic {
       $index += length( $tryp );
     }
   }
-
   # Cache non-coverage sequence
   $args{protein_data}->{_non_coverage} = \@unlikely_to_observe;
+
+  ## end coverage
 
   ## Generate TMHMM-derived tracks ##
 
@@ -2709,14 +2661,10 @@ sub get_sequence_graphic {
     $tm_rationale= "Transmembrane domain annoted in $tmhmm_source";
     $om_rationale = "Outside membrane region annoted in $tmhmm_source";
   }
-  $tm_info = [] if $sp_info;
-
-  
 
   foreach my $region (@$tm_info) {
     my $primary = $region->[0];
     my $tag = $primary;
-
     my $f = Bio::SeqFeature::Generic->new(
                                  -start        => $region->[1],
                                  -end          => $region->[2] ,
@@ -2724,6 +2672,7 @@ sub get_sequence_graphic {
                              -display_name     => $primary ,
                              -tag              => { $primary => $tag }
                                          );
+
     if ( $tag =~ /Intracellular/i ) {
       push @intra, $f;
     }elsif ( $tag =~ /Extracellular/i ) {
@@ -2743,10 +2692,7 @@ sub get_sequence_graphic {
   }
 
 
-
-#                      -label       => sub { my $f = shift; my $n = $f->display_name(); $n =~ s/(.*)::::.*/$1/g; return $n },
   ## Add all the tracks to the panel ##
-
   $panel->add_track( $ruler,
 	                 	-glyph  => 'anchored_arrow',
                     -tick   => 2,
@@ -2798,18 +2744,20 @@ sub get_sequence_graphic {
   # Add signalP track
   my $sigtype = ( $anchor ) ? 'Anchor' : 'Signal';
 
-  my $qualifier =  ( $sp_info ) ? '' : "($sigp_source)";
-  $panel->add_track(
-			\@signalp,
-			-glyph       => 'segments',
-			-bgcolor     => $colors{$sigtype},
-			-fgcolor     => 'black',
-			-key         => $sigtype . ' Sequence ' . $qualifier,
-			-bump        => +1,
-			-height      => 8,
-      -legend      => 1,
-			-label       => 0,
-  );
+  if (@signalp){
+		my $qualifier =  ( $sp_info ) ? '' : "($sigp_source)";
+		$panel->add_track(
+				\@signalp,
+				-glyph       => 'segments',
+				-bgcolor     => $colors{$sigtype},
+				-fgcolor     => 'black',
+				-key         => $sigtype . ' Sequence ' . $qualifier,
+				-bump        => +1,
+				-height      => 8,
+				-legend      => 1,
+				-label       => 0,
+		);
+  }
 
   my @topo_doms =  ('Intracellular');
   my $first = 1;
@@ -2862,30 +2810,32 @@ sub get_sequence_graphic {
 
 
   my %trk_seen = (  SIGNAL => 0, TRANSMEM => 0, TOPO_DOM => 0 );
-  for my $tag ( qw( SIGNAL TRANSMEM TOPO_DOM ) ) {
-    my $peps = get_swiss_peps( $swiss, $tag );
-    my @track;
-    for my $pep ( @{$peps} ) {
-      my $f =  Bio::SeqFeature::Generic->new( -start   => $pep->{start},
-                                              -end     => $pep->{end},
-                                              -primary => $pep->{status},
-                                         -display_name => $pep->{status} );
-      push @track, $f;
-    }
-    $panel->add_track( \@track,
-                        -glyph       => 'segments',
-                        -bgcolor     => $colors{$tag2color{$tag}},
-                        -fgcolor     => 'black',
-                        -key         => $tag,
-                        -connector   => 'solid',
-                        -bump        => 0,
-                        -height      => 8,
-                        -label       => sub { my $f = shift; return $f->display_name},
-        ) if @track;
-    $trk_seen{$tag}++ if @track;
+  ## for build >= 510, TM and SIGNAL info has been loaded into BPS table
+  ## hide this to avoid duplicate tracks
+  if ($args{build_id} < 510){
+		for my $tag ( qw( SIGNAL TRANSMEM TOPO_DOM ) ) {
+			my $peps = get_swiss_peps( $swiss, $tag );
+			my @track;
+			for my $pep ( @{$peps} ) {
+				my $f =  Bio::SeqFeature::Generic->new( -start   => $pep->{start},
+																								-end     => $pep->{end},
+																								-primary => $pep->{status},
+																					 -display_name => $pep->{status} );
+				push @track, $f;
+			}
+			$panel->add_track( \@track,
+													-glyph       => 'segments',
+													-bgcolor     => $colors{$tag2color{$tag}},
+													-fgcolor     => 'black',
+													-key         => $tag,
+													-connector   => 'solid',
+													-bump        => 0,
+													-height      => 8,
+													-label       => sub { my $f = shift; return $f->display_name},
+					) if @track;
+			$trk_seen{$tag}++ if @track;
+		}
   }
-
-
 
   # Add coverage track
   $panel->add_track( \@coverage,
@@ -2899,17 +2849,11 @@ sub get_sequence_graphic {
                       -label       => 0, # sub { my $f = shift; return $f->display_name},
       );
 
-
-
-
-
   $panel->add_track( $ruler,
 	                 	-glyph  => 'anchored_arrow',
                     -tick   => 2,
                     -height => 8,
                     -key  => '' );
-
-
 
   # Add difficult track
   $panel->add_track( \@likely,
@@ -2986,12 +2930,6 @@ sub get_sequence_graphic {
                     -height => 8,
                     -key  => 'Sequence Position' );
 
-
-#  $panel->add_track( $sequence,
-#                    -glyph   => 'segments',
-#                -bgcolor     => $colors{Translated},
-#                      -key   => 'Translated Sequence',
-#                     -tick   => 2 );
 
   # Set up graphic legend
   my @legend;
