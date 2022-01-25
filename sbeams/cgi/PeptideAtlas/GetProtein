@@ -320,11 +320,14 @@ sub handle_request {
     display_page_header_footer => 1,
     PROG_NAME => $PROG_NAME,
       );
+  $sbeams -> update_PA_table_variables($atlas_build_id);
+
   if (defined($atlas_build_id) && $atlas_build_id < 0) {
     return;
   }
   $parameters{atlas_build_id} = $atlas_build_id;
   $current_page->{atlas_build_id} = $atlas_build_id;
+
 
   $parameters->{motif} = $sbeamsMOD->getBuildMotif( build_id => $atlas_build_id ) || '';
 
@@ -1332,8 +1335,6 @@ sub handle_request {
 #		'is_subpeptide_of' => 1,
 #		'sample_ids' => 1
   );
-
-
 
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
@@ -2690,7 +2691,6 @@ sub get_sequence_graphic {
     @extra = ();
     %tmm_others = ();
   }
-
 
   ## Add all the tracks to the panel ##
   $panel->add_track( $ruler,
