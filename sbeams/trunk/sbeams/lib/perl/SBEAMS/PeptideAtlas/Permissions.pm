@@ -22,9 +22,10 @@ our @ISA = qw( Exporter );
 use SBEAMS::Connection::Log;
 use SBEAMS::Connection::Authenticator qw( $q );
 use SBEAMS::Connection::Settings;
-use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::Connection::Tables;
-use  SBEAMS::PeptideAtlas;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Tables;
 
 my $log = SBEAMS::Connection::Log->new();
 
@@ -577,6 +578,7 @@ sub getCurrentAtlasBuildID {
     }
   }
 
+  $sbeams -> update_PA_table_variables($this_atlas_build_id);
   return($this_atlas_build_id);
 
 } # end getCurrentAtlasBuildID
