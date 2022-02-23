@@ -1961,7 +1961,8 @@ sub getSpectrumFromMzmlFile {
 
 
   #### Create a virtual filename to fetch the spectrum
-  my $filename = "/proteomics/sw/tpp-dev/bin/readmzXML $filePath $scanNumber |";
+  #### Note that we have to use an EL7 compiled version while the server is still on EL7
+  my $filename = "/proteomics/sw/tpp/bin/readmzXML $filePath $scanNumber |";
   # Switch temporarily to Luis's compiled version
   #my $filename = "/proteomics/lmendoza/sw/tpp/bin/readmzXML $filePath $scanNumber |";
   print "Fetch command: $filename\n" if ($verbose);
