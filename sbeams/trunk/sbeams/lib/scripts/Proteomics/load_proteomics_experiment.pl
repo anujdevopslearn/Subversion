@@ -732,7 +732,7 @@ sub loadProteomicsExperiment {
       my $subdir = new DirHandle "$source_dir/$element";
       my $OKflag = 0;
       while ((!$OKflag) && defined($i = $subdir->read())) {
-        $OKflag++ if ($i =~ /\.out$/);
+        $OKflag++ if ($i =~ /\.out$/ && $i !~ /slurm/i);
       }
 
       #### And if so, add it to out list
