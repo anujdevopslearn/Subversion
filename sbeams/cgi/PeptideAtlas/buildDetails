@@ -17,7 +17,7 @@
 use strict;
 #use vars qw ($sbeams);
 
-use lib qw (../../lib/perl);
+use lib "$ENV{SBEAMS}/lib/perl";
 
 #use CGI::Carp qw(fatalsToBrowser croak);
 use vars qw($PROGRAM_FILE_NAME);
@@ -28,6 +28,9 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::DataTable;
 use SBEAMS::Connection::GoogleVisualization;
 use SBEAMS::Connection::TabMenu;
+
+use SBEAMS::Proteomics;
+use SBEAMS::Proteomics::Tables;
 
 
 use SBEAMS::PeptideAtlas;
@@ -567,55 +570,58 @@ sub get_build_overview {
 #  for my $k ( keys( %$build_info ) ) { print STDERR "$k => $build_info->{$k}\n"; }
   my $build_name = $build_info->{atlas_build_name};
   my $phospho_info;
-  if ($build_name =~ /human.*phospho/i){
+  if ($build_name =~ /phospho/i){
+    my ($id_col_name, $protein_name_contraint);
+    if ($build_name =~ /human/i){
+      $id_col_name = '#_neXtProt_(PE=1-4)';
+      $protein_name_contraint = 'AND B.dbxref_id = 65 and BSS.organism_id = 2'; 
+    }else{
+      $id_col_name = '#_protein';
+      $protein_name_contraint ="AND B.biosequence_name not like 'CONTAM%' AND B.biosequence_name not like 'DECOY%'";  
+    }
     $phospho_info =  $sbeams->selectrow_hashref( <<"  PHOS" );
   SELECT PS.atlas_build_id, 
-         count(distinct PS.biosequence_id) as '#_neXtProt_(PE=1-4)', 
+         count(distinct PS.biosequence_id) as '$id_col_name', 
          count(offset) as #_observed_phosphorylation_sites, 
          sum(case when residue = 'S'  then 1 else 0 end) as S_sites,
          sum(case when residue = 'T'  then 1 else 0 end) as T_sites,
          sum(case when residue = 'Y'  then 1 else 0 end) as Y_sites
   FROM $TBAT_PTM_SUMMARY PS 
   JOIN $TBAT_BIOSEQUENCE B ON PS.BIOSEQUENCE_ID = B.BIOSEQUENCE_ID
+  JOIN $TBAT_BIOSEQUENCE_SET BSS ON B.BIOSEQUENCE_SET_ID = BSS.BIOSEQUENCE_SET_ID
   WHERE PS.atlas_build_id = $build_id
-  AND B.dbxref_id = 65
-  --AND B.BIOSEQUENCE_DESC NOT LIKE '%PE=5%'
+  $protein_name_contraint
   GROUP BY PS.atlas_build_id
   PHOS
- 
-		my $sql =qq~ 
-		( SELECT PI.ATLAS_BUILD_ID, 'singly_phosphorylated' as type, count(distinct mp.modified_peptide_sequence) as cnt
-			FROM $TBAT_PEPTIDE_INSTANCE PI
-			JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MP 
-			ON (PI.PEPTIDE_INSTANCE_ID = MP.PEPTIDE_INSTANCE_ID)
-			WHERE PI.ATLAS_BUILD_ID = $build_id 
-			AND (MODIFIED_PEPTIDE_SEQUENCE LIKE '%[STY]_[0-9]%' AND 
-					 MODIFIED_PEPTIDE_SEQUENCE NOT LIKE '%[STY]_[0-9]%[STY]_[0-9]%')
-			GROUP BY PI.ATLAS_BUILD_ID
-		)UNION
-			( SELECT PI.ATLAS_BUILD_ID, 'doubly_phosphorylated' as type, count(distinct mp.modified_peptide_sequence) as cnt
-			FROM $TBAT_PEPTIDE_INSTANCE PI
-			JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MP
-			ON (PI.PEPTIDE_INSTANCE_ID = MP.PEPTIDE_INSTANCE_ID)
-			WHERE PI.ATLAS_BUILD_ID = $build_id
-			AND (MODIFIED_PEPTIDE_SEQUENCE LIKE '%[STY]_[0-9]%[STY]_[0-9]%' 
-					 AND MODIFIED_PEPTIDE_SEQUENCE NOT LIKE '%[STY]_[0-9]%[STY]_[0-9]%[STY]_[0-9]%')
-			GROUP BY PI.ATLAS_BUILD_ID
-		)UNION
-		( SELECT PI.ATLAS_BUILD_ID, 'over_2_phosphorylated' as type , count(distinct mp.modified_peptide_sequence) as cnt
-			FROM $TBAT_PEPTIDE_INSTANCE PI
-			JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MP
-			ON (PI.PEPTIDE_INSTANCE_ID = MP.PEPTIDE_INSTANCE_ID)
-			WHERE PI.ATLAS_BUILD_ID = $build_id
-			AND (MODIFIED_PEPTIDE_SEQUENCE LIKE '%[STY]_[0-9]%[STY]_[0-9]%[STY]_[0-9]%') 
-			GROUP BY PI.ATLAS_BUILD_ID
-	  )
-		~;
-   my @rows = $sbeams->selectSeveralColumns($sql);
-   foreach my $row(@rows){
-     my ($id, $type,$cnt) = @$row;
-     $phospho_info->{$type} = $cnt;
-   }
+
+     my $sql = qq~
+       SELECT mp.modified_peptide_sequence
+       FROM $TBAT_PEPTIDE_INSTANCE PI
+       JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MP ON (PI.PEPTIDE_INSTANCE_ID = MP.PEPTIDE_INSTANCE_ID)
+       JOIN $TBAT_PEPTIDE_MAPPING PM ON (PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID)
+       JOIN $TBAT_BIOSEQUENCE B ON (B.BIOSEQUENCE_ID = PM.MATCHED_BIOSEQUENCE_ID)
+       WHERE PI.ATLAS_BUILD_ID = $build_id
+       $protein_name_contraint
+     ~;
+
+     my @rows = $sbeams->selectSeveralColumns($sql);
+     my %result =();
+     foreach my $row(@rows){
+       my ($mod_pep) = @$row;
+       $mod_pep =~ s/([^STY])\[\d+\]/$1/g;
+       $mod_pep =~ s/[nc]//g;
+       my @m = $mod_pep =~ /[STY]\[/g;
+       if (@m == 1){
+         $result{'singly_phosphorylated'}{$mod_pep} =1;
+       }elsif(@m == 2){
+          $result{'doubly_phosphorylated'}{$mod_pep} =1;
+       }else{
+          $result{'over_2_phosphorylated'}{$mod_pep} =1;
+       }
+     }
+     foreach my $type(keys %result){
+       $phospho_info->{$type} = scalar keys %{$result{$type}};
+     }
   }
 
   my $pep_count = $sbeams->selectrow_hashref( <<"  PEP" );
@@ -747,9 +753,15 @@ sub build_overview_html {
      $level =~ s/(\w+)/\u$1/g; 
      $table .= $atlas->encodeSectionItem( key   => "&#8195;$level", tr_info => $tr, value => $sbeams->commifyNumber($build_info->{prot_count}{$key}), align => 'right' ) . "\n";
   }
-  if ($build_name =~ /human.*phospho/i){
+  if ($build_name =~ /phospho/i){
     $table .= $atlas->encodeSectionItem( key   => 'PhosphoProteome Summary', tr_info => $tr, value => '', align => 'right' ) . "\n";
-    foreach my $key (qw(#_neXtProt_(PE=1-4) #_observed_sites S_sites T_sites Y_sites)){
+    my @columns = ();
+    if ($build_name =~ /human/i){
+      @columns = qw(#_neXtProt_(PE=1-4) #_observed_sites S_sites T_sites Y_sites);
+    }else{
+       @columns = qw(#_proteins #_observed_sites S_sites T_sites Y_sites);
+    }
+    foreach my $key (@columns){
       my $level = $key;
       $level =~ s/\_/ /g;
       $level =~ s/(\w+)/\u$1/g;
@@ -833,9 +845,9 @@ sub get_sample_info {
       ) AS Pubmed_ID
 		FROM $TBAT_SAMPLE_PUBLICATION F1
   ) AS A ON (A.SAMPLE_ID = S.SAMPLE_ID) 
-  JOIN PROTEOMICS.DBO.SEARCH_BATCH PSB  ON (PSB.SEARCH_BATCH_ID = ASB.PROTEOMICS_SEARCH_BATCH_ID)
-  JOIN PROTEOMICS.DBO.PROTEOMICS_EXPERIMENT PE ON (PE.EXPERIMENT_ID = PSB.EXPERIMENT_ID)
-  JOIN PROTEOMICS.DBO.INSTRUMENT I ON (I.INSTRUMENT_ID = PE.INSTRUMENT_ID) 
+  JOIN $TBPR_SEARCH_BATCH PSB  ON (PSB.SEARCH_BATCH_ID = ASB.PROTEOMICS_SEARCH_BATCH_ID)
+  JOIN $TBPR_PROTEOMICS_EXPERIMENT PE ON (PE.EXPERIMENT_ID = PSB.EXPERIMENT_ID)
+  JOIN $TBPR_INSTRUMENT I ON (I.INSTRUMENT_ID = PE.INSTRUMENT_ID) 
   WHERE ABSB.atlas_build_id = $build_id
   ORDER BY rownum, cumulative_n_peptides, ABSB.atlas_build_search_batch_id ASC
   ~;
