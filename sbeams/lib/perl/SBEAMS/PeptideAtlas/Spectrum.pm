@@ -353,7 +353,7 @@ sub loadBuildPTMSpectra {
         $probability,$massdiff,$protein_name,$proteinProphet_probability,
         $n_proteinProphet_observations,$n_sibling_peptides,
         $SpectraST_probability, $ptm_sequence,$precursor_intensity,
-        $total_ion_current,$signal_to_noise,$retention_time_sec,$chimera_level);
+        $total_ion_current,$signal_to_noise,$retention_time_sec,$chimera_level,$ptm_sequence);
     if ($filetype eq 'peplist') {
       ($search_batch_id,$peptide_sequence,$modified_sequence,$charge,
         $probability,$protein_name,$spectrum_name) = @columns;
@@ -376,7 +376,8 @@ sub loadBuildPTMSpectra {
 				$total_ion_current,
 				$signal_to_noise,
         $retention_time_sec,
-				$chimera_level) = @columns;
+				$chimera_level,
+        $ptm_sequence) = @columns;
       #### Correction for occasional value '+-0.000000'
       $massdiff =~ s/\+\-//;
     } else {
@@ -384,11 +385,7 @@ sub loadBuildPTMSpectra {
     }
     
 		next if ($modified_sequence =~ /[JUO]/);
-    $ptm_sequence = '';
-    if ($modified_sequence =~ /\(/){
-      $ptm_sequence = $modified_sequence;
-      $modified_sequence =~ s/\([\d\.]+\)//g;
-      $ptm_sequence =~ s/\[[\d\.]+\]//g;
+    if ($ptm_sequence){
 			#### Get the sample_id for this search_batch_id
 			my $sample_id = $self->get_sample_id(
 				proteomics_search_batch_id => $search_batch_id,
@@ -446,6 +443,7 @@ sub loadBuildPTMSpectra {
 	while (my $line =<IN>){
     chomp $line;
 		my ($spectrum_identification_id, $ptm_sequence) = split(",", $line);
+    
 		my $spectrum_identification_id = $self->insertSpectrumPTMIdentificationRecord(
 		  spectrum_identification_id => $spectrum_identification_id,	
 			ptm_sequence => $ptm_sequence,
@@ -1643,7 +1641,8 @@ sub loadSpectrum_Fragmentation_Type {
     ## 1. check the data folder for fragmentation_types.tsv files
     ## 2. if not found or empty, use the type from proteomics experiment table, 
     #     if more than one type, print warning
-    my $data_directory = "/regis/sbeams/archive/$dir/data";
+    my $data_directory = "$dir/data";
+    $data_directory = "/regis/sbeams/archive/$dir/data" if ($dir !~ /regis/);
     if (! -d "$data_directory"){
       print "ERROR cannot find $data_directory\n";
       next;
@@ -1664,14 +1663,14 @@ sub loadSpectrum_Fragmentation_Type {
             $filename =~ /^.*\/(.*).fragmentation_types.tsv$/;
             my $specfile = $1;
             if (not defined $scan2spectrum_id{$specfile}){
-              print "no update\n";
+              #print "no update\n";
               next;
             }else{
               print "\n";
             }
             my %fragmentation_types =();
             foreach my $line(<F>){
-              if ($line =~ /unknown/i){
+              if ($line =~ /(unknown|\?\?)/i){ 
                  my $type = $directories{$dir};
 								 if ($type && $type !~/,/){
 									 $self->updateSpectrum_Fragmentation_Type(   scan2spectrum_id =>[values %{$scan2spectrum_id{$specfile}}],
@@ -1681,8 +1680,8 @@ sub loadSpectrum_Fragmentation_Type {
 								 }
                  last;
               }
-              if ($line =~ /^\*\s+(.*)/){
-                my $type = $1;
+              if ($line =~ /^(\-1|\*)\s+(.*)/){
+                my $type = $2;
                 die "ERROR $line\n\tno fragmentation_type_id found for type '$type'\n" if (not defined $fragmentation_type_ids{$type});
                 $self->updateSpectrum_Fragmentation_Type(   scan2spectrum_id =>[values %{$scan2spectrum_id{$specfile}}],
                                                      fragmentation_type_id => $fragmentation_type_ids{$type});
