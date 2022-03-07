@@ -17,7 +17,7 @@
 use strict;
 #use vars qw ($sbeams);
 
-use lib "$ENV{SBEAMS}/lib/perl";
+use lib "../../lib/perl";
 
 #use CGI::Carp qw(fatalsToBrowser croak);
 use vars qw($PROGRAM_FILE_NAME);
