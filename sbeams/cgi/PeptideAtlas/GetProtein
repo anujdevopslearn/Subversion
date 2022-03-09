@@ -320,7 +320,6 @@ sub handle_request {
     display_page_header_footer => 1,
     PROG_NAME => $PROG_NAME,
       );
-  $sbeams -> update_PA_table_variables($atlas_build_id);
 
   if (defined($atlas_build_id) && $atlas_build_id < 0) {
     return;
@@ -2142,6 +2141,7 @@ sub get_sequence_graphic {
   my $biosequence_name = $args{protein_data}->{biosequence_name} || '';
   my $likely = $args{likely_peptides} || {};
   my $tm_sigp_source = $args{protein_data}->{tm_sigp_source} || 'predicted';
+
   my $sigp_source = $tm_sigp_source;
   my $tmhmm_source = $tm_sigp_source;
   if ($tm_sigp_source =~ /(TMHMM\s[\d\.]+)/){
@@ -2371,12 +2371,10 @@ sub get_sequence_graphic {
   my ( $anchor, $signal );
   my $signal_peptide_coords = {};
 
-  # FIXME short-circuiting swiss-prot annotation primacy
-  # if no SIGNAL info in swiss, use info in BPS table
-#  my $sp_info = scalar( @sp_rows );
   my $sp_info = ( $swiss->{success} ) ? 1 : 0;
 
-  if ( $args{protein_data}->{has_signal_peptide} && ! $swiss->{SIGNAL} ) {
+  # use info in BPS table
+  if ( $args{protein_data}->{has_signal_peptide}  ) {
     if ( $args{protein_data}->{signal_peptide_is_cleaved} =~ /y/i  ) {
       $seqtype = 'Signal';
       $signal++;
