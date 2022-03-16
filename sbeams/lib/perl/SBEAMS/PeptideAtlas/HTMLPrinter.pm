@@ -1602,7 +1602,7 @@ sub get_individual_spectra_display {
 					align  => $align,
 					rows => \@data,
 					rows_to_show => 10,
-					max_rows => 200,
+					max_rows => 500,
 					nowrap => [1],
 					bkg_interval => 3,
 					rs_headings => \@$column_titles_ref, 
@@ -1660,6 +1660,7 @@ sub getProteinSampleDisplay {
     AND S.RECORD_STATUS != 'D'
     ORDER BY sample_ID
   ~;
+
   my @rows = $sbeams->selectSeveralColumns($sql);
   my $table = $self -> getSampleTableDisplay(data => \@rows,
                                rows_to_show => $rows_to_show, 
@@ -2062,7 +2063,7 @@ sub get_proteome_coverage_new {
             last;
           }
 				} 
-			}elsif($type =~ /description/i){
+			}elsif($biosqeuences{$id}{desc} && $type =~ /description/i){
 				foreach my $pat (@pats){
           if ($biosqeuences{$id}{desc} =~ /$pat/){
             $flag =1;
