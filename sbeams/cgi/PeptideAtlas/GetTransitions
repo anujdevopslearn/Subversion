@@ -1106,6 +1106,7 @@ sub get_download_form {
     </SCRIPT>
     <SELECT NAME=download ID=download>
       <OPTION VALUE='TSV_MRM' >TSV</OPTION>
+      <OPTION VALUE='TSV_SureQuant' >TSV-4digits</OPTION>
       <OPTION VALUE='AgilentQQQ' >Agilent QQQ SRM</OPTION>
       <OPTION VALUE='AgilentQQQ_dynamic' >Agilent QQQ dynamic SRM</OPTION>
       <OPTION VALUE='ABSCIEX_QTRAP_SRM' >SCIEX QTRAP Scheduled SRM</OPTION>
@@ -2230,14 +2231,14 @@ sub fetch_transitions {
       $row[10] = $peps{$pep_key};
       $row[9] = lcfirst($row[9]);
   
-      $row[5] = sprintf( "%0.2f", $row[5] );
+      $row[5] = sprintf( "%0.4f", $row[5] );
       $row[4] = $src_name{$row[4]} if $src_name{$row[4]};
       $row[4] .= '-pred' if $row[19] eq 'Y';
 
       if ( $row[4] eq 'QTOF' ) {
         $row[7] = sprintf( "%0.4f", $row[7] );
       } else {
-        $row[7] = sprintf( "%0.2f", $row[7] );
+        $row[7] = sprintf( "%0.4f", $row[7] );
       }
       $row[3] = sprintf( "%0.2f", $row[3] );
       $row[20] = sprintf( "%0.2f", $row[20] );
@@ -2757,6 +2758,7 @@ sub fetch_transitions {
         if ( $omode =~ /tsv|json/i  ) {
           $suppress_header = 0;
         }
+        
         $sbeams->displayResultSet( resultset_ref => $rs,
 				   query_parameters_ref=>\%parameters,
 				   rs_params_ref=> \%rs_params,

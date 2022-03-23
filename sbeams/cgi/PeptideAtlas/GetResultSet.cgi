@@ -165,9 +165,18 @@ sub handle_request {
                                       pid => $pid,
                                       debug => 1 );
 
+  my $column_titles_ref = $resultset_ref->{'column_list_ref'};
+  my %column_title_hash = ();
+  my $idx =0;
+  foreach my $column_name(@$column_titles_ref){
+    $column_title_hash{$column_name} =$idx;
+    $idx++;
+  } 
+
   for my $param ( keys( %form_params ) ) {
     $parameters{$param} = $form_params{$param};
   }
+
 #  $msg .= "empirical CE is now $parameters{empirical_ce}<BR>\n";
 #  die $msg;
 
@@ -195,6 +204,13 @@ sub handle_request {
     my @mrm_format;
     my %mrm_link_idx;
     for my $row ( @{$tsv_formatted} ) {
+			if ($download !~ /TSV_SureQuant/){
+        if ($row->[$column_title_hash{Q1_mz}] !~ /mz/i){
+				  $row->[$column_title_hash{Q1_mz}] = sprintf("%.2f", $row->[$column_title_hash{Q1_mz}]); 
+				  $row->[$column_title_hash{Q3_mz}] = sprintf("%.2f", $row->[$column_title_hash{Q3_mz}]);
+        }
+			}
+
       if ( !scalar( keys( %mrm_link_idx ) ) ) {
         my %link_cols = ( 'External Links' => 1, 'QTOF' => 1, 'QTOF_CE' => 1, 'QTrap5500' => 1, 'QQQ' => 1, 'IonTrap' => 1, 'QQQ ' => 1, ' QTRAP ' => 1 );
         my $idx = 0;
@@ -221,7 +237,6 @@ sub handle_request {
     $log->debug( "Convert to mrm format: " . $mem );
 
 #    die Dumper( %parameters );
-
     if ( $download =~ /AgilentQQQ_dynamic/i ) {
       my $method = $atlas->get_qqq_dynamic_transition_list( method => \@mrm_format, params => \%parameters );
       print $method;
