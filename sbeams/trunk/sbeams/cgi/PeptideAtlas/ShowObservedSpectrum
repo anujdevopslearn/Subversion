@@ -59,7 +59,7 @@ $sbeamsMOD->setSBEAMS($sbeams);
 $PROG_NAME="ShowObservedSpectrum";
 my $CLASS = $PROG_NAME;
 my $DEBUG = 0;
-my $VERBOSE = 1;
+my $VERBOSE = 0;       #### Set this to 1 to trace problems in spectrum finding
 
 my $output_mode = 'HTML';
 
@@ -114,7 +114,6 @@ sub processDatabaseActions {
     my $apply_action  = $q->param('apply_action');
 
     my $prot_info = new SBEAMS::PeptideAtlas::ProtInfo;
-    $VERBOSE = 0;
     $TESTONLY = 0;
     $prot_info->setSBEAMS($sbeams);
     $prot_info->setVERBOSE($VERBOSE);
@@ -270,10 +269,14 @@ sub processRequest {
       $output_mode = 'HTML';
     }
 
-    my $verbose = 0;
+    my $verbose = $VERBOSE;
 
-    #print("Content-type: text/plain\n\n");
-    #$sbeams->printDebuggingInfo($q);
+    #### If debugging level is 2 or more, print out CGI input information
+    if ( $verbose >= 2 ) {
+      print("<PRE>\n");
+      $sbeams->printDebuggingInfo($q);
+      print("</PRE>\n");
+  }
 
     #### Define the spectrum array. Need something fancier than this
     my @spectrum_array;
@@ -628,10 +631,10 @@ sub processRequest {
 
 
     #### Print some debugging information
-    if ( 0 == 1 ) {
+    if ( $verbose >= 1 ) {
       print "<PRE>\n";
       print "charge=$charge,\n";
-      print "peptidoform = $peptidoform,\n";
+      print "peptidoform = $peptidoform\n";
       print "precursor_mass    = $parameters{'precursor_mass'}\n";
       print "PrecursorMZ = $observedPrecursorMz\n";
       print "nativeId = $nativeId\n";
@@ -696,6 +699,9 @@ sub processRequest {
           precursor_mass    => $observedPrecursorMz || 100,
           scan              => $scanNumber,
           name              => $spectrumName,
+          massTolerance     => 20,
+          massErrorUnit     => 'ppm',
+          peakDetect        => 'false',
           a_ions            => $parameters{'ShowA'},
           b_ions            => $parameters{'ShowB'},
           c_ions            => $parameters{'ShowC'},
