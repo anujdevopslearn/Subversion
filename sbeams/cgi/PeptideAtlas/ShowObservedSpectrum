@@ -285,6 +285,7 @@ sub processRequest {
     my $convertedPeptidoformStr = $parameters{peptide};
     my $scanNumber = 0;
     my $nativeId = '';
+    my $spectrumProperties = { 'filterLine'=> '', 'fragmentation_type_id'=> '' };
     my $observedPrecursorMz = 0.0;
     my $spectrumName = '';
 
@@ -341,6 +342,8 @@ sub processRequest {
 	    @spectrum_array = @{$getSpectrumResult->{mz}};
 	    $observedPrecursorMz = $getSpectrumResult->{observedPrecursorMz};
 	    $nativeId = $getSpectrumResult->{nativeId} if ($getSpectrumResult->{nativeId});
+	    $spectrumProperties->{'filterLine'} = $getSpectrumResult->{'filterLine'} if ($getSpectrumResult->{'filterLine'});
+	    $spectrumProperties->{'fragmentation_type_id'} = $getSpectrumResult->{'fragmentation_type_id'} if ($getSpectrumResult->{'fragmentation_type_id'});
 	    $scanNumber = $getSpectrumResult->{scanNumber} if ($getSpectrumResult->{scanNumber});
 
 	    if ( $charge ) {
@@ -405,6 +408,8 @@ sub processRequest {
         parameters => \%parameters, verbose=>$verbose,
       );
       $nativeId = $spectrum{nativeId};
+      $spectrumProperties->{'filterLine'} = $spectrum{'filterLine'} if ($spectrum{'filterLine'});
+      $spectrumProperties->{'fragmentation_type_id'} = $spectrum{'fragmentation_type_id'} if ($spectrum{'fragmentation_type_id'});
 
       #### If a spectrum came back, transform it
       if (%spectrum) {
@@ -638,6 +643,8 @@ sub processRequest {
       print "precursor_mass    = $parameters{'precursor_mass'}\n";
       print "PrecursorMZ = $observedPrecursorMz\n";
       print "nativeId = $nativeId\n";
+      print "filterLine = $spectrumProperties->{'filterLine'}\n" if ($spectrumProperties->{'filterLine'});
+      print "fragmentation_type_id = $spectrumProperties->{'fragmentation_type_id'}\n" if ($spectrumProperties->{'fragmentation_type_id'});
       print "scanNumber = $scanNumber\n";
       print "spectrumName = $spectrumName\n";
       #print Data::Dumper->Dump([\@spectrum_array]);
@@ -661,7 +668,14 @@ sub processRequest {
     my $spectrum = Proteomics::Spectra::Spectrum->new(peptideIon=>"$peptidoform/$charge");
     #### Read the spectrum in from the text buffer
     $spectrum->parseLibrarySpectrumEntry(buffer=>\@spectrumBuffer);
-    $spectrum->reannotate( ppm => 1 );
+
+    #### By default we will annotate in high resolution, but if it's ITMS fragmentation, then low resolution
+    my $ppm_flag = 1;
+    if ( $spectrumProperties->{filterLine} && $spectrumProperties->{filterLine} =~ /ITMS/ ) {
+      $ppm_flag = 0;
+    }
+    #### Reannotate it
+    $spectrum->reannotate( ppm => $ppm_flag );
 
     #### If requested, create a Javascript data buffer for the spectrum with my annotations
     my $jsSpectrumDataString;
@@ -693,15 +707,12 @@ sub processRequest {
       #### There is a weird Javascript/Lorikeet bug where if the scan begins with a 0, it is interpreted as an octal number! Strip off leading zeros
       $scanNumber =~ s/^0+//;
       my $lorikeet = new SBEAMS::Proteomics::SpecViewer;
-      print $lorikeet->generateSpectrum(
+      my %lorikeetParameters = (
           charge            => $charge,
           modified_sequence => $peptidoform,
           precursor_mass    => $observedPrecursorMz || 100,
           scan              => $scanNumber,
           name              => $spectrumName,
-          massTolerance     => 20,
-          massErrorUnit     => 'ppm',
-          peakDetect        => 'false',
           a_ions            => $parameters{'ShowA'},
           b_ions            => $parameters{'ShowB'},
           c_ions            => $parameters{'ShowC'},
@@ -714,7 +725,21 @@ sub processRequest {
           ms1scanLabel      => $parameters{ms1scanLabel},
           ms1peaks          => $parameters{ms1peaks},
        jsSpectrumDataString => $jsSpectrumDataString
-        );
+      );
+      #### If this is an ion trap spectrum, then set low resolution parameters
+      if ( $spectrumProperties->{filterLine} && $spectrumProperties->{filterLine} =~ /ITMS/ ) {
+        $lorikeetParameters{massTolerance} = 0.6;
+        $lorikeetParameters{massErrorUnit} = 'Th';
+        $lorikeetParameters{peakDetect} = 'true';
+      #### Else default to high resolution
+      } else {
+        $lorikeetParameters{massTolerance} = 20;
+        $lorikeetParameters{massErrorUnit} = 'ppm';
+        $lorikeetParameters{peakDetect} = 'false';
+      }
+      print $lorikeet->generateSpectrum(
+        %lorikeetParameters
+      );
     } else {
       print "<BR><BR>The Lorikeet spectrum viewer is currently unable to display spectrum without any peptide ion interpretation. A temporary hack while we fix this is to set the sequence to 'PEPTIDE'<BR><BR>\n";
     }
@@ -1182,6 +1207,8 @@ sub get_spectrum
     $spectrum{n_peaks} = scalar(@{$spectrum{mz}});
     $spectrum{observedPrecursorMz} = $result->{observedPrecursorMz};
     $spectrum{nativeId} = $result->{nativeId};
+    $spectrum{filterLine} = $result->{filterLine};
+    $spectrum{fragmentation_type_id} = $result->{fragmentation_type_id};
     #### Silliness to fool later if statements. ugh.
     @mass_intensities = ( [1,1] );
   }
@@ -1985,6 +2012,7 @@ sub getSpectrumFromMzmlFile {
   my $observedPrecursorMz = 0;
   my $charge = 0;
   my $nativeId = '';
+  my $filterLine = '';
   while (my $line = <DTAFILE>) {
     $line =~ s/[\r\n]//g;
     #print "$line<BR>\n" if ($verbose);
@@ -2001,6 +2029,11 @@ sub getSpectrumFromMzmlFile {
 
     if ( $line =~ /nativeId:\s*(.+)/ ) {
       $nativeId = $1;
+      next;
+    }
+
+    if ( $line =~ /filterLine:\s*(.+)/ ) {
+      $filterLine = $1;
       next;
     }
 
@@ -2029,6 +2062,7 @@ sub getSpectrumFromMzmlFile {
   $response->{mz} = \@mz_intensities;
   $response->{observedPrecursorMz} = $observedPrecursorMz;
   $response->{nativeId} = $nativeId;
+  $response->{filterLine} = $filterLine;
   $response->{scanNumber} = $scanNumber;
 
   #### Build a prototype PROXI spectrum
