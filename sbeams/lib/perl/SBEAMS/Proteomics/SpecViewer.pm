@@ -156,7 +156,8 @@ sub generateSpectrum {
 
     my $html_id  = $args{'htmlID'} || 'lorikeet';
     my $charge   = $args{'charge'};
-    my $massTolerance  = $args{'massTolerance'} || 0.5;
+    my $massTolerance  = $args{'massTolerance'} || 20;
+    my $massErrorUnit  = $args{'massErrorUnit'} || 'ppm';
     my $peakDetect     = $args{'peakDetect'} || 'false';
     my $labelReporters = $args{'labelReporters'} || 'true';
     my $showA    = $args{'a_ions'} || '[0,0,0]';
@@ -167,7 +168,6 @@ sub generateSpectrum {
     my $showZ    = $args{'z_ions'} || '[0,0,0]';
     my $scanNum  = $args{'scan'} || '0';
     my $fileName = $args{'name'} || '';
-    my $peakDetect = $args{'peakDetect'} || 'true';
     my $modified_sequence = $args{'modified_sequence'};
     my $precursorMz   = $args{'precursor_mass'};
     my $spectrum_aref = $args{'spectrum'};
@@ -210,6 +210,7 @@ sub generateSpectrum {
 				      "scanNum":$scanNum,
 				      "charge":$charge,
 				      "massError":$massTolerance,
+                                      "massErrorUnit":"$massErrorUnit",
 				      "peakDetect":$peakDetect,
 				      "showMassErrorPlot":true,
 				      "massErrorPlotDefaultUnit":"ppm",
@@ -223,7 +224,6 @@ sub generateSpectrum {
 				      "showX":$showX,
 				      "showY":$showY,
 				      "showZ":$showZ,
-				      "peakDetect":$peakDetect,
 				      "labelReporters":$labelReporters,
 				      "variableMods":$mods,
                                       "maxNeutralLossCount":$nlosses,
