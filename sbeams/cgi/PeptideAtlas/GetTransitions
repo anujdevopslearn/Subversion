@@ -2544,9 +2544,9 @@ sub fetch_transitions {
             # If original row was light (unmodified)
             if ( $mod_row[2] =~ /$aa$/ ) {
               $mod_row[2] =~ s/$aa$/$annot/;
-              $mod_row[6] = sprintf( "%0.2f", $mod_row[6] + $delta_mass/$mod_row[7] );
+              $mod_row[6] = sprintf( "%0.4f", $mod_row[6] + $delta_mass/$mod_row[7] );
               if ($mod_row[10] =~ /^y/i ) {
-                $mod_row[8] = sprintf( "%0.2f", $mod_row[8] + $delta_mass/$mod_row[9] );
+                $mod_row[8] = sprintf( "%0.4f", $mod_row[8] + $delta_mass/$mod_row[9] );
               }
 
               # Setting the number of columns here, might get out of sync...
@@ -2556,7 +2556,6 @@ sub fetch_transitions {
                 # We are now pushing a links column into the row[1]
                  push @peptides, [ $mod_row[0], $rowdata[1], @mod_row[1..14] ];
               }
-
             # if original row was heavy (modified)
             } elsif ( $mod_row[2] =~ /$aa\[\d\d\d\]$/ ) {
 
@@ -2564,9 +2563,9 @@ sub fetch_transitions {
               $mod_row[2] =~ s/$aa\[\d\d\d\]$/$aa/;
 
               # Adjust transition mz by delta/charge
-              $mod_row[6] = sprintf( "%0.2f", $mod_row[6] - $delta_mass/$mod_row[7] );
+              $mod_row[6] = sprintf( "%0.4f", $mod_row[6] - $delta_mass/$mod_row[7] );
               if ($mod_row[10] =~ /^y/i ) {
-                $mod_row[8] = sprintf( "%0.2f", $mod_row[8] - $delta_mass/$mod_row[9] );
+                $mod_row[8] = sprintf( "%0.4f", $mod_row[8] - $delta_mass/$mod_row[9] );
               }
 
               # Setting the number of columns here, might get out of sync...
