@@ -325,7 +325,7 @@ sub handle_request {
       </TD>
       <TD WIDTH=10% ALIGN=LEFT { white-space: nowrap } >
       <DT>
-      <INPUT ID="exact_match" TYPE=radio $search_type_param{exact_match} NAME="exact_match"
+      <INPUT ID="exact_match" TYPE=radio $search_type_param{exact_match} NAME="exact_match" checked
           ONCLICK=toggle_radiobutton(this)>
           Exact Match
       <DT><INPUT ID="single_table" TYPE=radio $search_type_param{single_table}  NAME="single_table"
@@ -338,17 +338,17 @@ sub handle_request {
       </TD></TR></TABLE>
       <BR>
         (e.g.
-          <A HREF="$base_url?search_key=ENSP00000374576&build_type_name=Any&action=GO"><SPAN TITLE="Ensembl protein identifier" CLASS="popup">ENSP00000374576</SPAN></A>,
-          <A HREF="$base_url?search_key=IPI00807403&build_type_name=Any&action=GO"><SPAN TITLE="IPI protein identifier" CLASS="popup">IPI00807403</SPAN></A>,
-          <A HREF="$base_url?search_key=NP_001366&build_type_name=Any&action=GO"><SPAN TITLE="Refseq protein identifier" CLASS="popup">NP_001366</SPAN></A>,
-          <A HREF="$base_url?search_key=Hs.232375&build_type_name=Any&action=GO"><SPAN TITLE="UniGene identifier" CLASS="popup">Hs.232375</SPAN></A>,
-          <A HREF="$base_url?search_key=RBP&build_type_name=Any&action=GO"><SPAN TITLE="Gene name wildcard search" CLASS="popup">RBP</SPAN></A>,
-          <A HREF="$base_url?search_key=RBP4&build_type_name=Any&action=GO"><SPAN TITLE="Gene name" CLASS="popup">RBP4</SPAN></A>,<BR>
+          <A HREF="$base_url?search_key=ENSP00000374576&build_type_name=Human&action=GO"><SPAN TITLE="Ensembl protein identifier" CLASS="popup">ENSP00000374576</SPAN></A>,
+          <A HREF="$base_url?search_key=IPI00807403&build_type_name=Human&action=GO"><SPAN TITLE="IPI protein identifier" CLASS="popup">IPI00807403</SPAN></A>,
+          <A HREF="$base_url?search_key=NP_001366&build_type_name=Human&action=GO"><SPAN TITLE="Refseq protein identifier" CLASS="popup">NP_001366</SPAN></A>,
+          <A HREF="$base_url?search_key=Hs.232375&build_type_name=Human&action=GO"><SPAN TITLE="UniGene identifier" CLASS="popup">Hs.232375</SPAN></A>,
+          <A HREF="$base_url?search_key=RBP&build_type_name=Human&action=GO"><SPAN TITLE="Gene name wildcard search" CLASS="popup">RBP</SPAN></A>,
+          <A HREF="$base_url?search_key=RBP4&build_type_name=Human&action=GO"><SPAN TITLE="Gene name" CLASS="popup">RBP4</SPAN></A>,<BR>
           <A HREF="$base_url?search_key=helicase&build_type_name=Yeast&action=GO"><SPAN TITLE="Gene description wildcard search in yeast" CLASS="popup">helicase</SPAN></A>,
           <A HREF="$base_url?search_key=P06634&build_type_name=Yeast&action=GO"><SPAN TITLE="UniProt Identifier" CLASS="popup">P06634</SPAN></A>,
           <A HREF="$base_url?search_key=MCCC2&build_type_name=Human&action=GO"><SPAN TITLE="Gene name" CLASS="popup">MCCC2</SPAN></A>,
-          <A HREF="$base_url?search_key=PAp00000097&build_type_name=Any&action=GO"><SPAN TITLE="Peptide accession" CLASS="popup">PAp00000097</SPAN></A>,
-          <A HREF="$base_url?search_key=AAVEEGIVLGGGCALLR&build_type_name=Any&action=GO"><SPAN TITLE="Peptide sequence" CLASS="popup">AAVEEGIVLGGGCALLR</SPAN></A>
+          <A HREF="$base_url?search_key=PAp00000097&build_type_name=Human&action=GO"><SPAN TITLE="Peptide accession" CLASS="popup">PAp00000097</SPAN></A>,
+          <A HREF="$base_url?search_key=AAVEEGIVLGGGCALLR&build_type_name=Human&action=GO"><SPAN TITLE="Peptide sequence" CLASS="popup">AAVEEGIVLGGGCALLR</SPAN></A>
         )<BR>
       ~;
 
@@ -1357,9 +1357,10 @@ sub getBuildTypeSelection {
     );
   }
 
-  #### Or default to Any
+  #### Or default to Human
   unless ($build_type_name) {
-    $build_type_name = $organism_name || 'Any';
+    #$build_type_name = $organism_name || 'Any';
+    $build_type_name = $organism_name || 'Human';
   }
 
 
@@ -1384,8 +1385,11 @@ sub getBuildTypeSelection {
   #print "Content-type: text/html\n\n<PRE>$sql</PRE>\n";
   my @build_types = $sbeams->selectSeveralColumns($sql);
 
-  my @options = ('Any');
-  my %options = ('Any'=>'Any');
+  #my @options = ('Any');
+  #my %options = ('Any'=>'Any');
+  my @options = ('Human');
+  my %options = ('Human'=>'Human');
+
   my %atlas_build_ids;
 
   #### Build the list of available organisms
@@ -1412,7 +1416,8 @@ sub getBuildTypeSelection {
 
   #### Also make sure the user selected a valid option
   unless ($matched_parameter) {
-    $build_type_name = 'Any';
+    #$build_type_name = 'Any';
+    $build_type_name = 'Human';
   }
 
 
