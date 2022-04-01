@@ -309,6 +309,7 @@ sub drawPTMHisChart {
   my $self = shift;
   my %args = @_;
   my $data = $args{data};
+  my $ptm_residues = $args{ptm_residues} || die "parameter residues is missing\n";
   my $dataTable = qq~ 
    var data = new google.visualization.DataTable();
    data.addColumn('string', 'AA');
@@ -335,7 +336,7 @@ sub drawPTMHisChart {
   foreach my $pos(sort {$a <=> $b} keys %$data){
     my $aa=$data->{$pos}{aa};
     my ($obshh,$obsmh, $obsh,$obsm,$obsml,$obsl,$obsll); 
-    if ($aa =~ /[STY]/){
+    if ($aa =~ /[${ptm_residues}]/){
       if($not_sty){
 				$dataTable .= "['$not_sty',0,'',0,'',0,'',0,'',0,'',0,'',0,''],";
       }
@@ -366,29 +367,28 @@ sub drawPTMHisChart {
   $max_obs += ceil(0.2 * $max_obs);
   my $chart_div = qq~
     <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/jquery/jquery.js"></script>
-    <script>jQuery.noConflict();</script>
     <script type="text/javascript" src="https://www.google.com/jsapi"></script>
     <script type="text/javascript">
       google.load("visualization", "1", {packages:["corechart"]});
-      function drawVisualization() {
-          $dataTable
-	  var chart = new google.visualization.ComboChart(document.getElementById('chart_ptm'));
-          chart.draw(data,{
+      function drawVisualization_$ptm_residues() {
+        $dataTable
+				var chart = new google.visualization.ComboChart(document.getElementById("chart_ptm_$ptm_residues"));
+        chart.draw(data,{
 		     vAxis: {title: "N obs"},
                      vAxes: {0: {'maxValue':$max_obs }},
                      seriesType: "bars",
 										 annotations:{alwaysOutside:'true'},
-										 legend: { position: 'top' },
+										 legend: { position: 'bottom' },
 										 'colors': ['red','orange','purple','grey','#007eca','skyblue','green'], 
                      width: 900, height: 400,
                      chartArea: {left: 30, top: 50, width: "100%"},
                      focusTarget: 'category'
                     });
-  
-	  var mydiv = document.getElementById('chart_ptm');
-	  var rects = \$(mydiv).find('svg > g > g > g > text');
-	  var re = \/[STY]\/i;  
-	  for (i = 0; i < rects.length; i++) {
+ 
+					var \$jq = jQuery.noConflict(); 
+					var rects = \$jq("chart_ptm_$ptm_residues").find('svg > g > g > g > text');
+					var re = \/[$ptm_residues]\/i;  
+					for (i = 0; i < rects.length; i++) {
             var el = \$(rects[i]);
             var aparent = el.parent();
             var aas = el.text();
@@ -409,33 +409,32 @@ sub drawPTMHisChart {
                      'font-family': 'Arial',
                      'font-size': 14,
                      'text-anchor': 'middle'};
-          \$(rects[0]).parent().append(addTextNode(attrs, 'Total obs' , \$(rects[0]).parent()));
+          \$jq(rects[0]).parent().append(addTextNode(attrs, 'Total obs' , \$jq(rects[0]).parent()));
  
       }
-      google.setOnLoadCallback(drawVisualization);
+      google.setOnLoadCallback(drawVisualization_$ptm_residues);
       function getElementPos(\$el) {
-	// returns an object with the element position
-	return {
-	  x: parseFloat(\$el.attr("x")),
-	  width: parseFloat(\$el.attr("width")),
-	  y: parseFloat(\$el.attr("y")),
-	  height: parseFloat(\$el.attr("height"))
-	}
+				// returns an object with the element position
+				return {
+					x: parseFloat(\$el.attr("x")),
+					width: parseFloat(\$el.attr("width")),
+					y: parseFloat(\$el.attr("y")),
+					height: parseFloat(\$el.attr("height"))
+				}
       }
 
       function addTextNode(attrs, text, _element) {
         // creates an svg text node
         var sNamespace = "http://www.w3.org/2000/svg";
-	var el = document.createElementNS(sNamespace, "text");
-	for (var k in attrs) { el.setAttribute(k, attrs[k]); }
-	  var textNode = document.createTextNode(text);
-	  el.appendChild(textNode);
-	  return el;
-	}
-
+				var el = document.createElementNS(sNamespace, "text");
+				for (var k in attrs) { el.setAttribute(k, attrs[k]); }
+					var textNode = document.createTextNode(text);
+					el.appendChild(textNode);
+					return el;
+			}
   </script>
   <table>
-  <div id="chart_ptm" style="width: 1000px; height: 400px;"></div>
+  <div id="chart_ptm_$ptm_residues" style="width: 1000px; height: 400px;"></div>
   </table>
   ~;
   return $chart_div;
@@ -594,7 +593,10 @@ sub drawPTMHisChart_Protein {
 
 	});
       }
+     
+      window.addEventListener("load", () => {
       google.setOnLoadCallback(drawVisualization);
+  }); 
       function getElementPos(\$el) {
         // returns an object with the element position
 	return {
