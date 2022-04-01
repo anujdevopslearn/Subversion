@@ -3357,6 +3357,208 @@ sub create_table {
   return $html;
 }
 
+sub display_spectra_ptm_table {
+  my $self = shift;
+  my %args = @_;
+  my $ptm_identification_ref = $args{ptm_identification_ref};
+  my $column_titles_ref = $args{column_titles_ref};
+  my $colnameidx_ref = $args{colnameidx_ref};
+  my $hidden_cols_ref= $args{hidden_cols_ref};
+  my $resultset_ref = $args{resultset_ref};
+  my $ptm_score_summary_ref = $args{ptm_score_summary_ref};
+  my $drawVisualization = '';
+#  my $ptm_prob_color = qq~
+#		 <table>
+#		 <tr align="CENTER" bgcolor="#CCCCCC">
+#			<td>PTM Probability Score: </td>
+#			<td> 0 - 0.01 </td>
+#			<td class="ptm_ll" style="width: 10px; height: 5px;"></td>
+#			<td> 0.01 - 0.05 </td>
+#			<td class="ptm_ml" style="width: 10px; height: 5px;"></td>
+#			<td> 0.05 - 0.19 </td>
+#			<td class="ptm_l" style="width: 10px; height: 5px;"></td>
+#			<td> 0.19 - 0.81 </td>
+#			<td class="ptm_m" style="width: 10px; height: 5px;"></td>
+#			<td> 0.81 - 0.95 </td>
+#			<td class="ptm_h" style="width: 10px; height: 5px;"></td>
+#			<td> 0.95 - 0.99 </td>
+#			<td class="ptm_mh" style="width: 10px; height: 5px;"></td>
+#			<td> 0.99 - 1 </td>
+#			<td class="ptm_hh" style="width: 10px; height: 5px;"></td>
+#			</tr>
+#		 </table>
+#  ~;
+
+  my $spectraHTML = qq~
+    <div class="tab">
+      <style>
+      /* Style the tab */
+      .tab {
+        overflow: hidden;
+      }
+      /* Style the buttons inside the tab */
+      .tab button {
+        padding: 14px 16px;
+        border: none;
+        outline: none;
+        font-size: 14px;
+        font-weight:bold;
+        float:left;
+        color:#555555;
+        text-decoration:none;
+        background:#f3f1e4;
+        border-right:1.25px solid #AAAAAA;
+      }
+
+      /* Change background color of buttons on hover */
+      .tab button:hover {
+        background-color:#bb0000;
+            color:#ffffff;
+      }
+
+      /* Create an active/current tablink class */
+      .tab button.active {
+         background:#ffffff;
+          color:#333333;
+      }
+
+      /* Style the tab content */
+      .tabcontent {
+        border-top: none;
+      }
+			.ptm_ll {background:red;}
+			.ptm_ml {background:orange;}
+			.ptm_l {background:purple;}
+			.ptm_m {background:grey;}
+			.ptm_h {background:#007eca;}
+			.ptm_mh {background:skyblue;}
+			.ptm_hh {background:green;}
+		 </style>
+		 ~;
+	#$spectraHTML = $sbeams->getPopupDHTML();
+	my $counter = 1;
+	foreach my $ptm_type (keys %$ptm_identification_ref){
+		$spectraHTML .="<button type='button' class='ptmtablinks' onclick='openPTM(event,\"$ptm_type\")'>$ptm_type</button>\n";
+		$counter++;
+	}
+  $spectraHTML .="</div>";
+
+  $counter = 1;
+  foreach my $ptm_type(keys %$ptm_identification_ref){
+
+		$resultset_ref->{data_ref} = \@{$ptm_identification_ref->{$ptm_type}};
+    delete $hidden_cols_ref->{'ptm_lability'};
+
+		my $spectra_display = $self->get_individual_spectra_display(
+			column_titles_ref=>$column_titles_ref,
+			colnameidx_ref => $colnameidx_ref,
+			resultset_ref=> $resultset_ref,
+			hidden_cols_ref=>$hidden_cols_ref );
+		$spectra_display =~ s/<table/<table name="ptm_spectra_$counter" class="ptm_spectra"/i;
+
+		my $GV = SBEAMS::Connection::GoogleVisualization->new();
+    $ptm_type =~ /^(\w+):.*/;
+		my $ptm_summary_chart = $GV->drawPTMHisChart(data=> $ptm_score_summary_ref->{$ptm_type},ptm_residues=>$1 );
+		if ($counter == 1){
+			$spectraHTML .= "<div  id ='$ptm_type' style='display:block' class='tabcontent'>\n";
+		}else{
+			$spectraHTML .= "<div  id ='$ptm_type' style='display:none' class='tabcontent'>\n";
+      $drawVisualization .= "google.setOnLoadCallback(drawVisualization_$1)\n";
+		}
+		$spectraHTML .= qq~<div>$ptm_summary_chart</div>\n~;
+		#$spectraHTML .= "$ptm_prob_color\n$spectra_display";
+		$spectraHTML .= "$spectra_display\n</div>";
+		$counter++;
+  }
+		#### Display table
+	print scalar $sbeams->make_toggle_section( neutraltext => "PTM Spectra",
+							 sticky => 1,
+							 name => 'ptm_spectra_div',
+							 barlink => 1,
+							 visible => 1,
+							 content => $spectraHTML );
+
+		print qq~
+		<script LANGUAGE="JavaScript" TYPE="text/javascript">
+      function openPTM(evt, Name) {
+        $drawVisualization;     
+        var i, tabcontent, ptmtablinks;
+        tabcontent = document.getElementsByClassName("tabcontent");
+        for (i = 0; i < tabcontent.length; i++) {
+          tabcontent[i].style.display = "none";
+        }
+        ptmtablinks = document.getElementsByClassName("ptmtablinks");
+        for (i = 0; i < ptmtablinks.length; i++) {
+          ptmtablinks[i].className = ptmtablinks[i].className.replace(" active", "");
+        }
+        document.getElementById(Name).style.display = "block";
+        evt.currentTarget.className += " active";
+      }
+
+			var indiv_spec = document.getElementsByClassName("ptm_spectra");
+      for (var k=0; k<indiv_spec.length; k++) {
+				var rows = indiv_spec[k].getElementsByTagName('TR');
+				var j=3;
+				while (j< rows.length) {
+					var aas = rows[j].cells[0].innerHTML.split('\\)');
+					var newInnerHTML = '';
+					var re;
+				 for (var i=0; i < aas.length; i++){
+						if (aas[i].match(/\\(/g)){
+							var aa = aas[i].split('\\(');
+							var prob = parseFloat(aa[1]);
+							if (aas[i].match(/\\]\\(/g)){
+								re =  new RegExp('(\\\\w)(\\\\[\\\\d\\\+\\\\])\\\\('+aa[1], "g");
+								
+								if (prob < 0.01 ){
+									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_ll">\$1</span>\$2');
+								} else if (prob >=0.01 && prob < 0.05){
+									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_ml">\$1</span>\$2');
+								} else if (prob >= 0.05 && prob < 0.19 ){
+									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_l">\$1</span>\$2');
+								} else if (prob >= 0.19 && prob < 0.81 ){
+									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_m">\$1</span>\$2');
+								} else if (prob >= 0.81 && prob < 0.95 ){
+									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_h">\$1</span>\$2');
+								} else if (prob >= 0.95 && prob < 0.99 ){
+									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_mh">\$1</span>\$2');
+								} else {
+									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_hh">\$1</span>\$2');
+								}
+							} else {
+								re =  new RegExp('(\\\\w)\\\\('+aa[1], "g");
+								if (prob < 0.01 ){
+									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_ll">\$1</span>');
+								} else if (prob >=0.01 && prob < 0.05){
+									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_ml">\$1</span>');
+								} else if (prob >= 0.05 && prob < 0.19 ){
+									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_l">\$1</span>');
+								} else if (prob >= 0.19 && prob < 0.81 ){
+									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_m">\$1</span>');
+								} else if (prob >= 0.81 && prob < 0.95 ){
+									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_h">\$1</span>');
+								} else if (prob >= 0.95 && prob < 0.99 ){
+									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_mh">\$1</span>');
+								} else {
+									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_hh">\$1</span>');
+								}
+							}
+							newInnerHTML += aas[i] ;
+						} else {
+							newInnerHTML += aas[i];
+						}
+					}
+					re = new RegExp('(\\\\[\\\\d\\\+\\\\])', "g");
+					newInnerHTML = newInnerHTML.replace (re, "<span class='aa_mod'>\$1</span>");
+					rows[j].cells[0].innerHTML = newInnerHTML;
+					j++;
+				}
+      }
+		</script>
+  ~;
+
+}
+
 
 1;
 

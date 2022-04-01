@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/perl
 ###############################################################################
 # Program     : createPipelineInput.pl
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
@@ -16,10 +16,13 @@
 ###############################################################################
 use strict;
 use POSIX;  #for floor()
+use threads;
+use threads::shared;
+use Thread::Semaphore;
 use Getopt::Long;
 use XML::Xerces;
 use FindBin;
-use Fcntl qw/:seek/;
+use Fcntl qw(:flock :seek);
 use Devel::Size qw(size total_size);
 use Data::Dumper;
 use lib "$FindBin::Bin/../../perl";
@@ -46,6 +49,8 @@ use SBEAMS::PeptideAtlas::Peptide;
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS( $sbeams );
+our $mutex_sem = Thread::Semaphore->new();
+
 $| = 1; #flush output on every print
 
 
@@ -96,7 +101,7 @@ Options:
   --splib_filter      Filter out spectra not in spectral library
                       DATA_FILES/\${build_version}_all_Q2.sptxt
 
-
+  --threads            default 8
  e.g.:  $PROG_NAME --verbose 2 --source YeastInputExperiments.tsv
 
 EOU
@@ -123,6 +128,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
   "glyco_atlas",
   "biosequence_set_id=s", "best_probs_from_protxml", "min_indep=f",
   "APD_only", "protlist_only", "apportion_PSMs", "splib_filter",
+  "threads=i"
   )) {
   print "$USAGE";
   exit;
@@ -392,33 +398,26 @@ sub pepXML_start_element {
   #
   #### myrimatch has more than one top 1 search hit. (201606)
   if ($localname eq 'search_hit' ){
-    if (not exists $self->{pepcache}->{peptide} ){
+    $self->{pepcache}->{search_hit_rank}++;
+    if ($self->{pepcache}->{search_hit_rank} ==1 ){ 
       $self->{pepcache}->{peptide} = $attrs{peptide};
       $self->{pepcache}->{peptide_prev_aa} = $attrs{peptide_prev_aa};
       $self->{pepcache}->{peptide_next_aa} = $attrs{peptide_next_aa};
       $self->{pepcache}->{protein_name} = [$attrs{protein}];
       $self->{pepcache}->{massdiff} = $attrs{massdiff};
-    }else{
-      goto FOO;
     }
   }
 
-  #### If this is an alternative protein, push the protein name
-  #### onto the current peptide's list of protein names
-  if ($localname eq 'alternative_protein') {
-    if (not exists $self->{pepcache}->{scores}->{probability} ){
-      if ($attrs{protein}) {
-        push (@{$self->{pepcache}->{protein_name}}, $attrs{protein});
-      }
-    }else{
-      goto FOO;
-    }
-  }
-
-
-  #### If this is the mass mod info, then store some attributes
-  if ($localname eq 'modification_info') {
-    if (not exists $self->{pepcache}->{scores}->{probability} ){
+	#### If this is an alternative protein, push the protein name
+	#### onto the current peptide's list of protein names
+	if ($localname eq 'alternative_protein') {
+		if ($attrs{protein}) {
+			push (@{$self->{pepcache}->{protein_name}}, $attrs{protein});
+		}
+	}
+  if ($self->{pepcache}->{search_hit_rank} && $self->{pepcache}->{search_hit_rank} ==1 ){
+		#### If this is the mass mod info, then store some attributes
+		if ($localname eq 'modification_info') {
 			if ($attrs{mod_nterm_mass}) {
 				$self->{pepcache}->{modifications}->{0} = $attrs{mod_nterm_mass};
 			}
@@ -426,36 +425,30 @@ sub pepXML_start_element {
 				my $pos = length($self->{pepcache}->{peptide})+1;
 				$self->{pepcache}->{modifications}->{$pos} = $attrs{mod_cterm_mass};
 			}
-    }else{
-      goto FOO
-    }
-  }
-
-
-  #### If this is the mass mod info, then store some attributes
-  if ($localname eq 'mod_aminoacid_mass') {
-    if (not exists $self->{pepcache}->{scores}->{probability} ){
-     $self->{pepcache}->{modifications}->{$attrs{position}} = $attrs{mass};
-    }else{
-      goto FOO
-    }
-  }
-
-
-  #### If this is the search score info, then store some attributes
-  if ($localname eq 'search_score') {
-    if (not exists $self->{pepcache}->{scores}->{probability} ){
-     $self->{pepcache}->{scores}->{$attrs{name}} = $attrs{value};
-    }else{
-      goto FOO
-    }
-  }
-
-
-  #### If this is the Peptide Prophet derived values, store some attributes
-  if ($localname eq 'parameter') {
-    $self->{pepcache}->{scores}->{$attrs{name}} = $attrs{value};
-  }
+		}
+		#### If this is the mass mod info, then store some attributes
+		if ($localname eq 'mod_aminoacid_mass') {
+			 $self->{pepcache}->{modifications}->{$attrs{position}} = $attrs{mass};
+		}
+		#### If this is the search score info, then store some attributes
+		if ($localname eq 'search_score') {
+			$self->{pepcache}->{scores}->{$attrs{name}} = $attrs{value};
+		}
+		#### If this is the Peptide Prophet derived values, store some attributes
+		if ($localname eq 'parameter') {
+			$self->{pepcache}->{scores}->{$attrs{name}} = $attrs{value};
+		}
+		### ptm result
+		if ($localname eq 'ptmprophet_result'){
+			#prior="0.285714" ptm="PTMProphet_STY79.9663"
+			#ptm_peptide="AY(0.000)VY(0.000)ADWVEHAT(0.026)S(0.026)EIEPGT(0.961)T(0.493)T(0.493)VLR">
+			$attrs{ptm}=~ /(\w+):([\d\.]+)/;
+			push @{$self->{pepcache}->{ptm}}, sprintf("[%s:%.4f]%s", $1,$2,$attrs{ptm_peptide});
+		}
+		if ($localname eq 'lability'){
+			push @{$self->{pepcache}->{ptm_lability}}, $attrs{probability};
+		}
+  } ## search_hit_rank=1
 
   #### If this is the peptideProphet probability score, store some attributes
   if ($localname eq 'peptideprophet_result') {
@@ -469,22 +462,12 @@ sub pepXML_start_element {
   if ($localname eq 'interprophet_result') {
     $self->{pepcache}->{scores}->{probability} = $attrs{probability};
   }
-  ### ptm result.
-  if ($localname eq 'ptmprophet_result'){
-    #prior="0.285714" ptm="PTMProphet_STY79.9663"
-    #ptm_peptide="AY(0.000)VY(0.000)ADWVEHAT(0.026)S(0.026)EIEPGT(0.961)T(0.493)T(0.493)VLR">
-    ## phospho, Acetylation, Methylation
-    if ($attrs{ptm} =~ /:79\.9/ || $attrs{ptm} =~ /:42\.01/ || $attrs{ptm} =~ /:14\.01/){
-      $self->{pepcache}->{ptm_peptide}{$attrs{ptm}} = $attrs{ptm_peptide};
-    }
-  }
+
 
   #### Push information about this element onto the stack
-  FOO:
   my $tmp;
   $tmp->{name} = $localname;
   push(@{$self->object_stack},$tmp);
-
 
 } # end pepXML_start_element
 
@@ -733,15 +716,26 @@ sub pepXML_end_element {
            $chimera_level, 
            );
 
-       if ($self->{pepcache}->{ptm_peptide}){
-         my @ptm_peptides =();
-         foreach my $type (sort {$a cmp $b} keys %{$self->{pepcache}->{ptm_peptide}}){
-           push @ptm_peptides, "[$type]$self->{pepcache}->{ptm_peptide}{$type}";
-         }
-         push @tmp, join(",", @ptm_peptides);
-       }else{
-         push @tmp, '';
-       }
+			 if ($self->{pepcache}->{ptm}){
+					 my @ptm_peptides =();
+           my @ptm_labilities = ();
+           for (my $i=0; $i< scalar @{$self->{pepcache}->{ptm}}; $i++){
+             my $ptm_peptide = $self->{pepcache}->{ptm}->[$i];
+             if ($ptm_peptide !~ /0\.9840/ && $ptm_peptide !~ /15\.9949/ && $ptm_peptide !~ /27\.994/){
+               push @ptm_peptides, $ptm_peptide;
+               if ( not defined $self->{pepcache}->{ptm_lability}->[$i]){
+                 die "ERROR: not ptm liability score\n";
+               }
+               push @ptm_labilities, $self->{pepcache}->{ptm_lability}->[$i];
+             }
+           }
+           push @tmp, join(",", @ptm_peptides);
+           push @tmp, join(",", @ptm_labilities);
+
+			 }else{
+				 push @tmp, '';
+			 }
+
        push(@{ $self->{pep_identification_list}},[@tmp]);
     }
 
@@ -1262,7 +1256,8 @@ sub main {
                           total_ion_current
                           signal_to_noise
                           chimera_level
-                          ptm );
+                          ptm
+                          ptm_lability );
 
   unless ($APD_only) {
     #### If a list of search_batch_ids was provided, find the corresponding
@@ -1302,22 +1297,22 @@ sub main {
       # Modified to use library method, found in SearchBatch.pm.  New file
       # names should be added there; the preferred list below is considered
       # first before default names, allows caller to determine priority.
-      if ($filepath !~ /\.xml/) {
-          my @preferred = ( 
-                        'interact-ipro-ptm.pep.xml',   # ptm prophet output
-                        'interact-ipro.pep.xml',       #iProphet output
-                         );
+			if ($filepath !~ /\.xml/) {
+					my @preferred = (
+												'interact-ipro-ptm.pep.xml',   # ptm prophet output
+												'interact-ipro.pep.xml',       #iProphet output
+												 );
 
-        $filepath = $sbeamsMOD->findPepXMLFile( preferred_names => \@preferred,
-				                                        search_path => $filepath );
-
-	      unless ( $filepath ) {
-          print "ERROR: Unable to auto-detect an interact file in $path\n";
-          next;
-        }
-      }
-
-
+					if (-e "$path/interact-ipro-ptm.pep.xml" ) {
+						 $filepath = "$path/interact-ipro-ptm.pep.xml";
+					}else{
+						 $filepath = "$path/interact-ipro.pep.xml";
+					}
+				unless ( $filepath ) {
+					print "ERROR: Unable to auto-detect an interact file in $path\n";
+					next;
+				}
+			}
 
       unless ( -e $filepath ) {
         print "ERROR: Specified interact file '$filepath' does not exist!\n";
@@ -2283,65 +2278,64 @@ sub main {
     open(INFILE,$sorted_identlist_file) ||
       die("ERROR: Unable to open for reading '$sorted_identlist_file'");
 
-
-    #### Loop through all rows, grouping by peptide sequence, writing
-    #### out information for each group of peptide sequence
+  
+    my @peptide_indexes = ();
     my $prev_peptide_sequence = '';
     my $pre_peptide_accesion ='';
-    my $done = 0;
-    my @rows;
-    while (! $done) {
-      my $line = <INFILE>;
-      my @columns;
-      my $peptide_sequence = 'xxx';
-
-      #### Unless we're at the end of the file
-      if ($line) {
-				chomp($line);
-				@columns = split("\t",$line);
-				$peptide_sequence = $columns[3];
-        
+    my $peptide_sequence = '';
+    my $row_count=0;
+    while (my $line =<INFILE>){
+      chomp($line);
+      my @columns = split("\t",$line);
+      my $peptide_sequence = $columns[3];
+      if ($peptide_sequence ne $prev_peptide_sequence) {
+        push @peptide_indexes, $row_count;
       }
-
-      #### If we're encountering the new peptide, process and write the previous
-      if ($prev_peptide_sequence &&
-          $peptide_sequence ne $prev_peptide_sequence) {
-          $pre_peptide_accesion =~ /PAp0+(\d+)/;
-          #my $n = $1;
-          #if ($n > 8352023){ 
-          #print "$pre_peptide_accesion $n\n";
-         	my $peptide_summary = coalesceIdentifications(
-	        rows => \@rows,
-	        column_names => \@column_names,
-          );
-          writeToAPDFormatFile(
-    	    peptide_summary => $peptide_summary,
-          );
-          writeToPAxmlFile(
-        	  peptide_summary => $peptide_summary,
-        	);
-         #}
-        	$prev_peptide_sequence = $peptide_sequence;
-          $pre_peptide_accesion =  $columns[2];
-        	@rows = ();
-      }
-
-      #### If there is no peptide sequence, the we're at the end of the file
-      if ($peptide_sequence eq 'xxx') {
-	last;
-      }
-
-      push(@rows,\@columns);
-
-      #### Needed for the very first row
-      unless ($prev_peptide_sequence) {
-				$prev_peptide_sequence = $peptide_sequence;
-				$pre_peptide_accesion = $columns[2];
-
-      }
-
+      $prev_peptide_sequence = $peptide_sequence;
+      $row_count++; 
     }
-
+    if ($peptide_sequence ne $prev_peptide_sequence) {
+      push @peptide_indexes, $row_count-1;
+    }
+    
+    my $maxthreads = $OPTIONS{threads} || 8;
+    my $batch_size = 1 + int ($row_count/$maxthreads) ;
+ 
+		## get enzyme ids 
+		my $sql = qq~
+			SELECT SB.SEARCH_BATCH_ID, 
+						 PE.PROTEASE_ID 
+			FROM $TBPR_SEARCH_BATCH SB
+			JOIN $TBPR_PROTEOMICS_EXPERIMENT PE ON (PE.EXPERIMENT_ID = SB.EXPERIMENT_ID) 
+			ORDER BY SB.SEARCH_BATCH_ID DESC
+		~;
+		my %sb_enzyme_id = $sbeams->selectTwoColumnHash($sql);
+    #### Loop through all rows, grouping by peptide sequence, writing
+    #### out information for each group of peptide sequence
+    print "batch_size=$batch_size\n";
+    my $start=0;
+    my $cnt = 0;
+    for my $i (0..$maxthreads-1){
+      my $n=($i+1)*$batch_size;
+      my $end;
+      if ($n >= $row_count){
+        $end = $row_count;
+      }else{
+        while ($peptide_indexes[$cnt] < $n){
+          $cnt++;
+        }
+        $end = $peptide_indexes[$cnt];
+      }
+      threads->new(\&writeToAPD,file => $sorted_identlist_file, 
+                                start => $start,
+                                end =>$end, 
+                                column_name => \@column_names,
+                                sb_enzyme_id=>\%sb_enzyme_id);
+      $start=$end;
+    }
+    foreach my $onthr (threads->list()) {
+      $onthr->join();
+    }
 
     #### Close files
     closeAPDFormatFile();
@@ -2360,7 +2354,98 @@ sub main {
 
 } # end main
 
+sub writeToAPD{
+  my %args = @_;
+  my $file = $args{file};
+  my $start = $args{start};
+  my $end = $args{end};
+  my @column_names=@{$args{column_name}};
+  my $sb_enzyme_id = $args{sb_enzyme_id};
+  my $tid = threads->tid();
+  print "thread=$tid $file start=$start end=$end\n";
+  
+  open(my $fh,$file) || die("ERROR: Unable to open for reading '$file'");
+	my $done = 0;
+	my @rows;
+  my $prev_peptide_sequence = '';
+  my $pre_peptide_accesion ='';
+  our $TSVOUTFILE;
+  our $PAXMLOUTFILE;
+   
+	my $index =0;
+  my $line;
+  my $tsv_str='';
+  my $xml_str='';
+  my $progress=0;
+	while (! $done) {
+		if ($index < $start){
+			$index++;
+      $line = <$fh>;
+			next;
+		}
+		$line = <$fh>;
+    $progress++;
+    if ($progress % 1000 == 0){
+      printf ("thread=%s %.1f%% ...",$tid,($progress*100)/($end-$start+1));
+    }
+		my @columns;
+		my $peptide_sequence = 'xxx';
 
+		#### Unless we're at the end of the file
+		if ($line) {
+			chomp($line);
+			@columns = split("\t",$line);
+			$peptide_sequence = $columns[3];
+			
+		}
+
+		#### If we're encountering the new peptide, process and write the previous
+		if ($prev_peptide_sequence &&
+				($peptide_sequence ne $prev_peptide_sequence || $index == $end)) {
+				$pre_peptide_accesion =~ /PAp0+(\d+)/;
+				my $peptide_summary = coalesceIdentifications(
+					rows => \@rows,
+					column_names => \@column_names,
+					sb_enzyme_id => $sb_enzyme_id
+				);
+				$tsv_str .= writeToAPDFormatFile(
+					peptide_summary => $peptide_summary,
+				);
+				$xml_str .= writeToPAxmlFile(
+					peptide_summary => $peptide_summary,
+				);
+        if ($index %1000 ==1){
+          $mutex_sem->down();
+          print $TSVOUTFILE $tsv_str;
+          print $PAXMLOUTFILE $xml_str;
+          $mutex_sem->up();
+          $tsv_str='';
+          $xml_str='';
+        }
+				$prev_peptide_sequence = $peptide_sequence;
+				$pre_peptide_accesion =  $columns[2];
+				@rows = ();
+		}
+    $index++;
+		last if ($index > $end);
+
+		push(@rows,\@columns);
+
+		#### Needed for the very first row
+		unless ($prev_peptide_sequence) {
+			$prev_peptide_sequence = $peptide_sequence;
+			$pre_peptide_accesion = $columns[2];
+
+		}
+  }
+  if ($tsv_str || $xml_str){
+		$mutex_sem->down();
+		print $TSVOUTFILE $tsv_str;
+		print $PAXMLOUTFILE $xml_str;
+		$mutex_sem->up();
+	}
+
+}
 
 ###############################################################################
 ###############################################################################
@@ -2476,26 +2561,27 @@ sub writePepIdentificationListFile {
     || die("ERROR: Unable to open '$output_file' for write");
 
   #### Write out the column names
-  my @column_names = qw ( search_batch_id 
-                          spectrum_query 
+  my @column_names = qw ( search_batch_id
+                          spectrum_query
                           peptide_accession
-                          peptide_sequence 
-                          preceding_residue 
+                          peptide_sequence
+                          preceding_residue
                           modified_peptide_sequence
-                          following_residue 
-                          charge 
-                          probability 
-                          massdiff 
+                          following_residue
+                          charge
+                          probability
+                          massdiff
                           protein_name
                           protXML_nsp_adjusted_probability
-                          protXML_n_adjusted_observations 
+                          protXML_n_adjusted_observations
                           protXML_n_sibling_peptides
-                          precursor_intensity  
-                          total_ion_current 
+                          precursor_intensity
+                          total_ion_current
                           signal_to_noise
                           retention_time_sec
                           chimera_level
-                          ptm );
+                          ptm
+                          ptm_lability );
 
   print OUTFILE join("\t",@column_names)."\n";
 
@@ -2588,15 +2674,16 @@ sub writePepIdentificationListFile {
       $adjusted_probability = $info->{nsp_adjusted_probability};
       $n_adjusted_observations = $info->{n_adjusted_observations};
       $n_sibling_peptides = $info->{n_sibling_peptides};
-      $extra_cols_array[$idx] = "$identification->[8];$identification->[9];$identification->[10];".
-                                "$adjusted_probability;$n_adjusted_observations;$n_sibling_peptides;".
-                                join(";", @{$identification}[11,12,13,14,15,16]);
+      
+      $extra_cols_array[$idx] = "$identification->[8]#$identification->[9]#$identification->[10]#".
+                                "$adjusted_probability#$n_adjusted_observations#$n_sibling_peptides#".
+                                join("#", @{$identification}[11,12,13,14,15,16]);
       if ($initial_probability) {
 				$probability_adjustment_factor = $adjusted_probability / $initial_probability;
       }
     }else{
-      $extra_cols_array[$idx] = "$identification->[8];$identification->[9];$identification->[10];;;;".
-                                join(";", @{$identification}[11,12,13,14,15,16]);
+      $extra_cols_array[$idx] = "$identification->[8]#$identification->[9]#$identification->[10]####".
+                                join("#", @{$identification}[11,12,13,14,15,16]);
     }
     #### If there is spectral library information, look at that
     if ($spectral_library_data && $spectrast_formatted_sequence) {
@@ -2687,7 +2774,7 @@ sub writePepIdentificationListFile {
     if($extra_cols_array[$idx]){
       #splice(@columns,$#columns-6,7);
       splice(@columns, 8, $#columns);
-      push @columns, split(";", $extra_cols_array[$idx],-1);
+      push @columns, split("#", $extra_cols_array[$idx],-1);
     }else{
       print "WARINING: only 7 columns\n";
     }
@@ -2910,7 +2997,8 @@ sub openAPDFormatFile {
   open(TSVOUTFILE,">$output_file")
     || die("ERROR: Unable to open '$output_file' for write");
   $TSVOUTFILE = *TSVOUTFILE;
-
+  $TSVOUTFILE->autoflush();
+  
   print TSVOUTFILE "peptide_identifier_str\tbiosequence_gene_name\tbiosequence_accession\treference\tpeptide\tn_peptides\tmaximum_probability\tn_experiments\tobserved_experiment_list\tbiosequence_desc\tsearched_experiment_list\n";
 
   return 1;
@@ -2927,16 +3015,15 @@ sub writeToAPDFormatFile {
   my $peptide_summary = $args{'peptide_summary'}
     || die("No peptide_summary provided");
 
-  our $TSVOUTFILE;
-
+  my $buffer = ''; 
   while (my ($peptide_sequence,$attributes) =
             each %{$peptide_summary}) {
 
     my $n_experiments = scalar(keys(%{$attributes->{search_batch_ids}}));
-
-    my $peptide_accession = getPeptideAccession(
-      sequence => $peptide_sequence,
-    );
+    my $peptide_accession = $attributes->{peptide_accession};
+    #my $peptide_accession = getPeptideAccession(
+    #  sequence => $peptide_sequence,
+    #);
     my $protein_name = $attributes->{protein_name};
 
     my $biosequence_attributes;
@@ -2951,15 +3038,14 @@ sub writeToAPDFormatFile {
         if ( defined $biosequence_attributes->[4] );
     }
 
-    print $TSVOUTFILE "$peptide_accession\t$gene_name\t$protein_name\t$protein_name\t$peptide_sequence\t".
+    $buffer .= "$peptide_accession\t$gene_name\t$protein_name\t$protein_name\t$peptide_sequence\t".
       $attributes->{n_instances}."\t  ".
       $attributes->{best_probability}."\t$n_experiments\t".
       join(",",keys(%{$attributes->{search_batch_ids}}))."\t".
-      "\"$description\"\t\"$search_batch_ids\"\n";
-
+      #"\"$description\"\t\"$search_batch_ids\"\n";
+      "\"$description\"\t\"\"\n";
   }
-
-  return(1);
+  return($buffer);
 
 } # end writeToAPDFormatFile
 
@@ -2996,14 +3082,14 @@ sub writeAPDFormatFile {
 
   print OUTFILE "peptide_identifier_str\tbiosequence_gene_name\tbiosequence_accession\treference\tpeptide\tn_peptides\tmaximum_probability\tn_experiments\tobserved_experiment_list\tbiosequence_desc\tsearched_experiment_list\n";
 
-  while (my ($peptide_sequence,$attributes) =
-            each %{$peptides}) {
+  while (my ($peptide_sequence,$attributes) = each %{$peptides}) {
 
     my $n_experiments = scalar(keys(%{$attributes->{search_batch_ids}}));
 
-    my $peptide_accession = getPeptideAccession(
-      sequence => $peptide_sequence,
-    );
+    #my $peptide_accession = getPeptideAccession(
+    #  sequence => $peptide_sequence,
+    #);
+    my $peptide_accession = $attributes->{peptide_accession};
     my $protein_name = $attributes->{protein_name};
 
     my $biosequence_attributes;
@@ -3138,6 +3224,7 @@ sub coalesceIdentifications {
   my $rows = $args{'rows'} || die("No rows provided");
   my $column_names = $args{'column_names'} || die("No column_names provided");
   my $decoy_corrections = $args{'decoy_corrections'};
+  my $sb_enzyme_id = $args{'sb_enzyme_id'};
   use Data::Dumper;
 
   my $summary;
@@ -3157,15 +3244,6 @@ sub coalesceIdentifications {
   }
   #print Dumper( [$columns] );
 
-  ## get enzyme ids 
-  my $sql = qq~
-    SELECT SB.SEARCH_BATCH_ID, 
-           PE.PROTEASE_ID 
-    FROM $TBPR_SEARCH_BATCH SB
-    JOIN $TBPR_PROTEOMICS_EXPERIMENT PE ON (PE.EXPERIMENT_ID = SB.EXPERIMENT_ID) 
-    ORDER BY SB.SEARCH_BATCH_ID DESC
-  ~;
-  my %sb_enzyme_id = $sbeams->selectTwoColumnHash($sql);
 
   #### Loop over each row, organizing the information
   foreach my $row ( @{$rows} ) {
@@ -3189,7 +3267,7 @@ sub coalesceIdentifications {
 
     ## if enzyme is missing, leave empty, when display will assume it is trypsin
     my $enzyme = '';
-    $enzyme = $sb_enzyme_id{$search_batch_id} if ( $sb_enzyme_id{$search_batch_id});
+    $enzyme = $sb_enzyme_id->{$search_batch_id} if ( $sb_enzyme_id->{$search_batch_id});
     $info->{enzyme_ids}{$enzyme} = 1;
  
 
@@ -3263,7 +3341,7 @@ sub openPAxmlFile {
     || die("ERROR: Unable to open '$output_file' for write");
   print PAXMLOUTFILE qq~<?xml version="1.0" encoding="UTF-8"?>\n~;
   $PAXMLOUTFILE = *PAXMLOUTFILE;
-
+  $PAXMLOUTFILE->autoflush();
   #### Write out parent build element
   print PAXMLOUTFILE encodeXMLEntity(
     entity_name => 'atlas_build',
@@ -3287,9 +3365,7 @@ sub writeToPAxmlFile {
   my $peptide_summary = $args{'peptide_summary'}
     || die("No peptide_summary provided");
 
-  our $PAXMLOUTFILE;
-
-
+  my $buffer ='';
   #### Loop over all peptides and write out as XML
   while (my ($peptide_sequence,$attributes) = each %{$peptide_summary}) {
     my $enzyme_ids = join(", ", keys %{$attributes->{enzyme_ids}});
@@ -3297,7 +3373,7 @@ sub writeToPAxmlFile {
     $enzyme_ids =~ s/, $//;
     $enzyme_ids =~ s/,\s+,/,/g;
 
-    my $buffer = encodeXMLEntity(
+    $buffer .= encodeXMLEntity(
       entity_name => 'peptide_instance',
       indent => 4,
       entity_type => 'open',
@@ -3316,8 +3392,6 @@ sub writeToPAxmlFile {
         n_sibling_peptides => $attributes->{n_sibling_peptides},
       },
     );
-    print $PAXMLOUTFILE $buffer;
-
 
     #### Diagnostic dump
     #if ($peptide_sequence eq 'SENLVSCVDKNLR') {
@@ -3331,7 +3405,7 @@ sub writeToPAxmlFile {
       each %{$attributes->{modifications}}) {
 
       while (my ($mod_charge,$charge_attributes) = each %{$mod_attributes}) {
-        my $buffer = encodeXMLEntity(
+        $buffer .= encodeXMLEntity(
           entity_name => 'modified_peptide_instance',
           indent => 8,
           entity_type => 'openclose',
@@ -3347,25 +3421,21 @@ sub writeToPAxmlFile {
             n_sibling_peptides => $charge_attributes->{n_sibling_peptides},
           },
         );
-        print $PAXMLOUTFILE $buffer;
-
       }
 
     }
 
 
     #### Close peptide_instance tag
-    $buffer = encodeXMLEntity(
+    $buffer .= encodeXMLEntity(
       entity_name => 'peptide_instance',
       indent => 4,
       entity_type => 'close',
     );
-    print $PAXMLOUTFILE $buffer;
 
   }
 
-
-  return(1);
+  return $buffer;
 
 } # end writeToPAxmlFile
 

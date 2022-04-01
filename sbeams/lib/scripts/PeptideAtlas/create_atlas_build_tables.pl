@@ -192,6 +192,11 @@ sub main {
 
   ## get ATLAS_BUILD_ID:
   $ATLAS_BUILD_ID = get_atlas_build_id(atlas_build_name=>$atlas_build_name);
+  my $atlas_build_directory = get_atlas_build_directory(
+      atlas_build_id => $ATLAS_BUILD_ID,
+    );
+  chdir "$atlas_build_directory/../";
+
   #$sbeamsMOD->update_PA_table_variables($ATLAS_BUILD_ID);
   my @tables = qw (peptide_instance
                    peptide_mapping
@@ -202,7 +207,7 @@ sub main {
 									 modified_peptide_instance_search_batch);
 
   if ($OPTIONS{all} || $OPTIONS{peptide}){
-		print "generating \n\t". join("\n\t", @tables)."\ntables\n";
+		print "generating \n\t". join("\n\t", @tables) . "\ntables\n";
     set_file_handler (tables=>\@tables); 
 		loadAtlas( atlas_build_id=>$ATLAS_BUILD_ID,
 					organism_abbrev => $organism_abbrev,
@@ -210,7 +215,15 @@ sub main {
 			);
 		 foreach my $table (@tables){
 			 close $fhs{$table};
-		 } 
+		 }
+     if ( -e "$atlas_build_directory/peptide_NET_NMC.tsv"){
+       my $file = "$atlas_build_directory/peptide_NET_NMC.tsv";
+       write_peptide_net_nmc(file => $file, atlas_build_id=>$ATLAS_BUILD_ID); 
+     }else{
+       print "WARNING: missing $atlas_build_directory/peptide_NET_NMC.tsv file\n";
+     } 
+
+ 
   }
 
   @tables = qw (spectrum_identification
@@ -237,8 +250,8 @@ sub main {
 		}
   }
   @tables = qw(biosequence_relationship
-               protein_identification );
-               #biosequence_id_atlas_build_search_batch);
+               protein_identification 
+               biosequence_id_atlas_build_search_batch);
  
   #### If load or purge of protein information was requested
   if ($OPTIONS{all} || $OPTIONS{"prot_info"} ) {
@@ -262,6 +275,10 @@ sub main {
 		#		atlas_build_id => $ATLAS_BUILD_ID,
 		#	);
 		#}
+		## biosequence_id_atlas_build_search_batch table;
+    my %peptideAccession_absb = write_biosequence_id_atlas_build_search_batch (
+                                atlas_build_id => $ATLAS_BUILD_ID);
+
     foreach my $table (@tables){
       close $fhs{$table};
     }
@@ -478,7 +495,7 @@ sub purgeProteinIdentificationInfo {
 
    print "Purging caching\n";
    $sql = qq~
-     DELETE FROM sbeams.dbo.cached_resultset WHERE key_value = $atlas_build_id
+     DELETE FROM $TB_CACHED_RESULTSET WHERE key_value = $atlas_build_id
    ~;
    $sbeams->executeSQL($sql);
 
@@ -564,7 +581,7 @@ sub buildAtlas {
 
     ## hash with key = search_batch_id, value = $search_dir
     my %loading_sbid_searchdir_hash = getInfoFromExperimentsList(
-        infile => "$source_dir../Experiments.list" );
+        infile => "$source_dir/../Experiments.list" );
 
     ## the content handler for loadFromPAxmlFile is using search_batch_id's 
     ## from proteomics so we need to send it hash to look up atlas_search_batch_ids
@@ -577,7 +594,11 @@ sub buildAtlas {
         source_dir => $source_dir,
     );
 
-        
+    my $psb2asb = $sbeamsMOD->getProtSB2AtlasSB(build_id=>[$atlas_build_id]);
+    my $inst_obs = $sbeamsMOD->cntObsFromIdentlist( identlist_file => "$source_dir/PeptideAtlasInput_concat.PAidentlist",
+                                                key_type => 'peptide',
+                                                psb2asb => $psb2asb );
+      
     #### Load from .PAxml file
     my $PAxmlfile = $source_dir . "APD_" . $organism_abbrev . "_all.PAxml";
 
@@ -588,6 +609,7 @@ sub buildAtlas {
             infile => $PAxmlfile,
             sbid_asbid_sid_hash_ref => \%proteomicsSBID_hash,
             atlas_build_id => $ATLAS_BUILD_ID,
+            inst_obs => $inst_obs
         );
     } else {
         die("ERROR: Unable to find '$PAxmlfile' to load data from.");
@@ -1323,12 +1345,6 @@ sub getInfoFromExperimentsList
 #     value = peptide_instance_id
 #######################################################################
 sub get_peptide_accession_instance_id_hash {
-
-    my %args = @_;
-
-    my $atlas_build_id = $args{atlas_build_id} or die
-        "need atlas build id ($!)";
-
     my $sql = qq~
         SELECT P.peptide_id, P.peptide_accession
         FROM $TBAT_PEPTIDE P 
@@ -1353,6 +1369,161 @@ sub get_peptide_accession_instance_id_hash {
 }
 
 
+#######################################################################
+# write_biosequence_id_atlas_build_search_batch 
+#######################################################################
+sub write_biosequence_id_atlas_build_search_batch { 
+    my %args = @_;
+    my $atlas_build_id = $args{atlas_build_id};
+
+    my $sql = qq~
+      select ASB.ATLAS_SEARCH_BATCH_ID, ABSB.ATLAS_BUILD_SEARCH_BATCH_ID
+      FROM $TBAT_ATLAS_SEARCH_BATCH ASB 
+      JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH  ABSB 
+      ON    (ASB.ATLAS_SEARCH_BATCH_ID = ABSB.ATLAS_SEARCH_BATCH_ID)
+      where atlas_build_id = $atlas_build_id
+    ~;
+   
+    my %search_batch2build_search_batch = $sbeams->selectTwoColumnHash($sql);
+ 
+
+    open (IN, "<$dbprefix/peptide_instance_search_batch.txt") or 
+          die "cannot open $dbprefix/peptide_instance_search_batch.txt\n";
+    my %pi_build_search_batch =();
+    while (my $line = <IN>){
+      my @tmp = split(/\t/, $line);
+      my $peptide_instance_id = $tmp[1];
+      my $search_batch_id = $tmp[2];
+      my $build_search_batch = $search_batch2build_search_batch{$search_batch_id};
+      $pi_build_search_batch{$peptide_instance_id}{$build_search_batch} =1;
+    }
+    close IN;
+
+   $sql = qq~
+      select BS.BIOSEQUENCE_ID 
+      FROM $TBAT_BIOSEQUENCE BS
+      JOIN $TBAT_ATLAS_BUILD A ON (A.biosequence_set_id = BS.biosequence_set_id)
+      where A.atlas_build_id = $atlas_build_id
+      AND BS.biosequence_name not like 'DECOY%'
+      AND BS.biosequence_name not like 'CONTAM%' 
+    ~;
+
+    my @bioseqence_ids = $sbeams->selectOneColumn($sql);
+    my %bioseqence_ids = map {$_=> 1} @bioseqence_ids;
+    undef @bioseqence_ids;
+
+    open (MAP, "<$dbprefix/peptide_mapping.txt") or
+          die "cannot open $dbprefix/peptide_mapping.txt\n";
+
+    my $fh = $fhs{biosequence_id_atlas_build_search_batch};
+    my $counter = 1;
+    while (my $line = <MAP>){
+      my @tmp = split(/\t/, $line);
+      my $peptide_instance_id = $tmp[1];
+      my $matched_biosequence_id = $tmp[2];
+      next if (not defined $bioseqence_ids{$matched_biosequence_id});
+      foreach my $build_search_batch (keys %{$pi_build_search_batch{$peptide_instance_id}}){
+        print $fh "$counter\t$matched_biosequence_id\t$build_search_batch\n";
+      }
+      $counter++
+    }
+    close $fh;
+ 
+}
+
+
+#######################################################################
+# write_peptide_net_nmc
+#######################################################################
+sub write_peptide_net_nmc{
+    my %args = @_;
+    my $file = $args{file};
+    my $atlas_build_id = $args{atlas_build_id};
+
+    my $sql = qq~
+        SELECT P.peptide_id, P.peptide_accession
+        FROM $TBAT_PEPTIDE P
+        ~;
+    my %peptide_id = $sbeams->selectTwoColumnHash($sql);
+
+    $sql = qq~
+      SELECT BS.BIOSEQUENCE_ID, BS.BIOSEQUENCE_NAME
+      FROM $TBAT_BIOSEQUENCE BS
+      JOIN $TBAT_ATLAS_BUILD A ON (A.biosequence_set_id = BS.biosequence_set_id)
+      where A.atlas_build_id = $atlas_build_id
+      AND BS.biosequence_name not like 'DECOY%'
+      AND BS.biosequence_name not like 'CONTAM%' 
+    ~;
+
+    my %bioseqence_ids = $sbeams->selectTwoColumnHash($sql);
+    my %pi_peptide_id=();
+
+    open (PI, "<$dbprefix/peptide_instance.txt") or
+          die "cannot open $dbprefix/peptide_instance.txt\n";
+    while (my $line = <PI>){
+      my @tmp = split(/\t/, $line);
+      my $peptide_instance_id = $tmp[0];
+      my $peptide_id = $tmp[2];
+      $pi_peptide_id{$peptide_instance_id} = $peptide_id;
+      
+    }
+    close PI;
+ 
+    my %peptide_mapping;
+    open (MAP, "<$dbprefix/peptide_mapping.txt") or
+          die "cannot open $dbprefix/peptide_mapping.txt\n";
+    while (my $line = <MAP>){
+      my @tmp = split(/\t/, $line);
+      my $peptide_mapping_id = $tmp[0];
+      my $peptide_instance_id = $tmp[1];
+      my $matched_biosequence_id = $tmp[2];
+      my $peptide_accession = $peptide_id{$pi_peptide_id{$peptide_instance_id}};  
+      my $biosequence_name = $bioseqence_ids{$matched_biosequence_id};
+      $peptide_accession =~ s/PAp0+//;
+      $peptide_mapping{$biosequence_name}{$peptide_accession}{pi_id} = $peptide_instance_id;
+      push @{$peptide_mapping{$biosequence_name}{$peptide_accession}{pm_id}}, $peptide_mapping_id;
+    }
+    close MAP;
+
+    open (IN,"<$file") or die "cannot open $file\n";
+    open (OUTPI, ">$dbprefix/peptide_instance_netupdate.tsv") or 
+          die "cannot open $dbprefix/peptide_instance_netupdate.tsv\n";
+    open (OUTPM, ">$dbprefix/peptide_mapping_netupdate.tsv") or
+          die "cannot open $dbprefix/peptide_mapping_netupdate.tsv\n";
+    print OUTPM "peptide_mapping_id\tprotease_ids\thighest_n_enzymatic_termini\t".
+                "lowest_n_missed_cleavages\n";
+    print OUTPI "peptide_instance_id\thighest_n_enzymatic_termini\tlowest_n_missed_cleavages\n";
+    my %data=();
+    my $counter =0; 
+		while (my $line = <IN>){
+			chomp $line;
+			my ($pepacc, $pepseq, $prot,
+					$enzyme_prot, $highest_n_enzymatic_termini_prot, $lowest_n_missed_cleavages_prot,
+					$enzyme, $highest_n_enzymatic_termini, $lowest_n_missed_cleavages) = split("\t", $line);
+			$pepacc =~ s/PAp0+//;
+			my $pi_id = $peptide_mapping{$prot}{$pepacc}{pi_id};
+			$data{$pi_id}{enzyme} = $enzyme;
+			$data{$pi_id}{highest_n_enzymatic_termini} = $highest_n_enzymatic_termini;
+			$data{$pi_id}{lowest_n_missed_cleavages} = $lowest_n_missed_cleavages;
+
+			$counter++;
+      foreach my $pm_id (@{$peptide_mapping{$prot}{$pepacc}{pm_id}}){
+        print OUTPM "$pm_id\t$enzyme_prot\t$highest_n_enzymatic_termini_prot\t".
+                    "$lowest_n_missed_cleavages_prot\n";
+
+      }
+      print "$counter..." if ($counter % 100000 == 0);
+   }
+   $counter =0;
+   foreach my $id (keys %data){
+    $counter++;
+    print OUTPI "$id\t$data{$id}{highest_n_enzymatic_termini}\t$data{$id}{lowest_n_missed_cleavages}\n";
+    print "$counter..." if ($counter % 10000 == 0);
+  }
+  close OUTPI;
+  close OUTPM;
+ 
+}
 #######################################################################
 # get_peptide_accession_sequence_hash - get hash with key = peptide
 #    accession, value = peptide sequence
@@ -1481,17 +1652,10 @@ sub insert_spectra_description_set
         my $spectrum_parser = new SpectraDescriptionSetParametersParser();
 
         $spectrum_parser->setSpectrumXML_file($infile);
-
         $spectrum_parser->parse();
-
         $mzXML_schema = $spectrum_parser->getSpectrumXML_schema();
-
-        $conversion_software_name =
-            $spectrum_parser->getConversion_software_name();
-
-        $conversion_software_version =
-            $spectrum_parser->getConversion_software_version();
-
+        $conversion_software_name = $spectrum_parser->getConversion_software_name();
+        $conversion_software_version = $spectrum_parser->getConversion_software_version();
         $instrument_model_name = $spectrum_parser->getInstrument_model_name();
 
         $instrument_model_id='';
@@ -1525,18 +1689,16 @@ sub insert_spectra_description_set
 
         }
 
-
         ## count the number of MS/MS in the mzXML files: ##
         my $sum = 0;
-
-        foreach my $mzXMLFile (@mzXMLFileNames)
-        {
+        #foreach my $mzXMLFile (@mzXMLFileNames)
+        #{
 #            my $nspec = `grep 'msLevel="2"' $mzXMLFile | wc -l`;
-            my $nspec = 500;
-            $sum = $sum + $nspec;
+        #    my $nspec = 500;
+        #    $sum = $sum + $nspec;
             # don't print, since this is broken
             #print "  nspec=$nspec\n";
-        }
+        #}
 
         $n_spectra = $sum;
 
@@ -2178,12 +2340,10 @@ sub readCoords_updateRecords_calcAttributes {
 ####----------------------------------------------------------------------------
     print "\nCreating peptide_mapping records, and updating peptide_instance records\n";
 
-    #open (PI, ">peptide_instance_update.txt");
-    #print PI "peptide_instance_id\tn_genome_locations\tis_exon_spanning\tn_protein_mappings\tis_subpeptide_of\n";
+    open (PI, ">$dbprefix/peptide_instance_update.tsv");
+    print PI "peptide_instance_id\tn_genome_locations\tis_exon_spanning\tn_protein_mappings\tis_subpeptide_of\n";
     ## hash with key = peptide_accession, value = peptide_instance_id
-    my %peptideAccession_peptideInstanceID = 
-        get_peptide_accession_instance_id_hash( 
-        atlas_build_id => $atlas_build_id );
+    my %peptideAccession_peptideInstanceID = get_peptide_accession_instance_id_hash( );
     print scalar keys %peptideAccession_peptideInstanceID ; 
     print "\n";
 
@@ -2242,9 +2402,9 @@ sub readCoords_updateRecords_calcAttributes {
         die "ERROR $tmp_pep_acc\n";
       }
      #### If this is the first row for a peptide, then UPDATE peptide_instance record
-      #if ($tmp_pep_acc ne $previous_peptide_accession) {
-      #  print PI "$peptide_instance_id\t$data[11]\t$data[12]\t$data[10]\t$peptideAccession_subPeptide{$tmp_pep_acc}\n";
-      #}
+      if ($tmp_pep_acc ne $previous_peptide_accession) {
+        print PI "$peptide_instance_id\t$data[11]\t$data[12]\t$data[10]\t$peptideAccession_subPeptide{$tmp_pep_acc}\n";
+      }
 
 			#### If there weren't already records, CREATE peptide_mapping record
 		
@@ -2317,6 +2477,8 @@ sub loadFromPAxmlFile {
   my $atlas_build_id = $args{'atlas_build_id'} or die
     "need atlas_build_id ($!)";
 
+  my $inst_obs = $args{'inst_obs'} or die " inst_obs  ($!)";
+
   ## hash with key = atlas_search_batch_id, value = sample_id
   my %sbid_asbid_sid_hash = %{ $sbid_asbid_sid_hash_ref };
 
@@ -2378,7 +2540,8 @@ sub loadFromPAxmlFile {
   $CONTENT_HANDLER->{current_contact_id} = $current_contact_id;
   $CONTENT_HANDLER->{current_work_group_id} = $current_work_group_id;
   $CONTENT_HANDLER->{peptide_instance_id} =\%peptide_instance_hash;
- 
+  $CONTENT_HANDLER->{inst_obs} = $inst_obs;
+
   $parser->parse(XML::Xerces::LocalFileInputSource->new($infile));
 
   return(1);
@@ -2402,7 +2565,10 @@ sub getSpectrumXMLFileNamesFromPepXMLFile
       print "could not find infile '$infile'.\n";
       return @spectrumXMLFileNames;
     }
-
+    if ($infile =~ /Combined_201306_Agilent-IT/){
+      push @spectrumXMLFileNames, "/regis/sbeams/archive/jmalmstr/lg_scale_serum/SEC_OGE_II/Combined_201306_Agilent-IT/C0702-000032.mzXML";
+      return @spectrumXMLFileNames;
+    }
     if($infile =~ /\.gz$/){
       open(INFILE, "gunzip -c $infile|") or die "cannot open $infile for reading ($!)";
     }else{
@@ -2420,7 +2586,13 @@ sub getSpectrumXMLFileNamesFromPepXMLFile
         {
             my $basename = $1;
             my $extension = $2;
-
+            if ($extension eq 'mzBIN_calibrated'){
+              $extension='.mzML';
+              $basename =~ s/split.*tempdir\d+//;
+            }
+            if ($extension !~ /^\./){
+              $extension = ".$extension";
+            }
             if($extension eq 'gz' && $extension ne 'mzML.gz'){
               $extension = '.mzML.gz';
             }
@@ -2758,7 +2930,7 @@ sub loadBuildSpectra {
 
   #### First try to find the PAidentlist file
   my $filetype = 'PAidentlist';
-  my $expected_n_columns = 20;
+  my $expected_n_columns = 21;
   my $peplist_file = "$atlas_build_directory/".
     "PeptideAtlasInput_concat.PAidentlist";
 
@@ -2779,18 +2951,18 @@ sub loadBuildSpectra {
   my $pre_search_batch_id;
   while ( my $line = <INFILE>) {
     chomp $line;
-    @columns = split("\t",$line,-1);
-#    unless (scalar(@columns) == $expected_n_columns) {
-#				die("ERROR: Unexpected number of columns (".
-#				scalar(@columns)."!=$expected_n_columns) in\n$line\n");
-#    }
+    @columns = split(/\t/,$line, -1);
+    unless (scalar(@columns) == $expected_n_columns || scalar(@columns) == 22) {
+				die("ERROR: Unexpected number of columns (".
+				scalar(@columns)."!=$expected_n_columns) in\n$line\n");
+    }
 
     my ($search_batch_id,$spectrum_name,$peptide_accession,$peptide_sequence,
         $preceding_residue,$modified_sequence,$following_residue,$charge,
         $probability,$massdiff,$protein_name,$proteinProphet_probability,
         $n_proteinProphet_observations,$n_sibling_peptides,
         $SpectraST_probability, $ptm_sequence,$precursor_intensity,
-        $total_ion_current,$signal_to_noise,$retention_time_sec,$chimera_level);
+        $total_ion_current,$signal_to_noise,$retention_time_sec,$chimera_level,$ptm_lability);
 		($search_batch_id,
 			$spectrum_name,
 			$peptide_accession,
@@ -2810,7 +2982,8 @@ sub loadBuildSpectra {
 			$signal_to_noise,
 			$retention_time_sec,
 			$chimera_level,
-      $ptm_sequence) = @columns;
+      $ptm_sequence,
+      $ptm_lability) = @columns;
 		  #### Correction for occasional value '+-0.000000'
       $massdiff =~ s/\+\-//;
     
@@ -2819,6 +2992,7 @@ sub loadBuildSpectra {
        search_batch_id => $search_batch_id,
        modified_sequence => $modified_sequence,
        ptm_sequence => $ptm_sequence,
+       ptm_lability => $ptm_lability,
        charge => $charge,
        probability => $probability,
        protein_name => $protein_name,
@@ -2853,7 +3027,7 @@ sub insertSpectrumIdentification {
   my $modified_sequence = $args{modified_sequence}
     or die("ERROR[$METHOD]: Parameter modified_sequence not passed");
   my $ptm_sequence = $args{ptm_sequence} || ''; 
-
+  my $ptm_lability = $args{ptm_lability} || '';
   my $charge = $args{charge}
     or die("ERROR[$METHOD]: Parameter charge not passed");
   my $protein_name = $args{protein_name}
@@ -2911,9 +3085,13 @@ sub insertSpectrumIdentification {
   if ($ptm_sequence){
 		$fh = $fhs{spectrum_ptm_identification};
     my @ptm_sequences = split(",", $ptm_sequence);
-    foreach my $sequences(@ptm_sequences){
-      $sequences =~ /\[(\S+)\](.*)/;
-		  print $fh "$pk_counter{spectrum_ptm_identification}\t$pk_counter{spectrum_identification}\t$2\t$1\n";
+    my @ptm_labilities = split(",",$ptm_lability);
+    
+    for (my $i=0; $i<=$#ptm_sequences;$i++){
+      my $sequence = $ptm_sequences[$i];
+      my $lability = $ptm_labilities[$i];
+      $sequence =~ /\[(\S+)\](.*)/;
+		  print $fh "$pk_counter{spectrum_ptm_identification}\t$pk_counter{spectrum_identification}\t$2\t$1\t$lability\n";
       $pk_counter{spectrum_ptm_identification}++;
     }
   }
