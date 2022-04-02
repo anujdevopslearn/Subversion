@@ -2671,7 +2671,7 @@ sub displayProt_PTM_plotly{
 		my $maxnobs  = 0;
 		my $tickvals   = "var tickvals$div_counter =["; 
 
-		$sequence =~ s/\*.*//g;
+		#$sequence =~ s/\*.*//g;
 		my @aas = split(//, $sequence);
 		my $sep = '';
 		foreach my $pos (0..$#aas){
