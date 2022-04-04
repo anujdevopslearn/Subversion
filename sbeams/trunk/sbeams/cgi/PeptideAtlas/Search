@@ -300,11 +300,7 @@ sub handle_request {
       $buffer .= $tabMenu->asHTML();
       $buffer .= "<BR>$spacer<BR><P>";
       $buffer .= qq~<nobr><CENTER><IMG SRC="$HTML_BASE_DIR/images/PeptideAtlas_Logo.png"><BR>~;
-      #$buffer .= qq~<img src="$HTML_BASE_DIR/images/space.gif" height=1 width=30>~;
       my $advanced = getSearchKeyTypeHTML();
-      #$advanced =~ s/<TABLE\s+class=info_box>/<TR COLSPAN=2><TD><TABLE class=info_box>/;
-      #$advanced =~ s/<\/TABLE>/<\/TD><\/TR><\/TABLE>/;
-#      $buffer .= "$advanced ";
       
       $buffer .= $q->textfield(-name=>"search_key",
                                -default=>$search_key,
@@ -325,7 +321,7 @@ sub handle_request {
       </TD>
       <TD WIDTH=10% ALIGN=LEFT { white-space: nowrap } >
       <DT>
-      <INPUT ID="exact_match" TYPE=radio $search_type_param{exact_match} NAME="exact_match" checked
+      <INPUT ID="exact_match" TYPE=radio $search_type_param{exact_match} NAME="exact_match"
           ONCLICK=toggle_radiobutton(this)>
           Exact Match
       <DT><INPUT ID="single_table" TYPE=radio $search_type_param{single_table}  NAME="single_table"
@@ -338,7 +334,7 @@ sub handle_request {
       </TD></TR></TABLE>
       <BR>
         (e.g.
-          <A HREF="$base_url?search_key=ENSP00000374576&build_type_name=Human&action=GO"><SPAN TITLE="Ensembl protein identifier" CLASS="popup">ENSP00000374576</SPAN></A>,
+          <A HREF="$base_url?search_key=ENSP00000238647.3&build_type_name=Human&action=GO"><SPAN TITLE="Ensembl protein identifier" CLASS="popup">ENSP00000238647.3</SPAN></A>,
           <A HREF="$base_url?search_key=IPI00807403&build_type_name=Human&action=GO"><SPAN TITLE="IPI protein identifier" CLASS="popup">IPI00807403</SPAN></A>,
           <A HREF="$base_url?search_key=NP_001366&build_type_name=Human&action=GO"><SPAN TITLE="Refseq protein identifier" CLASS="popup">NP_001366</SPAN></A>,
           <A HREF="$base_url?search_key=Hs.232375&build_type_name=Human&action=GO"><SPAN TITLE="UniGene identifier" CLASS="popup">Hs.232375</SPAN></A>,
@@ -472,15 +468,6 @@ sub handle_request {
                    AND DAB.organism_id IS NOT NULL )
     ~;
   }
-  
-  #$sql = qq~
-  #  SELECT ATLAS_BUILD_ID
-  #  FROM $TBAT_ATLAS_BUILD
-  #  WHERE ATLAS_BUILD_ID IN ( $atlas_build_ids )
-  #  AND ATLAS_BUILD_NAME LIKE '%$exact_search_key%'
-  #~;
-  #my @matched_buildids= $sbeams->selectOneColumn($sql);
-
 
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
@@ -515,25 +502,12 @@ sub handle_request {
 						 BS_REF.biosequence_name AS "biosequence_name",
 						 PPL.level_phrase AS "presence_level"
 		 FROM $TBAT_PROTEIN_IDENTIFICATION PID
-		 INNER JOIN $TBAT_ATLAS_BUILD AB
-					ON ( AB.atlas_build_id = PID.atlas_build_id )
-		 INNER JOIN $TBAT_BIOSEQUENCE_SET BSS
-					ON ( BSS.biosequence_set_id = AB.biosequence_set_id )
-		 INNER JOIN $TB_ORGANISM O
-					ON ( O.organism_id = BSS.organism_id )
-		 INNER JOIN $TBAT_BIOSEQUENCE BS_REF
-					ON ( BS_REF.biosequence_id = PID.biosequence_id )
+		 INNER JOIN $TBAT_ATLAS_BUILD AB	ON ( AB.atlas_build_id = PID.atlas_build_id )
+		 INNER JOIN $TBAT_BIOSEQUENCE_SET BSS ON ( BSS.biosequence_set_id = AB.biosequence_set_id )
+		 INNER JOIN $TB_ORGANISM O ON ( O.organism_id = BSS.organism_id )
+		 INNER JOIN $TBAT_BIOSEQUENCE BS_REF ON ( BS_REF.biosequence_id = PID.biosequence_id )
 								AND ( BS_REF.biosequence_set_id = BSS.biosequence_set_id)
-		 INNER JOIN $TBAT_BIOSEQUENCE BS_REP
-					ON ( BS_REP.biosequence_id = PID.represented_by_biosequence_id )
-								AND ( BS_REP.biosequence_set_id = BSS.biosequence_set_id)
-		 INNER JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL
-					ON ( PPL.protein_presence_level_id = PID.presence_level_id )
-		 LEFT JOIN $TBAT_BIOSEQUENCE BS_SUBSUMED_BY
-					ON ( BS_SUBSUMED_BY.biosequence_id = PID.subsumed_by_biosequence_id )
-					AND ( BS_SUBSUMED_BY.biosequence_set_id = BSS.biosequence_set_id)
-		 LEFT JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPS
-				  ON ( BPS.biosequence_id = PID.biosequence_id )
+		 INNER JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL ON ( PPL.protein_presence_level_id = PID.presence_level_id )
 		 WHERE 1 = 1
 					 AND AB.atlas_build_id IN ( $atlas_build_ids )
 					 AND PPL.protein_presence_level_id IN ( 1,2,6,3 )
@@ -544,33 +518,17 @@ sub handle_request {
 					 BRT.relationship_phrase  + ' ' + 
 					 BS_REF.biosequence_name AS "presence_level" 
 			 FROM $TBAT_PROTEIN_IDENTIFICATION PID
-			 INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BR
-						ON ( BR.reference_biosequence_id = PID.biosequence_id AND
-								 BR.atlas_build_id = PID.atlas_build_id )
-			 INNER JOIN $TBAT_ATLAS_BUILD AB
-						ON ( AB.atlas_build_id = PID.atlas_build_id )
-			 INNER JOIN $TBAT_BIOSEQUENCE_SET BSS
-						ON ( BSS.biosequence_set_id = AB.biosequence_set_id )
-			 INNER JOIN $TB_ORGANISM O
-						ON ( O.organism_id = BSS.organism_id )
-			 INNER JOIN $TBAT_BIOSEQUENCE BS_REF
-						ON ( BS_REF.biosequence_id = PID.biosequence_id )
-									AND ( BS_REF.biosequence_set_id = BSS.biosequence_set_id)
-			 INNER JOIN $TBAT_BIOSEQUENCE BS_REP
-						ON ( BS_REP.biosequence_id = PID.represented_by_biosequence_id )
-									AND ( BS_REP.biosequence_set_id = BSS.biosequence_set_id)
-			 LEFT JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPP
-									ON ( BPP.biosequence_id = PID.biosequence_id )
-			 INNER JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL
-						ON ( PPL.protein_presence_level_id = PID.presence_level_id )
-			 INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT
-						ON ( BRT.biosequence_relationship_type_id =
-												BR.relationship_type_id )
-			 LEFT JOIN $TBAT_BIOSEQUENCE BS_REL
-						ON ( BS_REL.biosequence_id = BR.related_biosequence_id )
+			 INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BR ON ( BR.reference_biosequence_id = PID.biosequence_id ) 
+              AND (BR.atlas_build_id = PID.atlas_build_id )
+			 INNER JOIN $TBAT_ATLAS_BUILD AB ON ( AB.atlas_build_id = PID.atlas_build_id )
+			 INNER JOIN $TBAT_BIOSEQUENCE_SET BSS ON ( BSS.biosequence_set_id = AB.biosequence_set_id )
+			 INNER JOIN $TB_ORGANISM O ON ( O.organism_id = BSS.organism_id )
+			 INNER JOIN $TBAT_BIOSEQUENCE BS_REF ON ( BS_REF.biosequence_id = PID.biosequence_id )
+						 AND ( BS_REF.biosequence_set_id = BSS.biosequence_set_id)
+			 INNER JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL ON ( PPL.protein_presence_level_id = PID.presence_level_id )
+			 INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT ON ( BRT.biosequence_relationship_type_id = BR.relationship_type_id )
+			 LEFT JOIN $TBAT_BIOSEQUENCE BS_REL ON ( BS_REL.biosequence_id = BR.related_biosequence_id )
 						AND ( BS_REL.biosequence_set_id = BSS.biosequence_set_id )
-			 LEFT JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPS
-						ON ( BPS.biosequence_id = BS_REL.biosequence_id )
 			 WHERE 1 = 1
 								AND AB.atlas_build_id IN ( $atlas_build_ids )
 								AND PPL.protein_presence_level_id IN ( 1,2,6,3 )
@@ -583,39 +541,19 @@ sub handle_request {
 					 BRT.relationship_phrase   + ' ' +
 					 BS_REL.biosequence_name AS "presence_level"  
 			 FROM $TBAT_PROTEIN_IDENTIFICATION PID
-			 INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BR
-						ON ( BR.reference_biosequence_id = PID.biosequence_id AND
-								 BR.atlas_build_id = PID.atlas_build_id )
-			 INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BR_INDIS
-						ON ( BR_INDIS.reference_biosequence_id = BR.related_biosequence_id 
-									 AND
-								 BR_INDIS.atlas_build_id = PID.atlas_build_id )
-			 INNER JOIN $TBAT_ATLAS_BUILD AB
-						ON ( AB.atlas_build_id = PID.atlas_build_id )
-			 INNER JOIN $TBAT_BIOSEQUENCE_SET BSS
-						ON ( BSS.biosequence_set_id = AB.biosequence_set_id )
-			 INNER JOIN $TB_ORGANISM O
-						ON ( O.organism_id = BSS.organism_id )
-			 INNER JOIN $TBAT_BIOSEQUENCE BS_REF
-						ON ( BS_REF.biosequence_id = PID.biosequence_id )
-									AND ( BS_REF.biosequence_set_id = BSS.biosequence_set_id)
-			 INNER JOIN $TBAT_BIOSEQUENCE BS_REP
-						ON ( BS_REP.biosequence_id = PID.represented_by_biosequence_id )
-									AND ( BS_REP.biosequence_set_id = BSS.biosequence_set_id)
-			 LEFT JOIN $TBBL_DBXREF DBX ON ( DBX.dbxref_id = BS_REF.dbxref_id )
-			 INNER JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL
-						ON ( PPL.protein_presence_level_id = PID.presence_level_id )
-			 INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT
-						ON ( BRT.biosequence_relationship_type_id =
-										BR_INDIS.relationship_type_id )
-			 LEFT JOIN $TBAT_BIOSEQUENCE BS_INDIS
-						ON ( BR_INDIS.related_biosequence_id = BS_INDIS.biosequence_id )
-							AND ( BS_INDIS.biosequence_set_id = BSS.biosequence_set_id)
-			 LEFT JOIN $TBAT_BIOSEQUENCE BS_REL
-						ON ( BS_REL.biosequence_id = BR_INDIS.reference_biosequence_id  )
-					 AND ( BS_REL.biosequence_set_id = BSS.biosequence_set_id)
-			 LEFT JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPS
-						ON ( BPS.biosequence_id = BS_INDIS.biosequence_id )
+			 INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BR	ON ( BR.reference_biosequence_id = PID.biosequence_id )
+             AND (BR.atlas_build_id = PID.atlas_build_id )
+			 INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BR_INDIS ON ( BR_INDIS.reference_biosequence_id = BR.related_biosequence_id 
+						 AND  BR_INDIS.atlas_build_id = PID.atlas_build_id )
+			 INNER JOIN $TBAT_ATLAS_BUILD AB ON ( AB.atlas_build_id = PID.atlas_build_id )
+			 INNER JOIN $TBAT_BIOSEQUENCE_SET BSS ON ( BSS.biosequence_set_id = AB.biosequence_set_id )
+			 INNER JOIN $TB_ORGANISM O ON ( O.organism_id = BSS.organism_id )
+			 INNER JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL ON ( PPL.protein_presence_level_id = PID.presence_level_id )
+			 INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT ON ( BRT.biosequence_relationship_type_id = BR_INDIS.relationship_type_id )
+			 LEFT JOIN $TBAT_BIOSEQUENCE BS_INDIS ON ( BR_INDIS.related_biosequence_id = BS_INDIS.biosequence_id )
+						AND ( BS_INDIS.biosequence_set_id = BSS.biosequence_set_id)
+			 LEFT JOIN $TBAT_BIOSEQUENCE BS_REL ON ( BS_REL.biosequence_id = BR_INDIS.reference_biosequence_id  )
+					  AND ( BS_REL.biosequence_set_id = BSS.biosequence_set_id)
 					 WHERE 1 = 1
 								AND AB.atlas_build_id IN ( $atlas_build_ids )
 								AND PPL.protein_presence_level_id IN ( 1,2,6,3 )
@@ -624,7 +562,7 @@ sub handle_request {
 			 ~;
 
   my $select_sql = qq~
-       SELECT DISTINCT TOP 5000 $columns_clause
+       SELECT DISTINCT TOP 1001 $columns_clause
          FROM $TBAT_SEARCH_KEY_LINK SKL
          LEFT JOIN  $TBAT_SEARCH_KEY_ENTITY SKE 
               ON (SKL.RESOURCE_NAME = SKE.RESOURCE_NAME) 
@@ -642,6 +580,7 @@ sub handle_request {
        ORDER BY search_key_name
    ~;
    $sql = $select_sql.$where_clause; 
+
    $sbeams->display_sql(sql=>$sql) if ($show_sql);
  
 
@@ -666,8 +605,6 @@ sub handle_request {
   my $url_base = $SERVER_BASE_DIR . $CGI_BASE_DIR;
   my $reexec_key = $sbeams->setShortURL( $reexec_url );
 
-  #use Time::HiRes;
-  #my $elapsed;
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
   if ($apply_action =~ /(QUERY|GO|VIEWRESULTSET|DOWNLOAD)/) {
@@ -696,19 +633,19 @@ sub handle_request {
       my $tmp_resultset_ref = \%tmp_resultset;
 
       if ($apply_action =~ /(QUERY|GO)/i) {
-	#### Fetch the results from the database server
-	$sbeams->fetchResultSet(
-	  sql_query=>$sql,
-	  resultset_ref=>$tmp_resultset_ref,
-	);
-	%exact_resultset = %$tmp_resultset_ref;
-	%resultset = %$tmp_resultset_ref;
+				#### Fetch the results from the database server
+				$sbeams->fetchResultSet(
+					sql_query=>$sql,
+					resultset_ref=>$tmp_resultset_ref,
+				);
+				%exact_resultset = %$tmp_resultset_ref;
+				%resultset = %$tmp_resultset_ref;
       }
 
       if(defined $exact_resultset{data_ref}){
-	$n_exact_results = scalar(@{$exact_resultset{data_ref}});
+				$n_exact_results = scalar(@{$exact_resultset{data_ref}});
       } else {
-	$n_exact_results = 0;
+				$n_exact_results = 0;
       }
 
       #### If exactly one result came back, then redirect to the one hit
@@ -716,13 +653,9 @@ sub handle_request {
         $buffer ="$buffer";
         $buffer.= $pass_query_result if ($pass_query_result =~ /PASS\d+/);
         $buffer .= $repository_query_result if ($repository_query_result =~ /PAe\d+/);
-	if ($n_exact_results == 1) {
-	  #print "Status: 302 Resource Temporarily Moved\n";
-	  #print "Location: $CGI_BASE_DIR/PeptideAtlas/".
-          #print "$exact_resultset{data_ref}->[0]->[$colnameidx{resource_url}]";
-	  #$q->redirect("$CGI_BASE_DIR/PeptideAtlas/$exact_resultset{data_ref}->[0]->[$colnameidx{resource_url}]");
-          print $q -> redirect("$url_base/PeptideAtlas/$exact_resultset{data_ref}->[0]->[$colnameidx{resource_url}]");
-	  exit;
+				if ($n_exact_results == 1) {
+					print $q -> redirect("$url_base/PeptideAtlas/$exact_resultset{data_ref}->[0]->[$colnameidx{resource_url}]");
+					exit;
 
         } elsif ($n_exact_results > 1) {
 
@@ -758,102 +691,71 @@ sub handle_request {
       # causing SearchProteins to break. However, it also causes the
       # Search cgi results to be sorted differently. Hope this is OK.
       
-      my $print_warning_msg = 0;
-      if ($apply_action =~ /(QUERY|GO)/i){
-	if(! $parameters{exact_match}) {
-	  pop @column_array;
-	  push @column_array, ["match_string","'fuzzy_match'", "fuzzy_match"];
-	  $columns_clause = $sbeams->build_SQL_columns_list(
-	    column_array_ref=>\@column_array,
-	    colnameidx_ref=>\%colnameidx,
-	    column_titles_ref=>\@column_titles
-	  );
-          my $dir = "/regis/sbeams5/nobackup/builds_output/cache/";
-	  if (opendir (DIR , $dir)) {
-            my %build_ids = map {$_ => 1} split(",", $atlas_build_ids);
-            my $search_key_id_str= '';
-            my $counter  = 0; 
-            my $search_key_clause = $exact_search_key;
-            $search_key_clause =~ s/\s+/.*/g; 
-            
-	    while( (my $filename = readdir(DIR))) {
-              my %search_key_ids =();
-              my %resource_names =();
-	      $filename =~ /(\d+).tsv/;
-	      next if (not defined $build_ids{$1});
-	      open (F, "<$dir/$filename");
-
-              foreach my $line (grep(/$search_key_clause/i, <F>)){
-                chomp $line; 
-		my ($key_id,$resource_name,$key) = split(/,/, $line,3);
-                next if (defined $resource_names{$resource_name});
-                $resource_names{$resource_name} =1;
-		if (lc($key) ne lc($exact_search_key)) { 
-		  $search_key_ids{$key_id}=1;
-                  $counter++;
-	        }
-                if ($counter >= 500 ) {$print_warning_msg = 1; last;}
-              }
-
-              next if (! scalar keys %search_key_ids); 
-
-              if (! $search_key_id_str) {
-                $search_key_id_str .= "SKE.search_key_id in (". join(",", keys %search_key_ids) .")";
-	      } else {
-                $search_key_id_str .= " or SKE.search_key_id in (". join(",", keys %search_key_ids) .")";
-	      }
-	    }
-
-            closedir(DIR);
-            close (F);
-
-	    if ( $search_key_id_str ) {
-	      $search_key_id_str = "AND ( $search_key_id_str )";
-	    }
-
-            $sql = qq~
-                $select_sql
-                WHERE 1 = 1
-                  $search_types_clause
-                  $search_key_id_str
-                  AND SKL.atlas_build_id IN ( $atlas_build_ids )
-                  ORDER BY search_key_name
-             ~;
-
-          } else {
-	    my $search_key_clause = '%'.$exact_search_key.'%';
-	    $search_key_clause =~ s/\s+/%/g;
-            $sql = qq~
-                $select_sql
-                WHERE 1 = 1
-                  $search_types_clause
-                  AND SKE.search_key_name like '$search_key_clause'
-                  AND SKL.atlas_build_id IN ( $atlas_build_ids )
-                ORDER BY search_key_name
-            ~;
+	my $print_warning_msg = 0;
+	if ($apply_action =~ /(QUERY|GO)/i){
+		if(! $parameters{exact_match}) {
+			pop @column_array;
+			push @column_array, ["match_string","'fuzzy_match'", "fuzzy_match"];
+			$columns_clause = $sbeams->build_SQL_columns_list(
+				column_array_ref=>\@column_array,
+				colnameidx_ref=>\%colnameidx,
+				column_titles_ref=>\@column_titles
+			);
+				my $search_key_clause = $exact_search_key;
+				$search_key_clause =~ s/\s+/.*/g;
+				my %search_key_ids =();
+        my $counter =0;
+        foreach my $build_id (split(",", $atlas_build_ids)){
+					my $file ="/regis/sbeams5/nobackup/builds_output/cache/search_keys_$build_id.txt";
+          if ( -e $file){
+						open (F, "<$file");
+						foreach my $line (grep(/$search_key_clause/i, <F>)){
+							chomp $line;
+							my ($key_id,$search_key_name) = split(/\t/, $line);
+							$search_key_ids{$key_id} =1;
+              $counter++;
+						}
+          }
+          if ($counter > 500){
+            $print_warning_msg = 1;
+            last;
           }
 
-	  $sbeams->fetchResultSet(
-	    sql_query=>$sql,
-	    resultset_ref=>$tmp_resultset_ref,
-	  );
-	  %fuzzy_resultset = %$tmp_resultset_ref;
-        } else {
-	  if ($n_exact_results == 0) {
-	    if ($sbeams->output_mode() eq 'html') {
-	      $sbeamsMOD->display_page_header(project_id => $project_id);
-	      print "$buffer<BR>";
-	      print "There were no matches in the index for your search string<BR>";
-	    }
-	    return(0);
-	  }
-        }
-      }
+			 }
+				my $search_key_id_str =  join(",", keys %search_key_ids);
+
+			 if ($search_key_id_str){
+				$sql = qq~
+						$select_sql
+						WHERE 1 = 1
+							$search_types_clause
+							AND SKE.search_key_id in ($search_key_id_str)
+							AND SKL.atlas_build_id IN ( $atlas_build_ids )
+						ORDER BY search_key_name
+				~;
+				#$log->error($sql);
+				$sbeams->fetchResultSet(
+					sql_query=>$sql,
+					resultset_ref=>$tmp_resultset_ref,
+				);
+			}
+			%fuzzy_resultset = (%fuzzy_resultset, %$tmp_resultset_ref);
+		} else {
+			if ($n_exact_results == 0) {
+				if ($sbeams->output_mode() eq 'html') {
+					$sbeamsMOD->display_page_header(project_id => $project_id);
+					print "$buffer<BR>";
+					print "There were no matches in the index for your search string<BR>";
+				}
+				return(0);
+			}
+		}
+  }
 			
       if(defined $fuzzy_resultset{data_ref}){
-	$n_fuzzy_results = scalar(@{$fuzzy_resultset{data_ref}});
+				$n_fuzzy_results = scalar(@{$fuzzy_resultset{data_ref}});
       } else {
-	$n_fuzzy_results = 0;
+				$n_fuzzy_results = 0;
       }
 
       if ($apply_action =~ /(QUERY|GO)/i){
@@ -915,8 +817,8 @@ sub handle_request {
 							column_titles_ref=>\@column_titles,
 							base_url=>$base_url,
 					);
-          if(scalar(@{$resultset_ref->{data_ref}}) >= 5000|| $print_warning_msg){
-           print "<BR><font color=\"red\"><b>There were too many matching results, please refine the search keys.</b></font><BR><BR>\n";
+          if(scalar(@{$resultset_ref->{data_ref}}) >= 500|| $print_warning_msg){
+           print "<BR><font color=\"red\"><b>There were too many matching results, please refine the search key.</b></font><BR><BR>\n";
          }
 
           $sbeams-> displayResultSetControls(
@@ -944,7 +846,7 @@ sub handle_request {
 								base_url  => $base_url
 						);
 					}
-         if(($n_fuzzy_results+ $n_exact_results) >= 5000 || $print_warning_msg){
+         if(($n_fuzzy_results+ $n_exact_results) >= 500 || $print_warning_msg){
            print "<BR><font color=\"red\"><b>There were too many matching results, please refine the search keys.</b></font><BR><BR>\n";
          }
           $sbeams-> displayResultSetControls(
@@ -1280,11 +1182,11 @@ sub displayTable{
 		  $text .=  qq~, observed <B>0</B> time~;
 		}
 
-		my $buffer = qq~<TR><TD colspan="2" width="1000">$link $text</TD></TR>~;
+		my $buffer = qq~<TR><TD colspan="1" >$link $text</TD></TR>~;
 
 		print "$resource_type hits<BR>" if($pre_resource_type ne $resource_type);
 		$pre_resource_type = $resource_type;
-		print qq~ \n<TABLE width="1000" >$buffer</TABLE><TABLE><TR $tr><TD COLSPAN=2>~;
+		print qq~ \n<TABLE style="padding-left: 1.5em;" >$buffer</TABLE><TABLE style="padding-left: 1.5em;"><TR $tr><TD>~;
 		#### Display the resultset
 		$sbeams->displayResultSet(
 		  resultset_ref=>$resultset_ref,
@@ -1357,9 +1259,8 @@ sub getBuildTypeSelection {
     );
   }
 
-  #### Or default to Human
+  #### Or default to Any
   unless ($build_type_name) {
-    #$build_type_name = $organism_name || 'Any';
     $build_type_name = $organism_name || 'Human';
   }
 
@@ -1387,9 +1288,8 @@ sub getBuildTypeSelection {
 
   #my @options = ('Any');
   #my %options = ('Any'=>'Any');
-  my @options = ('Human');
-  my %options = ('Human'=>'Human');
-
+  my @options = ();
+  my %options = ();
   my %atlas_build_ids;
 
   #### Build the list of available organisms
@@ -1416,7 +1316,6 @@ sub getBuildTypeSelection {
 
   #### Also make sure the user selected a valid option
   unless ($matched_parameter) {
-    #$build_type_name = 'Any';
     $build_type_name = 'Human';
   }
 
