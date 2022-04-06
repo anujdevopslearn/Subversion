@@ -309,7 +309,11 @@ sub drawPTMHisChart {
   my $self = shift;
   my %args = @_;
   my $data = $args{data};
-  my $ptm_residues = $args{ptm_residues} || die "parameter residues is missing\n";
+  my $ptm_type = $args{ptm_type} || die "parameter residues is missing\n";
+  $ptm_type =~ /(^.*):.*/;
+  my $ptm_residues = $1;
+  $ptm_type =~ s/[:\.]/_/g; 
+
   my $dataTable = qq~ 
    var data = new google.visualization.DataTable();
    data.addColumn('string', 'AA');
@@ -370,9 +374,9 @@ sub drawPTMHisChart {
     <script type="text/javascript" src="https://www.google.com/jsapi"></script>
     <script type="text/javascript">
       google.load("visualization", "1", {packages:["corechart"]});
-      function drawVisualization_$ptm_residues() {
+      function drawVisualization_$ptm_type() {
         $dataTable
-				var chart = new google.visualization.ComboChart(document.getElementById("chart_ptm_$ptm_residues"));
+				var chart = new google.visualization.ComboChart(document.getElementById("chart_ptm_$ptm_type"));
         chart.draw(data,{
 		     vAxis: {title: "N obs"},
                      vAxes: {0: {'maxValue':$max_obs }},
@@ -386,7 +390,7 @@ sub drawPTMHisChart {
                     });
  
 					var \$jq = jQuery.noConflict(); 
-					var rects = \$jq("chart_ptm_$ptm_residues").find('svg > g > g > g > text');
+					var rects = \$jq("chart_ptm_$ptm_type").find('svg > g > g > g > text');
 					var re = \/[$ptm_residues]\/i;  
 					for (i = 0; i < rects.length; i++) {
             var el = \$(rects[i]);
@@ -412,7 +416,7 @@ sub drawPTMHisChart {
           \$jq(rects[0]).parent().append(addTextNode(attrs, 'Total obs' , \$jq(rects[0]).parent()));
  
       }
-      google.setOnLoadCallback(drawVisualization_$ptm_residues);
+      google.setOnLoadCallback(drawVisualization_$ptm_type);
       function getElementPos(\$el) {
 				// returns an object with the element position
 				return {
@@ -434,7 +438,7 @@ sub drawPTMHisChart {
 			}
   </script>
   <table>
-  <div id="chart_ptm_$ptm_residues" style="width: 1000px; height: 400px;"></div>
+  <div id="chart_ptm_$ptm_type" style="width: 1000px; height: 400px;"></div>
   </table>
   ~;
   return $chart_div;

@@ -3457,13 +3457,14 @@ sub display_spectra_ptm_table {
 		$spectra_display =~ s/<table/<table name="ptm_spectra_$counter" class="ptm_spectra"/i;
 
 		my $GV = SBEAMS::Connection::GoogleVisualization->new();
-    $ptm_type =~ /^(\w+):.*/;
-		my $ptm_summary_chart = $GV->drawPTMHisChart(data=> $ptm_score_summary_ref->{$ptm_type},ptm_residues=>$1 );
+		my $ptm_summary_chart = $GV->drawPTMHisChart(data=> $ptm_score_summary_ref->{$ptm_type},ptm_type=>$ptm_type );
+    my $func_name = "drawVisualization_$ptm_type";
+    $func_name =~ s/[:\.]/_/g;
 		if ($counter == 1){
 			$spectraHTML .= "<div  id ='$ptm_type' style='display:block' class='tabcontent'>\n";
 		}else{
 			$spectraHTML .= "<div  id ='$ptm_type' style='display:none' class='tabcontent'>\n";
-      $drawVisualization .= "google.setOnLoadCallback(drawVisualization_$1)\n";
+      $drawVisualization .= "google.setOnLoadCallback($func_name)\n";
 		}
 		$spectraHTML .= qq~<div>$ptm_summary_chart</div>\n~;
 		#$spectraHTML .= "$ptm_prob_color\n$spectra_display";
