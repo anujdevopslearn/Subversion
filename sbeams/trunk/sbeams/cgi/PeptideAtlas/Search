@@ -469,6 +469,9 @@ sub handle_request {
     ~;
   }
 
+  my $msg = $sbeams->update_PA_table_variables($atlas_build_ids);
+
+
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
   my @column_array = (
@@ -562,7 +565,7 @@ sub handle_request {
 			 ~;
 
   my $select_sql = qq~
-       SELECT DISTINCT TOP 1001 $columns_clause
+       SELECT DISTINCT TOP 501 $columns_clause
          FROM $TBAT_SEARCH_KEY_LINK SKL
          LEFT JOIN  $TBAT_SEARCH_KEY_ENTITY SKE 
               ON (SKL.RESOURCE_NAME = SKE.RESOURCE_NAME) 
@@ -691,66 +694,67 @@ sub handle_request {
       # causing SearchProteins to break. However, it also causes the
       # Search cgi results to be sorted differently. Hope this is OK.
       
-	my $print_warning_msg = 0;
-	if ($apply_action =~ /(QUERY|GO)/i){
-		if(! $parameters{exact_match}) {
-			pop @column_array;
-			push @column_array, ["match_string","'fuzzy_match'", "fuzzy_match"];
-			$columns_clause = $sbeams->build_SQL_columns_list(
-				column_array_ref=>\@column_array,
-				colnameidx_ref=>\%colnameidx,
-				column_titles_ref=>\@column_titles
-			);
-				my $search_key_clause = $exact_search_key;
-				$search_key_clause =~ s/\s+/.*/g;
-				my %search_key_ids =();
-        my $counter =0;
-        foreach my $build_id (split(",", $atlas_build_ids)){
-					my $file ="/regis/sbeams5/nobackup/builds_output/cache/search_keys_$build_id.txt";
-          if ( -e $file){
-						open (F, "<$file");
-						foreach my $line (grep(/$search_key_clause/i, <F>)){
-							chomp $line;
-							my ($key_id,$search_key_name) = split(/\t/, $line);
-							$search_key_ids{$key_id} =1;
-              $counter++;
-						}
-          }
-          if ($counter > 500){
-            $print_warning_msg = 1;
-            last;
-          }
-
-			 }
-				my $search_key_id_str =  join(",", keys %search_key_ids);
-
-			 if ($search_key_id_str){
-				$sql = qq~
-						$select_sql
-						WHERE 1 = 1
-							$search_types_clause
-							AND SKE.search_key_id in ($search_key_id_str)
-							AND SKL.atlas_build_id IN ( $atlas_build_ids )
-						ORDER BY search_key_name
-				~;
-				#$log->error($sql);
-				$sbeams->fetchResultSet(
-					sql_query=>$sql,
-					resultset_ref=>$tmp_resultset_ref,
+		my $print_warning_msg = 0;
+		if ($apply_action =~ /(QUERY|GO)/i){
+			if(! $parameters{exact_match}) {
+				pop @column_array;
+				push @column_array, ["match_string","'fuzzy_match'", "fuzzy_match"];
+				$columns_clause = $sbeams->build_SQL_columns_list(
+					column_array_ref=>\@column_array,
+					colnameidx_ref=>\%colnameidx,
+					column_titles_ref=>\@column_titles
 				);
-			}
-			%fuzzy_resultset = (%fuzzy_resultset, %$tmp_resultset_ref);
-		} else {
-			if ($n_exact_results == 0) {
-				if ($sbeams->output_mode() eq 'html') {
-					$sbeamsMOD->display_page_header(project_id => $project_id);
-					print "$buffer<BR>";
-					print "There were no matches in the index for your search string<BR>";
+					my $search_key_clause = $exact_search_key;
+					$search_key_clause =~ s/\s+/.*/g;
+					my %search_key_ids =();
+					my $counter =0;
+					foreach my $build_id (split(",", $atlas_build_ids)){
+						my $file ="/regis/sbeams5/nobackup/builds_output/cache/search_keys_$build_id.txt";
+						if ( -e $file){
+							open (F, "<$file");
+							foreach my $line (grep(/$search_key_clause/i, <F>)){
+								chomp $line;
+								my ($key_id,$search_key_name) = split(/\t/, $line);
+								$search_key_ids{$key_id} =1;
+								$counter++;
+							}
+						}
+						if ($counter > 500){
+							$print_warning_msg = 1;
+							last;
+						}
+
+				 }
+					my $search_key_id_str =  join(",", keys %search_key_ids);
+
+				 if ($search_key_id_str){
+					$sql = qq~
+							$select_sql
+							WHERE 1 = 1
+								$search_types_clause
+								AND SKE.search_key_id in ($search_key_id_str)
+								AND SKL.atlas_build_id IN ( $atlas_build_ids )
+							ORDER BY search_key_name
+					~;
+					#$log->error($sql);
+					$sbeams->fetchResultSet(
+						sql_query=>$sql,
+						#resultset_ref=>$tmp_resultset_ref,
+					  resultset_ref=> \%fuzzy_resultset,
+					);
 				}
-				return(0);
+				#%fuzzy_resultset = (%fuzzy_resultset, %$tmp_resultset_ref);
+			} else {
+				if ($n_exact_results == 0) {
+					if ($sbeams->output_mode() eq 'html') {
+						$sbeamsMOD->display_page_header(project_id => $project_id);
+						print "$buffer<BR>";
+						print "There were no matches in the index for your search string<BR>";
+					}
+					return(0);
+				}
 			}
 		}
-  }
 			
       if(defined $fuzzy_resultset{data_ref}){
 				$n_fuzzy_results = scalar(@{$fuzzy_resultset{data_ref}});
@@ -759,10 +763,10 @@ sub handle_request {
       }
 
       if ($apply_action =~ /(QUERY|GO)/i){
-	foreach my $row(@{$fuzzy_resultset{data_ref}}){
-	  push @{$resultset{data_ref}}, $row;
+				foreach my $row(@{$fuzzy_resultset{data_ref}}){
+					push @{$resultset{data_ref}}, $row;
         }
-	undef %tmp_resultset;
+				undef %tmp_resultset;
       }
 
       #### If exactly one result came back, then redirect to the one hit
