@@ -249,6 +249,10 @@ sub Authenticate {
             permitted_work_groups_ref=>$permitted_work_groups_ref,
             allow_anonymous_access=>$allow_anonymous_access,
         );
+        if ( !$current_work_group_id ) {
+          $log->debug("User $current_username tried to login, but does not belong to any work groups permitted in this context. Needs to belong to one of the following, but does not:\n".Data::Dumper->Dump([$permitted_work_groups_ref]));
+          die("User $current_username tried to login, but does not belong to any work groups permitted in this context. Needs to belong to one of the following, but does not:\n".Data::Dumper->Dump([$permitted_work_groups_ref]));
+        }
         $current_username = '' unless ($current_work_group_id);
   }
 
