@@ -427,7 +427,7 @@ sub get_column_defs {
 			'Best Prob' => 'Highest iProphet probability for this observed sequence',
 			'Biosequence Name' => 'Protein Name/Accession.',
 			'CE' => 'Collision energy, the kinetic energy conferred to the peptide ion and resulting in peptide fragmentation',
-			'Canonical Proteins' => 'Minimally redunant set of proteins required to explain (virtually) all non-decoy peptides observed in build',
+			'Canonical Proteins' => 'Minimally redundant set of proteins required to explain (virtually) all non-decoy peptides observed in build',
 			'Charge' => 'Charge on peptide ion',
 			'Combined Predictor Score' => 'Score genereated based on STEPP, PSieve, ESPP, APEX and DPred scores',
 			'DPred' => 'Predicted peptide score calculated by Detectability Predictor algorithm',
