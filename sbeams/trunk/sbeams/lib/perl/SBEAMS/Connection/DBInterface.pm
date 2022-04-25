@@ -5108,8 +5108,15 @@ sub parse_input_parameters {
   }
 
   if ($ref_parameters->{atlas_build_id}){
+    if ( $ref_parameters->{atlas_build_id} !~ /^\d+$/ ) {
+      die( "ERROR: Invalid atlas_build_id" );
+    }
     $self-> update_PA_table_variables($ref_parameters->{atlas_build_id});
+
   }elsif($ref_parameters->{build_id}){
+    if ( $ref_parameters->{build_id} !~ /^\d+$/ ) {
+      die( "ERROR: Invalidi build_id" );
+    }
     $self-> update_PA_table_variables($ref_parameters->{build_id});
   }
 
@@ -5171,7 +5178,6 @@ sub show_help {
 sub processStandardParameters {
   my $self = shift;
   my %args = @_;
-
 
   #### Process the arguments list
   my $ref_parameters = $args{'parameters_ref'};
