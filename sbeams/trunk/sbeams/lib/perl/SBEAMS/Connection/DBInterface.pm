@@ -5115,7 +5115,7 @@ sub parse_input_parameters {
 
   }elsif($ref_parameters->{build_id}){
     if ( $ref_parameters->{build_id} !~ /^\d+$/ ) {
-      die( "ERROR: Invalidi build_id" );
+      die( "ERROR: Invalid build_id" );
     }
     $self-> update_PA_table_variables($ref_parameters->{build_id});
   }
