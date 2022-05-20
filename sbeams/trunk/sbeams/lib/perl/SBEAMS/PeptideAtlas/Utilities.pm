@@ -693,6 +693,7 @@ sub get_peptide_coords {
   my $self = shift;
   my %args = @_;
   my $pep_str = join("','", @{$args{peptides}});
+
   my $sbeams = $self->getSBEAMS() || new SBEAMS::Connection;
   my $sql = qq~
 			SELECT PEPTIDE_SEQUENCE, PM.START_IN_BIOSEQUENCE
@@ -791,7 +792,7 @@ sub get_snp_coverage_hash {
         if ($alt_aa ne '*'){
 					if ($start <= $args{pos} && $start+length($peptide) > $args{pos}){
 						my $idx = $args{pos} - $start;
-            if ($aas[$idx] eq $alt_aa){
+            if (($aas[$idx] eq $alt_aa )||($alt_aa =~ /[IL]/ && $aas[$idx]=~ /[IL]/) ){ 
   					  push @posn, $start;
             }else{
                ## 0 base
@@ -879,7 +880,7 @@ sub get_coverage_hash_db {
   my $error = '';
   my $coverage = {};
   # check for required args
-  for my $arg( qw( peptide_coords peptides) ) {
+  for my $arg( qw( peptide_coords peptides primary_protein_sequence) ) {
     next if defined $args{$arg};
     my $err_arg = ( $error ) ? ", $arg" : $arg;
     $error ||= 'Missing required param(s): ';
@@ -894,18 +895,30 @@ sub get_coverage_hash_db {
     return;
   }
   my $peptide_coords = $args{peptide_coords};
+  my $primary_protein_sequence = $args{primary_protein_sequence};
+  $primary_protein_sequence =~ s/I/L/g;
+
+  my %tmp = ();
   for my $peptide ( @{$args{peptides}}  )  {
     my @posn;
-    my @aas = split(//, $peptide);
+    my $match = 1;
+    my $il_neu_peptide = $peptide;
+    $il_neu_peptide =~ s/I/L/g;
+    $match = 0 if ($primary_protein_sequence !~ /$il_neu_peptide/);
     if (defined $peptide_coords->{$peptide}){
       foreach my $start(@{$peptide_coords->{$peptide}}){
 				for ( my $i = 0; $i < length($peptide); $i++ ){
 					my $covered_posn = $start + $i -1;
-					$coverage->{$covered_posn}++;
+          if ($match){
+					  $coverage->{$covered_posn}{primary}++;
+            $tmp{$covered_posn} =1;
+          }
+          $coverage->{$covered_posn}{all}++;
 				}
 			}
     } 
   }
+  #print join(",", sort {$a <=> $b} keys %tmp). '<BR>';
   return $coverage;
 }
 
@@ -923,7 +936,6 @@ sub highlight_sequence {
   my %args = @_;
 
   my $error = '';
-  
   # check for required args
   for my $arg( qw( seq coverage ) ) {
     next if defined $args{$arg};
@@ -1024,6 +1036,7 @@ sub get_transmembrane_info {
   my $start = 0;
   my $side = '';
   my ($posn, $beg, $end );
+
   while ( $string =~ m/[^oi]*[oi]/g ) {
     next unless $&;
     my $range = $&;
@@ -1471,8 +1484,16 @@ sub make_tags {
   my $tags = shift || {};
 
   for ( my $i = 0; $i <= $input->{number}; $i++ ){
-    $tags->{$input->{start}->[$i]} .= "<SPAN class=$input->{class}>";
-    $tags->{$input->{end}->[$i]} .= "</SPAN>";
+    if ($input->{snp_start} && $input->{snp_start}->[$i]){
+			$tags->{$input->{snp_start}->[$i]} .= "<SPAN onmouseout=\"hideTooltip()\" onmouseover=\"".
+                                        "showTooltip(event,'only observed by VARIANT peptides')\" class=$input->{snp_class}>";
+			$tags->{$input->{snp_end}->[$i]} .= "</SPAN>";
+    }else{
+      if($input->{start}->[$i]){
+			  $tags->{$input->{start}->[$i]} .= "<SPAN class=$input->{class}>";
+			  $tags->{$input->{end}->[$i]} .= "</SPAN>";
+      }
+    }
   }
   return $tags;
 }
@@ -1536,7 +1557,8 @@ sub assess_protein_peptides {
     return '' if $error;
 
     my $protein_sql = qq~
-    SELECT biosequence_seq FROM $TBAT_BIOSEQUENCE B
+    SELECT biosequence_seq 
+    FROM $TBAT_BIOSEQUENCE B
     JOIN $TBAT_ATLAS_BUILD AB
       ON AB.biosequence_set_id = B.biosequence_set_id
     WHERE AB.atlas_build_id = $args{build_id}
@@ -1548,7 +1570,8 @@ sub assess_protein_peptides {
 
     while ( my @row = $sth->fetchrow_array() ) {
       my @seqs = split( /\*/, $row[0] );
-      $args{seq} = $seqs[0];
+      #$args{seq} = $seqs[0];
+      $args{seq} = $row[0];
       last;
     }
   }
@@ -1646,7 +1669,6 @@ sub assess_protein_peptides {
       $status ||= 'SIG';
       $fail_status{SIG}++;
       $sig_peps{$pep}++;
-
     } else {
       for my $pos ( sort { $a <=> $b } ( keys( %sig ) ) ) {
         if ( $pos >= $start && $pos <= $end ) {
@@ -1720,11 +1742,6 @@ sub get_html_seq_vars {
                  clustal_display => '',
                  variant_list => [ [qw( Type Num Start End Info )] ] );
   my $organism = $args{organism} || ''; 
-# Let the caller do this.
-#  my $full_seq = $args{seq} || return '';
-#  my @seqs = split( /\*/, $full_seq );
-#  my $seq = shift @seqs;
-
   my $seq = $args{seq} || return '';
 
   my $ruler = '';
@@ -1750,14 +1767,13 @@ sub get_html_seq_vars {
     $peps{$pep}++;
   }
   my $whitespace = '<SPAN CLASS="white_bg">&nbsp;</SPAN>';
-
   my $cnt = 0;
   my $line_len = 0;
   my $prev_aa = '-';
 
   my %values = ( tryp =>    [ ['<PRE><SPAN CLASS="pa_sequence_font">'] ],
-		 inter =>   [ ['<PRE><SPAN CLASS="pa_sequence_font">'] ],
-		 alt_enz => [ ['<PRE><SPAN CLASS="pa_sequence_font">'] ],
+								 inter =>   [ ['<PRE><SPAN CLASS="pa_sequence_font">'] ],
+								 alt_enz => [ ['<PRE><SPAN CLASS="pa_sequence_font">'] ],
                  nosp =>    [ ['<PRE><SPAN CLASS="pa_sequence_font">'] ] );
 
   for my $aa ( split( "", $seq ) ) {
@@ -1779,8 +1795,8 @@ sub get_html_seq_vars {
     unless ( $cnt % 10 ) {
       push @iposn, $whitespace;
     }
-    push @nsposn, " <span class='pa_sequence_counter'>$cnt</span>\n" unless ( $cnt % 100 );
-    push @iposn,  " <span class='pa_sequence_counter'>$cnt</span>\n" unless ( $cnt % 100 );
+    push @nsposn, "<span class='pa_sequence_counter'>$cnt</span>\n" unless ( $cnt % 100 );
+    push @iposn,  "<span class='pa_sequence_counter'>$cnt</span>\n" unless ( $cnt % 100 );
 
     if ( $aa =~ /\*/ || $prev_aa =~ /\*/ ) {
       my $idx = scalar( @{$values{tryp}} );
@@ -1808,8 +1824,6 @@ sub get_html_seq_vars {
   if( $is_trypsin_build eq 'N'){
     $alt_enzyme_info = $self->get_alt_enzyme( %args );
   }
-
-
 
   push @{$values{tryp}},   ['</SPAN></PRE>'];
   push @{$values{nosp}},   ['</SPAN></PRE>'];
@@ -1943,7 +1957,6 @@ sub get_html_seq_vars {
   if ( $args{swiss} ){
     $self->{_swiss} = $args{swiss};
   } else {
-
     $self->{_swiss} = $self->get_uniprot_annotation( %args );
   }
   my $swiss = $self->{_swiss};
@@ -1972,7 +1985,8 @@ sub get_html_seq_vars {
                                peptides => $peps,
                                accession => $args{accession});
   $coverage_coords{$primary_clustal->[0]} = $self->get_coverage_hash_db(peptide_coords => \%peptide_coordinate_db,
-                   peptides => $peps);
+                                                                        peptides => $peps,
+                                                                        primary_protein_sequence => $args{seq});
 
   push @global_clustal, $primary_clustal;
 
@@ -2349,7 +2363,6 @@ sub get_uniprot_variant_seq {
                   '-' x ($seqlen - $args{end});
 
   } elsif ( 0 ) { # Deprecated, SNP shows as stand-alone peptide
-
     my $tryp = $self->do_tryptic_digestion( aa_seq => $args{fasta_seq} );
     my $pos = -1;
     my $snp_pep = '';
@@ -2497,13 +2510,13 @@ sub get_uniprot_annotation {
   $np_clause
   ORDER BY uniprot_db_entry_id DESC
   ~;
+
   my $sbeams = $self->getSBEAMS();
   my @results = $sbeams->selectrow_array( $sql );
   #print " file_path, entry_offset, entry_name " . join(",", @results) . "\n";
 
   my $entry = $self->read_uniprot_dat_entry( path => $results[0],
 					     offset => $results[1] );
-  #print "$entry\n";
 
   if ( !$entry ) {
     return \%annot;
@@ -2541,7 +2554,6 @@ sub get_uniprot_annotation {
           for my $key ( 1, 2 ) {
             $var->[$key] =~ s/\D//g;
           }
-
           next if $var->[0] eq 'CHAIN' && $var->[1] == 2 && $var->[2] == length($fasta_seq);
           next if $var->[0] eq 'CHAIN' && $var->[1] == 1 && $var->[2] == length($fasta_seq);
 
@@ -2563,13 +2575,13 @@ sub get_uniprot_annotation {
           $annot{$var{type}} ||= [];
 
           push @{$annot{$var{type}}}, \%var; 
-
           if ( $var->[0] =~ /MOD_RES|CARBOHYD/ ) {
             $annot{has_modres}++;
           } elsif ( $var->[0] ne 'CONFLICT' ) { # Not yet using these
             $annot{has_variants}++;
           }
         }
+
       }
     }
     if ( $swiss->{PE} ) {
@@ -2637,6 +2649,7 @@ sub get_clustal_display {
   my $style = '';
   my $style2= '';
   my $px = 0;
+
   for my $seq ( @{$args{alignments}} ) {
     my $sequence = $seq->[1];
     if ( $seq->[0] =~ /\&nbsp;/  ) {
@@ -2644,7 +2657,8 @@ sub get_clustal_display {
       $sequence = $self->highlight_sites( seq => $sequence, 
                                           acc => $seq->[0], 
                                           nogaps => 1,
-					  coverage => $args{coverage}->{$seq->[0]});
+                                          track => $seq->[0],
+																					coverage => $args{coverage}->{$seq->[0]});
     }
 
     if ( $args{snp_cover} ) {
@@ -2655,12 +2669,12 @@ sub get_clustal_display {
 
     if ( $seq->[0] ) {
       if ($seq->[0] eq 'Primary'){
-	$style2= "style ='position: sticky; top: ${px}px;left: 0px;z-index:6;background:#f3f1e4'";
-	$style = "style ='position: sticky; top: ${px}px;z-index:3;background:#f3f1e4'";
-	$px += 15;
+				$style2= "style ='position: sticky; top: ${px}px;left: 0px;z-index:6;background:#f3f1e4'";
+				$style = "style ='position: sticky; top: ${px}px;z-index:3;background:#f3f1e4'";
+				$px += 15;
       }
       else {
-	$style2= "style ='position: sticky; left: 0px;z-index:4;background:#f3f1e4'";
+				$style2= "style ='position: sticky; left: 0px;z-index:4;background:#f3f1e4'";
       }
       $table_rows .= qq~
       <TR >
@@ -2749,40 +2763,60 @@ sub highlight_sites {
   my %args = @_;
 #  die Dumper( %args ) if $args{acc} eq 'SNP_38';
   my $coverage = $args{coverage};
+  my $track = $args{track};
+
   my @aa = split( '', $args{seq} );
   my $return_seq = '';
   my $cnt = 0;
   my $in_coverage = 0;
+  my $in_primarysnp_coverage = 0;
   my $seq_started = 0;
-  for my $aa ( @aa ) {
 
+  for my $aa ( @aa ) {
     if ( $args{nogaps} && $aa eq '-' ) {
       if ( $seq_started ) {
-	if ( $in_coverage ) {
-	  $return_seq .= "</span>$aa";
-          $in_coverage = 0;
-       	} else {
-	  $return_seq .= $aa;
-	}
+				if ( $in_coverage ) {
+					$return_seq .= "</span>$aa";
+					$in_coverage = 0;
+			  } else {
+					$return_seq .= $aa;
+				}
       } else {
-	$return_seq .= $aa;
+				$return_seq .= $aa;
       }
     } else { # it is an amino acid
       $seq_started++;
-      if ( $coverage->{$cnt} ) {
-	if ( $in_coverage ) { # already in
-	  $return_seq .= $aa;
-	} else {
-	  $in_coverage++;
-	  $return_seq .= "<span class=pa_observed_sequence>$aa";
-	}
-      } else { # posn not covered!
-	if ( $in_coverage ) { # were in, close now
-	  $return_seq .= "</span>$aa";
-	  $in_coverage = 0;
-	} else {
-	  $return_seq .= $aa;
-	}
+      if ($track eq 'Primary' && $coverage->{$cnt} && ! $coverage->{$cnt}{primary}){# primary track covered by snp
+				if ( $in_primarysnp_coverage ) { # already in
+					$return_seq .= $aa;
+				} else {
+          if ($in_coverage){
+            $return_seq .= "</span>";
+            $in_coverage =0;
+          }
+					$in_primarysnp_coverage++;
+          $return_seq .= "<span class=pa_snp_observed_sequence>$aa";
+        }
+      }elsif(($track eq 'Primary' && $coverage->{$cnt} && $coverage->{$cnt}{primary}) || #primary track covered 
+             ($track ne 'Primary' && $coverage->{$cnt})){ # non-primary track covered 
+        if ( $in_coverage ) { # already in
+          $return_seq .= $aa;
+        } else {
+          if ($in_primarysnp_coverage){
+            $return_seq .= "</span>";
+            $in_primarysnp_coverage=0; 
+          }
+          $in_coverage++;
+          $return_seq .= "<span class=pa_observed_sequence>$aa";
+        }
+      }else { # posn not covered!
+				if ( $in_coverage || $in_primarysnp_coverage){# were in, close now
+          $return_seq .= "</span>$aa";
+          $in_primarysnp_coverage=0;
+          $in_coverage = 0;
+        }else{ 
+					$return_seq .= $aa;
+				}
       }
     }
     $cnt++;

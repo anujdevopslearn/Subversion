@@ -278,10 +278,11 @@ my $module_styles =<<"  END_STYLE";
 
   .pa_sequence_font{font-family:courier; font-size: ${FONT_SIZE}pt;  letter-spacing:0.5; font-weight: bold; }	
   .pa_observed_sequence{font-family:courier; font-size: ${FONT_SIZE}pt; color: red;  letter-spacing:0.5; font-weight: bold;}	
-  .pa_sequence_counter{font-size:smaller;color:#ccc;}
+  .pa_snp_observed_sequence{font-family:courier; font-size: ${FONT_SIZE}pt; color:#62b4cf;  letter-spacing:0.5; font-weight: extra bold;}
+  .pa_sequence_counter{font-size:smaller; background-color:white; color:#ccc;}
 
   .pa_snp_font{font-family:courier; font-size: ${FONT_SIZE}pt; letter-spacing:0.5; font-weight: bold; background-color: #66CCFF}	
-  .pa_snp_obs_font{font-family:courier; font-size: ${FONT_SIZE}pt; letter-spacing:0.5; font-weight: bold; color: #00CC00}	
+  .pa_snp_obs_font{font-family:courier; font-size: ${FONT_SIZE}pt; letter-spacing:0.5; font-weight: bold; color: #62b4cf}	
   .pa_snp_medium_font{font-family:courier; font-size: ${FONT_SIZE}pt; letter-spacing:0.5; font-weight: bold; color: #CCCC00}	
   .pa_snp_warn_font{font-family:courier; font-size: ${FONT_SIZE}pt; letter-spacing:0.5; font-weight: bold; color: #CC0000}	
 
