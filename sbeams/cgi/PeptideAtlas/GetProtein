@@ -2210,7 +2210,8 @@ sub get_sequence_graphic {
 #
   # Set up hash for storing point by point coverage info
   my %coverage;
-  for my $idx ( 1..$protlen ) { $coverage{$idx} = 0; }
+  my %coverage_primary;
+  for my $idx ( 1..$protlen ) { $coverage{$idx} = 0; $coverage_primary{$idx} = 0; }
 
   my $width = ( $protlen <= 4000 ) ? 1500 : int( $protlen/5 );
 
@@ -2314,7 +2315,10 @@ sub get_sequence_graphic {
     $pep_info{$ugly_key} = "$start - $stop, $acc: $seq ($n_obs obs)";
 
     # Record the coverage for this peptide
-    for my $idx ( $start..$stop ) { $coverage{$idx}++; }
+    for my $idx ( $start..$stop ) { 
+      $coverage{$idx}++; 
+      $coverage_primary{$idx}++ if ($protseq =~ /$seq/);
+    }
 
     # count peptide type, to build appropriate legend
     if ( $score ) {
@@ -2450,65 +2454,51 @@ sub get_sequence_graphic {
 
   # Not in coverage to begin with
   my $in_coverage = 0;
-
   # What is 1-based index of first observed aa, used for expected coverage.
   my $min_covered_aa = 0;
-
   # %coverage is hash of seq depth keyed by coordinate
   my $last_key;
-  for my $key ( sort{ $a <=> $b } keys( %coverage ) ) {
-
-    # Cache min covered aa if not yet set and index is covered
-    $min_covered_aa = $key if ( !$min_covered_aa && $coverage{$key} );
-
-    if ( !$in_coverage ) { # Not in coverage
-      if ( $coverage{$key} ) {
-        $cstart = $key;
-        $cend = $key;
-        $in_coverage = 1;
-
-        # Store non-coverage info
-        $ncend = $key - 1;
-        push @uncovered, { start => $ncstart, end => $ncend } if $ncstart && $ncend;
-
-      } else {
-        $in_coverage = 0;
-        # No-op
-      }
-    } else { # Already in coverage
-      if ( $coverage{$key} ) {
-        # Start stays the same, increment end
-        $cend = $key;
-        $in_coverage = 1;
-      } else {
-        $in_coverage = 0;
-        # Its showtime!
-        my $f = Bio::SeqFeature::Generic->new( -start   => $cstart,
-                                               -end     => $cend,
-                                               -primary => 'Coverage',
-                                               -display_name => 'Coverage' );
-        push @coverage, $f;
-        $cstart = 0;
-        $cend = 0;
-
-        # Dropped out of coverage, cache ncstart
-        $ncstart = $key;
-      }
+  my %sequence_coverage = ();
+  for my $i ( 1..$protlen ) { 
+    if (! $coverage{$i}){
+      push @{$sequence_coverage{uncovered}} , $i;
+    }elsif($coverage{$i} && ! $coverage_primary{$i}){
+       push @{$sequence_coverage{snpcovered}}, $i;
+    }else{
+      push @{$sequence_coverage{covered}}, $i;
+    } 
+  }
+ 
+  foreach my $type (qw(uncovered snpcovered covered)){
+    my $end = 0;
+    my @pos = @{$sequence_coverage{$type}};
+    my $start = $pos[0];
+    for (my $i=1; $i<=$#pos;$i++){
+      if ($pos[$i] != $pos[$i-1]+1 || $i == $#pos){
+        my $end = $pos[$i-1];
+        if ($i == $#pos){
+          $end = $pos[$i];
+        }
+        if ($type eq 'uncovered'){
+          push @uncovered, { start => $start, end => $end };
+        }else{
+            my $f = Bio::SeqFeature::Generic->new( -start   => $start,
+                                                 -end     => $end,
+                                                 -primary => 'Coverage',
+                                                 -display_name => 'Coverage',
+                                                 );
+					if($type eq 'snpcovered'){
+						 $f->add_tag_value("ctype", "S");
+					}else{
+						$f->add_tag_value("ctype", "P");
+					}
+					push @coverage, $f;
+        }
+        $start = $pos[$i];
+      } 
     }
-    $last_key = $key;
   }
 
-  if ( !$in_coverage ) {
-    push @uncovered, { start => $ncstart, end => $last_key } if $ncstart && $last_key;
-  }
-
-  if ( $cend ) {
-    my $f = Bio::SeqFeature::Generic->new( -start   => $cstart,
-                                           -end     => $cend,
-                                           -primary => 'Coverage',
-                                      -display_name => 'Coverage' );
-    push @coverage, $f;
-  }
 
   my @ssr;
   my @ok;
@@ -3205,35 +3195,26 @@ sub displayAnnotatedSequence {
   my @annotation_lines;
 
   while ($i < $seq_length) {
-
     if ($end_positions{$i}) {
       if ($color_level == $end_positions{$i}) {
-#	print "</B></font>";
       }
       $color_level -= $end_positions{$i} unless ($color_level == 0);
     }
-
     if ($start_positions{$i}) {
       if ($color_level == 0) {
-#	print "<font color=\"red\"><B>";
       }
       $color_level += $start_positions{$i};
     }
-
     if ($color_level) {
       $observed_residues++;
     }
-
 #    print substr($sequence,$i,1);
     $i++;
     if ($i %$line_length == 0) {
-#      print "\n";
     } elsif ($enzyme && $enzyme eq 'trypsin') {
       if (substr($sequence,$i-1,2) =~ /[RK][A-O,Q-Z]/) {
-#	print " ";
       }
     } elsif ($i % $word_length == 0) {
-#      print " ";
     }
   }
 
@@ -3254,14 +3235,24 @@ sub displayAnnotatedSequence {
 #  print ' (' . int(($observed_residues)/($seq_length-$cnt)*1000)/10,"% of likely observable sequence)";
 
   my %observed = ( start => [],
-		     end => [],
-		   class => 'pa_observed_sequence',
-		  number => 0 );
+									 end => [],
+									 class => 'pa_observed_sequence',
+									 number => 0,
+                   snp_start=>[], 
+                   snp_end=>[],
+                   snp_class=> 'pa_snp_observed_sequence' );
 
   for my $f ( @coverage ) {
 #    $log->debug( "coverage starts at " . $f->start() . " and ends at " . $f->end() );
-    push @{$observed{start}}, $f->start() - 1;
-    push @{$observed{end}}, $f->end() - 1;
+    my @tags = $f->get_tag_values('ctype'); 
+		#print $tags[0] ."<BR>"; 
+   if ($tags[0] eq 'S'){
+      #print "$tags[0] ". $f->start() . " and ends at " . $f->end() ."<BR>";
+			push @{$observed{snp_start}}, $f->start() - 1;
+			push @{$observed{snp_end}}, $f->end() - 1;
+    }
+		push @{$observed{start}}, $f->start() - 1;
+		push @{$observed{end}}, $f->end() - 1;
     $observed{number}++;
   }
   my $tags = $sbeamsMOD->make_tags( \%observed );
