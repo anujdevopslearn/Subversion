@@ -2471,7 +2471,10 @@ sub get_sequence_graphic {
  
   foreach my $type (qw(uncovered snpcovered covered)){
     my $end = 0;
-    my @pos = @{$sequence_coverage{$type}};
+    my @pos = ();
+    if ( $sequence_coverage{$type}){
+      @pos = @{$sequence_coverage{$type}};
+    }
     my $start = $pos[0];
     for (my $i=1; $i<=$#pos;$i++){
       if ($pos[$i] != $pos[$i-1]+1 || $i == $#pos){

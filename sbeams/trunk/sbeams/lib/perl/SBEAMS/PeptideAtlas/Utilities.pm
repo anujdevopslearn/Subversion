@@ -2048,10 +2048,9 @@ sub get_html_seq_vars {
   my %site_specific_nobs;
   my $t0 = time;
   
-  if ( scalar keys %obs_snps){ 
+  if ( scalar keys %obs_snps || @unobs){ 
     my $pnobs = $args{peptide_nobs};
     my %snp_only;
-
     # First see which peptides have snp
     for my $pep ( keys( %{$pnobs} ) ) {
       my $posn = $self->get_site_positions( seq => $args{seq},
