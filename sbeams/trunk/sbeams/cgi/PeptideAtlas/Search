@@ -499,7 +499,7 @@ sub handle_request {
 
   ## all any search for sequence search 
   my $select_sql;
-  if (($parameters{sequence} =~/on/i || $parameters{accession} =~ /on/i ) &&
+  if (($parameters{sequence} =~/on/i || $parameters{exact_match} =~ /on/i || $parameters{accession} =~ /on/i ) &&
        $parameters{organism_name}=~ /any/i){
     # skip protein level query  
     # use all build
