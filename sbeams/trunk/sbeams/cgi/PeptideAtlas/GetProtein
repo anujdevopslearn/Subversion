@@ -2460,8 +2460,9 @@ sub get_sequence_graphic {
   my $last_key;
   my %sequence_coverage = ();
   for my $i ( 1..$protlen ) { 
-    if (! $coverage{$i}){
+    if (! $coverage{$i} && ! $coverage_primary{$i}){
       push @{$sequence_coverage{uncovered}} , $i;
+      print "$i,";
     }elsif($coverage{$i} && ! $coverage_primary{$i}){
        push @{$sequence_coverage{snpcovered}}, $i;
     }else{
@@ -2478,24 +2479,35 @@ sub get_sequence_graphic {
     my $start = $pos[0];
     for (my $i=1; $i<=$#pos;$i++){
       if ($pos[$i] != $pos[$i-1]+1 || $i == $#pos){
-        my $end = $pos[$i-1];
-        if ($i == $#pos){
-          $end = $pos[$i];
-        }
-        if ($type eq 'uncovered'){
-          push @uncovered, { start => $start, end => $end };
+				my ($end, @coords);
+        if ($pos[$i] != $pos[$i-1]+1){
+          $end = $pos[$i-1];
+          push @coords, [$start, $end];
+          if ($i == $#pos){
+            push @coords, [$pos[$i], $pos[$i]];
+          }
         }else{
-            my $f = Bio::SeqFeature::Generic->new( -start   => $start,
-                                                 -end     => $end,
-                                                 -primary => 'Coverage',
-                                                 -display_name => 'Coverage',
-                                                 );
-					if($type eq 'snpcovered'){
-						 $f->add_tag_value("ctype", "S");
+          push @coords, [$start, $pos[$i]];
+        }
+
+        foreach my $coord(@coords){
+          my ($s, $e) =@$coord;
+					if ($type eq 'uncovered'){
+						push @uncovered, { start => $s, end => $e };
 					}else{
-						$f->add_tag_value("ctype", "P");
+							my $f = Bio::SeqFeature::Generic->new( -start   => $s,
+																									 -end     => $e,
+																									 -primary => 'Coverage',
+																									 -display_name => 'Coverage',
+																									 );
+						if($type eq 'snpcovered'){
+							 $f->add_tag_value("ctype", "S");
+						}else{
+							$f->add_tag_value("ctype", "P");
+						}
+						push @coverage, $f;
 					}
-					push @coverage, $f;
+
         }
         $start = $pos[$i];
       } 
