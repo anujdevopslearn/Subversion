@@ -2462,7 +2462,6 @@ sub get_sequence_graphic {
   for my $i ( 1..$protlen ) { 
     if (! $coverage{$i} && ! $coverage_primary{$i}){
       push @{$sequence_coverage{uncovered}} , $i;
-      print "$i,";
     }elsif($coverage{$i} && ! $coverage_primary{$i}){
        push @{$sequence_coverage{snpcovered}}, $i;
     }else{
