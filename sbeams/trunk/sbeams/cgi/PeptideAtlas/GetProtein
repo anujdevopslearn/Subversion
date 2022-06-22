@@ -23,6 +23,8 @@ use strict;
 use Getopt::Long;
 use FindBin;
 use Data::Dumper;
+use URI::Escape;
+
 $|++;
 
 use lib "$FindBin::Bin/../../lib/perl";
@@ -3456,8 +3458,10 @@ sub displayAnnotatedSequence {
               }
               $uniq = "($nobs->{unique}->{$skey} unique)" if $nobs->{unique}->{$skey};
             }
+            my $var_desc = $var->[4];
+            $var_desc = uri_escape($var_desc);
+            $var->[1] = "<a href=ViewPeptideExpression?atlas_build_id=$args{atlas_build_id};spep=$spep;opep=$opep;pos=$var->[2];desc=$var_desc;use_nextprot=$use_nextprot;acc=$biosequence->{biosequence_name} title='View VARIANT expression profile' target='_blank' >$var->[1]</a>";
 
-            $var->[1] = "<a href=ViewPeptideExpression?atlas_build_id=$args{atlas_build_id};spep=$spep;opep=$opep;use_nextprot=$use_nextprot;acc=$biosequence->{biosequence_name} title='View VARIANT expression profile' target='_blank' >$var->[1]</a>";
             $title .= "<br>Supporting Peptides:<br>$spep_str";
             $var->[4] = qq~<span class=$class onMouseout="hideTooltip()" onMouseover="showTooltip(event,'$title')">Obs $perc ~ . '% (' . "$post_cnt/$total) $uniq </span> $var->[4] ";
 
