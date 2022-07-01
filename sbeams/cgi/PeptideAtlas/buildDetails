@@ -168,6 +168,7 @@ my $show_image = 0;
     }
     if (! $section || $section =~ /ProteomeCoverage/i){
       my $proteome_cover = '';
+      my $ptm_coverage = '';
       my $proteomeComponentOrder_file = "$PHYSICAL_BASE_DIR/lib/conf/PeptideAtlas/ProteomeComponentOrder.txt";
       my @patterns =();
       if (open (O, "<$proteomeComponentOrder_file")){
@@ -186,6 +187,12 @@ my $show_image = 0;
                                          params => $params,
                                          resultset_ref => $resultset_ref,
                                          module_ref => sub{$atlas->get_proteome_coverage_new( $build_id, \@patterns)});
+          $ptm_coverage = fetchResultset(atlas_build_id => $build_id,
+                                         rs_table => 'buildDetail-ptmCoverage',
+                                         params => $params,
+                                         resultset_ref => $resultset_ref,
+                                         module_ref => sub{$atlas->get_proteome_coverage_new( $build_id, \@patterns)});
+        
        }else{
            $proteome_cover = fetchResultset(atlas_build_id => $build_id,
                                          rs_table => 'buildDetail-ProteomeCoverage',
@@ -196,6 +203,9 @@ my $show_image = 0;
       
       if($proteome_cover){
 				print "$proteome_cover<BR>\n";
+      }
+      if ($ptm_coverage){
+        print "$proteome_cover<BR>\n";
       }
     }
     my ( $sample_table, $sample_array_ref ,$column_name_ref ) = get_sample_info( $build_id );
@@ -755,23 +765,6 @@ sub build_overview_html {
   }
   if ($build_name =~ /phospho/i){
     $table .= $atlas->encodeSectionItem( key   => 'PhosphoProteome Summary', tr_info => $tr, value => '', align => 'right' ) . "\n";
-    my @columns = ();
-    if ($build_name =~ /human/i){
-      @columns = qw(#_neXtProt_(PE=1-4) #_observed_sites S_sites T_sites Y_sites);
-    }else{
-       @columns = qw(#_proteins #_observed_sites S_sites T_sites Y_sites);
-    }
-    foreach my $key (@columns){
-      my $level = $key;
-      $level =~ s/\_/ /g;
-      $level =~ s/(\w+)/\u$1/g;
-      my $space = '&#8195;';
-      if ($key =~ /[STY]/){
-	$space ='&#8195;&#8195;';
-      }
-      $table .= $atlas->encodeSectionItem( key   => "$space$level", tr_info => $tr, value => $build_info->{phospho_info}->{$key}, align => 'right' ) . "\n";
-    }
-
     $table .= $atlas->encodeSectionItem( key   => "&#8195;# of Phosphorylated Sites in Modified Peptides", tr_info => $tr, value =>'', align => 'right' ) . "\n";
     foreach my $key (qw (singly_phosphorylated doubly_phosphorylated over_2_phosphorylated)){
       my $level = $key;
@@ -1473,16 +1466,17 @@ sub generate_html_from_file {
    dataset_protein_info => 'Dataset Protein Info',
    dataset_spec_protein_info => 'Dataset Specific Protein Identification',
    proteome_coverage => 'Proteome Coverage (exhaustive)',
+   ptm_coverage => 'PTM Coverage',
  );
  my %column_align = (
    exp_contrib_table => [qw(left left left center center center center center center center center center center center center center)], 
    dataset_contrib_table => [qw(left center center center center center center center center center center center center center center)], 
    dataset_protein_info => [qw(left center center center center center center center center)], 
    dataset_spec_protein_info => [qw(left center center center center center center center center)], 
-   proteome_coverage => [qw(left)], 
+   proteome_coverage => [qw(left)],
+   ptm_coverage =>  [qw(left)],
+ 
  );
-
-
 
   open (IN , "<$file") || return '';
   my ($html, $table, $pre_table);
