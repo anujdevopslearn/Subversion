@@ -590,7 +590,29 @@ Counts only primary reference proteome entries, so final tally may be smaller th
        'N_Prots' => 'Total number of entries in subject database',
        'N_Obs_Prots' => 'Number of proteins within the subject database to which at least one observed peptide maps',
        'Pct_Obs' => 'The percentage of the subject proteome covered by one or more observed peptides',
-       
+       'total_S_sites' => 'total S sites',
+       'obs_protein_S_sites' => 'total S sites in the observed proteins',
+       'covered_S_sites' => 'covered S sites in the observed proteins',
+       'total_T_sites' => 'total T sites',
+       'obs_protein_T_sites' => 'total T sites in the observed proteins',
+       'covered_T_sites' => 'covered T sites in the observed proteins',
+       'total_Y_sites' => 'total Y sites',
+       'obs_protein_Y_sites' => 'total Y sites in the observed proteins',
+       'covered_Y_sites' => 'covered Y sites in the observed proteins',
+
+				'alignment start' => 'the region over which HMMER is confident that the alignment of the sequence to the profile HMM is correct',
+				'alignment end' => 'alignment end',
+				'envelope start' => 'the region on the sequence where the match has been probabilistically determined to lie',
+				'envelope end' => 'envelope end',
+				'hmm acc' => 'pfam accession',
+				'hmm name' => 'pfam domain name',
+				'domain type' => 'pfam domain type',
+				'hmm start' => 'pfam domain alignment start',
+				'hmm end' => 'pfam domain alignment end',
+				'hmm length' => 'pfam domain sequence length',
+				'bit score' => 'the likelihood of the match having been emitted by the model is equal to that of it having been emitted by the Null model (by chance).<a href="https://pfam.xfam.org/help#tabview=tab6">pfam help</>',
+				'e value' => 'the number of hits that would be expected to have a score equal to or better than this value by chance alone.',
+
   );
 
   if ( $args{labels} ) {
