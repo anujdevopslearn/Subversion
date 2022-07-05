@@ -1612,13 +1612,13 @@ sub handle_request {
 			FROM $TBAT_PEPTIDE_INSTANCE PI
 			INNER JOIN $TBAT_PEPTIDE P
 						ON ( PI.PEPTIDE_ID = P.PEPTIDE_ID )
-			 LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
+			LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
 						ON ( PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID )
 			INNER JOIN $TBAT_ATLAS_BUILD AB
 						ON ( PI.ATLAS_BUILD_ID = AB.ATLAS_BUILD_ID )
-			 LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
+			LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
 						ON ( AB.BIOSEQUENCE_SET_ID = BSS.BIOSEQUENCE_SET_ID )
-			 LEFT JOIN $TBAT_BIOSEQUENCE BS
+			LEFT JOIN $TBAT_BIOSEQUENCE BS
 						ON ( PM.MATCHED_BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID )
 			WHERE 1 = 1
 						AND AB.atlas_build_id IN ( $atlas_build_id )
@@ -3089,18 +3089,19 @@ sub getPeptideCount {
   my %seq2instance;
   my %map_info;
   foreach my $row (@{$data_ref}) {
-    $peptides{$row->[$col{peptide_sequence}]} = $row->[$col{n_observations}];
-    $seq2instance{$row->[$col{peptide_sequence}]} = $row->[$col{peptide_instance_id}];
-
-
-    $map_info{$row->[$col{peptide_sequence}]} = { acc => $row->[$col{peptide_accession}],
+    if (not defined $peptides{$row->[$col{peptide_sequence}]}){
+			$peptides{$row->[$col{peptide_sequence}]} = $row->[$col{n_observations}];
+			$seq2instance{$row->[$col{peptide_sequence}]} = $row->[$col{peptide_instance_id}];
+      $total_observations += $row->[$col{n_observations}];
+      $map_info{$row->[$col{peptide_sequence}]} = { acc => $row->[$col{peptide_accession}],
                                                   nobs => $row->[$col{n_observations}],
                                                   inst => $row->[$col{peptide_instance_id}],
                                                   n_gen => $row->[$col{n_genome_locations}] };
+      push(@peptides,$row->[$col{peptide_sequence}]);
+    }
 
 
-    push(@peptides,$row->[$col{peptide_sequence}]);
-   $total_observations += $row->[$col{n_observations}];
+
   }
   return( $total_observations, \@peptides, \%peptides, \%seq2instance, \%map_info );
 #  return( $total_observations, \@peptides );
