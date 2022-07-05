@@ -23,6 +23,7 @@ use strict;
 use Getopt::Long;
 use FindBin;
 use Data::Dumper;
+use List::MoreUtils qw(uniq);
 
 use POSIX qw(ceil floor);
 
@@ -754,7 +755,10 @@ sub handle_request {
 			}
 			$i++;
       }
-
+      
+      foreach my $key (keys %chrom_map){
+        @{$chrom_map{$key}} = uniq @{$chrom_map{$key}};
+      }
       ##xxxx PRINT RETURN to HTML HERE... 
 
       #############################################################################
@@ -904,9 +908,6 @@ sub handle_request {
 				## $current_peptide_seq is the entire peptide sequence, even if split over 2 exons
 				my $current_peptide_seq = $peptide_sequence;
 
-				#if ($current_chrom ne $last_chrom) {
-				#  $mapHTML .= "<TR><TD NOWRAP COLSPAN=2><B>Chromosome $current_chrom: </B></TD><TD></TD></TR>\n";
-				#}
 				my $tmp_protein = $current_prot;
 				my $tmp_seq;
 
@@ -1874,19 +1875,18 @@ sub postProcessResultset {
       $pep->[$ann_idx] = $none if (!$pep->[$ann_count_idx]);
       $pep->[$chrm_idx] = $chromatogram_entry;
       $pep->[$chimera_idx] = '' if (!$pep->[$chimera_idx]);
-      
 			my $modified_pepseq = $pep->[$mseq_idx];
+      $pep->[$mseq_idx] =   $sbeamsMOD->formatMassMods($pep->[$mseq_idx]);
 
     my @ptm_pep =();
     if ($pep->[$ptm_idx]){
       $pep->[$ptm_type_idx] =~ /^(\w+):.*/;
       my $ptm_residues=$1; 
- 
       foreach my $i (0..10){
 				push @ptm_pep, $pep->[$i];
       }
       my $ptm_sequence = $pep->[$ptm_idx];
-      my $newseq = '';
+      my $new_modified_pepseq = '';
       my %mods = ();
       my %ptm_score = ();
 
@@ -1902,6 +1902,8 @@ sub postProcessResultset {
       my $pos = -1;
       my @elms = split(/\]/, $modified_pepseq);
       foreach my $str (@elms){
+        $str =~ s/^-//;
+        $str =~ s/-\[/[/;
 				if ($str =~ /(.*)\[(.*)/){
 					$pos += length ($1);
 					$mods{$pos} = $2;
@@ -1924,10 +1926,8 @@ sub postProcessResultset {
 
       $pos= 0;
       @elms =  split(/(?=[a-zA-Z])/, $ptm_sequence) ;
-      my @melms = split(/(?=[a-zA-Z])/, $modified_pepseq) ;
       for (my $i=0; $i<=$#elms;$i++){
 				my $pstr = $elms[$i];
-				my $mstr = $melms[$i];
 				$pstr =~ /([a-zA-Z])/;
 				my $aa = $1;
 				my $score='';
@@ -1961,27 +1961,23 @@ sub postProcessResultset {
 				}
 				$pos++;
       }
-      my $pepseq = $modified_pepseq;
-      $pepseq =~ s/\[[\d\.]+\]//g;
-      my @aas = split(//, $pepseq);
+      
+      $modified_pepseq =~ s/\[[^\]]+\]//g;
+			$modified_pepseq =~ s/\-//g;
+      my @aas = split(//, $modified_pepseq);
+
       for(my $i=0; $i<=$#aas; $i++){
 				if(defined $mods{$i} && defined $ptm_score{$i}){
-					$newseq .= "$aas[$i]\[$mods{$i}\]($ptm_score{$i})";
+					$new_modified_pepseq .= "$aas[$i]\[$mods{$i}\]($ptm_score{$i})";
 				} elsif(defined $mods{$i} && not defined $ptm_score{$i}){
-					$newseq .= "$aas[$i]\[$mods{$i}\]";
+					$new_modified_pepseq .= "$aas[$i]\[$mods{$i}\]";
 				} elsif(defined $ptm_score{$i} && not defined $mods{$i}){
-					$newseq .= "$aas[$i]($ptm_score{$i})";
+					$new_modified_pepseq .= "$aas[$i]($ptm_score{$i})";
 				} else {
-					$newseq .= $aas[$i];
+					$new_modified_pepseq .= $aas[$i];
 				}
       }
-      $modified_pepseq = $newseq;
-      if ($modified_pepseq  !~/\(/){
-        $ptm_pep[$mseq_idx] = $sbeamsMOD->formatMassMods($modified_pepseq);
-      }else{
-         $ptm_pep[$mseq_idx] = $modified_pepseq; 
-      }
-      $ptm_pep[$mseq_idx] = $modified_pepseq;
+      $ptm_pep[$mseq_idx] = $new_modified_pepseq; 
       $ptm_pep[$frag_idx] = $pep->[$frag_idx];
       $ptm_pep[$ptm_lability_idx] =  $pep->[$ptm_lability_idx];
     }
