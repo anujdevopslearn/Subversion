@@ -23,6 +23,7 @@ use SBEAMS::Connection::Settings qw(:default );
 #use InSilicoSpectro::InSilico::MassCalculator 'setMassType','getMass';
 use InSilicoSpectro::InSilico::MassCalculator;
 use SBEAMS::Proteomics::AminoAcidModifications;
+use SBEAMS::Proteomics::Sequence::Peptide; 
 
 #use vars qw ( $H $O %supported_modifications @InSilicoConfig );
 use vars qw ( %supported_modifications @InSilicoConfig );
@@ -84,7 +85,6 @@ sub getPeptideMass {
   my $VERBOSE = $args{'verbose'} || '';
   my $mass_type = $args{'mass_type'} || 'monoisotopic';
   my $charge = $args{'charge'};
-
   #### Set mass type
   if ($mass_type eq 'monoisotopic') {
     setMassType(0);
@@ -97,19 +97,50 @@ sub getPeptideMass {
 
   #### Handle all the mass modifications
   my $cumulative_mass_diff = 0;
+  if ($sequence =~ /\[/ && $sequence !~ /\[\d+\]/){ 
+    my $peptide = SBEAMS::Proteomics::Sequence::Peptide->new( sequenceString => $sequence );
+    $sequence = $peptide->{deltaMassSequenceString};
+    $sequence = "n$sequence" if ($sequence =~ /^\[/);
+    $sequence =~ s/\]-/]/g;
+    $sequence =~ s/-\[/[/g; 
+
+  } 
   while ($sequence =~ /\[/) {
     if ($sequence =~ /([A-Znc]\[\d+\])/) {
       my $mod = $1;
       my $aa = substr($mod,0,1);
       my $mass_diff = $supported_modifications{$mass_type}->{$mod};
-      if (defined($mass_diff)) {
-	$cumulative_mass_diff += $mass_diff;
-	$sequence =~ s/[A-Znc]\[\d+\]/$aa/;
-      } else {
-	print STDERR "ERROR: Mass modification $mod is not supported yet\n";
-	return(undef);
+      if (not defined ($mass_diff)){
+          ## try other mass type
+          if ($mass_type eq 'monoisotopic'){
+             $mass_type = 'average';
+          }else{
+             $mass_type = 'monoisotopic';
+          }
+          $mass_diff = $supported_modifications{$mass_type}->{$mod};
       }
-    } else {
+      
+      if (defined($mass_diff)) {
+	        $cumulative_mass_diff += $mass_diff;
+	        $sequence =~ s/[A-Znc]\[\d+\]/$aa/;
+      } else {
+	        print STDERR "ERROR: Mass modification $sequence $mod is not supported yet\n";
+	        return(undef);
+      }
+    }elsif($sequence =~ /([A-Znc])\[([\+\-])([\d+\.]+)\]/){
+       my $aa = $1;
+       my $sign = $2;
+       my $val = $3;
+       if ($sign eq '+'){
+         $cumulative_mass_diff += $val;
+       }elsif ($sign eq '-'){
+         $cumulative_mass_diff -= $val;
+       }else{
+         die "ERROR: sign in modification, $sign, not supported\n";
+       }
+       $sequence =~ s/[A-Znc][\[\+\-\d\.\]]+/$aa/;
+
+    }else {
       print STDERR "ERROR: Unresolved mass modification in '$sequence'\n";
       return(undef);
     }
@@ -117,9 +148,8 @@ sub getPeptideMass {
 
   #### Remove n-term and c-term notation
   $sequence =~ s/[nc]//g;
-
   #### Fail if imprecise AA's are present
-  return(undef) if ($sequence =~ /[BZX]/);
+  return(undef) if ($sequence =~ /[BZXU]/);
 
   #### Calculate the neutral peptide mass using InSilicoSpectro
   my @modif = ();

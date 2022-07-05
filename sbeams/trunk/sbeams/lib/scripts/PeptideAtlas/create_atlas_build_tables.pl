@@ -1424,8 +1424,8 @@ sub write_biosequence_id_atlas_build_search_batch {
       next if (not defined $bioseqence_ids{$matched_biosequence_id});
       foreach my $build_search_batch (keys %{$pi_build_search_batch{$peptide_instance_id}}){
         print $fh "$counter\t$matched_biosequence_id\t$build_search_batch\n";
+        $counter++
       }
-      $counter++
     }
     close $fh;
  
@@ -3043,7 +3043,7 @@ sub insertSpectrumIdentification {
   my $total_ion_current = $args{total_ion_current};
   my $signal_to_noise = $args{signal_to_noise};
   my $retention_time_sec = $args{retention_time_sec};
-  return if ($modified_sequence =~ /[JUO]/);
+  #return if ($modified_sequence =~ /[JUO]/);
   our $counter;
 
   #### Get the modified_peptide_instance_id for this peptide
@@ -3132,7 +3132,7 @@ sub get_modified_peptide_instance_id {
   }
 
   #### Lookup and return modified_peptide_instance_id
-  $modified_sequence =~ s/\([\d\.]+\)//g;
+  #$modified_sequence =~ s/\([\d\.]+\)//g;
   if ($modified_peptide_instance_ids{$charge}{$modified_sequence}) {
     return($modified_peptide_instance_ids{$charge}{$modified_sequence});
   };

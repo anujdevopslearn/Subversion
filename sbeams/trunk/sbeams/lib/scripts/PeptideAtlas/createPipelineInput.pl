@@ -45,11 +45,16 @@ use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::PeptideAtlas::ProtInfo;
 use SBEAMS::PeptideAtlas::SpectralCounting;
 use SBEAMS::PeptideAtlas::Peptide;
+use SBEAMS::PeptideAtlas::ModificationHelper;
 
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS( $sbeams );
+my $modification_helper = new SBEAMS::PeptideAtlas::ModificationHelper();
+
 our $mutex_sem = Thread::Semaphore->new();
+
+use SBEAMS::Proteomics::Sequence::Peptide;
 
 $| = 1; #flush output on every print
 
@@ -169,7 +174,6 @@ my ($second, $minute, $hour, $dayOfMonth, $month, $yearOffset,
 my @months = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
 my $year = -100 + $yearOffset;
 my $date_string = sprintf("%02d%s%02d", $dayOfMonth, $months[$month], $year);
-
 my $organism_id;
 my $swiss_prot_href;
 
@@ -419,16 +423,23 @@ sub pepXML_start_element {
 		#### If this is the mass mod info, then store some attributes
 		if ($localname eq 'modification_info') {
 			if ($attrs{mod_nterm_mass}) {
-				$self->{pepcache}->{modifications}->{0} = $attrs{mod_nterm_mass};
+				$self->{pepcache}->{modifications}->{0} = sprintf ("%.4f", $attrs{mod_nterm_mass}-1.007825);
 			}
 			if ($attrs{mod_cterm_mass}) {
 				my $pos = length($self->{pepcache}->{peptide})+1;
-				$self->{pepcache}->{modifications}->{$pos} = $attrs{mod_cterm_mass};
+				$self->{pepcache}->{modifications}->{$pos} = sprintf ("%.4f", $attrs{mod_cterm_mass}-17.00274);
 			}
 		}
 		#### If this is the mass mod info, then store some attributes
 		if ($localname eq 'mod_aminoacid_mass') {
-			 $self->{pepcache}->{modifications}->{$attrs{position}} = $attrs{mass};
+			my $peptide_sequence = $self->{pepcache}->{peptide};
+      $peptide_sequence = "n$peptide_sequence" if ($peptide_sequence !~ /^n/);
+      my @aas = split(//, $peptide_sequence);
+      if ($modification_helper->getMass($aas[$attrs{position}])){
+        $self->{pepcache}->{modifications}->{$attrs{position}} = $attrs{mass}-$modification_helper->getMass($aas[$attrs{position}]);
+      }else{
+        die "ERROR: modification_helper not defined for $aas[$attrs{position}]\n";
+      }
 		}
 		#### If this is the search score info, then store some attributes
 		if ($localname eq 'search_score') {
@@ -443,7 +454,19 @@ sub pepXML_start_element {
 			#prior="0.285714" ptm="PTMProphet_STY79.9663"
 			#ptm_peptide="AY(0.000)VY(0.000)ADWVEHAT(0.026)S(0.026)EIEPGT(0.961)T(0.493)T(0.493)VLR">
 			$attrs{ptm}=~ /(\w+):([\d\.]+)/;
-			push @{$self->{pepcache}->{ptm}}, sprintf("[%s:%.4f]%s", $1,$2,$attrs{ptm_peptide});
+      $attrs{ptm}=~ /^(\w+):([\d\.\+\-]+)$/;
+      my $aas = $1;
+      my $mass=$2;
+      if ($mass > 0){
+        $mass = "+$mass";
+      }
+
+      $aas =~/^(\w).*$/;
+      my $peptide= SBEAMS::Proteomics::Sequence::Peptide->new( sequenceString => "$1" ."[$mass]" ,
+                                                               translation_override=> $self->{translation_override});
+      my $modSeqStr = $peptide->{modifiedSequenceString};
+      $modSeqStr =~ s/.*\[(.*)\].*/$1/;
+			push @{$self->{pepcache}->{ptm}}, sprintf("[%s:%s]%s", $aas,$modSeqStr,$attrs{ptm_peptide}); 
 		}
 		if ($localname eq 'lability'){
 			push @{$self->{pepcache}->{ptm_lability}}, $attrs{probability};
@@ -530,15 +553,23 @@ sub protXML_start_element {
   }
   if ($localname eq 'modification_info') {
     if ($attrs{mod_nterm_mass}) {
-      $self->{pepcache}->{modifications}->{0} = $attrs{mod_nterm_mass};
+      $self->{pepcache}->{modifications}->{0} = sprintf ("%.4f", $attrs{mod_nterm_mass} - 1.007825); 
     }
     if ($attrs{mod_cterm_mass}) {
       my $pos = length($self->{pepcache}->{peptide})+1;
-      $self->{pepcache}->{modifications}->{$pos} = $attrs{mod_cterm_mass};
+      $self->{pepcache}->{modifications}->{$pos} = sprintf ("%.4f", $attrs{mod_cterm_mass}-17.00274);
+ 
     }
   }
   if ($localname eq 'mod_aminoacid_mass') {
-    $self->{pepcache}->{modifications}->{$attrs{position}} = $attrs{mass};
+    my $peptide_sequence = $self->{pepcache}->{peptide};
+    $peptide_sequence = "n$peptide_sequence" if ($peptide_sequence !~ /^n/);
+    my @aas = split(//, $peptide_sequence);
+    if ($modification_helper->getMass($aas[$attrs{position}])){
+      $self->{pepcache}->{modifications}->{$attrs{position}} = $attrs{mass} - $modification_helper->getMass($aas[$attrs{position}]);
+    }else{
+      die "ERROR: amino_acid_mono_mass not defined for $aas[$attrs{position}]\n";
+    }
   }
 
   #### If this is a peptide, store some peptide attributes
@@ -689,6 +720,9 @@ sub pepXML_end_element {
       );
 
       #### Store the information for this peptide into an array for caching
+      my $peptideUnimod = SBEAMS::Proteomics::Sequence::Peptide->new( sequenceString => $modified_peptide,
+                                                                      translation_override=> $self->{translation_override} );
+
       my $chimera_level='';
 			if ($self->{pepcache}->{spectrum} =~ /^([^\.]+?)((\_rs)+)(\.\d+)\.\d+\.\d+/){
 				my $root = $1;
@@ -703,7 +737,7 @@ sub pepXML_end_element {
            $peptide_accession,
            $peptide_sequence,
            $self->{pepcache}->{peptide_prev_aa},
-           $modified_peptide,
+           $peptideUnimod ->{modifiedSequenceString},  
            $self->{pepcache}->{peptide_next_aa},
            $charge,
            $probability,
@@ -721,7 +755,7 @@ sub pepXML_end_element {
            my @ptm_labilities = ();
            for (my $i=0; $i< scalar @{$self->{pepcache}->{ptm}}; $i++){
              my $ptm_peptide = $self->{pepcache}->{ptm}->[$i];
-             if ($ptm_peptide !~ /0\.9840/ && $ptm_peptide !~ /15\.9949/ && $ptm_peptide !~ /27\.994/){
+             if ($ptm_peptide !~ /(Oxidation|Deamidated|dimethyl)/i ){ 
                push @ptm_peptides, $ptm_peptide;
                if ( not defined $self->{pepcache}->{ptm_lability}->[$i]){
                  die "ERROR: not ptm liability score\n";
@@ -1029,35 +1063,29 @@ sub modified_peptide_string {
   my $pep_key = '';
   if ($modifications) {
     my $i = 0;
-    if ($modifications->{$i}) {
-      #$modified_peptide .= 'n['.int($modifications->{$i}).']';
-      $modified_peptide .= 'n['. sprintf("%.0f", $modifications->{$i}) .']';
-    }
-	 for ($i=1; $i<=length($peptide_sequence); $i++) {
-		 my $aa = substr($peptide_sequence,$i-1,1);
-		 if ($modifications->{$i}) {
-			if ($modifications->{$i} =~ /([\d\.]+)\((.*)/){
-				#$aa .= '['.int($1).']('.$2;
-        $aa .= '['. sprintf("%.0f", $1) .']('.$2;
-			}elsif($modifications->{$i} =~ /^\((.*)\)$/){
-				 $aa .= "($1)";
-			}else{
-				#$aa .= '['.int($modifications->{$i}).']';
-        $aa .= '['. sprintf("%.0f", $modifications->{$i}) .']';
-			}
-		 }
-		 $modified_peptide .= $aa;
-    }
-    if ($modifications->{$i}) {
-      print $modifications->{$i} ."\n";
+   if ($modifications->{$i} > 0){
+      $modifications->{$i} = "+$modifications->{$i}";
+   }
+   if ($modifications->{$i}) {
+      $modified_peptide .= "n[$modifications->{$i}]";
+   }
+   for ($i=1; $i<=length($peptide_sequence); $i++) {
+     if ($modifications->{$i} > 0){
+        $modifications->{$i} = "+$modifications->{$i}";
+     }
 
-      #$modified_peptide .= 'c['.int($modifications->{$i}).']';
-      $modified_peptide .= 'c['. sprintf("%.0f", $modifications->{$i}) .']';
+     my $aa = substr($peptide_sequence,$i-1,1);
+     if ($modifications->{$i}) {
+        $aa .= "[$modifications->{$i}]";
+     }
+     $modified_peptide .= $aa;
+    }
+    if ($modifications->{$i}) {
+      $modified_peptide .= "c[$modifications->{$i}]";
     }
   } else {
     $modified_peptide = $peptide_sequence;
   }
-
 
   # If there is a charge, and if desired, prepend charge to peptide string
   if ($charge && $prepend_charge) {
@@ -1065,6 +1093,7 @@ sub modified_peptide_string {
   } else {
     $pep_key = $modified_peptide;
   }
+
   return ($pep_key);
 }
 
@@ -1319,7 +1348,6 @@ sub main {
         next;
       }
 
-
       my ($pepXML_document);
 
       $pepXML_document->{filepath} = $filepath;
@@ -1386,6 +1414,35 @@ sub main {
 				} else {
           undef $CONTENT_HANDLER->{best_prob_per_pep};
           $CONTENT_HANDLER->{best_prob_per_pep} = {};
+          $filepath =~ /(.*)\/.*/;
+					my $translation_file = "$1/TPP_PTM_translation_override.txt";
+					my %translation_override =();
+					if ( -e $translation_file){
+									open (TPT, "<$translation_file") or die "cannot open $translation_file\n";
+						print "reading $translation_file\n";
+						while (my $line = <TPT>){
+							chomp $line;
+							if ($line =~ /^(\w)\[([\+\-])([\d\.]+)\]=\w\[(.*)\]$/){
+								my ($aa,$sign,$unsigned_mass,$name) = ($1,$2,$3,$4);
+							  my $mass = sprintf("%s%.4f", $sign,$unsigned_mass);
+                print "TPP_PTM_translation_override $aa\[$mass\]=$aa\[$name\]\n";	
+								if (defined $translation_override{$aa}{$mass}){
+									die "duplicate translation\t$aa\t$mass\n$line\n$translation_override{$aa}{$mass}\n";
+								}
+								$translation_override{$aa}{$mass}= $name;
+                ### msfragger use 4 digit precision, the value might be 0.0001 off
+                $mass = sprintf("%s%.4f", $sign,$mass - 0.0001); 
+                $translation_override{$aa}{$mass} = $name;
+                $mass = sprintf("%s%.4f", $sign,$mass + 0.0002); 
+                $translation_override{$aa}{$mass} = $name;
+							}else{
+								die "unknown format $line\n";
+							}
+
+						}
+            $CONTENT_HANDLER->{translation_override} = \%translation_override;
+					}
+
 					print "INFO: Reading $filepath; saving records with prob >= $PEP_PROB_CUTOFF...\n"
 					 unless ($QUIET);
 					$CONTENT_HANDLER->{document_type} = $document->{document_type};
@@ -2677,13 +2734,13 @@ sub writePepIdentificationListFile {
       
       $extra_cols_array[$idx] = "$identification->[8]#$identification->[9]#$identification->[10]#".
                                 "$adjusted_probability#$n_adjusted_observations#$n_sibling_peptides#".
-                                join("#", @{$identification}[11,12,13,14,15,16]);
+                                join("#", @{$identification}[11,12,13,14,15,16,17]);
       if ($initial_probability) {
 				$probability_adjustment_factor = $adjusted_probability / $initial_probability;
       }
     }else{
       $extra_cols_array[$idx] = "$identification->[8]#$identification->[9]#$identification->[10]####".
-                                join("#", @{$identification}[11,12,13,14,15,16]);
+                                join("#", @{$identification}[11,12,13,14,15,16,17]);
     }
     #### If there is spectral library information, look at that
     if ($spectral_library_data && $spectrast_formatted_sequence) {
@@ -3273,7 +3330,7 @@ sub coalesceIdentifications {
 
     #### Now store information for this modification of the peptide
     my $modified_sequence = $row->[$columns->{modified_peptide_sequence}];
-    $modified_sequence =~ s/\([\d\.]+\)//g;
+    #$modified_sequence =~ s/\([\d\.]+\)//g;
     my $charge = $row->[$columns->{charge}];
     $info->{modifications}->{$modified_sequence}->{$charge}->{n_instances}++;
     my $modinfo = $info->{modifications}->{$modified_sequence}->{$charge};
