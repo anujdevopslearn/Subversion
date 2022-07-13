@@ -731,6 +731,7 @@ sub handle_request {
 						my $file ="/regis/sbeams5/nobackup/builds_output/cache/search_keys_$build_id.txt";
 						if ( -e $file){
 							open (F, "<$file");
+              $search_key_clause =~ s/\|/\\|/g;
 							foreach my $line (grep(/$search_key_clause/i, <F>)){
 								chomp $line;
 								my ($key_id,$search_key_name) = split(/\t/, $line);
@@ -924,6 +925,8 @@ sub query_repository{
 	$filterstr =~ s/^\s+//;
 	$filterstr =~ s/\s+$//;
 	$filterstr =~ s/[,;]//g;
+  $filterstr =~ s/\|/\\|/g;
+
 	my %tmp;
 	my @qts = split (/\s+/, $filterstr);
 	open (IN, "<$file");
