@@ -1,16 +1,19 @@
 package SBEAMS::PeptideAtlas::Utilities;
 
+use List::MoreUtils qw(uniq);
+
 use lib "/net/db/projects/PeptideAtlas/lib/Swissknife/lib";
-use vars qw($resultset_ref );
+use vars qw( $sbeams $resultset_ref );
 
 use SWISS::Entry;
 use SWISS::FTs;
-use SBEAMS::Connection qw( $log );
+use SBEAMS::Connection qw( $log $q );
 use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::ProtInfo;
+use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Proteomics::PeptideMassCalculator;
-
 
 use constant HYDROGEN_MASS => 1.0078;
 use Storable qw( nstore retrieve dclone );
@@ -1536,7 +1539,7 @@ sub assess_protein_peptides {
   my $self = shift;
   my %args = ( use_len => 1,
                min_len => 7,
-               max_len => 30,
+               max_len => 40,
                use_ssr => 1,
                min_ssr => 10,
                max_ssr => 60,
@@ -3910,4 +3913,953 @@ sub get_build_organism {
   }
   return @{$row[0]};
 }
+
+####################################################
+####################################################
+sub get_alignment_display {
+  my $self = shift;
+  my %args = @_;
+  # Content scalar to return
+  my $sbeams = $self->getSBEAMS();
+
+  my $curr_bid = $args{atlas_build_id}; 
+  my $bioseq_strain = $args{bioseq_strain}; 
+  my $clustal_display = '';
+  my $bioseq_clause = '';
+
+  $clustal_display .= "<form method='post' name='compareProteins'>\n";
+  for my $arg ( keys( %args ) ) {
+    next if $arg =~ /atlas_build_id/;
+    $clustal_display .= "<input type='hidden' name='$arg' value='$args{$arg}'>\n";
+  }
+  $clustal_display .= "</form>";
+
+  if ( $args{protein_list} ) {
+    $args{protein_list} =~ s/;/,/g;
+    my $list_ids = $self->getBioseqIDsFromProteinList( protein_list => $args{protein_list}, build_id => $curr_bid );
+    $args{bioseq_id} = ( !$args{bioseq_id} ) ? $list_ids : ( $list_ids ) ? $args{bioseq_id} . ',' . $list_ids : $args{bioseq_id};
+  }
+
+  if ( $args{restore} ) {
+    $args{bioseq_id} = $args{orig_bioseq_id};
+  }
+  
+  if ( $args{protein_group_number} ) {
+
+    my $excl = '';
+    if ( $args{exclude_ipi} ) {
+      $excl .= "AND biosequence_name NOT LIKE 'IPI%'\n";
+    }
+    if ( $args{exclude_ens} ) {
+      $excl .= "AND biosequence_name NOT LIKE 'ENS%'\n";
+    }
+
+    my $sql = qq~
+      (
+        SELECT PID.biosequence_id, BS.biosequence_name
+        FROM $TBAT_PROTEIN_IDENTIFICATION PID
+        JOIN $TBAT_ATLAS_BUILD AB
+        ON (AB.atlas_build_id = PID.atlas_build_id)
+        JOIN $TBAT_BIOSEQUENCE BS
+        ON (BS.biosequence_id = PID.biosequence_id)
+        where AB.atlas_build_id ='$curr_bid' AND
+        PID.protein_group_number = '$args{protein_group_number}'
+        $excl
+      ) UNION (
+        SELECT BR.related_biosequence_id, BS.biosequence_name
+        FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR
+        JOIN $TBAT_ATLAS_BUILD AB
+        ON (AB.atlas_build_id = BR.atlas_build_id)
+        JOIN $TBAT_BIOSEQUENCE BS
+        ON (BS.biosequence_id = BR.related_biosequence_id)
+        where AB.atlas_build_id ='$curr_bid' AND
+        BR.protein_group_number = '$args{protein_group_number}'
+        $excl
+      )
+      ~;
+
+    my @results = $sbeams->selectSeveralColumns($sql);
+    my %proteins;
+    # make a hash of biosequence_id to biosequence_name
+    for my $result_aref (@results) {
+      $proteins{$result_aref->[0]} = $result_aref->[1];
+    }
+    my @bioseq_ids = keys %proteins;
+
+    # Filter to include only Swiss-Prot IDs if requested.
+    my @swiss_prot_ids = ();
+    if ( $args{swiss_prot_only} ) {
+      my $prot_info = new SBEAMS::PeptideAtlas::ProtInfo;
+      $prot_info->setSBEAMS($sbeams);
+      my $swiss_bsids_aref = $prot_info->filter_swiss_prot(
+        atlas_build_id => $curr_bid,
+        protid_aref => \@bioseq_ids,
+    );
+      @bioseq_ids = @{$swiss_bsids_aref};
+    }
+
+    # Add to whatever additional bioseq_ids (if any) were specified in parameters.
+    $clustal_display .= "<b>Highlighting evidence for $proteins{$args{bioseq_id}} , peps $args{pepseq}</b><br>\n" if $args{eval_prot_evidence};
+    $args{bioseq_id} .= ',' if ($args{bioseq_id} && @bioseq_ids);
+    $args{bioseq_id} .= join( ",", @bioseq_ids);
+    #print "<br>bioseq_id = |$args{bioseq_id}|<br>\n";
+    my @ids = split (",", $args{bioseq_id});
+    @bioseq_ids = @bioseq_ids, @ids;
+
+    my $n_ids = scalar @bioseq_ids;
+    if ( $n_ids < 2 ) {
+      # if ( !$args{bioseq_id} ) {
+      my $errstr = $sbeams->makeErrorText( "Fewer than 2 proteins to align (build $curr_bid, protein group $args{protein_group_number})");
+      return ( "$errstr <br><br>  $clustal_display" );
+    }
+    $log->debug( "Ran protein group query:" .time() );
+
+  } elsif ( $args{protein_list_id} && $args{key_accession} ) {
+    my $sql = qq~
+    SELECT DISTINCT biosequence_id
+      FROM $TBAT_ATLAS_BUILD AB
+      JOIN $TBAT_BIOSEQUENCE B
+        ON B.biosequence_set_id = AB.biosequence_set_id
+      JOIN $TBAT_PROTEIN_LIST_PROTEIN PLP
+        ON B.biosequence_name = PLP.protein_name
+      JOIN $TBAT_PROTEIN_LIST PL
+        ON PL.protein_list_id = PLP.protein_list_id
+      WHERE atlas_build_id = $curr_bid
+      AND PL.protein_list_id = $args{protein_list_id}
+      AND key_accession = '$args{key_accession}'
+    ~;
+
+    my $sth = $sbeams->get_statement_handle( $sql );
+    my @bioseq_ids;
+    while ( my @row = $sth->fetchrow_array() ) {
+      push @bioseq_ids, $row[0];
+    }
+    $args{bioseq_id} = join( ",", @bioseq_ids);
+  }
+
+  $log->debug( "Ran bioseq query:" .time() );
+  if ( $args{protein_list} ) {
+    $args{protein_list} =~ s/;/,/g;
+    my $list_ids = $self->getBioseqIDsFromProteinList( protein_list => $args{protein_list}, build_id => $curr_bid );
+    $args{bioseq_id} = ( !$args{bioseq_id} ) ? $list_ids :
+  ( $list_ids ) ? $args{bioseq_id} . ',' . $list_ids : $args{bioseq_id};
+    $log->debug( "Ran bioseq_id query:" .time() );
+  }
+ 
+	my @bioseq_ids = uniq split (",", $args{bioseq_id});
+  my $n_ids = scalar @bioseq_ids;
+  if ( $n_ids < 2 ) {
+      my $errstr = $sbeams->makeErrorText( "Fewer than 2 proteins to align (build $curr_bid, 
+                                            protein group $args{protein_group_number})");
+      return ( "$errstr <br><br>  $clustal_display" );
+  }
+
+
+
+  $clustal_display .= qq~
+	<script>document.title = 'PeptideAtlas: Compare Protein Sequences';</script>
+	<a title="show/hide help" onclick="if(document.getElementById('pageinfo').style.display == 'none') document.getElementById('pageinfo').style.display = ''; else document.getElementById('pageinfo').style.display = 'none';" href="#">Page Info and Legend</a>
+	<div id="pageinfo" style="margin-left:5px;padding-left:5px;border:1px solid #666;max-width:90%;background:#f1f1f1;display: none;">
+	<p>In the <b>Peptide Mapping</b> section below, peptides for each protein are represented by 
+  <span style="background:teal;">teal</span>, 
+  <span style="background:#C5B4E3;">mauve</span>, 
+  <span style="background:firebrick;">firebrick</span>, 
+  <span style="background:#ffad4e;">orange</span>, 
+  and <span style="background:springgreen;">green</span> rectangles as defined in the <b>Legend</b>. 
+
+	<p>Red superscript letters <sup><span style='color:red;'>ABCD...</span></sup> after the protein identifiers denote groups of protein entries that are identical in sequence (All the proteins with <span style='color:red;'>A</span> are identical in sequence, etc.)</p><br>
+
+	<p>The <b>Sequence Coverage</b> section below, all relevant proteins are aligned with <a target="_new" href="https://mafft.cbrc.jp/alignment/software/">MAFFT</a> and all detected peptides are displayed in colors. In the <b>consensus</b> (bottom) row, a * indicates identity across all sequences. <br>Other symbols denote varying degrees of similarity. The controls in and below the Sequence Coverage section may be used to adjust the list of proteins displayed.</p>
+		<b>Legend</b><br>
+		Sequence highlighted with blue: <span class="obs_seq_bg_font">PEPTIDE</span> denotes peptides <b>observed</b> in specified build. 
+		Sequence highlighted with green: <span class="sec_obs_seq_bg_font">PEPTIDE</span> denotes '<b>bait</b>' peptide for this set of sequences.<br>
+
+		Peptide highlighted with <span style="background:teal;">teal</span> denotes a 
+		<b>uniquely-mapping</b> and <b>tryptic</b> peptide within this set of sequences.</br>
+
+		Peptide highlighted with <span style="background:#C5B4E3;">mauve</span> denotes a 
+		<b>uniquely-mapping</b> and <b>non-tryptic</b> peptide within this set of sequences.</br>
+
+		Peptide highlighted with <span style="background:firebrick;">red</span> denotes a 
+		<b>multi-mapping</b> and <b>tryptic</b> peptide within this set of sequences.</br>
+
+		Peptide highlighted with <span style="background:#ffad4e;">orange</span> denotes a 
+		<b>multi-mapping</b> and <b>non-tryptic</b> peptide within this set of sequences.</br>
+
+
+	</div>
+   ~;
+
+
+  if ( $args{bioseq_id} ) {
+    $bioseq_clause = "AND BS.biosequence_id IN ( $args{bioseq_id} )\n";
+  }
+
+  return 'Problem with form data: no biosequences found' unless $bioseq_clause;
+
+  # SQL to fetch bioseqs in them.
+  my $sql =<<"  END_SQL";
+  SELECT biosequence_name,
+  ORG.organism_name, 
+  'search_key_name',
+  CAST( biosequence_seq AS VARCHAR(4000) ),
+  biosequence_id,
+  LEN( CAST(biosequence_seq AS VARCHAR(4000) ) ),
+  biosequence_desc
+  FROM $TBAT_ATLAS_BUILD AB 
+	JOIN $TBAT_BIOSEQUENCE_SET BSS ON AB.biosequence_set_id = BSS.biosequence_set_id
+	JOIN $TBAT_BIOSEQUENCE BS ON BSS.biosequence_set_id = BS.biosequence_set_id
+  JOIN $TB_ORGANISM ORG ON BSS.organism_id = ORG.organism_id
+  WHERE AB.atlas_build_id IN ( $curr_bid )
+  $bioseq_clause
+  ORDER BY LEN(CAST(biosequence_seq AS VARCHAR(4000) ) ) DESC, CAST(biosequence_seq AS VARCHAR(4000)), biosequence_name DESC
+  END_SQL
+
+  my @rows  = $sbeams->selectSeveralColumns( $sql );
+  $log->debug( "got big query stmt handle:" .time() );
+
+  my %result =(); 
+  foreach my $row(@rows){
+    my $bioseq_id = $row->[4];
+    $result{$bioseq_id} = $row;
+  }
+  @rows=();
+  foreach my $bioseq_id(@bioseq_ids){
+    push @rows, $result{$bioseq_id};
+  } 
+
+  # hash of biosequence_ids -> seq or name
+  my %bioseq_id2seq;
+  my %bioseq_id2name;
+
+  # hash seq <=> accession
+  my %seq2acc;
+  my %acc2seq;
+
+  # Store acc -> bioseq_id
+  my %acc2bioseq_id;
+
+#  # Store organism for each biosequence set
+#	my %bss2org;
+
+  # Counter
+  my $cnt = 0;
+
+  # array of protein info
+  my @all_proteins;
+  my %peptide_map;
+  $peptide_map{'peptide_list'} = '';
+  $peptide_map{'protein_list'} = '';
+  my %coverage;
+  my $fasta = '';
+  my $peptide = $args{pepseq} || 'ZORROFEELTHESTINGOFHISBLADE';
+
+# 0 SELECT DISTINCT biosequence_name,
+#	1	organism_name,
+#	2	'search_key_name',
+#	3	CAST( biosequence_seq AS VARCHAR(4000) ),
+#	4	biosequence_id
+#	5 biosequence_desc
+  my %seen;
+  my %coverage;
+  my @seqs;
+  $log->debug( "loopin:" .time() );
+  my %seqtype = ( decoy => 0, fwd => 0 );
+  my %peptide_list_all =();
+  foreach my $row (@rows){
+    my @row = @$row;
+    my $acc = $row[0];
+    $acc = $acc.'_'. $bioseq_strain->{$row[4]} if ($bioseq_strain->{$row[4]});
+    $acc =~ s/[:,]/_/g;
+
+    if ( $acc =~ /^DECOY/ ) {
+      $seqtype{decoy}++;
+    } else {
+      $seqtype{fwd}++;
+    }
+
+    my $seq = $row[3];
+    my $seq_desc = $row[5];
+
+    next if $seen{$acc};
+    $seen{$acc}++;
+    push @seqs, $seq;
+
+    $log->debug( "Get build coverage " .time() );
+    my $peptide_list = $self->get_protein_build_coverage( build_id => $curr_bid,
+							       biosequence_ids => $row[4] );
+    
+    $peptide_map{'protein_list'} .= $acc.' '; # preserves order
+    my @mapped_peptides = ();
+    for my $pos(keys %{$peptide_list}){
+      foreach my $pep (keys %{$peptide_list->{$pos}}) {
+        foreach my $id (keys %{$peptide_list->{$pos}{$pep}}){
+          #print "id=$id pep=$pep pos=$pos $peptide_list->{$pos}{$pep}{$id}<BR>";
+					$peptide_list_all{$pos}{$pep}{$acc}{nobs}= $peptide_list->{$pos}{$pep}{$id}{nobs};
+          $peptide_list_all{$pos}{$pep}{$acc}{pre}= $peptide_list->{$pos}{$pep}{$id}{pre};
+        }
+        push @mapped_peptides, $pep;
+      }
+    }
+
+    $log->debug( "Done.  Now get coverage hash " .time() );
+    $coverage{$acc} = $self->get_coverage_hash(seq => $seq,         
+						    peptides => \@mapped_peptides); 
+ 
+    $log->debug( "Done " .time() );
+    # Check this out later for dups...
+    $seq2acc{$seq} ||= {};
+    $seq2acc{$seq}->{$acc}++;
+
+    $bioseq_id2seq{$row[4]} = $seq; 
+    $bioseq_id2name{$row[4]} = $acc; 
+
+    $fasta .= ">$acc\n$seq\n";
+
+    $acc2bioseq_id{"$acc"} = $row[4];
+    # Clustal W alignment file can only take 30 chars
+
+    my $short_acc = substr( $acc, 0, 30 );
+    $acc2bioseq_id{"$short_acc"} = $row[4];
+    $coverage{"$short_acc"} = $coverage{$acc};
+    $seq2acc{$seq}->{"$short_acc"}++;
+
+    my $acckeys = join( ',', keys( %acc2bioseq_id ) );
+
+    $cnt++;
+  }
+  $log->debug( "Iterated $cnt rows: " .time() );
+
+  ## 
+  my %processed_peptide = ();
+  for my $pos(sort {$a <=> $b} keys %peptide_list_all){
+    foreach my $pep (sort {$a cmp $b} keys %{$peptide_list_all{$pos}}){
+      foreach my $acc (split(/ /, $peptide_map{'protein_list'})){
+         next if (! $peptide_list_all{$pos}{$pep}{$acc});
+				 $peptide_map{'peptide_list'} .= $pep.' ' if (! $processed_peptide{$pep}) ;# preserves order
+         $processed_peptide{$pep} = 1;
+         $peptide_map{$pep}{$acc}{pos} = $pos;
+         $peptide_map{$pep}{$acc}{obs} = $peptide_list_all{$pos}{$pep}{$acc}{nobs};
+         $peptide_map{$pep}{$acc}{tryp} = 0;
+         $peptide_map{$pep}{$acc}{tryp} = 1 if ($peptide_list_all{$pos}{$pep}{$acc}{pre} =~ /[KR]/ && $pep =~ /[KR]$/);
+      }
+    }
+  }
+
+  # weed out duplicates - not quite working yet?
+  my %dup_seqs;
+  my $dup_char = 'A';
+  for my $seq ( @seqs ) {
+    if ( scalar(keys(%{$seq2acc{"$seq"}})) > 1 ) {
+      my $skip = 0;
+      for my $acc ( keys ( %{$seq2acc{"$seq"}} ) ) {
+				if ( $dup_seqs{"$acc"} ) {
+					$skip++;
+					next;
+				}
+        $dup_seqs{"$acc"} = $dup_char;
+      }
+      $dup_char++ unless $skip;
+    } else {
+      my ( $key ) = keys( %{$seq2acc{"$seq"}} );
+      $dup_seqs{"$key"} = '&nbsp;';
+    }
+  }
+
+  #$clustal_display .= $self->get_peptide_mapping_display(peptide_map => \%peptide_map,
+  #                                            dup_seqs => \%dup_seqs);
+
+  my $MSF = SBEAMS::BioLink::MSF->new();
+
+  $log->debug( "Run alignment: " .time() );
+  my $acckeys = join( ',', keys( %acc2bioseq_id ) );
+
+  if ( $cnt > 100 ) {
+    $clustal_display = $sbeams->makeErrorText( "Too many sequences to run alignment, skipping" );
+  } else {
+    #print "$fasta<br>";
+    my $clustal = $MSF->runClustalW( sequences => $fasta );
+    if ( ref $clustal ne 'ARRAY' ) {
+      my $rerun_link = '';
+      if ( $seqtype{decoy} && $seqtype{fwd} ) {
+        my $url = $q->self_url();
+        $rerun_link = qq~
+&nbsp;        Try re-running clustalW <a href="$url;decoys=no">without DECOY </a> sequences?<br>
+&nbsp;        Try re-running clustalW with <a href="$url;decoys=yes"> only DECOY</a> sequences?<br>
+        ~;
+      }
+      $clustal_display = "<div style='margin:50px;'>" . $sbeams->makeErrorText( "Error running Clustal: $clustal" );
+      $clustal_display .= "<br> $rerun_link</div>";
+    }else {
+      my $nseqs = scalar @{$clustal};
+      #print "nseqs=$nseqs<br>";
+      $clustal_display .= $self->get_peptide_mapping_display_graphic(peptide_map => \%peptide_map,
+                                              dup_seqs => \%dup_seqs,
+                                              alignments => $clustal,
+                                              accessions => $peptide_map{'protein_list'},
+                                              );
+
+      $clustal_display .= $self->get_clustal_alignemnt_display( alignments => $clustal, 
+					       dup_seqs => \%dup_seqs,
+					       pepseq => $peptide,
+					       coverage => \%coverage,
+					       acc2bioseq_id => \%acc2bioseq_id,
+                 accessions => $peptide_map{'protein_list'},
+					       %args );
+    }
+  }
+#	  $log->debug( "CompProtein, fasta is " . length( $fasta ) . ", result is " . length( $clustal_display ) );
+  return $clustal_display;
+}
+
+sub get_peptide_mapping_display{
+  my $self = shift;
+  my %args = @_;
+  my $peptide_map = $args{peptide_map} || die "need peptide_map\n";
+  my $dup_seqs = $args{dup_seqs} || die "need dup_seqs\n";
+
+  my $html = "<br><div class='hoverabletitle'>Peptide Mapping</div>";
+  $html .= "<div style='width: calc(90vw - 20px); overflow-x: auto; border-right: 1px solid #aaa'>\n<table style='border-spacing:0px'>";
+  for my $map_prot (split / /, $peptide_map->{'protein_list'}) {
+    $html .= "<tr style='border-top: 1px solid #aaa;'>";
+    $html .= "<td class='sequence_font' style='border-top: 1px solid #aaa; border-right: 1px solid #aaa; background-color:#f3f1e4; text-align: right; white-space: nowrap; position:sticky; left: 0px; z-index:6;'>$map_prot";
+
+    if ( $dup_seqs->{$map_prot} ) {
+      $html .= "<sup><span style='color:red;'>$dup_seqs->{$map_prot}</span></sup>";
+    }
+    $html .= "</td><td style='border-top: 1px solid #aaa; white-space: nowrap;'>";
+
+    my $num_uniq = 0;  # might want this...?
+    for my $map_pep (split / /, $peptide_map->{'peptide_list'}) {
+      my $seqlen = length $map_pep;
+      my $pos = '';
+      my $obs = '';
+      if ( $peptide_map->{$map_pep}{$map_prot}){
+        $pos = $peptide_map->{$map_pep}{$map_prot}{pos};
+        my $end_pos = $pos + $seqlen -1;
+        $pos = "$pos-$end_pos,";
+        $obs =' ('.  $peptide_map->{$map_pep}{$map_prot}{obs} . " obs)";
+      }
+
+      
+      $html .= "<span title='$pos$map_pep$obs' style='width: ${seqlen}px; display: inline-block; ";
+      if ($peptide_map->{$map_pep}{$map_prot}) {
+				$html .= "height: 11px; background-color:";
+				my $opacity = '';
+				$opacity = "opacity: 0.5;" if ($peptide_map->{$map_pep}{$map_prot}{obs}< 5); 
+        if ($map_pep eq $args{pepseq}) { # bait
+          $html .= "springgreen;";
+				}elsif (scalar keys %{$peptide_map->{$map_pep}} == 1) { # singly-mapping within this group
+					#$html .=  "#ffad4e;";
+					$html .=  "#ffad4e; $opacity:";
+					$num_uniq++;
+				}else {
+					#$html .= "lightskyblue;";##d3d1c4;";
+          $html .= "lightskyblue; $opacity"; 
+				}
+      }
+      else {
+        #$html .= "";
+      }
+      $html .= "'></span>\n";
+    }
+    $html .= "</td></tr>\n";
+  }
+  $html .= "</table></div>\n";
+  return $html;
+
+}
+sub get_peptide_mapping_display_graphic{
+  my $self = shift;
+  my %args = @_;
+  my $peptide_map = $args{peptide_map} || die "need peptide_map\n";
+  my $dup_seqs = $args{dup_seqs} || die "need dup_seqs\n";
+  my $alignments = $args{alignments} || die "need alignments\n";
+  my $accessions = $args{accessions} || die "need accessions\n";
+
+  my @accessions = split(/ /, $accessions);
+  my %sequence_with_gap = ();
+  my $i=0;
+  my $track_len = 0;
+  my %ungapped_range_list = ();
+
+	for my $seq ( @{$args{alignments}} ) {
+		my $sequence = $seq->[1];
+		my $map_prot = $accessions[$i] || '';
+    $sequence_with_gap{$map_prot} = $sequence;
+    $track_len = length($sequence);
+		my @seqss = split('', $sequence); # explode the sequence
+    my @matches = grep { $seqss[$_] ~~ /[A-Z]/} 0 .. $#seqss; #get the positions of each gap character "-"
+    my @range_list;
+    if (@matches){
+			my $s = $matches[0];
+      my $e = $s;
+			for (my $j=1; $j<=$#matches;$j++){
+        if ($j < $#matches && $matches[$j]+1 == $matches[$j+1]){
+          next;
+        }else{
+          if ($j < $#matches){
+            push @range_list,[($s+1,$matches[$j]+1)];
+            $j++;
+            $s = $matches[$j];
+          }else{
+            push @range_list,[($s+1,$matches[$j]+1)];
+          }
+        }
+			}
+    }
+    $ungapped_range_list{$map_prot} = \@range_list; 
+    next if(! $map_prot);
+    $i++;
+  }
+	my $panel = Bio::Graphics::Panel->new(-length => $track_len, 
+																			 -key_style => 'between',
+																			 -width     => 1000,
+                                       #-grid => 1,
+																			 -empty_tracks => 'suppress',
+																			 -pad_top   => 5,
+																			 -pad_bottom => 5,
+																			 -pad_left  => 10,
+																			 -pad_right => 20 );
+
+	my $ruler = Bio::SeqFeature::Generic->new( -end => $track_len, 
+																				 -start => 1);
+  $panel->add_track( $ruler,
+                    -glyph  => 'arrow',
+                    -tick   => 2,
+                    -height => 8,
+                    -key  => 'Sequence Alignement and Peptide Mapping' );
+
+
+  my $html = "<br>";
+	my $width = ( $track_len <= 4000 ) ? 1500 : int( $track_len/5 );
+#  my $threshold = 1000;
+#  my $lten = log(10);
+#	$max_obs = $threshold if ( $max_obs > $threshold );
+#  my $max_score = log($max_obs)/$lten;
+
+  my %pep_info;
+  my $cnt=1;
+  my $i=0;
+  for my $map_prot (split / /, $peptide_map->{'protein_list'}) {
+    my $sequences = $sequence_with_gap{$map_prot};
+    $sequences =~ s/\-//g;
+    my $track = $panel->add_track(-glyph       => 'segments',
+                                  -connector   => 'dashed',
+                                  -height     =>  6,
+                                  -bgcolor     => 'gray',
+                                  -font2color  => 'red',
+                                  -key => $map_prot,
+                                 );
+
+     my $feature = Bio::SeqFeature::Generic->new(-start => 1,
+                                                 -end => $track_len, 
+                                                 -seq_id => $map_prot);
+    foreach my $range_list(@{$ungapped_range_list{$map_prot}}){
+      my ($s, $e)= @$range_list;
+      my $subfeature =  Bio::SeqFeature::Generic->new(-start => $s, -end => $e);
+      $feature->add_sub_SeqFeature($subfeature, "EXPAND");
+    }
+    $track->add_feature($feature);
+
+    my @seqFeatures=();
+    for my $map_pep (split / /, $peptide_map->{'peptide_list'}) {
+      my $seqlen = length $map_pep;
+      my $obs = '';
+      if ( $peptide_map->{$map_pep}{$map_prot}){
+        my $start_pos = $peptide_map->{$map_pep}{$map_prot}{pos};
+        my $end_pos = $start_pos + $seqlen -1;
+        $obs =' ('.  $peptide_map->{$map_pep}{$map_prot}{obs} . " obs)";
+        my $ugly_key ="$map_prot:$map_pep" . '::::' . $start_pos . $end_pos;
+				$cnt++;
+        $pep_info{$ugly_key} = "$start_pos - $end_pos, $map_prot: $map_pep $obs";
+        ## add gap
+        my $s_start = $start_pos;
+        my $s_end = $end_pos;
+        my $idx=1;
+        my @seg = ();
+        #print "$start_pos, $end_pos => ";
+        LOOP2:foreach my $range_list(@{$ungapped_range_list{$map_prot}}){
+					my ($s, $e)= @$range_list;
+          my $j=0;
+          my $k=$idx;
+          #print "($s,$e)$start_pos,";
+          LOOP:for($s..$e){
+            if($k==$start_pos){
+              $s_start = $s+$j;
+              $s_end = ($end_pos - $start_pos)+$s_start;
+              if ($s_end <= $e){
+                push @seg, [$s_start,$s_end];
+                last LOOP2;
+              }else{
+                push @seg, [$s_start,$e];
+                $start_pos += $e - $s_start+1;
+                last LOOP;
+              }
+            }
+            $j++;
+            $k++;
+          }
+          $idx += $e-$s+1;
+        }
+ 
+        my $source_tag = 'multi';
+        if (scalar keys %{$peptide_map->{$map_pep}} == 1){
+           $source_tag = 'uniq';
+        }
+        if ($peptide_map->{$map_pep}{$map_prot}{tryp}){
+          $source_tag = "$source_tag-tryptic";
+        }
+        #my $score =  ( $peptide_map->{$map_pep}{$map_prot}{obs} <= $threshold ) ? 
+        #               sprintf("%0.1f", (log($peptide_map->{$map_pep}{$map_prot}{obs})/$lten) + 0.3) : $max_score;
+        my $score = 1;
+        $score = 0.5 if ($peptide_map->{$map_pep}{$map_prot}{obs} < 5);
+
+        my $f = Bio::Graphics::Feature->new(
+                             -segments=> \@seg, 
+                             -source=>$source_tag,
+                      -display_name => $ugly_key,
+                             -score => $score, 
+                             );
+         push @seqFeatures, $f;
+      }
+    }
+		  $panel->add_track( \@seqFeatures,
+												-glyph       => 'graded_segments',
+                        -bgcolor   => sub { my $source_tag = shift->source_tag;
+                                            $source_tag eq 'uniq-tryptic' ? "teal":
+                                            $source_tag eq 'uniq' ? "#C5B4E3" :
+                                            $source_tag eq 'multi-tryptic'? "firebrick": 
+                                            "#ffad4e" },
+												-fgcolor     => 'black',
+												-font2color  => '#882222',
+                        -connector   => 'dashed',
+												-bump        => 1,
+												-height      => 8,
+												-label       => '',
+												-min_score   => 0,
+                        -max_score   => 1
+											 );
+  }
+  
+  my $baselink = "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$args{build_id}&searchWithinThis=Peptide+Sequence&searchForThis=_PA_Sequence_&action=QUERY";
+  my $pid = $$;
+  my @objects = $panel->boxes();
+  my $map = "<MAP NAME='$pid'>\n";
+  for my $obj ( @objects ) {
+    my $hkey_name = $obj->[0]->display_name();
+    my $link_name = $hkey_name;
+    $link_name =~ s/.*:(.*)::::.*/$1/g;  # Grrr...
+    if ( $link_name =~ /[A-Z]/ ) { # Peptide, add link + mouseover coords/sequence
+      my $coords = join( ", ", @$obj[1..4] );
+      my $link = $baselink;
+      $link =~ s/_PA_Sequence_/$link_name/g;
+      $map .= "<AREA SHAPE='RECT' COORDS='$coords' TITLE='$pep_info{$hkey_name}' TARGET='_peptides' HREF='$link'>\n";
+    } else {
+      my $f = $obj->[0];
+      my $coords = join( ", ", @$obj[1..4] );
+      my $text = $f->start() . '-' . $f->end();
+      $map .= "<AREA SHAPE='RECT' COORDS='$coords' TITLE='$text'>\n";
+    }
+  }
+  $map .= '</MAP>';
+  my $legend = '';
+  my $style = '';
+  my $file_name    = $pid . "_ortho_peptide_map.png";
+  my $tmp_img_path = "images/tmp";
+  my $img_file     = "$PHYSICAL_BASE_DIR/$tmp_img_path/$file_name";
+	open( OUT, ">$img_file" ) || die "$!: $img_file";
+	binmode(OUT);
+	print OUT $panel->png;
+	close OUT;
+  my $graphic =<<"  EOG";
+        <img src='$HTML_BASE_DIR/$tmp_img_path/$file_name' ISMAP USEMAP='#$pid' alt='Sorry No Img' BORDER=0>
+        $map
+        <br>
+        <table style='border-width:1px;margin-left:40%;' class='lgnd_outline'>
+        $legend
+        </table>
+  $style
+  EOG
+ 
+ 
+  return $html."\n".$graphic;
+
+}
+
+
+sub get_clustal_alignemnt_display {
+  my $self = shift;
+  my $sbeams = $self->getSBEAMS();
+  my %args = ( acc_color => '#0090D0', @_ );
+  my $accessions = $args{accessions} || '';
+  my $display = qq~
+	<br><br>
+        <div class='hoverabletitle'>Sequence Coverage</div>
+	<div style="width: calc(90vw - 20px); overflow-x: auto; border-right: 1px solid #aaa">
+	<form method="POST" name="custom_alignment">
+	<table style="border-spacing:1px; border:0;">
+	~;
+
+  my $position_bar_track = '';
+  my $position_number_track = '&nbsp;';
+  my @accessions = split(/ /, $accessions);   
+  my $i=0;
+  my $first = 1;
+  my %first_seq_aa = (); 
+  for my $seq ( @{$args{alignments}} ) {
+    my $sequence = $seq->[1];
+    if ($first){
+      my @aas = split(//, $sequence);
+      for (my $i=0;$i<=$#aas;$i++){
+         $first_seq_aa{$i} =$aas[$i];
+      }
+      $first = 0;
+    }
+    my $acc = $accessions[$i] || '';
+    $i++;
+
+    if ( $seq->[0] eq 'consensus'  ) {
+      my $counter = 1;
+      foreach my $a (split(//, $sequence)){ 
+        if ($counter % 10 == 0){
+           my $space_length = 8 - (length($counter) - 2);
+           $position_number_track .= '&nbsp;' x $space_length;
+           $position_number_track .= $counter;
+           $position_bar_track .= '|';
+        }else{
+           $position_bar_track .='.';
+        }
+        $counter++;
+      } 
+      $sequence =~ s/ /&nbsp;/g;
+    } else {
+      $sequence = $self->highlight_sites2( seq => $sequence,
+                                   acc => $acc, 
+                                   ref_aa => \%first_seq_aa, 
+																	 coverage => $args{coverage}->{$acc} );
+      my @pepseqs = split(",", $args{pepseq});
+      for my $pepseq (@pepseqs) {
+				$sequence =~ s/${pepseq}/<span class="sec_obs_seq_bg_font">$pepseq<\/span>/g;
+      }
+
+    }
+    my $dup = '';
+    if ( $args{dup_seqs}->{$acc} ) {
+      $dup .= "<sup><span style='color:red;'>$args{dup_seqs}->{$acc}</span></sup>";
+    }
+    my $checkbox = '';
+    unless ( $seq->[0] eq 'consensus' ) {
+      if ( !$args{acc2bioseq_id}->{"$acc"} ) {
+        $log->warn( "$seq->[0] has no bioseq_id, can't re-assemble" );
+      } else {
+				$checkbox = "<input id='bioseq_id' type='checkbox' checked name='bioseq_id' value='$args{acc2bioseq_id}->{$acc}'></input>";
+      }
+    }
+
+    if ( $seq->[0] eq 'consensus') {
+      $display .= qq~
+			<tr>
+			<td style="padding:3px; background-color: #f3f1e4; position:sticky; left: 0px; z-index:6;"></td>
+			<td style="padding:3px; background-color: #f3f1e4; position:sticky; left: 20px; z-index:6; border-right: 1px solid #aaa; text-align: right;" class="sequence_font">consensus</td>
+			<td style="padding:3px; white-space: nowrap;" class="sequence_font">$sequence</td>
+			</tr>
+			<tr>
+			<td style="padding:3px; background-color: #f3f1e4; position:sticky; left: 0px; z-index:6;"></td>
+			<td style="padding:3px; background-color: #f3f1e4; position:sticky; left: 20px; z-index:6; border-right: 1px solid #aaa; text-align: right;" class="sequence_font"></td>
+			<td style="padding:3px; white-space: nowrap;" class="sequence_font">$position_bar_track</td>
+			</tr>
+      <tr>
+      <td style="padding:3px; background-color: #f3f1e4; position:sticky; left: 0px; z-index:6;"></td>
+      <td style="padding:3px; background-color: #f3f1e4; position:sticky; left: 20px; z-index:6; border-right: 1px solid #aaa; text-align: right;" class="sequence_font">position</td>
+      <td style="padding:3px; white-space: nowrap;" class="sequence_font">$position_number_track</td>
+      </tr>
+
+			~;
+
+    }else{
+			$display .= qq~
+			<tr>
+			<td style="padding:3px; background-color: #f3f1e4; position:sticky; left: 0px; z-index:6;">$checkbox </td>
+			<td style="padding:3px; background-color: #f3f1e4; position:sticky; left: 20px; z-index:6; border-right: 1px solid #aaa; text-align: right;" class="sequence_font">$acc$dup</td>
+			<td style="padding:3px; white-space: nowrap;" class="sequence_font">$sequence</td>
+			</tr>
+			~;
+    }
+  }
+  
+  my $toggle_checkbox = $sbeams->get_checkbox_toggle( controller_name => 'alignment_chk',
+						      checkbox_name => 'bioseq_id' );
+
+  my $toggle_text = $sbeams->makeInfoText( 'Toggle all checkboxes' );
+
+  # Add field to allow ad hoc addition of proteins.
+  my $text = qq~
+	You can add an additional protein or proteins
+	to this assembly by inserting their accession
+	numbers here as a semicolon-separated list.
+	~;
+
+  my $popup = qq~
+	$text
+    The following accession types should work:
+  <br>
+  <br>
+	<ALIGN = RIGHT>
+	Human      IPI, ENSP
+  <br>
+	Mouse      IPI, ENSMUS
+  <br>
+	Yeast      Yxxxxx
+  <br>
+	Halo       VNG
+  <br>
+	celegans   wormbase acc.
+  <br>
+  <br>
+	</ALIGN>
+
+	  Please note that using more sequences and/or 
+	sequences that are not very similar will cause 
+	the assembly to be slower.  There is a limit of 
+	100 proteins in the assembly, but the practical
+	limit of aligning dissimilar proteins is much 
+	lower.
+	~;
+
+  my $pHTML .= $sbeams->getPopupDHTML();
+  my $session_key = $sbeams->getRandomString();
+  $sbeams->setSessionAttribute( key => $session_key,  value => $popup );
+
+  my $url = "$CGI_BASE_DIR/help_popup.cgi?title=BuildProteinList;session_key=$session_key;email_link=no";
+
+  my $link =<<"  END_LINK";
+   <span title='$text - click for more...' class="popup">
+   <img src="$HTML_BASE_DIR/images/greyqmark.gif" border="0" onclick="popitup('$url');"></span>
+  END_LINK
+
+  # Cache ids to be able to restore!
+  my $orig_bioseq_field = '';
+  if ( $args{bioseq_id} && !$args{orig_bioseq_id} ) {
+    $orig_bioseq_field = "<input type='hidden' name='orig_bioseq_id' value='$args{bioseq_id}'></input>";
+  } else {
+    $orig_bioseq_field = "<input type='hidden' name='orig_bioseq_id' value='$args{orig_bioseq_id}'></input>";
+  }
+  my $self_url = $q->self_url();
+  my $short_url = $sbeams->setShortURL( $self_url );
+
+  $display .= qq~
+	$pHTML
+  <tr><td style="position:sticky; left: 0px;">$toggle_checkbox</td><td style="position:sticky; left: 20px; text-align:left">$toggle_text </td><td></td></tr>
+	</table>\n</div>
+	<br>
+
+	Add proteins to list
+	<span style='background:#e0e0e0; margin:0px 3px; padding:3px;'>$link</span>
+	<input type='text' name='protein_list' size='40'>
+	<br>
+	<br>
+	<input type='hidden' name='pepseq' value='$args{pepseq}'>
+  $orig_bioseq_field
+	<input type='submit' value='Align selected sequences'>
+	<input type='submit' value='Restore Original' name='restore'>
+	</form>
+	<br><br>
+  Save link to recall current <a href='$CGI_BASE_DIR/shortURL?key=$short_url'>sequence alignment</a>.
+	<br><br>
+	~;
+
+  return $display;
+}
+
+sub highlight_sites2 {
+  my $self = shift;
+  my %args = @_;
+  my $coverage = $args{coverage};
+  #$log->debug( "seq is there , acc is $args{acc}, and coverage is $coverage->{$args{acc}}" );
+  my $ref_aa = $args{ref_aa};
+ 
+  #https://merenlab.org/2018/02/13/color-coding-aa-alignments/
+  #https://www.jalview.org/help/html/colourSchemes/clustal.html
+  my %amino_acid_colors=(
+		A => '#15a4a4',  #cyan
+		I=>'#15a4a4', 
+		L=>'#15a4a4',
+		M=>'#15a4a4',
+		F=>'#15a4a4',
+		W=>'#15a4a4',
+		V=>'#15a4a4',
+		K=>'red',
+		R=>'red',
+		E=>'Magenta',
+		D=>'Magenta',
+		N=>'green',
+		Q=>'green',
+		S=>'Green',
+		T=>'Green',
+		C	=>'Hotpink',
+		G	=>'Orange',
+		H=>'Brown',
+		Y=>'Brown',
+		P=>'#f0e130',   
+  );
+
+#  foreach my $i (sort {$a <=>$b} keys %$ref_aa){
+#    print $ref_aa->{$i};
+#  }
+#  print "<BR>";
+#  print "$args{seq}<BR>";
+
+  my @aas = split( '', $args{seq} );
+  my $return_seq = '';
+  my $cnt = 0;
+  my $in_coverage = 0;
+  my $span_closed = 1;
+  my $i=0;
+  for my $aa ( @aas ) {
+    if ( $aa eq '-' ) {
+      if ( $in_coverage && !$span_closed ) {
+				$return_seq .= "</span>$aa";
+				$span_closed++;
+      } else {
+				$return_seq .= $aa;
+      }
+    } else { # it is an amino acid
+      if ($ref_aa->{$i} ne $aa){
+        $aa = "<font color='". $amino_acid_colors{$aa} ."'>$aa</font>"; 
+      }
+      if ( $coverage->{$cnt} ) {
+				if ( $in_coverage ) { # already in
+					if ( $span_closed ) {  # Must have been jumping a --- gap
+						$span_closed = 0;
+						$return_seq .= "<span class='obs_seq_bg_font'>$aa";
+					} else {
+						$return_seq .= $aa;
+					}
+				} else {
+					$in_coverage++;
+					$span_closed = 0;
+					$return_seq .= "<span class='obs_seq_bg_font'>$aa";
+				}
+						} else { # posn not covered!
+				if ( $in_coverage ) { # were in, close now
+					$return_seq .= "</span>$aa";
+					$in_coverage = 0;
+					$span_closed++;
+				} else {
+					$return_seq .= $aa;
+				}
+      }
+        
+      $cnt++;
+        
+    }
+    $i++;
+  }
+  if ( $in_coverage && !$span_closed ) {
+    $return_seq .= '</span>';
+  }
+  return $return_seq;
+}
+
 1;

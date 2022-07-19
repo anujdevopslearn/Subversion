@@ -71,6 +71,7 @@ sub runClustalW {
   my $exists = $sbeams->doesSBEAMSTempFileExist( filename => "$checksum.aln", 
 						 dirname => $dirname );
 
+  my $align_file = '';
   if ( !$exists ) {
     $log->info( "no existing alignment named $checksum!" );
     $clustal_file = $sbeams->writeSBEAMSTempFile( content => $args{sequences},
@@ -78,20 +79,24 @@ sub runClustalW {
 						  filename => $checksum,
 						  suffix => 'fsa',
 						  newdir => 1
-	);
-    my $clustal_exe = $CONFIG_SETTING{CLUSTALW} || return 'Clustal executable not found on this server';
-    my $out = `$clustal_exe -tree -align -outorder=input -infile=$clustal_file`;
+		);
+    $align_file = $clustal_file;
+    $align_file =~ s/fsa$/aln/;
+		#my $clustal_exe = $CONFIG_SETTING{CLUSTALW} || return 'Clustal executable not found on this server';
+		#my $out = `$clustal_exe -tree -align -outorder=input -infile=$clustal_file`;
+		my $clustal_exe = '/net/db/projects/PeptideAtlas/pipeline/bin/mafft';
+		my $out = `$clustal_exe --namelength 100 --clustalout $clustal_file > $align_file`;
 
-    if ( $out && $out =~ /No alignment!/gm ) {
-      return "Clustal run failed: $out\n";
-    }
+		if ( $out && $out =~ /No alignment!/gm ) {
+			return "Clustal run failed: $out\n";
+		}
   } else {
     $clustal_file = $exists;
+    $align_file = $clustal_file;
+    $align_file =~ s/fsa$/aln/;
     $log->info( "Reading existing alignment $checksum! ($clustal_file)" );
   }
 
-  my $align_file = $clustal_file;
-  $align_file =~ s/fsa$/aln/;
   if ( !-e $align_file ) {
     return "Output not produced";
   } elsif ( !-s $align_file ) {
