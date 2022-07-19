@@ -1071,8 +1071,10 @@ sub getSampleMapDisplay {
   my %args = ( peptide_field => 'peptide_accession', @_ );
 
   my $in = join( ", ", keys( %{$args{instance_ids}} ) );
+  my $sample_category = $args{sample_category} || 0;
   return unless $in;
 
+  
   my $header = '';
   if ( $args{link} ) {
     $header .= $self->encodeSectionHeader( text => 'Experiment peptide map:',
@@ -1088,9 +1090,15 @@ sub getSampleMapDisplay {
 
   my $html = '';
   my $trinfo = $args{tr_info} || '';
+  my $order_by = 'ORDER BY sample_tag ASC';
+  my $sample_tag = 'sample_tag';
+  if ($sample_category){
+    $order_by = 'ORDER BY sample_name ASC';
+    $sample_tag = "SC.name + ':' + sample_tag  as sample_name";
+  }
 
   my $sql = qq~     
-  	SELECT DISTINCT SB.atlas_search_batch_id, sample_tag, 
+  	SELECT DISTINCT SB.atlas_search_batch_id, $sample_tag, 
 		PISB.n_observations, $args{peptide_field},
     CASE when n_genome_locations = 1 THEN 1 ELSE 2 END
 		FROM $TBAT_ATLAS_SEARCH_BATCH SB 
@@ -1098,12 +1106,12 @@ sub getSampleMapDisplay {
 	  JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB ON PISB.atlas_search_batch_id = SB.atlas_search_batch_id
 	  JOIN $TBAT_PEPTIDE_INSTANCE PI ON PI.peptide_instance_id = PISB.peptide_instance_id
 	  JOIN $TBAT_PEPTIDE P ON P.peptide_id = PI.peptide_id
+    LEFT JOIN $TBAT_SAMPLE_CATEGORY SC ON (SC.id = S.sample_category_id)
     WHERE PI.peptide_instance_id IN ( $in )
     AND S.record_status != 'D'
     -- ORDER BY PISB.n_observations, $args{peptide_field} ASC
-    ORDER BY sample_tag ASC
+    $order_by 
   ~;
-
   my @samples = $sbeams->selectSeveralColumns($sql);
 
   my $sample_js;
@@ -1116,7 +1124,7 @@ sub getSampleMapDisplay {
     $row->[3] .= '*' if $row->[4] < 2;
     $peptides{$row->[3]}++;
     $samples{$key} ||= {};
-    $samples{$key}->{$row->[3]} = $row->[2];
+    $samples{$key}->{$row->[3]} += $row->[2];
   }
   my $array_def = qq~
     <script type="text/javascript">
@@ -1430,12 +1438,13 @@ sub getSampleTableDisplay{
   my $data = $args{data};
   my $type = $args{type};
   my $rows_to_show = $args{rows_to_show} || 25;
+  my $sample_category = $args{sample_category} || 0;
   my @samples = ();
   my $pre_id = '';
   my $anno =0;
   my @annotation_urls;
   foreach my $row (@$data){
-     my ($id, $title, $nobs,$ins,$enzyme,$pub_name, $abstract, $link, $rp_id) = @$row;
+     my ($id, $title, $nobs,$ins,$enzyme,$pub_name, $abstract, $link, $rp_id,$sc) = @$row;
      my $annotation_url;
      $id = "<a href='". "$CGI_BASE_DIR/PeptideAtlas/ManageTable.cgi?TABLE_NAME=AT_SAMPLE&sample_id=" . $id . "' target='_blank'>$id</a>";
      ($rp_id, $annotation_url) = $self->get_dataset_url ($rp_id);
@@ -1448,7 +1457,11 @@ sub getSampleTableDisplay{
      if ($type eq 'Peptide'){
        push @samples, [$id, $rp_id, $title, $nobs,$ins,$enzyme,$pub_name];
      }else{
-       push @samples, [$id, $rp_id, $title,$ins,$enzyme,$pub_name];
+       if ($sample_category){
+				 push @samples, [$id, $rp_id, $title,$ins,$enzyme,$pub_name,$sc];
+       }else{
+         push @samples, [$id, $rp_id, $title,$ins,$enzyme,$pub_name]; 
+       }
      }
      $pre_id = $id;
   }
@@ -1459,7 +1472,11 @@ sub getSampleTableDisplay{
     @cols = ('Experiment ID','Dataset','Experiment Name','NObs','Instrument','Enzyme','Publication');
     @align = qw(center left left center left left);
   }else{
-    @cols = ('Experiment ID','Dataset','Experiment Name', 'Instrument','Enzyme','Publication');
+    if ($sample_category){
+      @cols = ('Experiment ID','Dataset','Experiment Name', 'Instrument','Enzyme','Publication', 'Source');
+    }else{
+      @cols = ('Experiment ID','Dataset','Experiment Name', 'Instrument','Enzyme','Publication');
+    }
     @align = qw(center left left center left left left);
   }
   if ($anno){
@@ -1632,7 +1649,7 @@ sub getProteinSampleDisplay {
     $sortable = $args{sortable};
   }
   my $rows_to_show = $args{rows_to_show} || 25;
-
+  my $sample_category = $args{sample_category} || 0;
   unless( $args{sample_ids} ) {
     $log->error( "No samples passed to display samples" );
     return;
@@ -1640,31 +1657,35 @@ sub getProteinSampleDisplay {
 
   my $in = join( ", ", @{$args{sample_ids}} );
   return unless $in;
-  my $sql = qq~
-    SELECT S.SAMPLE_ID,
-           S.SAMPLE_TITLE, 
-           '' ,
-           INSTRUMENT_NAME, 
-           CASE WHEN ENZ.name IS NULL THEN 'Trypsin' ELSE ENZ.name END AS Enzyme, 
-           PUB.PUBLICATION_NAME, 
-           PUB.ABSTRACT , 
-           PUB.URI, 
-           S.REPOSITORY_IDENTIFIERS
-    FROM $TBAT_SAMPLE S
-    LEFT JOIN $TBPR_INSTRUMENT I ON S.instrument_model_id = I.instrument_id
-    LEFT JOIN $TBAT_PROTEASES ENZ ON ENZ.id = S.protease_id
-    LEFT JOIN $TBAT_SAMPLE_PUBLICATION SP ON SP.SAMPLE_ID = S.SAMPLE_ID
-    LEFT JOIN $TBAT_PUBLICATION PUB ON (PUB.PUBLICATION_ID = SP.PUBLICATION_ID
-                                        AND SP.record_status != 'D')
-    WHERE S.SAMPLE_ID IN ( $in )
-    AND S.RECORD_STATUS != 'D'
-    ORDER BY sample_ID
-  ~;
+	my $sql = qq~
+	SELECT S.SAMPLE_ID,
+				 S.SAMPLE_TITLE,
+				 '' ,
+				 INSTRUMENT_NAME,
+				 CASE WHEN ENZ.name IS NULL THEN 'Trypsin' ELSE ENZ.name END AS Enzyme,
+				 PUB.PUBLICATION_NAME,
+				 PUB.ABSTRACT ,
+				 PUB.URI,
+				 S.REPOSITORY_IDENTIFIERS,
+				 SC.name 
+	FROM $TBAT_SAMPLE S
+	LEFT JOIN $TBPR_INSTRUMENT I ON S.instrument_model_id = I.instrument_id
+	LEFT JOIN $TBAT_PROTEASES ENZ ON ENZ.id = S.protease_id
+	LEFT JOIN $TBAT_SAMPLE_PUBLICATION SP ON SP.SAMPLE_ID = S.SAMPLE_ID
+	LEFT JOIN $TBAT_PUBLICATION PUB ON (PUB.PUBLICATION_ID = SP.PUBLICATION_ID
+																			AND SP.record_status != 'D')
+	JOIN $TBAT_SAMPLE_CATEGORY SC ON (SC.id = S.sample_category_id)
+	WHERE S.SAMPLE_ID IN ( $in )
+	AND S.RECORD_STATUS != 'D'
+	ORDER BY sample_ID
+	~;
 
   my @rows = $sbeams->selectSeveralColumns($sql);
   my $table = $self -> getSampleTableDisplay(data => \@rows,
                                rows_to_show => $rows_to_show, 
-                               type => 'Protein');
+                               type => 'Protein',
+                               sample_category=>$sample_category,
+                               );
   return $table;
 } # end getProteinSampleDisplay 
 
@@ -2025,6 +2046,7 @@ sub get_proteome_coverage_new {
   my %biosqeuences = ();
   my %entry_cnt = ();
   my %obs=();
+  my %ptm_summary =();
   my $sql = qq~
 		  SELECT B.BIOSEQUENCE_ID,B.BIOSEQUENCE_NAME, B.BIOSEQUENCE_Desc
 			FROM $TBAT_ATLAS_BUILD AB
@@ -2039,16 +2061,15 @@ sub get_proteome_coverage_new {
   }
 
   my $obs_sql = qq~
-		SELECT DISTINCT B2.BIOSEQUENCE_ID
+		SELECT DISTINCT B2.BIOSEQUENCE_ID, B2.BIOSEQUENCE_ID
 		FROM $TBAT_PEPTIDE_INSTANCE PI
 		JOIN $TBAT_PEPTIDE_MAPPING PM ON (PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID)
 		JOIN $TBAT_BIOSEQUENCE B2 ON (B2.biosequence_id = PM.matched_biosequence_id)
 		WHERE PI.atlas_build_id = $build_id
 		--AND B2.BIOSEQUENCE_NAME LIKE 'CONTAM%' 
    ~;
-  my @biosqeuence_id_obs = $sbeams->selectOneColumn($obs_sql);
+  my %biosqeuence_id_obs = $sbeams->selectTwoColumnHash($obs_sql);
 
-  
   foreach my $line (@patterns){
     my ($org_id, $name, $type, $pat_str)  = split(/,/, $line);
     my @pats = split(/;/, $pat_str);
@@ -2073,43 +2094,25 @@ sub get_proteome_coverage_new {
 			}
       if ($flag){
         $entry_cnt{$name}++;
-      }
-    }
-    foreach my $id (@biosqeuence_id_obs){
-      my $flag = 0;
-      if ($type =~ /accession/i){
-        foreach my $pat (@pats){
-          if ($biosqeuences{$id}{accession} =~ /^$pat/){
-            $flag =1;
-            last;
-          }
+        if (defined $biosqeuence_id_obs{$id} ){
+          $obs{$name}++;
         }
-      }elsif($type =~ /description/i){
-        foreach my $pat (@pats){
-          if ($biosqeuences{$id}{desc} =~ /$pat/){
-            $flag =1;
-            last;
-          }
-        }
-      }
-      if ($flag){
-        $obs{$name}++;
       }
     }
   }
 
   #$log->error($sql);
   my @headings;
-  my %head_defs = ( Database => 'Name of database, which collectively form the reference database for this build',
+  my %heading_defs = ( Database => 'Name of database, which collectively form the reference database for this build',
                     N_Prots => 'Total number of entries in subject database',
                     N_Obs_Prots => 'Number of proteins within the subject database to which at least one observed peptide maps',
                     Pct_Obs => 'The percentage of the subject proteome covered by one or more observed peptides' );
 
-  for my $head ( qw( Database N_Prots N_Obs_Prots Pct_Obs ) ) {
-    push @headings, $head, $head_defs{$head};
+  for my $col_name ( qw( Database N_Prots N_Obs_Prots Pct_Obs ) ) {
+    push @headings, $col_name, $heading_defs{$col_name};
   }
   my $headings = $self->make_sort_headings( headings => \@headings, default => 'Database' );
-  my @return = ( $headings );
+  my @result = ( $headings );
 
   for my $name ( @names ) {
     my $db = $name;
@@ -2119,9 +2122,9 @@ sub get_proteome_coverage_new {
     if ( $obs && $n_entry ) {
         $pct = sprintf( "%0.1f", 100*($obs/$n_entry) );
     }
-    push @return, [ $db, $n_entry, $obs, $pct ];
+    push @result, [ $db, $n_entry, $obs, $pct];
   }
-  return '' if ( @return == 1);
+  return '' if ( @result == 1);
   my $table = '<table>';
 
   $table .= $self->encodeSectionHeader(
@@ -2130,17 +2133,207 @@ sub get_proteome_coverage_new {
       LMTABS => 1
   );
 
-  $table .= $self->encodeSectionTable( rows => \@return, 
+  $table .= $self->encodeSectionTable( rows => \@result, 
 				       header => 1, 
 				       table_id => 'proteome_cover',
-				       align => [ qw(left right right right ) ],
+				       align => [ qw(left left left left left left left left left left left ) ],
 				       has_key => 1,
+               nowrap => [qw(5 6 7 8 9 10)], 
 				       rows_to_show => 25,
 				       sortable => 1 );
   $table .= '</table>';
 
   if ($data_only){
-    return \@return;
+    shift @result;
+    unshift @result ,[qw(Database N_Prots N_Obs_Prots Pct_Obs)]; 
+    return \@result;
+  }else{
+    return $table;
+  }
+}
+sub get_ptm_coverage {
+
+  my $self = shift;
+  my $build_id = shift; 
+  my $patterns = shift;
+  my $data_only = shift;
+  my @patterns = @$patterns;
+
+  return [] if (! $build_id || ! @patterns);
+  my $sbeams = $self->getSBEAMS();
+  my $sql = '';
+  my $obs_sql = '';
+  my @names = ();
+  my %biosqeuences = ();
+  my %entry_cnt = ();
+  my %obs=();
+  my %ptm_summary =();
+  my $sql = qq~
+		  SELECT B.BIOSEQUENCE_ID,B.BIOSEQUENCE_NAME, B.BIOSEQUENCE_Desc, B.biosequence_seq
+			FROM $TBAT_ATLAS_BUILD AB
+			JOIN $TBAT_BIOSEQUENCE B ON B.BIOSEQUENCE_SET_ID = AB.BIOSEQUENCE_SET_ID
+			WHERE atlas_build_id = $build_id
+      AND B.BIOSEQUENCE_NAME not like 'DECOY%'
+  ~;
+  my @rows = $sbeams->selectSeveralColumns($sql);
+  my %biosqeuence_id_ptm =();
+  foreach my $row(@rows){
+    my ($id, $name, $desc,$seq) = @$row;
+    $biosqeuences{$id}{accession} = $name;
+    $biosqeuences{$id}{desc} = $desc;
+    foreach my $site (qw(A S T Y)){
+			my @m = $seq =~ /$site/g;
+			$biosqeuence_id_ptm{$id}{$site} = scalar @m;
+    }
+  }
+
+  my $ptm_sql = qq~
+      SELECT biosequence_id,
+             offset,
+             nobs,
+             residue,
+             nP81,
+             nP95,
+             nP100,      
+             nochoice, 
+             ptm_type
+      FROM $TBAT_PTM_SUMMARY PS
+      WHERE atlas_build_id = $build_id
+      --AND (residue = 'A' or residue = 'S' or residue = 'T' or residue = 'Y')
+      and ptm_type like '%phos%'
+      ~;
+   @rows = $sbeams->selectSeveralColumns($ptm_sql);
+
+   return if (! @rows);
+   my %biosqeuence_id_ptm_obs = ();
+   my %ptm_residues = ();
+  foreach my $row(@rows){
+    my ($id, $offset,$obs, $residue, $np81,$np95,$np100,$nochoice,$ptm_type) = @$row;
+    $ptm_residues{$residue} =1;
+    $biosqeuence_id_ptm_obs{$id}{$residue}{total}++; 
+    if ($obs > 0){
+      $biosqeuence_id_ptm_obs{$id}{$residue}{obs}++;
+    }
+    $biosqeuence_id_ptm_obs{$id}{$residue}{obsL1}++ if ($np81);
+    $biosqeuence_id_ptm_obs{$id}{$residue}{obsL2}++ if ($np95);
+    $biosqeuence_id_ptm_obs{$id}{$residue}{obsL3}++ if ($np100);
+    $biosqeuence_id_ptm_obs{$id}{$residue}{obsL4}++ if ($nochoice); 
+  }
+
+  foreach my $line (@patterns){
+    my ($org_id, $name, $type, $pat_str)  = split(/,/, $line);
+    my @pats = split(/;/, $pat_str);
+    my $or = '';
+    push @names, $name;
+    foreach my $id (keys %biosqeuences){
+      my $flag = 0;
+			if ($type =~ /accession/i){
+				foreach my $pat (@pats){
+          if ($biosqeuences{$id}{accession} =~ /^$pat/){
+            $flag =1;
+            last;
+          }
+				} 
+			}elsif($biosqeuences{$id}{desc} && $type =~ /description/i){
+				foreach my $pat (@pats){
+          if ($biosqeuences{$id}{desc} =~ /$pat/){
+            $flag =1;
+            last;
+          }
+				}
+			}
+      if ($flag){
+        foreach my $residue (sort {$a cmp $b} keys %ptm_residues){
+          $ptm_summary{$name}{"total_$residue"} += $biosqeuence_id_ptm{$id}{$residue};
+        }
+        if (defined $biosqeuence_id_ptm_obs{$id}){
+           foreach my $residue (keys %{$biosqeuence_id_ptm_obs{$id}}){
+             $ptm_summary{$name}{"prot_$residue"} += $biosqeuence_id_ptm_obs{$id}{$residue}{total};
+             $ptm_summary{$name}{"covered_$residue"} += $biosqeuence_id_ptm_obs{$id}{$residue}{obs};
+             $ptm_summary{$name}{"obsL1_$residue"} += $biosqeuence_id_ptm_obs{$id}{$residue}{obsL1};
+             $ptm_summary{$name}{"obsL2_$residue"} += $biosqeuence_id_ptm_obs{$id}{$residue}{obsL2};
+             $ptm_summary{$name}{"obsL3_$residue"} += $biosqeuence_id_ptm_obs{$id}{$residue}{obsL3};
+             $ptm_summary{$name}{"obsL4_$residue"} += $biosqeuence_id_ptm_obs{$id}{$residue}{obsL4};
+
+           }
+        } 
+      }
+    }
+  }
+
+#foreach my $id (keys %biosqeuence_id_ptm_obs){
+#  foreach my $s (keys %{$biosqeuence_id_ptm_obs{$id}}){
+#     print "$id\t$biosqeuence_id_ptm_obs{$id}{$s}{total}\t$biosqeuence_id_ptm_obs{$id}{$s}{obs}\n";
+#  }
+#}
+
+  #$log->error($sql);
+  my @col_names;
+  if (%ptm_residues){
+    push @col_names, 'Database';
+    foreach my $residue (sort {$a cmp $b} keys %ptm_residues){
+      push @col_names, ("total_".$residue."_sites", "obs_protein_$residue"."_sites", "covered_$residue"."_sites"
+                        ,"nP>.80","nP>.95","nP>.99","no-choice");
+    }
+  }else{
+    return;
+  } 
+  my @headings = @col_names;
+  my $headings = $self->make_sort_headings( headings => \@headings);
+  my @result = ( $headings );
+
+  for my $name ( @names ) {
+    my $db = $name;
+    my $obs  = $obs{$name} || 0;
+    my $n_entry = $entry_cnt{$name} || 0;
+    my $pct =0;
+    if ( $obs && $n_entry ) {
+        $pct = sprintf( "%0.1f", 100*($obs/$n_entry) );
+    }
+    my @ptm_summary =();
+    if (%ptm_residues){
+			foreach my $residue (sort {$a cmp $b} keys %ptm_residues){
+        my $total = $ptm_summary{$name}{"total_$residue"} || '-'; 
+        my $prot_total = $ptm_summary{$name}{"prot_$residue"}  || '-';
+        my $obs = $ptm_summary{$name}{"covered_$residue"} || '-';
+        if ($prot_total ne '-' ){
+          push @ptm_summary, $total;
+           push @ptm_summary,$prot_total;
+          push @ptm_summary, sprintf("%d \(%.2f%\)",  $obs, $obs*100/$prot_total);
+          push @ptm_summary,  sprintf("%d\t%d\t%d\t%d", $ptm_summary{$name}{"obsL1_$residue"},
+                                      $ptm_summary{$name}{"obsL2_$residue"},
+                                      $ptm_summary{$name}{"obsL3_$residue"},
+                                      $ptm_summary{$name}{"obsL4_$residue"});  
+        }else{
+          push @ptm_summary, ($total, '-', '-', '-','-','-','-');
+        }
+			}
+    }
+    push @result, [ $db, @ptm_summary];
+  }
+  return '' if ( @result == 1);
+  my $table = '<table>';
+
+  $table .= $self->encodeSectionHeader(
+      text => 'PTM Coverage',
+      no_toggle => 1,
+      LMTABS => 1
+  );
+
+  $table .= $self->encodeSectionTable( rows => \@result, 
+				       header => 1, 
+				       table_id => 'ptm_coverage',
+				       align => [ qw(left left left left left left left left left left left ) ],
+				       has_key => 1,
+               nowrap => [qw(5 6 7 8 9 10)], 
+				       rows_to_show => 25,
+				       sortable => 1 );
+  $table .= '</table>';
+
+  if ($data_only){
+    shift @result;
+    unshift @result ,[@col_names];
+    return \@result;
   }else{
     return $table;
   }
@@ -3324,6 +3517,7 @@ sub create_table {
   my $column_names = $args{column_names} || die "need column_names\n";
   my $table_name =  $args{table_name} || die "need table name\n";
   my $table_id =  $args{table_id} || die "need div name\n";
+  my $plot_html = $args{plot_html} || '';
   my $align = $args{align} || ();
   my $sortable = $args{sortable} || 0;
   my $table_width = $args{width} || 800;
@@ -3351,7 +3545,7 @@ sub create_table {
       barlink => 1,
       visible => 1,
       name => $table_id."_div",
-      content => "<TABLE><TR><TD COLSPAN='5'>$heading_info</TD></TR>$table</TABLE>",
+      content => "$plot_html<TABLE><TR><TD COLSPAN='5'>$heading_info</TD></TR>$table</TABLE>",
   );
 
   return $html;
@@ -3367,27 +3561,6 @@ sub display_spectra_ptm_table {
   my $resultset_ref = $args{resultset_ref};
   my $ptm_score_summary_ref = $args{ptm_score_summary_ref};
   my $drawVisualization = '';
-#  my $ptm_prob_color = qq~
-#		 <table>
-#		 <tr align="CENTER" bgcolor="#CCCCCC">
-#			<td>PTM Probability Score: </td>
-#			<td> 0 - 0.01 </td>
-#			<td class="ptm_ll" style="width: 10px; height: 5px;"></td>
-#			<td> 0.01 - 0.05 </td>
-#			<td class="ptm_ml" style="width: 10px; height: 5px;"></td>
-#			<td> 0.05 - 0.19 </td>
-#			<td class="ptm_l" style="width: 10px; height: 5px;"></td>
-#			<td> 0.19 - 0.81 </td>
-#			<td class="ptm_m" style="width: 10px; height: 5px;"></td>
-#			<td> 0.81 - 0.95 </td>
-#			<td class="ptm_h" style="width: 10px; height: 5px;"></td>
-#			<td> 0.95 - 0.99 </td>
-#			<td class="ptm_mh" style="width: 10px; height: 5px;"></td>
-#			<td> 0.99 - 1 </td>
-#			<td class="ptm_hh" style="width: 10px; height: 5px;"></td>
-#			</tr>
-#		 </table>
-#  ~;
 
   my $spectraHTML = qq~
     <div class="tab">
@@ -3426,13 +3599,13 @@ sub display_spectra_ptm_table {
       .tabcontent {
         border-top: none;
       }
-			.ptm_ll {background:red;}
-			.ptm_ml {background:orange;}
-			.ptm_l {background:purple;}
-			.ptm_m {background:grey;}
-			.ptm_h {background:#007eca;}
-			.ptm_mh {background:skyblue;}
-			.ptm_hh {background:green;}
+			.ptm_ll {background:red; font-weight: bold; opacity: 0.5}
+			.ptm_ml {background:orange;  font-weight: bold; opacity: 0.5}
+			.ptm_l {background:purple; font-weight: bold; opacity: 0.5}
+			.ptm_m {background:grey;  font-weight: bold; opacity: 0.5}
+			.ptm_h {background:#007eca; font-weight: bold; opacity: 0.5}
+			.ptm_mh {background:skyblue; font-weight: bold; opacity: 0.5}
+			.ptm_hh {background:green; font-weight: bold; opacity: 0.5}
 		 </style>
 		 ~;
 	#$spectraHTML = $sbeams->getPopupDHTML();
@@ -3505,51 +3678,33 @@ sub display_spectra_ptm_table {
 					var newInnerHTML = '';
 					var re;
 				 for (var i=0; i < aas.length; i++){
-						if (aas[i].match(/\\(/g)){
-							var aa = aas[i].split('\\(');
+						if (aas[i].match(/\\([01]\\./g)){
+							var aa = aas[i].split(/\\((?=[01]\\.)/);
 							var prob = parseFloat(aa[1]);
-							if (aas[i].match(/\\]\\(/g)){
-								re =  new RegExp('(\\\\w)(\\\\[\\\\d\\\+\\\\])\\\\('+aa[1], "g");
-								
-								if (prob < 0.01 ){
-									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_ll">\$1</span>\$2');
-								} else if (prob >=0.01 && prob < 0.05){
-									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_ml">\$1</span>\$2');
-								} else if (prob >= 0.05 && prob < 0.19 ){
-									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_l">\$1</span>\$2');
-								} else if (prob >= 0.19 && prob < 0.81 ){
-									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_m">\$1</span>\$2');
-								} else if (prob >= 0.81 && prob < 0.95 ){
-									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_h">\$1</span>\$2');
-								} else if (prob >= 0.95 && prob < 0.99 ){
-									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_mh">\$1</span>\$2');
-								} else {
-									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_hh">\$1</span>\$2');
-								}
+              aa[1].replace('(','\\(', 'g');
+
+							re =  new RegExp('(\\\\w)(\\\\[[^\\\\]]+\\\\])?\\\\('+ aa[1],  "g");
+							if (prob < 0.01 ){
+								aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_ll">\$1</span>\$2');
+							} else if (prob >=0.01 && prob < 0.05){
+								aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_ml">\$1</span>\$2');
+							} else if (prob >= 0.05 && prob < 0.19 ){
+								aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_l">\$1</span>\$2');
+							} else if (prob >= 0.19 && prob < 0.81 ){
+								aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_m">\$1</span>\$2');
+							} else if (prob >= 0.81 && prob < 0.95 ){
+								aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_h">\$1</span>\$2');
+							} else if (prob >= 0.95 && prob < 0.99 ){
+								aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_mh">\$1</span>\$2');
 							} else {
-								re =  new RegExp('(\\\\w)\\\\('+aa[1], "g");
-								if (prob < 0.01 ){
-									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_ll">\$1</span>');
-								} else if (prob >=0.01 && prob < 0.05){
-									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_ml">\$1</span>');
-								} else if (prob >= 0.05 && prob < 0.19 ){
-									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_l">\$1</span>');
-								} else if (prob >= 0.19 && prob < 0.81 ){
-									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_m">\$1</span>');
-								} else if (prob >= 0.81 && prob < 0.95 ){
-									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_h">\$1</span>');
-								} else if (prob >= 0.95 && prob < 0.99 ){
-									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_mh">\$1</span>');
-								} else {
-									aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_hh">\$1</span>');
-								}
+								aas[i] = aas[i].replace(re, '<span onmouseover="showTooltip(event,'+ aa[1] +')" onmouseout="hideTooltip()" class="ptm_hh">\$1</span>\$2');
 							}
 							newInnerHTML += aas[i] ;
 						} else {
 							newInnerHTML += aas[i];
 						}
 					}
-					re = new RegExp('(\\\\[\\\\d\\\+\\\\])', "g");
+					re = new RegExp('(\\\\[[^\\\\]]+\\\\])', "g");
 					newInnerHTML = newInnerHTML.replace (re, "<span class='aa_mod'>\$1</span>");
 					rows[j].cells[0].innerHTML = newInnerHTML;
 					j++;
@@ -3558,6 +3713,250 @@ sub display_spectra_ptm_table {
 		</script>
   ~;
 
+}
+sub get_pfam_domain_display {
+  my $self = shift;
+  my %args = @_;
+  my $data = $args{data}; ## json format
+  my $list = $args{list};
+  my $html = qq~
+    <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/pfam/prototip/prototype.js"></script>
+    <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/pfam/prototip/prototip.js"></script>
+    <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/pfam/prototip//styles.js"></script>
+    <link rel="stylesheet" href="$HTML_BASE_DIR/usr/javascript/pfam/prototip/prototip.css" type="text/css" />
+
+    <!-- stylesheets. We only really need the rules that are specific to the tooltips -->
+    <link rel="stylesheet" href="$HTML_BASE_DIR/usr/javascript/pfam/css/pfam.css" type="text/css" />
+
+    <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/pfam/js/main.js"></script>
+
+    <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/pfam/js/excanvas.js"></script>
+    <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/pfam/js/graphic_generator.js"></script>
+    <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/pfam/js/domain_graphics.js"></script>
+
+  ~;
+
+  my $counter = 1;
+  $html .= '<div id="graphic" class="panel">';
+  $html .='<h2>Domain graphic</h2>';
+
+  foreach my $prot (@$list){
+    $html .=qq~
+    <div style="display:flex;width:100%;text-align: center;">
+    <div style="float:left;width:15%;text-align:right;flex-grow:1;">$prot</div>
+    ~;
+    if(defined $data->{$prot}){
+		  $html .= qq~<div style="float:right;width:85%;flex-grow:1;text-align:left;" id="dg$counter"><span id="none"></span></div>~;
+      $counter++;
+    }else{
+      $html .= qq~<div style="float:right;width:85%;flex-grow:1;text-align:left;"></div>~;
+    }
+    $html .="</div>";
+  }
+  $html .=qq~
+	</div>
+  <br>
+  <div class="cleaner"><!-- empty --></div>
+	<div id="form">
+	<div id="sequence" class="panel">
+  ~;
+  
+  use JSON;
+  my $json = new JSON;
+  $counter=1;
+  foreach my $prot (@$list){
+		$json = $json->pretty([1]);
+		my $json_text =   $json->encode($data->{$prot});
+		$html .= "<textarea cols='80' rows='40' id='pfam_seq$counter' hidden>$json_text</textarea>\n";
+    $counter++;
+  }
+  $html .= qq~
+		</div>
+  	</div>
+
+	<div> 
+		<div class="row">
+		<span class="label">X-scale:</span><input id="xscale" value="2.0"></input>
+		</div>
+		<div class="row">
+		<span class="label">Y-scale:</span><input id="yscale" value="1.0"></input>
+		</div>
+		<button id="submit">Update graphic</button>
+		<div id="errors" style="display: none"></div>
+		<div id="error"></div>
+	</div>
+
+    <script type="text/javascript">
+  var generator;
+  document.observe( "dom:loaded", function() {
+    generator = new GraphicGenerator();
+  } );
+
+    </script>
+  ~;
+   
+  return $html;
+   
+
+
+}
+sub draw_tree{
+
+	my $self = shift;
+	my $newick = shift;
+	my $html = qq~ 
+    <script src="https://code.jquery.com/jquery.js"></script>
+    <script src="$HTML_BASE_DIR/usr/javascript/tree/underscore-min.js"></script>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css"/>
+    <script src="$HTML_BASE_DIR/usr/javascript/tree/bootstrap.min.js" ></script>
+    <script src="$HTML_BASE_DIR/usr/javascript/tree/d3.v5.js"></script>
+    <script src="$HTML_BASE_DIR/usr/javascript/tree/phylotree.js"></script>
+    <link href="$HTML_BASE_DIR/usr/javascript/tree/phylotree.css" rel="stylesheet" />
+
+    <style>
+
+      \@media (max-width: 1075px) {
+        .container {
+          padding-top: 50px;
+        }
+      }
+
+      .btn {
+        height: 30px;
+      }
+
+      #toolbar {
+        display: flex;
+        justify-content: space-between;
+        width: 550px;
+      }
+
+      #controls {
+        position: fixed;
+        left: 5px;
+      }
+    </style>
+
+    <div class="container" id="main_display">
+      <div class="row">
+        <div class="col-md-8">
+          <div class="btn-toolbar" role="toolbar" id="toolbar">
+            <div class="btn-group">
+              <button
+                type="button"
+                class="btn btn-light btn-sm"
+                data-direction="vertical"
+                data-amount="1"
+                title="Expand vertical spacing"
+              >
+                <i class="fa fa-arrows-v"></i>
+              </button>
+              <button
+                type="button"
+                class="btn btn-light btn-sm"
+                data-direction="vertical"
+                data-amount="-1"
+                title="Compress vertical spacing"
+              >
+                <i class="fa  fa-compress fa-rotate-135"></i>
+              </button>
+              <button
+                type="button"
+                class="btn btn-light btn-sm"
+                data-direction="horizontal"
+                data-amount="1"
+                title="Expand horizonal spacing"
+              >
+                <i class="fa fa-arrows-h"></i>
+              </button>
+              <button
+                type="button"
+                class="btn btn-light btn-sm"
+                data-direction="horizontal"
+                data-amount="-1"
+                title="Compress horizonal spacing"
+              >
+                <i class="fa  fa-compress fa-rotate-45"></i>
+              </button>
+              <button
+                type="button"
+                class="btn btn-light btn-sm"
+                id="sort_ascending"
+                title="Sort deepest clades to the bototm"
+              >
+                <i class="fa fa-sort-amount-asc"></i>
+              </button>
+              <button
+                type="button"
+                class="btn btn-light btn-sm"
+                id="sort_descending"
+                title="Sort deepsest clades to the top"
+              >
+                <i class="fa fa-sort-amount-desc"></i>
+              </button>
+              <button
+                type="button"
+                class="btn btn-light btn-sm"
+                id="sort_original"
+                title="Restore original order"
+              >
+                <i class="fa fa-sort"></i>
+              </button>
+              <button
+                type="button"
+                class="btn btn-light btn-sm"
+                id="save_image"
+                title="Save image"
+              >
+                <i class="fa fa-picture-o"></i>
+              </button>
+            </div>
+            <div class="btn-group" role="group">
+              <button
+                class="btn btn-light btn-sm active phylotree-layout-mode"
+                data-mode="linear"
+              >
+                Linear
+              </button>
+              <button
+                class="btn btn-light btn-sm phylotree-layout-mode"
+                data-mode="radial"
+              >
+                Radial
+              </button>
+            </div>
+            <div class="btn-group" role="group">
+              <button
+                class="btn btn-light btn-sm active phylotree-align-toggler"
+                data-align="left"
+              >
+                <i class="fa fa-align-left"></i>
+              </button>
+              <button
+                class="btn btn-light btn-sm phylotree-align-toggler"
+                data-align="right"
+              >
+                <i class="fa fa-align-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="row">
+        <div class="col-md-12">
+          <div id="tree_container" class="tree-widget"></div>
+        </div>
+      </div>
+    </div>
+    <BR>
+        <script src="../../usr/javascript/tree/plot_phylotree.js"></script>
+    <script>
+      var newick_string = '$newick';
+    </script>
+  ~;
+  return $html;
 }
 
 
