@@ -640,6 +640,64 @@ Counts only primary reference proteome entries, so final tally may be smaller th
   return \%coldefs;
 }
 
+
+
+sub get_color_def {
+  my $self = shift;
+  my %colors = ( 'uniq_tryptic'      => 'teal',
+                 'uniq_non_tryptic'  => '#C5B4E3',
+                 'multi_tryptic'     => 'firebrick',
+                 'multi_non_tryptic' => '#ffad4e',
+														 Signal => 'cornflowerblue',
+														 Anchor => 'lightskyblue',
+											Transmembrane => 'royalblue',
+											Intracellular => 'coral',
+											Extracellular => 'mediumseagreen',
+													 Coverage => 'beige',
+												 Translated => 'gainsboro',
+													 Observed => 'firebrick' ,
+											 Glycopeptide => 'goldenrod',
+														 SSR_un => 'coral',
+															TM_un => 'cornflowerblue',
+																sig => 'lightskyblue',
+																 OK => 'gainsboro',
+														 Length => 'goldenrod',
+													Difficult => 'bisque',
+																 10 => '#555566',
+																	9 => '#666677',
+																	8 => '#777788',
+																	7 => '#888899',
+																	6 => '#9999aa',
+																	5 => '#aaaabb',
+																	4 => '#bbbbcc',
+																	3 => '#ccccdd',
+																	2 => '#ddddee',
+																	1 => '#eeeeff',
+																	0 => '#ffffff', 
+																	A => '#15a4a4',  #cyan
+																	I => '#15a4a4',
+																	L => '#15a4a4',
+																	M => '#15a4a4',
+																	F => '#15a4a4',
+																	W => '#15a4a4',
+																	V => '#15a4a4',
+																	K => 'red',
+																	R => 'red',
+																	E => 'Magenta',
+																	D => 'Magenta',
+																	N => 'green',
+																	Q => 'green',
+																	S => 'Green',
+																	T => 'Green',
+																	C => 'Hotpink',
+																	G => 'Orange',
+																	H => 'Brown',
+																	Y => 'Brown',
+																	P => '#f0e130' );
+   return \%colors;
+}
+
+
 sub make_annotation_text {
   my $self = shift;
   my %args = @_;

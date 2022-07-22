@@ -24,6 +24,7 @@ use Getopt::Long;
 use FindBin;
 use Data::Dumper;
 use URI::Escape;
+use List::MoreUtils qw(uniq);
 
 $|++;
 
@@ -80,7 +81,7 @@ my $parameters;
 my $swiss; # fetch info from swissprot/nextprot if applicable
 
 
-use constant MIN_OBS_LENGTH => 6;
+use constant MIN_OBS_LENGTH => 7;
 use constant MAX_OBS_LENGTH => 40;
 
 ###############################################################################
@@ -1228,11 +1229,11 @@ sub handle_request {
   my @column_array = (
     ["peptide_accession","P.peptide_accession","Accession"],
     ["start_in_biosequence", "PM.start_in_biosequence", "<SPAN TITLE='Start postion in the protein'>Start</SPAN>"],
-    ["preceding_residue","PI.preceding_residue","<SPAN TITLE='Preceding (towards the N terminus) amino acid'>Pre AA</SPAN>"],
+    ["preceding_residue","COALESCE(PM.peptide_preceding_residue,PI.preceding_residue)","<SPAN TITLE='Preceding (towards the N terminus) amino acid'>Pre AA</SPAN>"],
     ["peptide_sequence","P.peptide_sequence","<SPAN TITLE='Amino Acid sequence of this peptide'>Sequence</SPAN>"],
-    ["following_residue","PI.following_residue","<SPAN TITLE='Following (towards the C terminus) amino acid'>Fol AA</SPAN>"],
+    ["following_residue","COALESCE(PM.peptide_following_residue,PI.following_residue)","<SPAN TITLE='Following (towards the C terminus) amino acid'>Fol AA</SPAN>"],
     ["suitability_score","0.0001","<SPAN TITLE='Score derived from peptide probability, EOS, and sequence characteristics such as missed cleavage(MC) or semi-tryptic(NTT); these are annotated in red.'>ESS</SPAN>"],
-    ["highest_n_enzymatic_termini","''","<SPAN TITLE='Highest # of enzymatic termini'>NET</SPAN>"],
+    ["highest_n_enzymatic_termini","PM.highest_n_enzymatic_termini","<SPAN TITLE='Highest # of enzymatic termini'>NET</SPAN>"],
     ["lowest_n_missed_cleavages","''","<SPAN TITLE='Lowest # of missed cleavage'>NMC</SPAN>"],
     ["best_probability","STR(PI.best_probability,7,3)","<SPAN TITLE='Highest PeptideProphet probability for this observed sequence'>Best Prob</SPAN>"],
     ["best_adjusted_probability","STR(PI.best_adjusted_probability,7,3)","<SPAN TITLE='Highest iProphet-adjusted probablity for this observed sequence'>Best Adj Prob</SPAN>"],
@@ -1256,9 +1257,12 @@ sub handle_request {
     #["is_subpeptide_of","PI.is_subpeptide_of","<SPAN TITLE='Observed peptides of which this peptide is a subsequence'>Parent Peptides</SPAN>"],
     ["is_subpeptide_of","PI.is_subpeptide_of",'Subpep of'],
     ["peptide_instance_id","PI.peptide_instance_id","peptide_instance_id"],
+    ["lowest_n_missed_cleavages","PM.lowest_n_missed_cleavages","lowest_n_missed_cleavages"],
   );
   push @column_array, ["SAL_level_probability","AVG(SAL.level_probability)","Avg Eval"] if $parameters{'ann'};
-  $group_by_clause .= "PI.empirical_proteotypic_score,P.SSRCalc_relative_hydrophobicity,PI.n_protein_mappings,PI.n_genome_locations,PI.is_subpeptide_of,PI.peptide_instance_id, PISB.atlas_search_batch_id";
+  $group_by_clause .= "PI.empirical_proteotypic_score,P.SSRCalc_relative_hydrophobicity,PI.n_protein_mappings,".
+                      "PI.n_genome_locations,PI.is_subpeptide_of,PI.peptide_instance_id, PISB.atlas_search_batch_id, ".
+                      "PM.highest_n_enzymatic_termini,PM.lowest_n_missed_cleavages,peptide_preceding_residue,peptide_following_residue";
 
 
   #### Build the columns part of the SQL statement
@@ -1379,7 +1383,7 @@ sub handle_request {
       biosequence_id => $biosequence_id,
     );
 
-    my ( $obs, $peptides, $pep_nobs, $seq2instance, $pep_info ) = getPeptideCount( biosequence => $biosequence,
+    my ( $obs, $peptides, $pep_nobs, $seq2instance, $pep_info) = getPeptideCount( biosequence => $biosequence,
 										 resultset_ref => $resultset_ref );
     my $peptide_counts = scalar( @$peptides );
 
@@ -1459,7 +1463,7 @@ sub handle_request {
 						likely_peptides => $likely,
 						mappings => $peptide_mappings,
 						pep_info => $pep_info
-	);
+	  );
 
     if ( $htmlmode ) {
       print scalar $sbeams->make_toggle_section( neutraltext => 'Sequence Motifs',
@@ -1519,6 +1523,7 @@ sub handle_request {
                     is_trypsin_build => $is_trypsin_build,
                    protein_structure => $protein_structure,
                                glyco => $motif_params{glyco},
+                            pep_info => $pep_info
                            );
 
     #############################################################################
@@ -1599,42 +1604,14 @@ sub handle_request {
     #### huge, otherwise the user may not see all peptides
     $rs_params{page_size} = 500;
 
-    #### get correct flanking AA info
-    $sql = qq~
-       SELECT DISTINCT
-           P.peptide_accession AS "peptide_accession",
-           PM.start_in_biosequence AS "start",
-           COALESCE(PM.peptide_preceding_residue,PI.preceding_residue) As "preceding_residue",
-           P.peptide_sequence AS "peptide_sequence",
-           COALESCE(PM.peptide_following_residue,PI.following_residue) AS "following_residue",
-           PM.highest_n_enzymatic_termini,
-           PM.lowest_n_missed_cleavages
-			FROM $TBAT_PEPTIDE_INSTANCE PI
-			INNER JOIN $TBAT_PEPTIDE P
-						ON ( PI.PEPTIDE_ID = P.PEPTIDE_ID )
-			LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
-						ON ( PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID )
-			INNER JOIN $TBAT_ATLAS_BUILD AB
-						ON ( PI.ATLAS_BUILD_ID = AB.ATLAS_BUILD_ID )
-			LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
-						ON ( AB.BIOSEQUENCE_SET_ID = BSS.BIOSEQUENCE_SET_ID )
-			LEFT JOIN $TBAT_BIOSEQUENCE BS
-						ON ( PM.MATCHED_BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID )
-			WHERE 1 = 1
-						AND AB.atlas_build_id IN ( $atlas_build_id )
-						AND BS.biosequence_id = $biosequence_id
-			ORDER BY P.PEPTIDE_ACCESSION
-    ~;
-    my @rows = $sbeams->selectSeveralColumns($sql);
     my %peptide_info = ();
-    foreach my $row(@rows){
-      my ($peptide_accession,$start,$preceding_residue,$peptide_sequence,$following_residue,
-          $highest_n_enzymatic_termini,$lowest_n_missed_cleavages) = @$row;
-      push @{$peptide_info{$peptide_accession}{preceding_residue}}, $preceding_residue;
-      push @{$peptide_info{$peptide_accession}{following_residue}}, $following_residue;
-      $peptide_info{$peptide_accession}{highest_n_enzymatic_termini} = $highest_n_enzymatic_termini;
-      $peptide_info{$peptide_accession}{lowest_n_missed_cleavages} = $lowest_n_missed_cleavages;
-      push @{$peptide_info{$peptide_accession}{start}},  $start;
+    foreach my $peptide_sequence (keys %$pep_info){
+      my $peptide_accession = $pep_info->{$peptide_sequence}{acc};
+      push @{$peptide_info{$peptide_accession}{preceding_residue}}, uniq @{$pep_info->{$peptide_sequence}{preceding_residue}};
+      push @{$peptide_info{$peptide_accession}{following_residue}}, uniq @{$pep_info->{$peptide_sequence}{following_residue}};
+      $peptide_info{$peptide_accession}{highest_n_enzymatic_termini} = $pep_info->{$peptide_sequence}{highest_n_enzymatic_termini};
+      $peptide_info{$peptide_accession}{lowest_n_missed_cleavages} = $pep_info->{$peptide_sequence}{lowest_n_missed_cleavages};
+      @{$peptide_info{$peptide_accession}{start}} = @{$pep_info->{$peptide_sequence}{start}};
     }
 
     #### Calculate the best peptides to use
@@ -2145,7 +2122,7 @@ sub get_sequence_graphic {
   my $biosequence_name = $args{protein_data}->{biosequence_name} || '';
   my $likely = $args{likely_peptides} || {};
   my $tm_sigp_source = $args{protein_data}->{tm_sigp_source} || 'predicted';
-
+  my $peptides = $args{peptides} || {};
   my $sigp_source = $tm_sigp_source;
   my $tmhmm_source = $tm_sigp_source;
   if ($tm_sigp_source =~ /(TMHMM\s[\d\.]+)/){
@@ -2156,25 +2133,8 @@ sub get_sequence_graphic {
   }
 
   # Define color mapping for various features.
-  my %colors = ( Signal => 'cornflowerblue',
-                 Anchor => 'lightskyblue',
-          Transmembrane => 'royalblue',
-          Intracellular => 'coral',
-          Extracellular => 'mediumseagreen',
-               Coverage => 'beige',
-             Translated => 'gainsboro',
-               Observed => $args{obs_color} || 'firebrick' ,
-           Glycopeptide => 'goldenrod',
-#           SSR => 'DarkOrange',
-#           OK => 'DarkGreen',
-#           Length => 'DarkRed',
-           SSR_un => 'coral',
-           TM_un => 'cornflowerblue',
-           sig => 'lightskyblue',
-           OK => 'gainsboro',
-           Length => 'goldenrod',
-        Difficult => 'bisque' );
-
+  my %colors = %{$sbeamsMOD->get_color_def()};
+               
   # Define CSS classes
   my $sp = '&nbsp;' x 4;
   my $style =<<"  END_STYLE";
@@ -2235,141 +2195,60 @@ sub get_sequence_graphic {
                                               -start => 1,
                                        -display_name => 'Sequence Position');
 
-
-  my $peptide_instance_constraint = $args{peptide_instance_constraint} || '';
-  my $n_observation_clause ='PI.n_observations';
-  if($peptide_instance_constraint){
-      $n_observation_clause  = 'PI2.n_observations';
-  }
-  # Had initially used the peptide query above, but the start/end coordinates
-  # were problematic.  Thus we need to do it again.
-  my $sql = qq~
-     SELECT 
-           P.peptide_accession,
-           P.peptide_sequence,
-           PI.n_genome_locations,
-           PM.start_in_biosequence,
-           PM.end_in_biosequence,
-           $n_observation_clause
-    FROM $TBAT_PEPTIDE_INSTANCE PI INNER JOIN $TBAT_PEPTIDE P
-      ON ( PI.peptide_id = P.peptide_id )
-    LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
-      ON ( PI.peptide_instance_id = PM.peptide_instance_id )
-    $peptide_instance_constraint
-    INNER JOIN $TBAT_ATLAS_BUILD AB
-      ON ( PI.atlas_build_id = AB.atlas_build_id )
-    LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
-      ON ( AB.biosequence_set_id = BSS.biosequence_set_id )
-    WHERE AB.atlas_build_id IN ( $args{build_id} )
-	  AND PM.matched_biosequence_id = $id
-    ORDER BY PI.n_observations DESC, PM.start_in_biosequence ASC, PM.end_in_biosequence ASC,
-    P.peptide_accession
-  ~;
-  my @rows = $sbeams->selectSeveralColumns( $sql );
-
   ## Generate observed peptide tracks ##
-  # color peptides based on n_obs
-  my $max = 1;
-  my $threshold = 200000;
-  my $lten = log(10);
-  foreach my $row (@rows) {
-    $max = ( $max > $row->[5] ) ? $max : $row->[5];
-    if ( $max > $threshold ) {
-      $max = $threshold;
-      last;
-    }
-  }
-  $max = log($max)/$lten;
-
-
   # Loop over peptides
   my @peptides;
   my @snps;
   my %pep_info;
   my ( $multi, $single );
-  foreach my $row (@rows) {
-    my $acc  =  $row->[0];
-    my $seq  =  $row->[1];
-
-    my $val = 0;
-    if ($row->[5]){
-      $val = log($row->[5]);
-    }
-#    my $score = ( $row->[2] > 1 ) ? 0 :
-    my $score =  ( $row->[5] <= $threshold ) ? sprintf("%0.1f", ($val/$lten) + 0.3) : $max;
-
-    my $start =  $row->[3];
-    my $stop  =  $row->[4];
-    # accession isn't necessarily unique, need compound key...
-    my $ugly_key = $acc . '::::' . $start . $stop;
-    my $f = Bio::SeqFeature::Generic->new(
-                             -start => $start,
-                               -end => $stop,
-                           -primary => $acc,
-                      -display_name => $ugly_key,
-                             -score => $score
-                             );
-
-    if ( !scalar( @{$args{mappings}->{$seq}}) ) {
-      push @snps, $f;
-    }
-    my $n_obs  =  $args{pep_info}->{$seq}->{nobs} || 'n/d';
-    $pep_info{$ugly_key} = "$start - $stop, $acc: $seq ($n_obs obs)";
-
-    # Record the coverage for this peptide
-    for my $idx ( $start..$stop ) { 
-      $coverage{$idx}++; 
-      $coverage_primary{$idx}++ if ($protseq =~ /$seq/);
-    }
-
-    # count peptide type, to build appropriate legend
-    if ( $score ) {
-      $single++;
-    } else {
-      $multi++;
-    }
-  }
-
-  my $cnt = 0;
-  foreach my $seq ( sort { $args{mappings}->{$a}->[0] <=> $args{mappings}->{$b}->[0] ||
+  foreach my $pep ( sort { $args{mappings}->{$a}->[0] <=> $args{mappings}->{$b}->[0] ||
                            $args{pep_info}->{$b}->{nobs} <=> $args{pep_info}->{$a}->{nobs}
                          } ( keys( %{$args{pep_info}} ) ) ) {
-    my $acc  =  $args{pep_info}->{$seq}->{acc};
-    my $val = 0;
-    my $n_obs  =  $args{pep_info}->{$seq}->{nobs};
-    if ($n_obs){
-      $val = log($n_obs);
+    my $acc  =  $args{pep_info}->{$pep}{acc};
+    my $score = 1;
+    if ($args{pep_info}->{$pep}{nobs} < 5){
+      $score = 0.4;
     }
-    my $score = ( $n_obs <= $threshold ) ? sprintf( "%0.1f", ($val/$lten) + .7 ) : $max;
-
-    for my $start_0 ( @{$args{mappings}->{$seq}} ) {
-      my $start =  $start_0 + 1;
-      my $stop  =  $start_0 + length( $seq );
-    # accession isn't necessarily unique, need compound key...
-      my $ugly_key = $acc . '::::' . $start . $stop;
-      my $f = Bio::SeqFeature::Generic->new(
-                             -start => $start,
-                               -end => $stop,
-                           -primary => $acc,
-                      -display_name => $ugly_key,
-														 -score => $score
-                             );
-
-			push @peptides, $f;
-
-    # Record the coverage for this peptide
-      for my $idx ( $start..$stop ) { $coverage{$idx}++; }
-
-      # count peptide type, to build appropriate legend
-      if ( $score ) {
-        $single++;
-      } else {
-        $multi++;
+    foreach my $s (@{$args{pep_info}->{$pep}{start}}){
+			my $start =  $s; 
+			my $stop  =  $s+length($pep)-1;
+      my $source_tag = 'multi_non_tryptic';
+      if ($args{pep_info}->{$pep}{n_protein_mappings} == 1){
+        $source_tag = 'uniq_non_tryptic';
       }
+      if ($args{pep_info}->{$pep}{highest_n_enzymatic_termini} == 2){
+        $source_tag =~ s/non_//;
+      }
+			# accession isn't necessarily unique, need compound key...
+			my $ugly_key = $acc . '::::' . $start . $stop;
+			my $f = Bio::Graphics::Feature->new(
+															 -segments => [[$start,$stop]],
+                                 -source => $colors{$source_tag},
+														    -primary => $acc,
+												   -display_name => $ugly_key,
+													    		-score => $score
+															 );
+			if ( !scalar( @{$args{mappings}->{$pep}}) ) {
+				push @snps, $f;
+			}else{
+        push @peptides, $f;
+      }
+			# Record the coverage for this peptide
+			for my $idx ( $start..$stop ) { 
+				$coverage{$idx}++; 
+				$coverage_primary{$idx}++ if ($protseq =~ /$pep/);
+			}
+			my $n_obs  =  $args{pep_info}->{$pep}->{nobs} || 'n/d';
+			$pep_info{$ugly_key} = "$start - $stop, $acc: $pep ($n_obs obs)";
     }
+    # count peptide type, to build appropriate legend
+    if ($args{pep_info}->{$pep}{n_gen} > 1){
+      $multi++;
+    } 
+    #else {
+    #  $single++;
+    #}
   }
-
-
 
 ###############
   ## Generate Signal P related tracks ##
@@ -2463,7 +2342,7 @@ sub get_sequence_graphic {
   my %sequence_coverage = ();
   for my $i ( 1..$protlen ) { 
     if (! $coverage{$i} && ! $coverage_primary{$i}){
-      push @{$sequence_coverage{uncovered}} , $i;
+       push @{$sequence_coverage{uncovered}} , $i;
     }elsif($coverage{$i} && ! $coverage_primary{$i}){
        push @{$sequence_coverage{snpcovered}}, $i;
     }else{
@@ -2497,9 +2376,9 @@ sub get_sequence_graphic {
 						push @uncovered, { start => $s, end => $e };
 					}else{
 							my $f = Bio::SeqFeature::Generic->new( -start   => $s,
-																									 -end     => $e,
-																									 -primary => 'Coverage',
-																									 -display_name => 'Coverage',
+																									   -end     => $e,
+																									   -primary => 'Coverage',
+																								-display_name => 'Coverage',
 																									 );
 						if($type eq 'snpcovered'){
 							 $f->add_tag_value("ctype", "S");
@@ -2606,6 +2485,7 @@ sub get_sequence_graphic {
   }
 
   # my $protseq = $args{protein_data}->{biosequence_seq};
+
   for my $cpair ( @uncovered ) {
     if ( $signal_peptide_coords &&  $signal_peptide_coords->{end}  ) {
 # $log->debug( "Start is $cpair->{start}, End is $cpair->{end}, seq is $cpair->{seq}" );
@@ -2620,6 +2500,7 @@ sub get_sequence_graphic {
 #   anchor
       if ( length( $tryp ) < MIN_OBS_LENGTH ) {
         my $peptide_end =  $index + length($tryp) - 1;
+
         push @unlikely_to_observe, { start => $index, end => $peptide_end, rationale => 'Short peptide', seq => $tryp };
         my $f = Bio::SeqFeature::Generic->new( -start   => $index,
                                                -end     => $peptide_end,
@@ -2708,7 +2589,7 @@ sub get_sequence_graphic {
   # Add observed peptide track
   $panel->add_track( \@peptides,
                       -glyph       => 'graded_segments',
-                      -bgcolor     => $colors{Observed},
+                      -bgcolor     => sub {shift->source_tag;}, 
                       -fgcolor     => 'black',
                       -font2color  => '#882222',
                       -key         => 'Observed Peptides',
@@ -2716,13 +2597,13 @@ sub get_sequence_graphic {
                       -height      => 8,
                       -label       => '',
                       -min_score   => 0,
-                      -max_score   => $max
+                      -max_score   => 1 
                      );
   # Add observed SNP track
 #                      -label       => sub { my $f = shift; my $n = $f->display_name(); $n =~ s/(.*)::::.*/$1/g; return $n },
   $panel->add_track( \@snps,
                       -glyph       => 'graded_segments',
-                      -bgcolor     => $colors{Observed},
+                       -bgcolor     => sub {shift->source_tag;}, 
                       -fgcolor     => 'black',
                       -font2color  => '#882222',
                       -key         => 'Observed VARIANT peptides',
@@ -2730,7 +2611,7 @@ sub get_sequence_graphic {
                       -height      => 8,
                       -label       => '', # sub { my $f = shift; my $n = $f->display_name(); $n =~ s/(.*)::::.*/$1/g; return $n },
                       -min_score   => 0,
-                      -max_score   => $max
+                      -max_score   => 1
                      ) if @snps;
 
 
@@ -2956,10 +2837,14 @@ sub get_sequence_graphic {
                 tm => "Unlikely due to transmembrane",
                 ok => "Likely to be observed",
               );
+  
+   push @legend, "<TR><TD style='background:$colors{uniq_tryptic};'><TD class=sm_txt>Uniquely-mapping and tryptic peptide</TD></TR>\n";
+   push @legend, "<TR><TD style='background:$colors{uniq_non_tryptic};'><TD class=sm_txt>Uniquely-mapping and non-tryptic peptide</TD></TR>\n";
+   push @legend, "<TR><TD style='background:$colors{multi_tryptic};'><TD class=sm_txt>Multi-mapping and tryptic peptide</TD></TR>\n";
+   push @legend, "<TR><TD style='background:$colors{multi_non_tryptic};'><TD class=sm_txt>Multi-mapping and non-tryptic peptide</TD></TR>\n";
 
-
-  push @legend, "<TR> <TD CLASS=lgnd_obs_sing>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{obs_sing}'>Observed peptide with single genome mapping</SPAN></TD> </TR>\n" if $single;
-  push @legend, "<TR> <TD CLASS=lgnd_obs_multi>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{obs_multi}'>Observed peptide with ambiguous genome mapping</SPAN></TD> </TR>\n" if $multi;
+  #push @legend, "<TR> <TD CLASS=lgnd_obs_sing>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{obs_sing}'>Observed peptide with single genome mapping</SPAN></TD> </TR>\n" if $single;
+  #push @legend, "<TR> <TD CLASS=lgnd_obs_multi>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{obs_multi}'>Observed peptide with ambiguous genome mapping</SPAN></TD> </TR>\n" if $multi;
   push @legend, "<TR> <TD CLASS=lgnd_sig_seq>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{sig_seq}'>$sp_rationale</SPAN></TD> </TR>\n" if $signal;
   push @legend, "<TR> <TD CLASS=lgnd_anc_seq>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{anc_seq}'>Anchor sequence predicted by Signal P</SPAN></TD> </TR>\n" if $anchor;
   push @legend, "<TR> <TD CLASS=lgnd_tm_dom>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{tm_dom}'>$tm_rationale </SPAN></TD> </TR>\n" if @tmm;
@@ -3096,14 +2981,17 @@ sub getPeptideCount {
       $map_info{$row->[$col{peptide_sequence}]} = { acc => $row->[$col{peptide_accession}],
                                                   nobs => $row->[$col{n_observations}],
                                                   inst => $row->[$col{peptide_instance_id}],
+                           highest_n_enzymatic_termini => $row->[$col{highest_n_enzymatic_termini}],
+                             lowest_n_missed_cleavages => $row->[$col{lowest_n_missed_cleavages}],
+                                    n_protein_mappings => $row->[$col{n_protein_mappings}],
                                                   n_gen => $row->[$col{n_genome_locations}] };
       push(@peptides,$row->[$col{peptide_sequence}]);
     }
-
-
-
+		push @{$map_info{$row->[$col{peptide_sequence}]}{start}}, $row->[$col{start_in_biosequence}];
+		push @{$map_info{$row->[$col{peptide_sequence}]}{preceding_residue}}, $row->[$col{preceding_residue}];
+		push @{$map_info{$row->[$col{peptide_sequence}]}{following_residue}}, $row->[$col{following_residue}];
   }
-  return( $total_observations, \@peptides, \%peptides, \%seq2instance, \%map_info );
+  return( $total_observations, \@peptides, \%peptides, \%seq2instance, \%map_info);
 #  return( $total_observations, \@peptides );
 }
 
@@ -3124,6 +3012,7 @@ sub displayAnnotatedSequence {
   my $enzyme = $args{'enzyme'} || '';
   my $protein_structure = $args{'protein_structure'};
   my $total_observations = $args{'total_observations'};
+  my $pep_info  = $args{pep_info} ;
 
   my $peptide_nobs = $args{peptide_nobs} || {};
   my $seq2instance = $args{seq2instance} || {};
@@ -3131,33 +3020,26 @@ sub displayAnnotatedSequence {
   #### Don't display unless HTML
   return unless ($sbeams->output_mode() eq 'html');
 
-  # @unlikely_to_observe, { start => $index, end => $peptide_end, rationale => 'Short peptide' };
-# _non_coverage
-
-  #### Get the hash of indices of the columns
-  my %col = %{$resultset_ref->{column_hash_ref}};
-
   #### Loop over all the peptides
   my $data_ref = $resultset_ref->{data_ref};
   my @peptides = @{$args{peptides}};
-
+  #### Get the hash of indices of the columns
+  my %col = %{$resultset_ref->{column_hash_ref}};
   my $seqHTML = '';
 
   my $sequence = $biosequence->{biosequence_seq};
   my %start_positions;
   my %end_positions;
 
+  my %observed_residues = ();
   foreach my $label_peptide (@peptides) {
-    if ($label_peptide) {
-      my $pos = -1;
-      while (($pos = index($sequence,$label_peptide,$pos)) > -1) {
-	$start_positions{$pos}++;
-	$end_positions{$pos+length($label_peptide)}++;
-	$pos++;
+		foreach my $s(@{$pep_info->{$label_peptide}{start}}){
+      for (my $i=$s;$i<$s+length($label_peptide);$i++){
+        $observed_residues{$i} =1;
       }
-    }
+		}
   }
-
+  my $observed_residues = scalar keys %observed_residues;
 
   #### If transmembrane regions topology has been supplied, find the TMRs
   my %tmr_start_positions;
@@ -3205,39 +3087,6 @@ sub displayAnnotatedSequence {
   #  $seq_length = length($concat[0]);
   #}
 
-  my $i = 0;
-  my $color_level = 0;
-  my $observed_residues = 0;
-
-  my @annotation_lines;
-
-  while ($i < $seq_length) {
-    if ($end_positions{$i}) {
-      if ($color_level == $end_positions{$i}) {
-      }
-      $color_level -= $end_positions{$i} unless ($color_level == 0);
-    }
-    if ($start_positions{$i}) {
-      if ($color_level == 0) {
-      }
-      $color_level += $start_positions{$i};
-    }
-    if ($color_level) {
-      $observed_residues++;
-    }
-#    print substr($sequence,$i,1);
-    $i++;
-    if ($i %$line_length == 0) {
-    } elsif ($enzyme && $enzyme eq 'trypsin') {
-      if (substr($sequence,$i-1,2) =~ /[RK][A-O,Q-Z]/) {
-      }
-    } elsif ($i % $word_length == 0) {
-    }
-  }
-
-  if ($color_level) {
-#    print "</B></font>";
-  }
 
   my $cnt = 0;
   for my $frag ( @{$biosequence->{_non_coverage}} ) {
@@ -3272,6 +3121,7 @@ sub displayAnnotatedSequence {
 		push @{$observed{end}}, $f->end() - 1;
     $observed{number}++;
   }
+
   my $tags = $sbeamsMOD->make_tags( \%observed );
 
   if ( $args{glyco} ) {
@@ -3526,8 +3376,6 @@ sub displayAnnotatedSequence {
   } # End if !variants
 
   #$seqHTML .= "<BR><BR>Notes:<BR>\n$notes_buffer" if ($notes_buffer);
-
-
   if ( $args{show_aa_content} ) {
     my $tot = length( $sequence );
     my @aa = split( '', $sequence );
@@ -3541,18 +3389,7 @@ sub displayAnnotatedSequence {
     for my $aa ( @aa ) {
       $aa{$aa}++;
     }
-
-    my %colors = ( 10 => '#555566',
-                    9 => '#666677',
-                    8 => '#777788',
-                    7 => '#888899',
-                    6 => '#9999aa',
-                    5 => '#aaaabb',
-                    4 => '#bbbbcc',
-                    3 => '#ccccdd',
-                    2 => '#ddddee',
-                    1 => '#eeeeff',
-                    0 => '#ffffff' );
+    my %colors = %{$sbeamsMOD->get_color_def()};
 
     my $name = '<TR><TD style="border-bottom:2px solid black; border-right:1px solid black; text-align:left;"><B>AA </B></TD>';
     my $count = '<TR><TD style="border-right:1px solid black; text-align:left;"><B>Cnt </B></TD>';
@@ -3562,8 +3399,6 @@ sub displayAnnotatedSequence {
       my $color_key = int( $pct );
       my $font_color = ( $color_key > 6 ) ? 'white' : 'black';
       $color_key = 10 if $color_key > 10;
-
-#      $name .= "<TD Align=Center BGCOLOR='$colors{$color_key}'><FONT COLOR=$font_color>$aa</FONT></TD>";
       $name .= "<TD style='border-bottom:2px solid black; border-right:1px solid black; text-align:center;'>$aa</TD>";
       $count .= "<TD style='border-right:1px solid black; text-align:right;'>$aa{$aa}</TD>";
       $perc  .= "<TD style='border-right:1px solid black; text-align:right;' BGCOLOR='$colors{$color_key}'><FONT COLOR=$font_color>$pct</FONT></TD>";

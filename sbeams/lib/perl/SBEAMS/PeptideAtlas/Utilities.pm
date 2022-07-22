@@ -1492,7 +1492,7 @@ sub make_tags {
                                         "showTooltip(event,'only observed by VARIANT peptides')\" class=$input->{snp_class}>";
 			$tags->{$input->{snp_end}->[$i]} .= "</SPAN>";
     }else{
-      if($input->{start}->[$i]){
+      if($input->{start}->[$i] ne ''){
 			  $tags->{$input->{start}->[$i]} .= "<SPAN class=$input->{class}>";
 			  $tags->{$input->{end}->[$i]} .= "</SPAN>";
       }
@@ -4054,17 +4054,18 @@ sub get_alignment_display {
       return ( "$errstr <br><br>  $clustal_display" );
   }
 
-
+  # Define color mapping for various features.
+  my %colors = %{$self->get_color_def()}; 
 
   $clustal_display .= qq~
 	<script>document.title = 'PeptideAtlas: Compare Protein Sequences';</script>
 	<a title="show/hide help" onclick="if(document.getElementById('pageinfo').style.display == 'none') document.getElementById('pageinfo').style.display = ''; else document.getElementById('pageinfo').style.display = 'none';" href="#">Page Info and Legend</a>
 	<div id="pageinfo" style="margin-left:5px;padding-left:5px;border:1px solid #666;max-width:90%;background:#f1f1f1;display: none;">
 	<p>In the <b>Peptide Mapping</b> section below, peptides for each protein are represented by 
-  <span style="background:teal;">teal</span>, 
-  <span style="background:#C5B4E3;">mauve</span>, 
-  <span style="background:firebrick;">firebrick</span>, 
-  <span style="background:#ffad4e;">orange</span>, 
+  <span style="background:$colors{uniq_tryptic};">teal</span>, 
+  <span style="background:$colors{uniq_non_tryptic};">mauve</span>, 
+  <span style="background:$colors{multi_tryptic};">red</span>, 
+  <span style="background:$colors{multi_non_tryptic};">orange</span>, 
   and <span style="background:springgreen;">green</span> rectangles as defined in the <b>Legend</b>. 
 
 	<p>Red superscript letters <sup><span style='color:red;'>ABCD...</span></sup> after the protein identifiers denote groups of protein entries that are identical in sequence (All the proteins with <span style='color:red;'>A</span> are identical in sequence, etc.)</p><br>
@@ -4074,16 +4075,16 @@ sub get_alignment_display {
 		Sequence highlighted with blue: <span class="obs_seq_bg_font">PEPTIDE</span> denotes peptides <b>observed</b> in specified build. 
 		Sequence highlighted with green: <span class="sec_obs_seq_bg_font">PEPTIDE</span> denotes '<b>bait</b>' peptide for this set of sequences.<br>
 
-		Peptide highlighted with <span style="background:teal;">teal</span> denotes a 
+		Peptide highlighted with <span style="background:$colors{uniq_tryptic};">teal</span> denotes a 
 		<b>uniquely-mapping</b> and <b>tryptic</b> peptide within this set of sequences.</br>
 
-		Peptide highlighted with <span style="background:#C5B4E3;">mauve</span> denotes a 
+		Peptide highlighted with <span style="background:$colors{uniq_non_tryptic};">mauve</span> denotes a 
 		<b>uniquely-mapping</b> and <b>non-tryptic</b> peptide within this set of sequences.</br>
 
-		Peptide highlighted with <span style="background:firebrick;">red</span> denotes a 
+		Peptide highlighted with <span style="background:$colors{multi_tryptic};">red</span> denotes a 
 		<b>multi-mapping</b> and <b>tryptic</b> peptide within this set of sequences.</br>
 
-		Peptide highlighted with <span style="background:#ffad4e;">orange</span> denotes a 
+		Peptide highlighted with <span style="background:$colors{multi_non_tryptic};">orange</span> denotes a 
 		<b>multi-mapping</b> and <b>non-tryptic</b> peptide within this set of sequences.</br>
 
 
@@ -4376,6 +4377,7 @@ sub get_peptide_mapping_display_graphic{
   my $dup_seqs = $args{dup_seqs} || die "need dup_seqs\n";
   my $alignments = $args{alignments} || die "need alignments\n";
   my $accessions = $args{accessions} || die "need accessions\n";
+  my $colors = $self->get_color_def(); 
 
   my @accessions = split(/ /, $accessions);
   my %sequence_with_gap = ();
@@ -4433,11 +4435,6 @@ sub get_peptide_mapping_display_graphic{
 
   my $html = "<br>";
 	my $width = ( $track_len <= 4000 ) ? 1500 : int( $track_len/5 );
-#  my $threshold = 1000;
-#  my $lten = log(10);
-#	$max_obs = $threshold if ( $max_obs > $threshold );
-#  my $max_score = log($max_obs)/$lten;
-
   my %pep_info;
   my $cnt=1;
   my $i=0;
@@ -4503,43 +4500,37 @@ sub get_peptide_mapping_display_graphic{
           $idx += $e-$s+1;
         }
  
-        my $source_tag = 'multi';
+        my $source_tag = 'multi_non_tryptic';
         if (scalar keys %{$peptide_map->{$map_pep}} == 1){
-           $source_tag = 'uniq';
+           $source_tag = 'uniq_non_tryptic';
         }
         if ($peptide_map->{$map_pep}{$map_prot}{tryp}){
-          $source_tag = "$source_tag-tryptic";
+          $source_tag =~ s/non_//; 
         }
-        #my $score =  ( $peptide_map->{$map_pep}{$map_prot}{obs} <= $threshold ) ? 
-        #               sprintf("%0.1f", (log($peptide_map->{$map_pep}{$map_prot}{obs})/$lten) + 0.3) : $max_score;
         my $score = 1;
         $score = 0.5 if ($peptide_map->{$map_pep}{$map_prot}{obs} < 5);
 
         my $f = Bio::Graphics::Feature->new(
-                             -segments=> \@seg, 
-                             -source=>$source_tag,
-                      -display_name => $ugly_key,
-                             -score => $score, 
+                             -segments => \@seg, 
+                             -source   => $colors->{$source_tag},
+                      -display_name    => $ugly_key,
+                             -score    => $score,
                              );
          push @seqFeatures, $f;
       }
     }
-		  $panel->add_track( \@seqFeatures,
-												-glyph       => 'graded_segments',
-                        -bgcolor   => sub { my $source_tag = shift->source_tag;
-                                            $source_tag eq 'uniq-tryptic' ? "teal":
-                                            $source_tag eq 'uniq' ? "#C5B4E3" :
-                                            $source_tag eq 'multi-tryptic'? "firebrick": 
-                                            "#ffad4e" },
-												-fgcolor     => 'black',
-												-font2color  => '#882222',
-                        -connector   => 'dashed',
-												-bump        => 1,
-												-height      => 8,
-												-label       => '',
-												-min_score   => 0,
-                        -max_score   => 1
-											 );
+		$panel->add_track( \@seqFeatures,
+											-glyph       => 'graded_segments',
+											-bgcolor     => sub {shift->source_tag;},
+											-fgcolor     => 'black',
+											-font2color  => '#882222',
+											-connector   => 'dashed',
+											-bump        => 1,
+											-height      => 8,
+											-label       => '',
+											-min_score   => 0,
+											-max_score   => 1
+										 );
   }
   
   my $baselink = "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$args{build_id}&searchWithinThis=Peptide+Sequence&searchForThis=_PA_Sequence_&action=QUERY";
@@ -4582,9 +4573,7 @@ sub get_peptide_mapping_display_graphic{
   $style
   EOG
  
- 
   return $html."\n".$graphic;
-
 }
 
 
@@ -4781,28 +4770,7 @@ sub highlight_sites2 {
  
   #https://merenlab.org/2018/02/13/color-coding-aa-alignments/
   #https://www.jalview.org/help/html/colourSchemes/clustal.html
-  my %amino_acid_colors=(
-		A => '#15a4a4',  #cyan
-		I=>'#15a4a4', 
-		L=>'#15a4a4',
-		M=>'#15a4a4',
-		F=>'#15a4a4',
-		W=>'#15a4a4',
-		V=>'#15a4a4',
-		K=>'red',
-		R=>'red',
-		E=>'Magenta',
-		D=>'Magenta',
-		N=>'green',
-		Q=>'green',
-		S=>'Green',
-		T=>'Green',
-		C	=>'Hotpink',
-		G	=>'Orange',
-		H=>'Brown',
-		Y=>'Brown',
-		P=>'#f0e130',   
-  );
+  my %amino_acid_colors=%{$self->get_color_def()};
 
 #  foreach my $i (sort {$a <=>$b} keys %$ref_aa){
 #    print $ref_aa->{$i};
