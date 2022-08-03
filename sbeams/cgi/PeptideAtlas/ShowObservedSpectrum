@@ -1040,7 +1040,7 @@ sub showSpectrumText {
     $spectrum->filter( minimumIntensity => $1 );
   }
 
-  print "Content-type: text/plain\n\n";
+  #print "Content-type: text/plain\n\n";
   print "<PRE>\n";
 
   #### Set the reannotation resolution
@@ -1619,7 +1619,7 @@ sub interpretUSI {
   #### There may be some error messages for info messages coming, so switch to PRE mode
   #print "Content-type: text/plain\n\n";
   #print "<PRE>\n";
-  $debug = 0;
+  $debug = $VERBOSE;
 
   #### Clean the string a little
   $usiStr =~ s/^\s+//;
@@ -1754,6 +1754,15 @@ sub interpretUSI {
 
       my ($sample_id,$sample_accession,$search_batch_id,$is_public,$repository_identifiers,$data_location) = @{$row};
       print("INFO: data_location is $data_location<BR>\n") if ( $debug );
+
+      #### If this is a relative path, then try some prefixes
+      my @possible_prefixes = ( '/proteomics/peptideatlas/archive', '/regis/sbeams/archive' );
+      for my $possible_prefix ( @possible_prefixes ) {
+        print("INFO: data_location is a relative path, trying prefix $possible_prefix<BR>\n") if ( $debug );
+        if ( -d "$possible_prefix/$data_location" ) {
+          $data_location = "$possible_prefix/$data_location";
+        }
+      }
 
       #### Is this a directory?
       unless ( -d $data_location ) {
@@ -1995,7 +2004,7 @@ sub getSpectrumFromMzmlFile {
 
   #### Create a virtual filename to fetch the spectrum
   #### Note that we have to use an EL7 compiled version while the server is still on EL7
-  my $filename = "/proteomics/sw/tpp/bin/readmzXML $filePath $scanNumber |";
+  my $filename = "/proteomics/sw/tpp-6.0.0/bin/readmzXML $filePath $scanNumber |";
   # Switch temporarily to Luis's compiled version
   #my $filename = "/proteomics/lmendoza/sw/tpp/bin/readmzXML $filePath $scanNumber |";
   print "Fetch command: $filename\n" if ($verbose);
