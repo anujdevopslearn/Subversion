@@ -347,7 +347,19 @@ sub processRequest {
 	    $scanNumber = $getSpectrumResult->{scanNumber} if ($getSpectrumResult->{scanNumber});
 
 	    if ( $charge ) {
-	      push(@{$getSpectrumResult->{proxiSpectrum}->{attributes}}, { accession=>"MS:1000041", name=>"charge state", value=>$charge } );
+
+              #### If there's already a charge state, then update it, else add it
+              my $attribute_updated = 0;
+              for my $attribute ( @{$getSpectrumResult->{proxiSpectrum}->{attributes}} ) {
+                if ( $attribute->{'accession'} == "MS:1000041" ) {
+                  $attribute->{'value'} = $charge;
+                  $attribute_updated = 1;
+	        }
+	      }
+              if ( ! $attribute_updated ) {
+                push(@{$getSpectrumResult->{proxiSpectrum}->{attributes}}, { accession=>"MS:1000041", name=>"charge state", value=>$charge } );
+	      }
+
               my $spectrum_name = "$result->{peptidoform}/$charge";
               if ( $result->{original_peptidoform} ) {
                $spectrum_name = "$result->{original_peptidoform}/$charge";
@@ -2024,7 +2036,7 @@ sub getSpectrumFromMzmlFile {
   my $filterLine = '';
   while (my $line = <DTAFILE>) {
     $line =~ s/[\r\n]//g;
-    #print "$line<BR>\n" if ($verbose);
+    print "$line<BR>\n" if ($verbose);
 
     #### Extract the precursor mz and charge information from that line
     if ( $line =~ /precursorMZ: ([\d\.]+)/ ) {
@@ -2079,7 +2091,7 @@ sub getSpectrumFromMzmlFile {
   $proxiSpectrum->{attributes} = [];
   push(@{$proxiSpectrum->{attributes}}, { accession=>"MS:1008025", name=>"scan number", value=>$scanNumber } );
   push(@{$proxiSpectrum->{attributes}}, { accession=>"MS:1000827", name=>"isolation window target m/z", value=>$observedPrecursorMz } );
-  #push(@{$proxiSpectrum->{attributes}}, { accession=>"MS:1000041", name=>"charge state", value=>$charge } ) if ( $charge );
+  push(@{$proxiSpectrum->{attributes}}, { accession=>"MS:1000041", name=>"charge state", value=>$charge } ) if ( $charge );
 
   my @mzs;
   my @intensities;
