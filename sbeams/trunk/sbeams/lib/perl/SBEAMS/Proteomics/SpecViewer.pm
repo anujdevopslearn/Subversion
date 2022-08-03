@@ -23,6 +23,10 @@ use SBEAMS::Connection::TableInfo;
 
 use SBEAMS::Proteomics::AminoAcidModifications;
 
+use lib "/net/db/projects/Proteomics/devED/lib";
+use Proteomics::CV::MassModificationControlledVocabulary;
+my $cv = new Proteomics::CV::MassModificationControlledVocabulary();
+
 
 ###############################################################################
 # Constructor
@@ -35,6 +39,28 @@ sub new {
     return($self);
 }
 
+
+###############################################################################
+# getMassdiffByName
+#   Return a mass_diff given a string name like: Phospho
+###############################################################################
+sub getMassdiffByName { 
+#    my $self = shift;
+    my %args = @_;
+
+    my $name = $args{'name'} || '';
+
+    $cv->loadMissingNamespace(namespace=>'UNIMOD');
+    my $accession = $cv->getTerm(name=>$name);
+    #print("<BR>**** accession $accession<BR>\n");
+    my $mass_diff;
+    if ( $accession ) {
+        my $attributes = $cv->getAttributes(accession=>$accession);
+        $mass_diff = $attributes->{'monoisotopicMass'};
+    }
+
+    return $mass_diff;
+}
 
 
 ###############################################################################
@@ -68,6 +94,18 @@ sub convertMods {
 	}
     }
 
+    #### Support new ProForma style
+    if ( $sequence =~ s/^\[(.+)\]-// ) {
+	my $mod = $1;
+        my $mass_diff = getMassdiffByName(name=>$mod);
+	if (defined($mass_diff)) {
+	    $nterm = $mass_diff;
+        } else {
+	    print STDERR "ERROR: N-terminal mass modification $mod is not supported yet\n";
+	    return;
+	}
+    }
+
     if ($sequence =~ s/(c\[\d+\])//) {
 	my $mod = $1;
 	my $mass_diff = $supported_modifications{$mass_type}->{$mod};
@@ -83,12 +121,19 @@ sub convertMods {
     my $modstring = "[ ";
     while ($sequence =~ /\[/) {
 	my $index = $-[0];
-	if ($sequence =~ /([A-Znc]\[\d+\])/) {
+	if ($sequence =~ /([A-Znc]\[.+?\])/) {
 	    my $mod = $1;
 	    my $aa = substr($mod,0,1);
 	    my $mass_diff = $supported_modifications{$mass_type}->{$mod};
-	    if (defined($mass_diff)) {
 
+            #### If that didn't work, try a lookup by name
+            if ( ! defined($mass_diff) ) {
+              if ($sequence =~ /(\w)\[(.+?)\]/) {
+                $mass_diff = getMassdiffByName(name=>$2);
+              }
+            }
+
+	    if (defined($mass_diff)) {
 	        my $losses = '';
 		if ($aa eq "M" && ($mass_diff-15.9949 < 0.01)) {  #Ox
 		  if (!$losses) {
@@ -110,7 +155,7 @@ sub convertMods {
 		} else {
 		    $modstring .= ", {index: $index, modMass: $mass_diff, aminoAcid: \"$aa\" $losses}";
 		}
-		$sequence =~ s/[A-Z]\[\d+\]/$aa/;
+		$sequence =~ s/[A-Z]\[.+?\]/$aa/;
 	    } else {
 		print STDERR "ERROR: Mass modification $mod is not supported yet\n";
 		return(undef);
