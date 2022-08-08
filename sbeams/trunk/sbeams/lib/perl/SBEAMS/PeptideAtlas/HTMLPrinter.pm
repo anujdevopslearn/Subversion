@@ -1681,12 +1681,28 @@ sub getProteinSampleDisplay {
 	~;
 
   my @rows = $sbeams->selectSeveralColumns($sql);
-  my $table = $self -> getSampleTableDisplay(data => \@rows,
+  my $html = ''; 
+  if ($sample_category){
+    ## get pie chart 
+    my %sc = ();
+    foreach my $row(@rows){
+      $sc{$row->[9]}++;
+    }
+    my @sc = keys %sc;
+    my @vals = values %sc;
+    if (@sc > 1){
+      $html = qq~
+        <div  id ='sample_cat_pie' style='display:block'>
+       ~;
+      $html .= $self->plotly_pie(data => \@vals, names=>\@sc , divName=>"sample_cat_pie"); 
+    }
+  }
+  $html .= $self -> getSampleTableDisplay(data => \@rows,
                                rows_to_show => $rows_to_show, 
                                type => 'Protein',
                                sample_category=>$sample_category,
                                );
-  return $table;
+  return $html;
 } # end getProteinSampleDisplay 
 
 sub add_tabletoggle_js {
@@ -2077,21 +2093,29 @@ sub get_proteome_coverage_new {
     push @names, $name;
     foreach my $id (keys %biosqeuences){
       my $flag = 0;
-			if ($type =~ /accession/i){
+			if ($type =~ /accession$/i){
 				foreach my $pat (@pats){
           if ($biosqeuences{$id}{accession} =~ /^$pat/){
             $flag =1;
             last;
           }
 				} 
-			}elsif($biosqeuences{$id}{desc} && $type =~ /description/i){
+			}elsif($biosqeuences{$id}{desc} && $type =~ /^description/i){
 				foreach my $pat (@pats){
           if ($biosqeuences{$id}{desc} =~ /$pat/){
             $flag =1;
             last;
           }
 				}
-			}
+			}elsif($type =~ /AccessionDescription/i){
+        my $s = $biosqeuences{$id}{accession}. " " . $biosqeuences{$id}{desc};
+        foreach my $pat (@pats){
+          if ($s =~ /$pat/){
+             $flag =1;
+            last;
+          }
+        }
+      }
       if ($flag){
         $entry_cnt{$name}++;
         if (defined $biosqeuence_id_obs{$id} ){
@@ -2656,11 +2680,12 @@ sub get_what_is_new {
   my @sample_ids = $sbeams->selectOneColumn($sql);
   if(@sample_ids){
     my $sampleDisplay = $self->getProteinSampleDisplay( sample_ids => \@sample_ids,
-							no_header => 1,
-							rows_to_show => 25,
-                                                        #bg_color  =>  '#f3f1e4', #EAEAEA'
-                                                        #sortable => 1,
-							max_rows => 500);
+																											no_header => 1,
+																											rows_to_show => 25,
+																											sample_category => 1,
+																											#bg_color  =>  '#f3f1e4', #EAEAEA'
+																											#sortable => 1,
+																											max_rows => 500);
     $table .=$sbeams->make_toggle_section( neutraltext => 'New Experiments',
 					   sticky => 1,
 					   name => 'getnew_samplelist_div',
@@ -3404,6 +3429,37 @@ sub tableHeatMap{
   ~;
   return $str;
 }
+##################################################################################
+sub plotly_pie {
+
+  my $self = shift;
+  my %args = @_;
+  my $data = $args{data};
+  my $names = $args{names};
+  my $divname = $args{divName} || '';
+  
+  my $values = join(",", @$data);
+  my $labels = join('","', @$names);
+    
+	my $plot_js = qq~
+   <script type="text/javascript" src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+   <script type="text/javascript" charset="utf-8">
+   var data=[{
+      values: [$values],
+      labels:["$labels"],
+      type: 'pie',
+      //textinfo: "label+percent",
+
+    }]
+		var layout = {
+			height: 400,
+			width: 800
+		};
+    Plotly.newPlot("$divname", data, layout);
+	 </script>
+  ~;
+  return $plot_js;
+}
 
 ##################################################################################
 sub plotly_barchart {
@@ -3632,7 +3688,7 @@ sub display_spectra_ptm_table {
 		my $GV = SBEAMS::Connection::GoogleVisualization->new();
 		my $ptm_summary_chart = $GV->drawPTMHisChart(data=> $ptm_score_summary_ref->{$ptm_type},ptm_type=>$ptm_type );
     my $func_name = "drawVisualization_$ptm_type";
-    $func_name =~ s/[:\.]/_/g;
+    $func_name =~ s/[:\.\-]/_/g;
 		if ($counter == 1){
 			$spectraHTML .= "<div  id ='$ptm_type' style='display:block' class='tabcontent'>\n";
 		}else{
@@ -3654,7 +3710,6 @@ sub display_spectra_ptm_table {
 
 		print qq~
 		<script LANGUAGE="JavaScript" TYPE="text/javascript">
-      function openPTM(evt, Name) {
         $drawVisualization;     
         var i, tabcontent, ptmtablinks;
         tabcontent = document.getElementsByClassName("tabcontent");
@@ -3762,7 +3817,7 @@ sub get_pfam_domain_display {
   ~;
   
   use JSON;
-  my $json = new JSON;
+  my $json = JSON->new->allow_nonref;;
   $counter=1;
   foreach my $prot (@$list){
 		$json = $json->pretty([1]);

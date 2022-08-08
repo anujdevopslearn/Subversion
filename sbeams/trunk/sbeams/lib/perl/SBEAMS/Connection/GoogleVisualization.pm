@@ -312,7 +312,7 @@ sub drawPTMHisChart {
   my $ptm_type = $args{ptm_type} || die "parameter residues is missing\n";
   $ptm_type =~ /(^.*):.*/;
   my $ptm_residues = $1;
-  $ptm_type =~ s/[:\.]/_/g; 
+  $ptm_type =~ s/[:\.\-]/_/g; 
 
   my $dataTable = qq~ 
    var data = new google.visualization.DataTable();
@@ -374,6 +374,7 @@ sub drawPTMHisChart {
     <script type="text/javascript" src="https://www.google.com/jsapi"></script>
     <script type="text/javascript">
       google.load("visualization", "1", {packages:["corechart"]});
+     
       function drawVisualization_$ptm_type() {
         $dataTable
 				var chart = new google.visualization.ComboChart(document.getElementById("chart_ptm_$ptm_type"));
