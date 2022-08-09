@@ -1923,10 +1923,16 @@ sub handle_request {
     #
 
     if ($htmlmode) {
+      my $sample_category_display=0;
+      if ($atlas_build_names{$atlas_build_id} =~ /(human|mouse|arabidop|maize)/i){
+         $sample_category_display=1;
+      }
+
       my $sampleDisplay = $sbeamsMOD->getProteinSampleDisplay( sample_ids => $sample_ids,
 						      no_header => 1,
 						      rows_to_show => 25,
 						      max_rows => 500,
+                  sample_category=>$sample_category_display,
 						    );
       print scalar $sbeams->make_toggle_section( neutraltext => 'Observed in Experiments',
 						 sticky => 1,
@@ -2196,7 +2202,7 @@ sub get_sequence_graphic {
                                        -display_name => 'Sequence Position');
 
   ## Generate observed peptide tracks ##
-  # Loop over peptides
+  ## Loop over peptides
   my @peptides;
   my @snps;
   my %pep_info;
@@ -2213,7 +2219,7 @@ sub get_sequence_graphic {
 			my $start =  $s; 
 			my $stop  =  $s+length($pep)-1;
       my $source_tag = 'multi_non_tryptic';
-      if ($args{pep_info}->{$pep}{n_protein_mappings} == 1){
+      if ($args{pep_info}->{$pep}{n_protein_mappings} == 1 || $args{pep_info}->{$pep}{n_gen} == 1){
         $source_tag = 'uniq_non_tryptic';
       }
       if ($args{pep_info}->{$pep}{highest_n_enzymatic_termini} == 2){
@@ -2838,8 +2844,8 @@ sub get_sequence_graphic {
                 ok => "Likely to be observed",
               );
   
-   push @legend, "<TR><TD style='background:$colors{uniq_tryptic};'><TD class=sm_txt>Uniquely-mapping and tryptic peptide</TD></TR>\n";
-   push @legend, "<TR><TD style='background:$colors{uniq_non_tryptic};'><TD class=sm_txt>Uniquely-mapping and non-tryptic peptide</TD></TR>\n";
+   push @legend, "<TR><TD style='background:$colors{uniq_tryptic};'><TD class=sm_txt>Uniquely-mapping or single-genome-location tryptic peptide</TD></TR>\n";
+   push @legend, "<TR><TD style='background:$colors{uniq_non_tryptic};'><TD class=sm_txt>Uniquely-mapping or single-genome-location non-tryptic peptide</TD></TR>\n";
    push @legend, "<TR><TD style='background:$colors{multi_tryptic};'><TD class=sm_txt>Multi-mapping and tryptic peptide</TD></TR>\n";
    push @legend, "<TR><TD style='background:$colors{multi_non_tryptic};'><TD class=sm_txt>Multi-mapping and non-tryptic peptide</TD></TR>\n";
 
