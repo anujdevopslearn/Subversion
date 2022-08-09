@@ -4501,9 +4501,18 @@ sub get_peptide_mapping_display_graphic{
         }
  
         my $source_tag = 'multi_non_tryptic';
-        if (scalar keys %{$peptide_map->{$map_pep}} == 1){
-           $source_tag = 'uniq_non_tryptic';
+        my %cnt_mapping = ();
+        my $dup_cnt = 1;
+        foreach my $acc ( keys %{$peptide_map->{$map_pep}}){
+          if ($dup_seqs->{$acc} =~ /([A-Z])/){
+            $cnt_mapping{$1} = 1;
+          }else{
+            $cnt_mapping{$dup_cnt} =1;
+            $dup_cnt++;
+          }
         }
+        $source_tag = 'uniq_non_tryptic' if (scalar keys %cnt_mapping == 1);
+
         if ($peptide_map->{$map_pep}{$map_prot}{tryp}){
           $source_tag =~ s/non_//; 
         }
