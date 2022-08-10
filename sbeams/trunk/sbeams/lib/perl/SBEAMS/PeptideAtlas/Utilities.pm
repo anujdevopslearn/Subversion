@@ -2116,7 +2116,7 @@ sub get_html_seq_vars {
       my $snp = "VARIANT_$vnum";
       my $site = $entry->{start};
       my $snpped_seq = $args{seq};
-      $entry->{info} =~ /(\w)\s+\-\>\s+(\w)/;
+      $entry->{info} =~ /(\w)\s+\-\>\s+(\S)/;
       my $pre = $1;
       my $post = $2;
       eval { substr( $snpped_seq, $site - 1, 1, $post ) };
@@ -2396,7 +2396,7 @@ sub get_uniprot_variant_seq {
 
   } elsif ( $args{type} eq 'VARIANT' || $args{type} eq 'CONFLICT' ) { # with snp_context (15)
     my $snp_context = 2;
-    $args{info} =~ /^\s*(\w+)\s*\-\>\s*(\w+)/;
+    $args{info} =~ /^\s*(\w+)\s*\-\>\s*(\S+)/;
     my $original = $1;
     my $altered = $2;
     if ( $args{type} eq 'CONFLICT' && length( $original ) != length( $altered ) ) {
@@ -2480,6 +2480,8 @@ sub get_uniprot_variant_seq {
     $seq->{seq} = substr( $args{fasta_seq}, 0, $args{end} ) . '-' x ( $seqlen - $args{end} );
   } else { # Should never get here...
   }
+  if ($seq->{seq} =~ /\*/){$seq->{seq} =~ s/\*.*/\*/;}
+
   return $seq;
 }
 
