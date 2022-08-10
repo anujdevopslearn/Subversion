@@ -34,15 +34,15 @@ $USAGE = <<EOU;
 Usage: $PROG_NAME [OPTIONS]
 Options:
   --ptm_build_path   build path for ptm enriched dataset
+  --build_path       build path for all data
+  --list             experiment list for enrichment datasets
+  --ptm_type         STY:79.9663/K:42.0106  
   --fasta                
-  --non-enrichment_list  experiment list for non-enrichment dataset
-  --build_path           build path for all data
-  --ptm_type             STY:79.9663/K:42.0106  
 
  e.g.:  $PROG_NAME \\
      --ptm_build_path DATA_FILES/ \\
      --fasta DATA_FILES/Arabidopsis.fasta \\
-     --non-enrichment_list Experiments_2021-01_no_phospho.list \\
+     --list Experiments_2021-01_phospho.list \\
      --build_path DATA_FILES/
 
 EOU
@@ -50,16 +50,16 @@ EOU
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"ptm_build_path|p:s",
-  "fasta|f:s", "non-enrichment_list|n:s","build_path|b:s","ptm_type:s")) {
+  "fasta|f:s", "list|l:s","build_path|b:s","ptm_type:s")) {
   print "$USAGE";
   exit;
 }
 
 
-my $buildpath = $OPTIONS{ptm_build_path} || die $USAGE;
+my $ptm_buildpath = $OPTIONS{ptm_build_path} || die $USAGE;
 my $fastafile = $OPTIONS{fasta} || die $USAGE;
-my $unenriched_list = $OPTIONS{"non-enrichment_list"} || die $USAGE;
-my $HsPA_buildpath = $OPTIONS{build_path} || die $USAGE;
+my $enriched_list = $OPTIONS{"list"} || die $USAGE;
+my $all_buildpath = $OPTIONS{build_path} || die $USAGE;
 my $ptm_type = $OPTIONS{ptm_type} || die $USAGE;
 my $ptm_residue = $ptm_type;
 $ptm_residue =~ s/:.*//;
@@ -70,69 +70,61 @@ exit;
 ###############################################################################
 sub main {
 
-  my $PeptideMappingFile = "$buildpath/HsPA-HsPhos_peptide_mapping.tsv";
-  my $PAIdentlistFile  = "$buildpath/PeptideAtlasInput_concat.PAidentlist";
-  my $PAIdentlistFile_all = "$buildpath/PeptideAtlasInput_concat.PAidentlist-all";
-  my $HsPA_PAIdentlistFile = "$HsPA_buildpath/PeptideAtlasInput_concat.PAidentlist";
-  my $ext_list = "$buildpath/../Experiments.list";
- 
-  my %non_enriched_list = ();
+  my $ptm_peptide_mapping_file = "$ptm_buildpath/peptide_mapping.tsv";
+  my $ptm_PAIdentlistFile_filtered  = "$ptm_buildpath/PeptideAtlasInput_concat.PAidentlist";
+  my $ptm_PAIdentlistFile_all = "$ptm_buildpath/PeptideAtlasInput_concat.PAidentlist-all";
+  my $all_PAIdentlistFile;
+
+  if (! -e "$ptm_PAIdentlistFile_all"){
+    $ptm_PAIdentlistFile_all = "$ptm_buildpath/PeptideAtlasInput_concat.PAidentlist";
+  }
+  if ($ptm_buildpath eq $all_buildpath ){
+   $all_PAIdentlistFile = $ptm_PAIdentlistFile_all;
+  }else{
+   $all_PAIdentlistFile = "$all_buildpath/PeptideAtlasInput_concat.PAidentlist";
+  }
+
   my %enriched_list = ();
-  if (! -e $PAIdentlistFile_all ){
-    print "WARNING: $PAIdentlistFile_all not found, will use $buildpath/PeptideAtlasInput_concat.PAidentlist file\n";
-    print "Please stop job if the file is not correct\n";
-    $PAIdentlistFile_all = "$buildpath/PeptideAtlasInput_concat.PAidentlist";
 
-  }
-  if ( ! -e "$PeptideMappingFile"){
-    print "WARNING: $PeptideMappingFile not found, will use $buildpath/peptide_mapping.tsv file\n";
-    print "Please stop job if the file is not correct\n";
-    $PeptideMappingFile = "$buildpath/peptide_mapping.tsv";
+  if (! -e "$ptm_PAIdentlistFile_all"){
+    print "WARNING: don't find $ptm_PAIdentlistFile_all\n";
+    $ptm_PAIdentlistFile_all = $ptm_PAIdentlistFile_filtered;
+    print "\twill use $ptm_PAIdentlistFile_all instead\n";
   }
 
-  open (IN, "<$unenriched_list") or die "cannot open $unenriched_list file\n";
+  open (IN, "<$enriched_list") or die "cannot open $enriched_list file\n";
   while (my $line = <IN>){
     chomp $line;
     next if ($line =~ /^#/);
     next if($line =~ /^$/);
     next if($line =~ /^PXD/);
     my ($id , $dir) = split("\t", $line);
-    $non_enriched_list{$id} =1;
-  }
-  open (E, "<$ext_list") or die "cannot open $ext_list file\n";
-  while (my $line = <E>){
-    chomp $line;
-    next if ($line =~ /^#/);
-    next if($line =~ /^$/);
-    my ($id , $dir) = split("\t", $line);
-    next if (defined $non_enriched_list{$id});
     $enriched_list{$id} =1;
   }
-  close E;
   close IN;
 
   my %tmp = ();
   my $peptide_obs = \%tmp;
-  ## get spectrum count from human all and phospho all
-  if (! -e "$buildpath/PeptideObs.savedState") {
+  ## get spectrum count from all and ptm all
+  #if (! -e "$ptm_buildpath/PeptideObs.savedState") {
+    print "reading unfiltered ptm PAIdentlist unfiltered\n";
 		readIdentFile(
-			file => $PAIdentlistFile_all,
+			file => $ptm_PAIdentlistFile_all,
 			peptides => $peptide_obs,
 			enriched_list => \%enriched_list,
 			tag => 'ptm'
 		);
-
+    print "reading build all PAIdentlist\n";
 		readIdentFile(
-			file => $HsPA_PAIdentlistFile,
+			file => $all_PAIdentlistFile,
 			peptides => $peptide_obs,
 			enriched_list => \%enriched_list,
 			tag => 'all'
 		);
-     saveState( peptides => $peptide_obs );
-  }else{
-     
-     $peptide_obs = restoreState();
-  }
+     #saveState( peptides => $peptide_obs );
+  #}else{
+     #$peptide_obs = restoreState();
+  #}
   my %peptides;
 #use Data::Dumper;
 #print Dumper ($peptide_obs->{GCNPLAQTGR});
@@ -184,11 +176,12 @@ sub main {
 		# }
 	 #}
 
-	open (I, "<$PAIdentlistFile") or die "cannot open $PAIdentlistFile\n";
-	open (M, "<$PeptideMappingFile") or die "cannot open $PeptideMappingFile\n";
+	open (I, "<$ptm_PAIdentlistFile_filtered") or die "cannot open $ptm_PAIdentlistFile_filtered\n";
+	open (M, "<$ptm_peptide_mapping_file") or die "cannot open $ptm_peptide_mapping_file\n";
 
   #search_batch_id,spectrum_query,peptide_accession,peptide_sequence,preceding_residue,modified_peptide_sequence,following_residue,charge,probability,massdiff,protein_name
   # HRPT[181](1.000)FT(0.000)R 
+  print "reading ptm PAIdentlist $ptm_PAIdentlistFile_filtered\n";
 
 	while (my $line = <I>){
     chomp $line;
@@ -206,10 +199,17 @@ sub main {
  
     ## only obs has ptm score is counted
  		$peptides{$pep}{obsall}++;
+    if ($modified_sequence =~ /^\[[^\]]+\]\-/){ $modified_sequence =~ s/^(\[[^\]]+\])\-/n$1/; print "$modified_sequence\n";}
+    if ($modified_sequence =~ /\-\[[^\]]+\]$/){$modified_sequence =~ s/\-(\[[^\]]+\])$/c$1/;}
+
     my @n_ptm_sites = $modified_sequence =~ /([$ptm_residue]\[)/g;
     my $n = scalar @n_ptm_sites;
     my $pep_w_term = 'n'.$pep.'c';
-    my @n_potential_sites = $pep =~ /([$ptm_residue])/g;
+    my @n_potential_sites = $pep_w_term =~ /([$ptm_residue])/g;
+
+    #print  "$modified_sequence $ptm_residue n_potential_sites=". join(",", @n_potential_sites) ."\n" if ($pep =~ /ELSPRAAELTNLFESR/);
+    #print "$pep_w_term $ptm_residue n_ptm_sites=". join(",", @n_ptm_sites) ."\n" if ($pep =~ /ELSPRAAELTNLFESR/);
+
 
     if ($n >=3 ){
        $peptides{$pep}{'obs3+'}++;
@@ -233,9 +233,9 @@ sub main {
         $peptides{$pep}{$pos}{$res}{nP19}++ ;
        }elsif ($score >= 0.20 && $score < 0.80){
          $peptides{$pep}{$pos}{$res}{nP81}++ ;
-       }elsif ($score > 0.80 && $score <= 0.95){
+       }elsif ($score >= 0.80 && $score < 0.95){
          $peptides{$pep}{$pos}{$res}{nP95}++ ;
-       }elsif ($score > 0.95 && $score <= 0.99){
+       }elsif ($score >= 0.95 && $score < 0.99){
          $peptides{$pep}{$pos}{$res}{nP99}++ ;
        }else{
          if (scalar @n_potential_sites == scalar @n_ptm_sites && $score == 1 ){
@@ -258,10 +258,12 @@ sub main {
   my @prob_categories = qw (nP01 nP05 nP19 nP81 nP95 nP99 nP100 no-choice enriched-with-mod enriched-but-non-mod non-enriched );
 
   print "getting PTM obs info for each mapped protein\n";
+  print "reading ptm_peptide_mapping_file $ptm_peptide_mapping_file\n";
   my %processed = ();
   while (my $line = <M>){
     my ($peptide_accession, $pep, $prot,$start, $end) = split(/\t/, $line);
-    next if ($prot =~ /(ENS|IPI|DECOY|[NXY]P\_|CONTAM|CONTRI|Microbe|IMGT)/);
+    #next if ($prot =~ /(ENS|IPI|DECOY|[NXY]P\_|CONTAM|CONTRI|Microbe|IMGT)/);
+    next if ($prot =~ /(IPI|DECOY|CONTRI|Microbe|IMGT)/);
     #next if($pep !~ /[$ptm_residue]/);
     next if (not defined $peptides{$pep});
     my %args = (accession => $prot);
@@ -348,7 +350,7 @@ sub main {
 
 
 
-	open(FA, "$fastafile") || die "Couldn't open file\n";
+	open(FA, "$fastafile") || die "Couldn't open file $fastafile\n";
 	my $fasta = new FAlite(\*FA);
 	my %sequence;
 	while( my $entry = $fasta->nextEntry() ){
@@ -356,15 +358,15 @@ sub main {
 		my $def = $entry->def();
 		my @def = split( /\s/, $def );
 		my $acc = $def[0];
-		next if($acc =~ /(IPI|ENS|DECOY)/);
+		next if($acc =~ /(IPI|DECOY)/);
 		$acc =~ s/^>//g;
 		$sequence{$acc} = $seq; 
 	}
 
 
 
-  open (OUT, ">$buildpath/protein_PTM_summary_$ptm_type.txt");
-  print OUT "protein\toffset\tresidue\tnObs\t1phospho\t2phospho\t3+phospho\t";
+  open (OUT, ">$ptm_buildpath/protein_PTM_summary_$ptm_type.txt");
+  print OUT "protein\toffset\tresidue\tnObs\t1mod\t2mods\t3+mods\t";
   print OUT  join("\t", @prob_categories) ;
   print OUT "\tisInUniProt\tisInNeXtProt\tmost_observed_peptide\tptm_type\n";
 
@@ -459,8 +461,13 @@ sub readIdentFile {
     my $peptideSequence = $columns[3];
     my $modifiedSequence = $columns[5];
     
+      
     ## need to consider mod mass. do it later 
-    next if($peptideSequence !~ /[$ptm_residue]/);
+    if($peptideSequence !~ /[$ptm_residue]/){
+       if ($ptm_residue !~ /[nc]/){
+         next;
+       }
+    }
     ## acetyl
     $modifiedSequence = get_modified_sequence($modifiedSequence);
 
