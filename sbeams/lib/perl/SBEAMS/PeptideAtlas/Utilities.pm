@@ -4186,6 +4186,8 @@ sub get_alignment_display {
 
     next if $seen{$acc};
     $seen{$acc}++;
+    $seq =~ s/[\r\n]//g;
+
     push @seqs, $seq;
 
     $log->debug( "Get build coverage " .time() );
@@ -4252,17 +4254,13 @@ sub get_alignment_display {
   # weed out duplicates - not quite working yet?
   my %dup_seqs;
   my $dup_char = 'A';
-  for my $seq ( @seqs ) {
+  for my $seq ( uniq @seqs ) {
     if ( scalar(keys(%{$seq2acc{"$seq"}})) > 1 ) {
       my $skip = 0;
       for my $acc ( keys ( %{$seq2acc{"$seq"}} ) ) {
-				if ( $dup_seqs{"$acc"} ) {
-					$skip++;
-					next;
-				}
         $dup_seqs{"$acc"} = $dup_char;
       }
-      $dup_char++ unless $skip;
+      $dup_char++;
     } else {
       my ( $key ) = keys( %{$seq2acc{"$seq"}} );
       $dup_seqs{"$key"} = '&nbsp;';
