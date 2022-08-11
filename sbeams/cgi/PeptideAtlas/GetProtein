@@ -2349,7 +2349,7 @@ sub get_sequence_graphic {
   for my $i ( 1..$protlen ) { 
     if (! $coverage{$i} && ! $coverage_primary{$i}){
        push @{$sequence_coverage{uncovered}} , $i;
-    }elsif($coverage{$i} && ! $coverage_primary{$i}){
+    }elsif($coverage{$i} && ! $coverage_primary{$i} && $swiss->{has_variants}){
        push @{$sequence_coverage{snpcovered}}, $i;
     }else{
       push @{$sequence_coverage{covered}}, $i;
