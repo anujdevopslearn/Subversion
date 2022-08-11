@@ -314,9 +314,9 @@ sub getTabMenu {
 			   url => "$CGI_BASE_DIR/PeptideAtlas/GetProteins"
 			   );
     $tabmenu->addMenuItem( tablabel => 'Queries',
-			 label => 'Browse neXtProt Proteins',
-			 helptext => 'Browsing neXtProt Proteins Chromosome mapping and PeptideAtlas observabiligy',
-			 url => "$CGI_BASE_DIR/PeptideAtlas/GetNextProtChromMapping"
+			 label => 'Browse Core Proteome',
+			 helptext => 'Browsing Core Proteome Chromosome mapping and PeptideAtlas observabiligy',
+			 url => "$CGI_BASE_DIR/PeptideAtlas/GetCoreProteomeMapping"
 			 );
 
     $tabmenu->addMenuItem( tablabel => 'Queries',
