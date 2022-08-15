@@ -1,9 +1,9 @@
 #!/usr/local/bin/perl
 
 ###############################################################################
-# Program     : GetNextProtChromMapping
+# Program     : GetCoreChromosomeMapping
 # Author      : Zhi Sun <zsun@systemsbiology.org>
-# $Id: GetNextProtChromMapping 
+# $Id: GetCoreChromosomeMapping
 #
 # Description : 
 #
@@ -97,13 +97,9 @@ sub main {
     allow_anonymous_access=>1,
   ));
 
-
   #### Read in the default input parameters
   my %parameters;
-
   $parameters{uploaded_file_not_saved} = 1;
-  $parameters{current_username} = $current_username;
-
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);
      #$sbeams->printDebuggingInfo($q);
@@ -147,18 +143,27 @@ sub handle_request {
     || die "ref_parameters not passed";
   my %parameters = %{$ref_parameters};
 
-  my ($nextprot_mapping_id,$atlas_build_id);
-
-
   #### Get the HTML to display the tabs
   my $tabMenu = $sbeamsMOD->getTabMenu(
     parameters_ref => \%parameters,
     program_name => $PROG_NAME,
   );
-  if ($sbeams->output_mode() eq 'html') {
-    print $tabMenu->asHTML();
-    print"<script>document.title = 'PeptideAtlas: Get Core Proteome Mapping';</script>\n";
+  print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+
+  #### Get the current atlas_build_id based on parameters or session
+  my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
+    parameters_ref => \%parameters,
+  );
+  if (defined($atlas_build_id) && $atlas_build_id < 0) {
+    return;
   }
+  $parameters{atlas_build_id} = $atlas_build_id;
+  my ($build_name) = $sbeams->selectOneColumn( "SELECT atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE atlas_build_id = $atlas_build_id" );
+ 
+  #### Show current user context information
+  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
+
+
 
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
@@ -241,23 +246,17 @@ sub handle_request {
   #########################################################################
   #### Process all the constraints
 
-  #### If no atlas_build_id was selected, stop here
-  unless ($parameters{atlas_build_id} && $parameters{nextprot_mapping_id}) {
-    $sbeams->reportException(
-      state => 'ERROR',
-      type => 'INSUFFICIENT CONSTRAINTS',
-      message => 'You must select at least one mapping date and one Atlas Build',
-    );
-    return;
-  }
-
+  #########################################################################
+  #### Process all the constraints
+  
     #### Build ATLAS_BUILD constraint
-  my $nextprot_mapping_id_clause = $sbeams->parseConstraint2SQL(
+  my $mapping_id_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"NM.ID",
     constraint_type=>"int_list",
-    constraint_name=>"Protein Mapping",
-    constraint_value=>$parameters{nextprot_mapping_id} );
-  return if ($nextprot_mapping_id_clause eq '-1');
+    constraint_name=>"Mapping",
+    constraint_value=>$parameters{mapping_id} );
+  return if ($mapping_id_clause eq '-1');
+
 
   #### Build ATLAS_BUILD constraint
   my $atlas_build_clause = $sbeams->parseConstraint2SQL(
@@ -267,22 +266,20 @@ sub handle_request {
     constraint_value=>$parameters{atlas_build_id} );
   return if ($atlas_build_clause eq '-1');
 
-  #########################################################################
-  #### Process all the constraints
-  
-  my $gene_name_clause = $sbeams->parseConstraint2SQL(
+  my $gene_symbol_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"NCM.Gene_Name",
     constraint_type=>"plain_text",
-    constraint_name=>"Gene Name Constraint",
-    constraint_value=>$parameters{biosequence_gene_name_constraint});
-  return if ($gene_name_clause eq '-1');
+    constraint_name=>"Gene Symbol Constraint",
+    constraint_value=>$parameters{gene_symbol_constraint});
+  return if ($gene_symbol_clause eq '-1');
 
-  my $biosequence_name_clause = $sbeams->parseConstraint2SQL(
+  my $gene_accession_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"NCM.neXtProt_Accession",
     constraint_type=>"plain_text",
-    constraint_name=>"Protein Name Constraint",
-    constraint_value=>$parameters{biosequence_name_constraint});
-  return if ($biosequence_name_clause eq '-1');
+    constraint_name=>"Gene Accession Constraint",
+    constraint_value=>$parameters{gene_accession_constraint});
+  return if ($gene_accession_clause eq '-1');
+
 
   my %protein_hash;
   if ( $parameters{upload_file} )
@@ -320,8 +317,15 @@ sub handle_request {
     }
     ## trim off last comma:
     $protein_list =~ s/(.*)(,)$/$1/;
-    $biosequence_name_clause  = "AND NCM.neXtProt_Accession in ($protein_list)";
+    $gene_accession_clause  = "AND NCM.neXtProt_Accession in ($protein_list)";
   } # if upload file
+
+  my $uniprot_name_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"NCM.Uniprot_Accession",
+    constraint_type=>"plain_text",
+    constraint_name=>"Uniprot Protein Name Constraint",
+    constraint_value=>$parameters{uniprot_name_constraint});
+  return if ($uniprot_name_clause eq '-1');
 
 
   my $ensembl_name_clause = $sbeams->parseConstraint2SQL(
@@ -410,22 +414,22 @@ sub handle_request {
   if($parameters{chromosome}){
      my $chromosome = $parameters{chromosome};
      $chromosome =~ s/^0+//g;
-
      $chromosome_clause = "AND (NCM.chromosome like '$chromosome' or NCM.chromosome like '$chromosome\[qp\]%')";
-
   }
 
-  #### Define some variables needed to build the quere
+  #### Define some variables needed to build the query
   my @column_array = (
-      ["Gene_Name","NCM.Gene_Name","Gene Name"],
-      ["nextprot_accession", "NCM.nextprot_accession","Protein Identifier"],
+      ["Gene_Name","NCM.Gene_Name","Gene Symbol"],
+      ["nextprot_accession", "NCM.nextprot_accession","Gene Accession"],
+      ["primary_isoform", "NCM.Primary_Isoform", "Primary Isoform"],
       ["Ensembl_Accession", "NCM.Ensembl_Accession", "Ensembl Gene"],
-      ["RefSeq_Accession", "NCM.RefSeq_Accession", "RefSeq"],
+      ["RefSeq_Accession", "NCM.RefSeq_Accession", "RefSeq Protein"],
+      ["Uniprot_Accession", "NCM.Uniprot_Accession", "Uniprot"],
       ["Chromosome", "NCM.Chromosome","Chromosome"],
       ["Start","NCM.Start", "Start"],
       ["End","NCM.Stop", "End"],
       ["n_neXtProt_entry", "NCM.n_neXtProt_entry", "N Chromosomal Location"],
-      ["Protein_existence", "NCM.Protein_existence", "Protein Evidence Category"],
+      ["Protein_existence", "NCM.Protein_existence", "Protein Evidence"],
       ["PeptideAtlas_Category", "NCM.PeptideAtlas_Category", "PeptideAtlas"],
       ["nobs", "NCM.n_obs", "N Distinct Peptides"],
       ["Description", "NCM.Description", "Description"]
@@ -443,12 +447,12 @@ sub handle_request {
 
 
   my $sql = qq~
-	SELECT $columns_clause
+		SELECT $columns_clause
     FROM $TBAT_NEXTPROT_CHROMOSOME_MAPPING NCM
-	JOIN $TBAT_NEXTPROT_MAPPING NM  ON (NM.ID = NCM.NEXTPROT_MAPPING_ID) 
-	WHERE 1=1 
-   $nextprot_mapping_id_clause
-   $gene_name_clause
+		JOIN $TBAT_NEXTPROT_MAPPING NM  ON (NM.ID = NCM.NEXTPROT_MAPPING_ID) 
+		WHERE 1=1 
+   $mapping_id_clause
+   $gene_symbol_clause
    $ensembl_name_clause
    $refseq_name_clause
    $description_clause
@@ -458,7 +462,8 @@ sub handle_request {
    $chromosome_end_clause
    $protein_evidence_level_clause
    $peptideatlas_category_clause
-   $biosequence_name_clause
+   $gene_accession_clause
+   $uniprot_name_clause
   ~;
 
 
@@ -468,10 +473,17 @@ sub handle_request {
   my $pass_action = "QUERY";
   $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
 
+
   $url_cols{'PeptideAtlas'} = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=".$parameters{atlas_build_id}
-                              ."&apply_action=$pass_action&protein_name=\%1V"; 
-  $url_cols{'neXtProt AC'} = "http://www.nextprot.org/db/entry/NX_\%1V";
-  $url_cols{'neXtProt AC_ATAG'} = qq~ TARGET=_neXtProt ONMOUSEOVER="window.status=\'View entry at neXtProt\'; return true;" ~;
+                              ."&apply_action=$pass_action&protein_name=\%2V"; 
+  if ($build_name =~ /^Arabidopsis/){ 
+    $url_cols{'Gene Accession'} = "https://www.arabidopsis.org/servlets/Search?type=general&search_action=detail&method=1&show_obsolete=F&name=\%1V&".
+                                "sub_type=gene&SEARCH_EXACT=4&SEARCH_CONTAINS=1";
+  }elsif($build_name =~ /human/i){
+    $url_cols{'Gene Accession'} = "http://www.nextprot.org/db/entry/\%1V";
+  }
+  $url_cols{'RefSeq Protein'} = "https://www.ncbi.nlm.nih.gov/protein/\%4V";
+  $url_cols{'Uniprot'} = "https://www.uniprot.org/uniprot/\%5V"; 
 
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
@@ -554,9 +566,10 @@ sub handle_request {
     if ($sbeams->invocation_mode() eq 'http') {
       print "<H4>Select parameters above and press QUERY</H4>\n";
     } else {
-      print "You need to supply some parameters to constrain the query\n";
+      print "You need to supply some parameters to contrain the query\n";
     }
   }
+
 
 } # end handle_request
 
@@ -591,26 +604,25 @@ sub displayTableSummary{
 
   my $prefix = $sbeams->addTabbedPane(label => "Summary");
   my $HTML= $sbeamsMOD->encodeSectionTable( header => 1,
-					    set_download => 0,
-					    chg_bkg_idx => 1,
-					    align  => [qw(left right right)],
-					    rows => \@ratio );
+                  set_download => 0,
+                  chg_bkg_idx => 1,
+                  align  => [qw(left right right)],
+                  rows => \@ratio );
 
-  print qq~
+    print qq~
       $prefix
-      <table>
+      <TABLE>
       $HTML
-      </table>
-      <br>Protein identification terminology used in PeptideAtlas can be found
-      <a href="http://www.peptideatlas.org/docs/protein_ident_terms.php">here</a>  
-      <hr color='black'></div>
-      <script>
+      </TABLE>
+      <br>Protein Identification Terminology used in PeptideAtlas can be found <a
+href="http://www.peptideatlas.org/docs/protein_ident_terms.php">here<a>  
+    <hr color='black'></div>
+      <SCRIPT LANGUAGE="JavaScript" TYPE="text/javascript">
        document.getElementById("messagetab").innerHTML = " ";
        var mytab = 'resultsettab' + (resultsettabs.length - 1);
-      </script>
+    </SCRIPT>
    ~ if ($sbeams->output_mode() eq 'html'); 
 }
-
 ###############################################################################
 # evalSQL
 #
@@ -619,7 +631,9 @@ sub displayTableSummary{
 ###############################################################################
 sub evalSQL {
   my $sql = shift;
+
   return eval "\"$sql\"";
+
 } # end evalSQL
 
 
@@ -642,6 +656,8 @@ sub postProcessResultset {
   my $cols = $resultset_ref->{column_hash_ref};
   my %accession_list = ();
   my @new_result_set = ();
+
+
   for (my $i=0; $i<$n_rows; $i++) {
     my $nextprot_acc = $resultset_ref->{data_ref}->[$i]->[$cols->{nextprot_accession}];
     if (not defined $accession_list{$nextprot_acc}){
@@ -652,3 +668,4 @@ sub postProcessResultset {
   $resultset_ref->{data_ref} = \@new_result_set;
 
 } # end postProcessResult
+
