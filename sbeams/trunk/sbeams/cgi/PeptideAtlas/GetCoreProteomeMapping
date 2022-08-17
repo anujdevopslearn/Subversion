@@ -102,6 +102,7 @@ sub main {
   $parameters{uploaded_file_not_saved} = 1;
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);
+
      #$sbeams->printDebuggingInfo($q);
 
   #### Process generic "state" parameters before we start
@@ -194,6 +195,9 @@ sub handle_request {
     columns_ref=>\@columns,input_types_ref=>\%input_types);
    #$sbeams->printDebuggingInfo($q);
 
+    #foreach my $p(keys %parameters){
+    #  print "$p=$parameters{$p}<BR>";
+    #}
 
   #### If the apply action was to recall a previous resultset, do it
   my %rs_params = $sbeams->parseResultSetParams(q=>$q);
@@ -205,7 +209,6 @@ sub handle_request {
     );
     $n_params_found = 99;
   }
-
 
   #### Set some reasonable defaults if no parameters supplied
   unless ($n_params_found) {
@@ -253,7 +256,7 @@ sub handle_request {
   my $mapping_id_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"NM.ID",
     constraint_type=>"int_list",
-    constraint_name=>"Mapping",
+    constraint_name=>"Mapping Date",
     constraint_value=>$parameters{mapping_id} );
   return if ($mapping_id_clause eq '-1');
 
@@ -375,6 +378,7 @@ sub handle_request {
      $protein_evidence_level_clause =~ s/,$//;
      $protein_evidence_level_clause .= ")";
   }
+
   my $peptideatlas_category_clause = '';
   if ($parameters{peptideatlas_category_constraint}){
     my $level_sql = qq~ 
@@ -410,10 +414,14 @@ sub handle_request {
 
     $chromosome_end_clause = "AND NCM.Stop >= $parameters{end_in_chromosome}";
   }
+
   my $chromosome_clause = ''; 
   if($parameters{chromosome}){
      my $chromosome = $parameters{chromosome};
      $chromosome =~ s/^0+//g;
+     if ($chromosome eq '?'){
+       $chromosome = 'NA'
+     }
      $chromosome_clause = "AND (NCM.chromosome like '$chromosome' or NCM.chromosome like '$chromosome\[qp\]%')";
   }
 
@@ -467,7 +475,7 @@ sub handle_request {
   ~;
 
 
-  #$sbeams->display_sql( sql => $sql, use_tabbed_panes => 1 );
+  $sbeams->display_sql( sql => $sql, use_tabbed_panes => 1 );
 
   #### Certain types of actions should be passed to links
   my $pass_action = "QUERY";
@@ -475,7 +483,7 @@ sub handle_request {
 
 
   $url_cols{'PeptideAtlas'} = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=".$parameters{atlas_build_id}
-                              ."&apply_action=$pass_action&protein_name=\%2V"; 
+                              ."&apply_action=$pass_action&protein_name=\%1V"; 
   if ($build_name =~ /^Arabidopsis/){ 
     $url_cols{'Gene Accession'} = "https://www.arabidopsis.org/servlets/Search?type=general&search_action=detail&method=1&show_obsolete=F&name=\%1V&".
                                 "sub_type=gene&SEARCH_EXACT=4&SEARCH_CONTAINS=1";
