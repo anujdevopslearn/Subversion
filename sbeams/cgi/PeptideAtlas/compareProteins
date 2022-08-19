@@ -82,7 +82,8 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
   if ( $params{bioseq_id} || $params{restore} || $params{protein_list} ||
        $params{protein_group_number} || $params{protein_list_id} ) {
     #$page .= get_alignment_display( %params );
-    $page .= $sbeamsMOD->get_alignment_display(  %params,  
+    $page .= $sbeamsMOD->get_alignment_display(  %params,
+                                                 order_by => 'dup',  
                                                  atlas_build_id => $curr_bid);
   } else {
     $page .= "</form></p>\n";
