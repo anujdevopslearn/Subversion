@@ -3925,7 +3925,8 @@ sub get_alignment_display {
   my $sbeams = $self->getSBEAMS();
 
   my $curr_bid = $args{atlas_build_id}; 
-  my $bioseq_strain = $args{bioseq_strain}; 
+  my $bioseq_strain = $args{bioseq_strain};
+  my $order_by = $args{order_by} || ''; 
   my $clustal_display = '';
   my $bioseq_clause = '';
 
@@ -4224,7 +4225,7 @@ sub get_alignment_display {
     $acc2bioseq_id{"$acc"} = $row[4];
     # Clustal W alignment file can only take 30 chars
 
-    my $short_acc = substr( $acc, 0, 30 );
+    my $short_acc = substr( $acc, 0, 100 );
     $acc2bioseq_id{"$short_acc"} = $row[4];
     $coverage{"$short_acc"} = $coverage{$acc};
     $seq2acc{$seq}->{"$short_acc"}++;
@@ -4265,6 +4266,16 @@ sub get_alignment_display {
       my ( $key ) = keys( %{$seq2acc{"$seq"}} );
       $dup_seqs{"$key"} = '&nbsp;';
     }
+  }
+ 
+ 
+  if ($order_by eq 'dup'){
+     my @acc_order =(); 
+     foreach my $acc (sort {$dup_seqs{$a} cmp $dup_seqs{$b}} keys %dup_seqs){
+       push @acc_order, $acc; 
+     }
+    $peptide_map{protein_list} = join(" ", @acc_order);
+
   }
 
   #$clustal_display .= $self->get_peptide_mapping_display(peptide_map => \%peptide_map,
