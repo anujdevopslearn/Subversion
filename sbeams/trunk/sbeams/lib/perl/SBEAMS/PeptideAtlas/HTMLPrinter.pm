@@ -765,6 +765,14 @@ sub encodeSectionTable {
   my $pre_text = '';
   my $class_def = '';
   my $id = $args{table_id} || '';
+  my $file_prefix = '';
+  if ( $args{file_prefix}){
+    $file_prefix = $args{file_prefix};
+  }elsif($id){
+    $file_prefix = $id ."_";
+  }else{
+    $file_prefix = 'mrm_';
+  }
 
   if ( $args{sortable} ) {
     if ( !$self->{_included_sortable} ) {
@@ -783,20 +791,18 @@ sub encodeSectionTable {
   my $tr_info = $args{tr_info} || 'NOOP=1 ';
   my $tab = SBEAMS::Connection::DataTable->new( @table_attrs,
 						__use_thead => 1,
-                                                __tr_info => $tr_info,
+						__tr_info => $tr_info,
 						CLASS => $class_def,
-                                                ID => $id  );
+						ID => $id  );
   my $num_cols = 0;
 
 
   my $rs_link = '';
   my $rs_name = '';
-  my $file_prefix = $args{file_prefix} || 'mrm_';
 
   my @rs_data =  @{$args{rows}};
 
   if ( $args{set_download} ) {
-
     my $rs_headers = shift( @rs_data );
     $rs_headers = $args{rs_headings} if $args{rs_headings};
     
@@ -1575,6 +1581,7 @@ sub get_individual_spectra_display {
   my $column_titles_ref = $args{column_titles_ref};
   my $colnameidx_ref = $args{colnameidx_ref};
   my $hidden_cols_ref = $args{hidden_cols_ref};
+  my $table_id = $args{table_id} || 'individual_spectra'; 
 
   my $sortable = 1;
   if ( $args{sortable} ne ''){
@@ -1626,7 +1633,7 @@ sub get_individual_spectra_display {
 					bg_color => '#EAEAEA',
 					sortable => 1,
 					close_table => 1,
-					table_id => 'individual_spectra',
+					table_id => $table_id,
 					truncate_msg => '  <b>Use link in Modified Peptides section to filter results</b>.',
       );
 
@@ -3682,7 +3689,8 @@ sub display_spectra_ptm_table {
 			column_titles_ref=>$column_titles_ref,
 			colnameidx_ref => $colnameidx_ref,
 			resultset_ref=> $resultset_ref,
-			hidden_cols_ref=>$hidden_cols_ref );
+			hidden_cols_ref=>$hidden_cols_ref,
+      table_id => 'ptm_spectra' );
 		$spectra_display =~ s/<table/<table name="ptm_spectra_$counter" class="ptm_spectra"/i;
 
 		my $GV = SBEAMS::Connection::GoogleVisualization->new();
