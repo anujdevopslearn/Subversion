@@ -2234,7 +2234,6 @@ sub get_ptm_coverage {
       and ptm_type like '%phos%'
       ~;
    @rows = $sbeams->selectSeveralColumns($ptm_sql);
-
    return if (! @rows);
    my %biosqeuence_id_ptm_obs = ();
    my %ptm_residues = ();
@@ -3696,7 +3695,7 @@ sub display_spectra_ptm_table {
 		my $GV = SBEAMS::Connection::GoogleVisualization->new();
 		my $ptm_summary_chart = $GV->drawPTMHisChart(data=> $ptm_score_summary_ref->{$ptm_type},ptm_type=>$ptm_type );
     my $func_name = "drawVisualization_$ptm_type";
-    $func_name =~ s/[:\.\-]/_/g;
+    $func_name =~ s/[:\.\-\+]/_/g;
 		if ($counter == 1){
 			$spectraHTML .= "<div  id ='$ptm_type' style='display:block' class='tabcontent'>\n";
 		}else{
@@ -3718,6 +3717,7 @@ sub display_spectra_ptm_table {
 
 		print qq~
 		<script LANGUAGE="JavaScript" TYPE="text/javascript">
+     function openPTM(evt, Name) {
         $drawVisualization;     
         var i, tabcontent, ptmtablinks;
         tabcontent = document.getElementsByClassName("tabcontent");
