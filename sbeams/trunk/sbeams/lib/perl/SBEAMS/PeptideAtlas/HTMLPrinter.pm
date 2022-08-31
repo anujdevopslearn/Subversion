@@ -1617,7 +1617,7 @@ sub get_individual_spectra_display {
     #push @{$resultset_ref->{column_list_ref}}, 'num_prot_mappings';
     #push @{$resultset_ref->{types_list_ref}}, 'int';
 
-  my $align = [qw(left center right left left center center center center left left left)];
+  my $align = [qw(left center center center left center center center center center center center center center left center center)];
 
   my $html = $self->encodeSectionTable( header => 1,
 					unified_widgets => 1,
