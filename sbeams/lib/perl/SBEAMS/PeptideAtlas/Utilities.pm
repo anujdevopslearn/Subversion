@@ -4268,12 +4268,15 @@ sub get_alignment_display {
     }
   }
  
- 
+   
   if ($order_by eq 'dup'){
      my @acc_order =(); 
+     my $new_fasta='';
      foreach my $acc (sort {$dup_seqs{$a} cmp $dup_seqs{$b}} keys %dup_seqs){
        push @acc_order, $acc; 
+       $new_fasta .=">$acc\n$bioseq_id2seq{$acc2bioseq_id{$acc}}\n";
      }
+    $fasta = $new_fasta;
     $peptide_map{protein_list} = join(" ", @acc_order);
 
   }
