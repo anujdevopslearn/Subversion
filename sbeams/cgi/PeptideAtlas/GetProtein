@@ -1229,6 +1229,7 @@ sub handle_request {
   my @column_array = (
     ["peptide_accession","P.peptide_accession","Accession"],
     ["start_in_biosequence", "PM.start_in_biosequence", "<SPAN TITLE='Start postion in the protein'>Start</SPAN>"],
+    ["peptide_length", "LEN(P.peptide_sequence)", "Length"],
     ["preceding_residue","COALESCE(PM.peptide_preceding_residue,PI.preceding_residue)","<SPAN TITLE='Preceding (towards the N terminus) amino acid'>Pre AA</SPAN>"],
     ["peptide_sequence","P.peptide_sequence","<SPAN TITLE='Amino Acid sequence of this peptide'>Sequence</SPAN>"],
     ["following_residue","COALESCE(PM.peptide_following_residue,PI.following_residue)","<SPAN TITLE='Following (towards the C terminus) amino acid'>Fol AA</SPAN>"],
@@ -1258,11 +1259,13 @@ sub handle_request {
     ["is_subpeptide_of","PI.is_subpeptide_of",'Subpep of'],
     ["peptide_instance_id","PI.peptide_instance_id","peptide_instance_id"],
     ["lowest_n_missed_cleavages","PM.lowest_n_missed_cleavages","lowest_n_missed_cleavages"],
+    ["is_unique","PM.is_unique","is_unique"]
   );
   push @column_array, ["SAL_level_probability","AVG(SAL.level_probability)","Avg Eval"] if $parameters{'ann'};
   $group_by_clause .= "PI.empirical_proteotypic_score,P.SSRCalc_relative_hydrophobicity,PI.n_protein_mappings,".
                       "PI.n_genome_locations,PI.is_subpeptide_of,PI.peptide_instance_id, PISB.atlas_search_batch_id, ".
-                      "PM.highest_n_enzymatic_termini,PM.lowest_n_missed_cleavages,peptide_preceding_residue,peptide_following_residue";
+                      "PM.highest_n_enzymatic_termini,PM.lowest_n_missed_cleavages,peptide_preceding_residue,peptide_following_residue," .
+                      "PM.is_unique";
 
 
   #### Build the columns part of the SQL statement
@@ -1334,11 +1337,9 @@ sub handle_request {
 
 
   %hidden_cols = (
-#    'Suitability Score' => 1,
-    'Best Adjusted Prob' => 1,
+    'best_adjusted_probability' => 1,
     'peptide_instance_id' => 1,
-#		'is_subpeptide_of' => 1,
-#		'sample_ids' => 1
+    'lowest_n_missed_cleavages' => 1,
   );
 
   #########################################################################
@@ -1643,7 +1644,7 @@ sub handle_request {
     my $pre_idx = $resultset_ref->{column_hash_ref}->{preceding_residue};
     my $fol_idx = $resultset_ref->{column_hash_ref}->{following_residue};
     my $ntt_idx = $resultset_ref->{column_hash_ref}->{highest_n_enzymatic_termini};
-    my $mc_idx = $resultset_ref->{column_hash_ref}->{lowest_n_missed_cleavages};
+    my $mc_idx  = $resultset_ref->{column_hash_ref}->{lowest_n_missed_cleavages};
     my $ngl_idx = $resultset_ref->{column_hash_ref}->{n_genome_locations};
     my $ess_idx = $resultset_ref->{column_hash_ref}->{suitability_score};
 
@@ -2206,7 +2207,8 @@ sub get_sequence_graphic {
   my @peptides;
   my @snps;
   my %pep_info;
-  my ( $multi, $single );
+  my ( $multi, $single);
+  my $is_unique_peptide_col=0;
   foreach my $pep ( sort { $args{mappings}->{$a}->[0] <=> $args{mappings}->{$b}->[0] ||
                            $args{pep_info}->{$b}->{nobs} <=> $args{pep_info}->{$a}->{nobs}
                          } ( keys( %{$args{pep_info}} ) ) ) {
@@ -2219,12 +2221,18 @@ sub get_sequence_graphic {
 			my $start =  $s; 
 			my $stop  =  $s+length($pep)-1;
       my $source_tag = 'multi_non_tryptic';
-      if ($args{pep_info}->{$pep}{n_protein_mappings} == 1 || $args{pep_info}->{$pep}{n_gen} == 1){
+      if ($args{pep_info}->{$pep}{is_unique} eq ''){
+        $source_tag = 'Observed';
+      }elsif ( $args{pep_info}->{$pep}{is_unique} eq 'Y'){
+        $is_unique_peptide_col=1;
         $source_tag = 'uniq_non_tryptic';
+				if ($args{pep_info}->{$pep}{highest_n_enzymatic_termini} == 2){
+					$source_tag =~ s/non_//;
+				}
+      }else{
+        $is_unique_peptide_col =1;
       }
-      if ($args{pep_info}->{$pep}{highest_n_enzymatic_termini} == 2){
-        $source_tag =~ s/non_//;
-      }
+
 			# accession isn't necessarily unique, need compound key...
 			my $ugly_key = $acc . '::::' . $start . $stop;
 			my $f = Bio::Graphics::Feature->new(
@@ -2250,10 +2258,9 @@ sub get_sequence_graphic {
     # count peptide type, to build appropriate legend
     if ($args{pep_info}->{$pep}{n_gen} > 1){
       $multi++;
-    } 
-    #else {
-    #  $single++;
-    #}
+    } else {
+      $single++;
+    }
   }
 
 ###############
@@ -2843,14 +2850,16 @@ sub get_sequence_graphic {
                 tm => "Unlikely due to transmembrane",
                 ok => "Likely to be observed",
               );
-  
-   push @legend, "<TR><TD style='background:$colors{uniq_tryptic};'><TD class=sm_txt>Uniquely-mapping or single-genome-location tryptic peptide</TD></TR>\n";
-   push @legend, "<TR><TD style='background:$colors{uniq_non_tryptic};'><TD class=sm_txt>Uniquely-mapping or single-genome-location non-tryptic peptide</TD></TR>\n";
-   push @legend, "<TR><TD style='background:$colors{multi_tryptic};'><TD class=sm_txt>Multi-mapping and tryptic peptide</TD></TR>\n";
-   push @legend, "<TR><TD style='background:$colors{multi_non_tryptic};'><TD class=sm_txt>Multi-mapping and non-tryptic peptide</TD></TR>\n";
-
-  #push @legend, "<TR> <TD CLASS=lgnd_obs_sing>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{obs_sing}'>Observed peptide with single genome mapping</SPAN></TD> </TR>\n" if $single;
-  #push @legend, "<TR> <TD CLASS=lgnd_obs_multi>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{obs_multi}'>Observed peptide with ambiguous genome mapping</SPAN></TD> </TR>\n" if $multi;
+ 
+   if ($is_unique_peptide_col == 1){ 
+		 push @legend, "<TR><TD style='background:$colors{uniq_tryptic};'><TD class=sm_txt>Uniquely-mapping tryptic peptide</TD></TR>\n";
+		 push @legend, "<TR><TD style='background:$colors{uniq_non_tryptic};'><TD class=sm_txt>Uniquely-mapping non-tryptic peptide</TD></TR>\n";
+		 push @legend, "<TR><TD style='background:$colors{multi_tryptic};'><TD class=sm_txt>Multi-mapping and tryptic peptide</TD></TR>\n";
+		 push @legend, "<TR><TD style='background:$colors{multi_non_tryptic};'><TD class=sm_txt>Multi-mapping and non-tryptic peptide</TD></TR>\n";
+   }else{
+     push @legend, "<TR> <TD CLASS=lgnd_obs_sing>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{obs_sing}'>Observed peptide with single genome mapping</SPAN></TD> </TR>\n" if $single;
+     push @legend, "<TR> <TD CLASS=lgnd_obs_multi>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{obs_multi}'>Observed peptide with ambiguous genome mapping</SPAN></TD> </TR>\n" if $multi;
+  }
   push @legend, "<TR> <TD CLASS=lgnd_sig_seq>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{sig_seq}'>$sp_rationale</SPAN></TD> </TR>\n" if $signal;
   push @legend, "<TR> <TD CLASS=lgnd_anc_seq>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{anc_seq}'>Anchor sequence predicted by Signal P</SPAN></TD> </TR>\n" if $anchor;
   push @legend, "<TR> <TD CLASS=lgnd_tm_dom>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{tm_dom}'>$tm_rationale </SPAN></TD> </TR>\n" if @tmm;
@@ -2990,7 +2999,8 @@ sub getPeptideCount {
                            highest_n_enzymatic_termini => $row->[$col{highest_n_enzymatic_termini}],
                              lowest_n_missed_cleavages => $row->[$col{lowest_n_missed_cleavages}],
                                     n_protein_mappings => $row->[$col{n_protein_mappings}],
-                                                  n_gen => $row->[$col{n_genome_locations}] };
+                                                 n_gen => $row->[$col{n_genome_locations}],
+                                             is_unique => $row->[$col{is_unique}]};
       push(@peptides,$row->[$col{peptide_sequence}]);
     }
 		push @{$map_info{$row->[$col{peptide_sequence}]}{start}}, $row->[$col{start_in_biosequence}];
