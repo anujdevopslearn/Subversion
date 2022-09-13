@@ -612,6 +612,7 @@ Counts only primary reference proteome entries, so final tally may be smaller th
 				'hmm length' => 'pfam domain sequence length',
 				'bit score' => 'the likelihood of the match having been emitted by the model is equal to that of it having been emitted by the Null model (by chance).<a href="https://pfam.xfam.org/help#tabview=tab6">pfam help</>',
 				'e value' => 'the number of hits that would be expected to have a score equal to or better than this value by chance alone.',
+        'Percent Coverage' => '% of observable sequence'
 
   );
 

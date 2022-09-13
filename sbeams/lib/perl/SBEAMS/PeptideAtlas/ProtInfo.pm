@@ -151,7 +151,7 @@ sub loadBuildProtInfo {
 
   # Input is PA.protIdentlist file
   # Process one line at a time
-  my $nfields = 14;
+  #my $nfields = 14;
   my $line = <IDENTFILE>;  #throw away header line
   while ($line = <IDENTFILE>) {
     chomp ($line);
@@ -169,7 +169,8 @@ sub loadBuildProtInfo {
         $is_covering,
         $seq_unique_prots_in_group,
         $norm_PSMs_per_100K,
-	  ) = split(",", $line, $nfields);
+        $pct_coverage
+	  ) = split(",", $line, -1);
 
     if (! $fhs->{protein_identification}){
 			if ($estimated_ng_per_ml eq '') {
@@ -202,13 +203,8 @@ sub loadBuildProtInfo {
       $unmapped_subsumed_by++;
       next;
     }
-
-    $level_name =~ s/\s+from.*//;
-    my $inserted = $self->insertProteinIdentification(
-       atlas_build_id => $atlas_build_id,
-       biosequence_name => $biosequence_name,
-       protein_group_number => $protein_group_number,
-       level_name => $level_name,
+    next;
+    my %data = (
        represented_by_biosequence_name => $represented_by_biosequence_name,
        probability => $probability,
        confidence => $confidence,
@@ -220,6 +216,15 @@ sub loadBuildProtInfo {
        is_covering => $is_covering,
        norm_PSMs_per_100K => $norm_PSMs_per_100K,
        seq_unique_prots_in_group => $seq_unique_prots_in_group,
+       pct_coverage=>$pct_coverage
+    );
+    $level_name =~ s/\s+from.*//;
+    my $inserted = $self->insertProteinIdentification(
+       atlas_build_id => $atlas_build_id,
+       biosequence_name => $biosequence_name,
+       protein_group_number => $protein_group_number,
+       level_name => $level_name,
+       %data,
     );
 
     if ($inserted) {
@@ -255,6 +260,7 @@ sub loadBuildProtInfo {
         $reference_biosequence_name,
 		$related_biosequence_name,
 		$relationship_name,
+    $pct_coverage,
 	) = split(",", $line);
 
     # skip UNMAPPED proteins.
@@ -269,6 +275,7 @@ sub loadBuildProtInfo {
        reference_biosequence_name => $reference_biosequence_name,
        related_biosequence_name => $related_biosequence_name,
        relationship_name => $relationship_name,
+       pct_coverage => $pct_coverage
     );
 
     if ($inserted) {
@@ -305,6 +312,8 @@ sub insert_biosequence_id_atlas_build_search_batch{
   my $METHOD = 'insert_biosequence_id_atlas_build_search_batch';
   my $self = shift || die ("self not passed");
   my %args = @_;
+  print "METHOD=$METHOD\n";
+
   my $atlas_build_id = $args{atlas_build_id};
   my $sql = qq~
     SELECT  DISTINCT BS.BIOSEQUENCE_ID, ABSB.ATLAS_BUILD_SEARCH_BATCH_ID 
@@ -363,6 +372,8 @@ sub update_protInfo_sampleSpecific{
   my $self = shift || die ("self not passed");
   my %args = @_;
   my $atlas_build_id = $args{atlas_build_id};
+  print "METHOD=$METHOD\n";
+
   my $sql = qq~
      SELECT BS.biosequence_id, PIS.sample_id
      FROM $TBAT_PEPTIDE_INSTANCE PI
@@ -491,21 +502,10 @@ sub insertProteinIdentification {
     or die("ERROR[$METHOD]: Parameter protein_group_number not passed");
   my $level_name = $args{level_name}
     or die("ERROR[$METHOD]: Parameter level_name not passed");
-  my $represented_by_biosequence_name = $args{represented_by_biosequence_name};
-  my $probability = $args{probability};
-  my $confidence = $args{confidence};
-  my $n_observations = $args{n_observations};
-  my $n_distinct_peptides = $args{n_distinct_peptides};
-  my $subsumed_by_biosequence_name = $args{subsumed_by_biosequence_name};
-  my $estimated_ng_per_ml = $args{estimated_ng_per_ml};
-  my $abundance_uncertainty = $args{abundance_uncertainty};
-  my $is_covering = $args{is_covering};
-  my $seq_unique_prots_in_group = $args{seq_unique_prots_in_group};
-  my $norm_PSMs_per_100K = $args{norm_PSMs_per_100K};
  
   our $counter;
   return 1 if ($level_name =~/rejected/i );
-  if ($represented_by_biosequence_name eq ''){
+  if (! $args{represented_by_biosequence_name}){
       die("ERROR[$METHOD]: biosequence_name=$biosequence_name protein_group_number=$protein_group_number".
       " Parameter represented_by_biosequence_name not passed");
   }
@@ -515,14 +515,14 @@ sub insertProteinIdentification {
     atlas_build_id => $atlas_build_id,
   );
   my $represented_by_biosequence_id = $self->get_biosequence_id(
-    biosequence_name => $represented_by_biosequence_name,
+    biosequence_name => $args{represented_by_biosequence_name},
     atlas_build_id => $atlas_build_id,
   );
   return if (! $biosequence_id || ! $represented_by_biosequence_id); 
   my $subsumed_by_biosequence_id = '';
-  if ($subsumed_by_biosequence_name && $subsumed_by_biosequence_name ne 'multiple') {
+  if ($args{subsumed_by_biosequence_name} && $args{subsumed_by_biosequence_name} ne 'multiple') {
     $subsumed_by_biosequence_id = $self->get_biosequence_id(
-      biosequence_name => $subsumed_by_biosequence_name,
+      biosequence_name => $args{subsumed_by_biosequence_name},
       atlas_build_id => $atlas_build_id,
     );
     return if (! $subsumed_by_biosequence_id);
@@ -550,24 +550,11 @@ sub insertProteinIdentification {
 			return ('');
 		} 
    }
-   my $protein_identification_id = $self->insertProteinIdentificationRecord(
-      biosequence_id => $biosequence_id,
-      atlas_build_id => $atlas_build_id,
-      protein_group_number => $protein_group_number,
-      presence_level_id => $presence_level_id,
-      represented_by_biosequence_id => $represented_by_biosequence_id,
-      probability => $probability,
-      confidence => $confidence,
-      n_observations => $n_observations,
-      n_distinct_peptides => $n_distinct_peptides,
-      subsumed_by_biosequence_id => $subsumed_by_biosequence_id,
-      estimated_ng_per_ml => $estimated_ng_per_ml,
-      abundance_uncertainty => $abundance_uncertainty,
-      is_covering => $is_covering,
-      seq_unique_prots_in_group => $seq_unique_prots_in_group,
-      norm_PSMs_per_100K => $norm_PSMs_per_100K,
-    );
-    return ($protein_identification_id);
+   my $protein_identification_id = $self->insertProteinIdentificationRecord(biosequence_id=>$biosequence_id,
+                                                                            presence_level_id=>$presence_level_id,
+                                                                            represented_by_biosequence_id=>$represented_by_biosequence_id, 
+                                                                            %args);
+   return ($protein_identification_id);
 
 } # end insertProteinIdentification
 
@@ -602,6 +589,7 @@ sub insertProteinIdentificationRecord {
   my $is_covering = $args{is_covering};
   my $seq_unique_prots_in_group = $args{seq_unique_prots_in_group};
   my $norm_PSMs_per_100K = $args{norm_PSMs_per_100K};
+  my $pct_coverage = $args{pct_coverage};
   my $table_name = $TBAT_PROTEIN_IDENTIFICATION;
   # no value
   #observed_in_origenetube    varchar(20) NULL,
@@ -617,7 +605,7 @@ sub insertProteinIdentificationRecord {
 							"$protein_group_number\t$presence_level_id\t$represented_by_biosequence_id\t".
 							"$probability\t$confidence\t$subsumed_by_biosequence_id\t$n_observations\t".
 							"$n_distinct_peptides\t$estimated_ng_per_ml\t$abundance_uncertainty\t$seq_unique_prots_in_group\t".
-							"$is_covering\t$norm_PSMs_per_100K\t\t\t\t\t\n";   
+							"$is_covering\t$norm_PSMs_per_100K\t\t\t\t\t\t$pct_coverage\n";   
 
 		$protein_identification_id=$pk_counter->{protein_identification};
 
@@ -640,6 +628,7 @@ sub insertProteinIdentificationRecord {
 			 is_covering => $is_covering,
 			 seq_unique_prots_in_group => $seq_unique_prots_in_group,
 			 norm_PSMs_per_100K => $norm_PSMs_per_100K,
+       percentage_coverage => $pct_coverage 
 		 };
 
 		#### Insert protein identification record
@@ -679,6 +668,8 @@ sub insertBiosequenceRelationship {
     or die("ERROR[$METHOD]: Parameter related_biosequence_name not passed");
   my $relationship_name = $args{relationship_name}
     or die("ERROR[$METHOD]: Parameter relationship_name not passed");
+  my $pct_coverage = $args{pct_coverage} 
+    or die("ERROR[$METHOD]: Parameter pct_coverage not passed");
 
   our $counter;
 
@@ -724,6 +715,7 @@ sub insertBiosequenceRelationship {
       reference_biosequence_id => $reference_biosequence_id,
       related_biosequence_id => $related_biosequence_id,
       relationship_type_id => $relationship_type_id,
+      pct_coverage => $pct_coverage
     );
     return ($biosequence_relationship_id);
 
@@ -751,13 +743,16 @@ sub insertBiosequenceRelationshipRecord {
     or die("ERROR[$METHOD]:Parameter related_biosequence_id not passed");
   my $relationship_type_id = $args{relationship_type_id}
     or die("ERROR[$METHOD]:Parameter relationship_type_id not passed");
+	my $pct_coverage = $args{pct_coverage}
+	  or die("ERROR[$METHOD]: Parameter pct_coverage not passed");
+ 
   my $table_name = $TBAT_BIOSEQUENCE_RELATIONSHIP;
 
   my $biosequence_relationship_id='';
   if ($fhs->{biosequence_relationship}){
 		my $fh = $fhs->{biosequence_relationship};
 		print $fh "$pk_counter->{biosequence_relationship}\t$atlas_build_id\t$protein_group_number\t".
-							"$reference_biosequence_id\t$related_biosequence_id\t$relationship_type_id\t\t\n";
+							"$reference_biosequence_id\t$related_biosequence_id\t$relationship_type_id\t\t\t$pct_coverage\n";
 		$biosequence_relationship_id=$pk_counter->{biosequence_relationship};
 		$pk_counter->{biosequence_relationship}++;
   }else{
@@ -768,6 +763,7 @@ sub insertBiosequenceRelationshipRecord {
 			 reference_biosequence_id => $reference_biosequence_id,
 			 related_biosequence_id => $related_biosequence_id,
 			 relationship_type_id => $relationship_type_id,
+       related_biosequence_percentage_coverage => $pct_coverage 
 		};
 
 		#### Insert protein identification record
