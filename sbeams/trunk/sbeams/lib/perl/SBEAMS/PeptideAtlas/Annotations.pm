@@ -580,11 +580,12 @@ Counts only primary reference proteome entries, so final tally may be smaller th
       # protein 
       'Canonical' => 'Minimally redundant set of proteins required to explain (virtually) all non-decoy peptides observed in build (<a target=_termdefs href="http://www.peptideatlas.org/docs/protein_ident_terms.php">more info</a>)',
       'Noncore-Canonical' => 'Noncore canonical means that there are uniquely mapping peptides to this protein that do not map to a protein that is considered part of the core proteome of a species. A non-core canonical protein might be an isoform, contaminant, or protein missing from the core reference proteome.',
-      'Indistinguishable Representative' =>'Indistinguishable representative means that a group of peptides map uniquely to a set of proteins that cannot be distinguished from each other based on the peptide evidence, thereby indicating that at least one of the proteins in the set must be present, but it cannot be determined which it is. One entry is selected as the "Indistinguishable representative" while the others are labeled as "Indistinguishable".', 
-      'Marginally Distinguished'=>'Marginally distinguished means that this protein has peptides that are shared with a canonical peptide, but it also has a small number of peptides that appear to distinguish it from the canonical identification.',
-      'Representative'=>'Representative means that there are peptides that map uniquely to a set of non-canonical proteins in a complex way, thereby indicating that at least some of the proteins in the set must be present. The minimal set of proteins needed to explain the peptides are labeled as "Representative" while the rest of labeled as "Subsumed".',
-      'Insufficient Evidence'=>'Protein has one or more apparently uniquely mapping peptides but none are 9AA or greater',
-      'Weak' => 'Protein has one peptide that is uniquely mapping and at least 9 AA long, but is missing a second peptide that meets HPP guidelines',
+      'Indistinguishable Representative' =>'Protein has no unique peptides, and there are several indistinguishable proteins, but this one is assigned to be an Indistinguishable Representative and the others are Indistinguishable.',
+      'Marginally Distinguished'=>'Protein has unique peptides, but there are not more unique peptides than shared peptides, and the extended length of unique peptides is < 18AA.',
+      'Representative'=>'Protein has mostly shared peptides, does not fit the description of another category, and is assigned to be the representative protein to explain some of its shared peptides.',
+      'Subsumed' => 'Protein has no unique peptides and shares all peptides with at least one protein but has fewer peptides',
+      'Insufficient Evidence'=>'Protein has more unique peptides than shared peptides, but none are 9AA or greater',
+      'Weak' => 'Protein has more unique peptides than shared peptides, and only one uniquely mapping peptide 9AA or greater',
        #Proteome Coverage (exhaustive)
        'Database' => 'Name of database, which collectively form the reference database for this build',
        'N_Prots' => 'Total number of entries in subject database',
@@ -612,7 +613,7 @@ Counts only primary reference proteome entries, so final tally may be smaller th
 				'hmm length' => 'pfam domain sequence length',
 				'bit score' => 'the likelihood of the match having been emitted by the model is equal to that of it having been emitted by the Null model (by chance).<a href="https://pfam.xfam.org/help#tabview=tab6">pfam help</>',
 				'e value' => 'the number of hits that would be expected to have a score equal to or better than this value by chance alone.',
-        'Percent Coverage' => '% of observable sequence'
+        'Percent Coverage' => '% of observed sequence'
 
   );
 
