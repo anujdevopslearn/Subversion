@@ -167,17 +167,14 @@ sub handle_request {
     SELECT AB.atlas_build_id, atlas_build_name, default_atlas_build_id
     FROM $TBAT_ATLAS_BUILD AB
     LEFT JOIN $TBAT_DEFAULT_ATLAS_BUILD DAB 
-      ON DAB.atlas_build_id = AB.atlas_build_id
+    ON DAB.atlas_build_id = AB.atlas_build_id
     WHERE AB.project_id IN ( $accessible_project_ids )
-	AND AB.atlas_build_id IN
-          ( SELECT DISTINCT atlas_build_id FROM $TBAT_PEPTIDE_INSTANCE )
-    AND ( DAB.record_status IS NULL OR DAB.record_status != 'D' )
-    AND AB.record_status != 'D'
-    AND NOT ( DAB.organism_id IS NULL 
-              AND default_atlas_build_id IS NOT NULL ) -- keep global default from showing up 2x
+	  --AND AB.atlas_build_id IN ( SELECT DISTINCT atlas_build_id FROM $TBAT_PEPTIDE_INSTANCE )
+	  AND ( DAB.record_status IS NULL OR DAB.record_status != 'D' )
+	  AND AB.record_status != 'D'
+	  AND NOT ( DAB.organism_id IS NULL AND default_atlas_build_id IS NOT NULL ) -- keep global default from showing up 2x
     ~;
     my @atlas_builds = $sbeams->selectSeveralColumns($sql);
-
     my $atlas_atlas_build_id_output_idx = 0;
     my $atlas_build_name_idx = 1;
     my $def_atlas_build_id_output_idx = 2;
@@ -323,6 +320,7 @@ sub handle_request {
 
   #Open and read the cached .tsv file.
   my $tsv_file = "$PHYSICAL_BASE_DIR/tmp/buildInfo.tsv";
+
   open (TSV, $tsv_file) || die "$PROG_NAME: cannot open $tsv_file for reading.";
   my $header = <TSV>;
   chomp $header;
