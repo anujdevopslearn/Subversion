@@ -1053,7 +1053,16 @@ sub handle_request {
 				my $text = $sbeams->makeInactiveText( 'Compare Proteins' );
 					$compare_link = "<TR><TD COLSPAN=3><DIV TITLE='Cannot run alignment with only one sequence'>$text</DIV></TD></TR>\n";
 			 } else  {
-					$compare_link = "<tr><td colspan='3'><h2><a title='Align all proteins that this peptide maps to, and graphical view of all detected peptide sequences' href='compareProteins?pepseq=$peptide_sequence[0];bioseq_id=$bioseqs'>&cong; Compare Proteins</a></h2></td></tr>\n";
+          my $base_url = "https://db.systemsbiology.net/devZS/sbeams/cgi/PeptideAtlas/compareProteins?pepseq=$peptide_sequence[0];bioseq_id=";
+          my $length_limit = 8000 - length($base_url);
+          my $n_bioseqs = scalar keys %biosequence_id;
+          my $warning_text = '';
+          my $n_bioseq_trimmed= '';
+          if ($n_bioseqs > 100){
+             $bioseqs = join(",", (keys  %biosequence_id )[0..99]);
+             $warning_text = "(list truncated from $n_bioseqs to 100 sequences)";
+           } 
+					  $compare_link = "<tr><td colspan='3'><h2><a title='Align all proteins that this peptide maps to, and graphical view of all detected peptide sequences' href='compareProteins?pepseq=$peptide_sequence[0];bioseq_id=$bioseqs'>&cong; Compare Proteins $warning_text</a></h2></td></tr>\n";
 			 }
 			$mapHTML .= $compare_link;
 
