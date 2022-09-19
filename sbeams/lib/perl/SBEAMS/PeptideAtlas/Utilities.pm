@@ -3929,6 +3929,7 @@ sub get_alignment_display {
   my $order_by = $args{order_by} || ''; 
   my $clustal_display = '';
   my $bioseq_clause = '';
+  my $warningstr='';
 
   $clustal_display .= "<form method='post' name='compareProteins'>\n";
   for my $arg ( keys( %args ) ) {
@@ -3946,9 +3947,7 @@ sub get_alignment_display {
   if ( $args{restore} ) {
     $args{bioseq_id} = $args{orig_bioseq_id};
   }
-  
   if ( $args{protein_group_number} ) {
-
     my $excl = '';
     if ( $args{exclude_ipi} ) {
       $excl .= "AND biosequence_name NOT LIKE 'IPI%'\n";
@@ -3984,6 +3983,12 @@ sub get_alignment_display {
     my @results = $sbeams->selectSeveralColumns($sql);
     my %proteins;
     # make a hash of biosequence_id to biosequence_name
+    if (@results > 100 ){
+      $warningstr = $sbeams->makeErrorText( "More than 100 proteins to align (build $curr_bid, protein group $args{protein_group_number}). Truncated the list to 100 proteins.");
+      $warningstr .= "<br><br>";
+      @results = (@results)[1..99];
+    }
+
     for my $result_aref (@results) {
       $proteins{$result_aref->[0]} = $result_aref->[1];
     }
@@ -4062,6 +4067,7 @@ sub get_alignment_display {
 
   $clustal_display .= qq~
 	<script>document.title = 'PeptideAtlas: Compare Protein Sequences';</script>
+  $warningstr
 	<a title="show/hide help" onclick="if(document.getElementById('pageinfo').style.display == 'none') document.getElementById('pageinfo').style.display = ''; else document.getElementById('pageinfo').style.display = 'none';" href="#">Page Info and Legend</a>
 	<div id="pageinfo" style="margin-left:5px;padding-left:5px;border:1px solid #666;max-width:90%;background:#f1f1f1;display: none;">
 	<p>In the <b>Peptide Mapping</b> section below, peptides for each protein are represented by 
@@ -4730,7 +4736,6 @@ sub get_clustal_alignemnt_display {
   <br>
   <br>
 	</ALIGN>
-
 	  Please note that using more sequences and/or 
 	sequences that are not very similar will cause 
 	the assembly to be slower.  There is a limit of 
