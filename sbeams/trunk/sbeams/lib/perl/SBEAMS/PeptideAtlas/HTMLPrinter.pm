@@ -1412,7 +1412,7 @@ sub getPeptideSampleDisplay {
   return unless $in;
 
   my $sql = qq~
-  	SELECT S.sample_id, sample_title, PISB.n_observations,
+  	SELECT S.sample_id, sample_tag, PISB.n_observations,
            instrument_name, CASE WHEN ENZ.name IS NULL THEN 'Trypsin' ELSE ENZ.name END AS Enzyme,
            PUB.publication_name, PUB.abstract , PUB.uri, S.repository_identifiers
 		FROM $TBAT_ATLAS_SEARCH_BATCH SB 
@@ -1475,13 +1475,13 @@ sub getSampleTableDisplay{
   my @headings;
   my @cols = ();
   if ($type eq 'Peptide'){
-    @cols = ('Experiment ID','Dataset','Experiment Name','NObs','Instrument','Enzyme','Publication');
+    @cols = ('Experiment ID','Dataset','Experiment Tag','NObs','Instrument','Enzyme','Publication');
     @align = qw(center left left center left left);
   }else{
     if ($sample_category){
-      @cols = ('Experiment ID','Dataset','Experiment Name', 'Instrument','Enzyme','Publication', 'Source');
+      @cols = ('Experiment ID','Dataset','Experiment Tag', 'Instrument','Enzyme','Publication', 'Source');
     }else{
-      @cols = ('Experiment ID','Dataset','Experiment Name', 'Instrument','Enzyme','Publication');
+      @cols = ('Experiment ID','Dataset','Experiment Tag', 'Instrument','Enzyme','Publication');
     }
     @align = qw(center left left center left left left);
   }
@@ -1666,7 +1666,7 @@ sub getProteinSampleDisplay {
   return unless $in;
 	my $sql = qq~
 	SELECT S.SAMPLE_ID,
-				 S.SAMPLE_TITLE,
+				 S.SAMPLE_Tag,
 				 '' ,
 				 INSTRUMENT_NAME,
 				 CASE WHEN ENZ.name IS NULL THEN 'Trypsin' ELSE ENZ.name END AS Enzyme,
