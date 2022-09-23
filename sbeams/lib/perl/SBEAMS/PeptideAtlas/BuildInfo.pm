@@ -41,6 +41,7 @@ $sbeamsMOD->setSBEAMS($sbeams);
 
 my $protinfo = new SBEAMS::PeptideAtlas::ProtInfo;
 $protinfo->setSBEAMS($sbeams);
+our $BUILD_DB;
 
 
 ###############################################################################
@@ -127,31 +128,33 @@ sub pa_build_info_2_tsv {
 
   #### Get a list of available atlas builds plus some of the info we want
   my $sql = qq~
-  SELECT AB.atlas_build_id, atlas_build_name, atlas_build_description,
-	 default_atlas_build_id, organism_specialized_build, organism_name,
-	 ( SELECT  COUNT(*) cnt
-	    FROM $TBAT_PEPTIDE_INSTANCE
-	    WHERE atlas_build_id = AB.atlas_build_id ) AS n_distinct,
-	 ( SELECT SUM(n_progressive_peptides) 
-	   FROM $TBAT_SEARCH_BATCH_STATISTICS SBS JOIN
-		$TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB 
-	     ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
-	   WHERE atlas_build_id = AB.atlas_build_id ) AS n_distinct_2,
-	 AB.probability_threshold, AB.protpro_PSM_FDR_per_expt
-  FROM $TBAT_ATLAS_BUILD AB JOIN $TBAT_BIOSEQUENCE_SET BS
-    ON AB.biosequence_set_id = BS.biosequence_set_id
+  SELECT AB.atlas_build_id, 
+         atlas_build_name, 
+         atlas_build_description,
+	       default_atlas_build_id, 
+         organism_specialized_build, 
+         organism_name,
+				 '0' ,
+				 ( SELECT SUM(n_progressive_peptides) 
+					 FROM $TBAT_SEARCH_BATCH_STATISTICS SBS 
+					 JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB 
+					 ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
+	         WHERE atlas_build_id = AB.atlas_build_id ) AS n_distinct_2,
+				 AB.probability_threshold, 
+				 AB.protpro_PSM_FDR_per_expt
+  FROM $TBAT_ATLAS_BUILD AB 
+  JOIN $TBAT_BIOSEQUENCE_SET BS ON AB.biosequence_set_id = BS.biosequence_set_id
   JOIN $TB_ORGANISM O ON BS.organism_id = O.organism_id
-  LEFT JOIN $TBAT_DEFAULT_ATLAS_BUILD DAB 
-    ON DAB.atlas_build_id = AB.atlas_build_id
-  WHERE  AB.atlas_build_id IN
-	( SELECT DISTINCT atlas_build_id FROM $TBAT_PEPTIDE_INSTANCE )
+	LEFT JOIN $TBAT_DEFAULT_ATLAS_BUILD DAB  ON DAB.atlas_build_id = AB.atlas_build_id
+	WHERE 1=1   
   AND ( DAB.record_status IS NULL OR DAB.record_status != 'D' )
   AND AB.record_status != 'D'
   AND BS.record_status != 'D'
   AND NOT ( DAB.organism_id IS NULL 
-	    AND default_atlas_build_id IS NOT NULL ) -- keep global default from showing up 2x
-  ORDER BY BS.organism_id DESC, organism_specialized_build, 
-	   AB.atlas_build_id DESC
+	AND default_atlas_build_id IS NOT NULL ) -- keep global default from showing up 2x
+  ORDER BY BS.organism_id DESC, 
+					 organism_specialized_build, 
+					 AB.atlas_build_id DESC
   ~;
   my @atlas_builds = $sbeams->selectSeveralColumns($sql);
   $log->debug( $sbeams->evalSQL($sql) );
@@ -227,20 +230,33 @@ sub pa_build_info_2_tsv {
   ### For each build, get the info we want to display.
   my $nbuilds = scalar @atlas_builds;
   print "Getting info for each of $nbuilds builds: \n" if $VERBOSE;
+  my $DATABASE = $DBPREFIX{'PeptideAtlas'};
+  $DATABASE=~ s/\.$//;
+  my $sql = qq~SELECT name FROM MASTER..SYSDATABASES WHERE name like 'PeptideAtlas_build%'~;
+  my @result = $sbeams->selectOneColumn($sql);
+  my %databases =();
+  foreach my $db (@result){
+    $db =~ /^\D+(\d+)$/;
+    $databases{$1} = "$db.dbo";
+  }
   foreach my $atlas_build ( @atlas_builds ) {
     my @row;
     my $selected = '';
-#next if ($atlas_build->[$atlas_build_id_idx] != 462);
     print "#$atlas_build->[$atlas_build_id_idx] " if $VERBOSE;
-
+    my $build_id = $atlas_build->[$atlas_build_id_idx];
+    $BUILD_DB = $DATABASE;
+    if ($databases{$build_id}){
+      $BUILD_DB = $databases{$build_id};
+    }
+  
+    my $dist_peps_cnt = get_distinct_peptide_count ( build_id => $atlas_build->[$atlas_build_id_idx]);
+    next if(! $dist_peps_cnt); 
+    $atlas_build->[$dist_peps_idx] = $dist_peps_cnt;
+ 
     # Retrieve the infos
-    my $samples_href = get_sample_info (
-      build_id => $atlas_build->[$atlas_build_id_idx],
-    );
+    my $samples_href = get_sample_info ( build_id => $atlas_build->[$atlas_build_id_idx]);
 
-    my $spectra_searched_href = get_spectra_searched (
-      build_id => $atlas_build->[$atlas_build_id_idx],
-    );
+    my $spectra_searched_href = get_spectra_searched (build_id => $atlas_build->[$atlas_build_id_idx]);
 
     # get 7 different protein counts. could be faster.
 
@@ -430,13 +446,13 @@ sub get_sample_info
 
   my $pep_count = $sbeams->selectrow_hashref( <<"  PEP" );  
   SELECT COUNT(*) cnt,  SUM(n_observations) obs
-  FROM $TBAT_PEPTIDE_INSTANCE
+  FROM $BUILD_DB.PEPTIDE_INSTANCE
   WHERE atlas_build_id = $build_id
   PEP
 
   my $multi_pep_count = $sbeams->selectrow_hashref( <<"  MPEP" );
   SELECT COUNT(*) cnt, SUM(n_observations) obs
-  FROM $TBAT_PEPTIDE_INSTANCE
+  FROM $BUILD_DB.PEPTIDE_INSTANCE
   WHERE atlas_build_id = $build_id
   AND n_observations > 1
   MPEP
@@ -457,7 +473,22 @@ sub get_sample_info
   return \%result_hash;
 
 }
-
+sub get_distinct_peptide_count {
+  my %args = @_;
+  my $build_id = $args{'build_id'} || die "atlas_build_id not passed";
+  my $sql = qq~
+		SELECT  COUNT(*) cnt
+		FROM $BUILD_DB.PEPTIDE_INSTANCE
+		WHERE atlas_build_id = $build_id
+  ~;
+  my @result =  $sbeams->selectOneColumn($sql);
+  if (@result){
+    return $result[0];
+  }else{
+    return 0;
+  }
+  
+}
 sub get_spectra_searched
 {
   my %args = @_;
@@ -466,8 +497,9 @@ sub get_spectra_searched
       || die "atlas_build_id not passed";
 
   my $sql =<<"  END";
-  SELECT ABS.atlas_build_id ab, SUM(SBS.n_searched_spectra) nspec ,
-         SUM(n_good_spectra) ngoodspec
+  SELECT ABS.atlas_build_id ab, 
+         SUM(CAST(SBS.n_searched_spectra AS bigint)) nspec ,
+         SUM(CAST(n_good_spectra AS bigint)) ngoodspec
   FROM $TBAT_SEARCH_BATCH_STATISTICS SBS JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
     ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
   JOIN $TBAT_SAMPLE S ON s.sample_id = ABSB.sample_id
@@ -507,7 +539,7 @@ sub get_protein_identification_count
 
   my $sql =<<"  END";
   SELECT PI.atlas_build_id ab, COUNT(PI.biosequence_id) nprots
-  FROM $TBAT_PROTEIN_IDENTIFICATION PI
+  FROM $BUILD_DB.PROTEIN_IDENTIFICATION PI
     JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL ON
      PPL.protein_presence_level_id = PI.presence_level_id
     JOIN $TBAT_BIOSEQUENCE BS ON 
@@ -546,7 +578,7 @@ sub get_covering_set_count
 
   my $sql =<<"  END";
   SELECT PI.atlas_build_id ab, COUNT(PI.biosequence_id) nprots
-  FROM $TBAT_PROTEIN_IDENTIFICATION PI
+  FROM $BUILD_DB.PROTEIN_IDENTIFICATION PI
     JOIN $TBAT_BIOSEQUENCE BS ON 
      BS.biosequence_id = PI.biosequence_id
   WHERE PI.atlas_build_id = $build_id
@@ -599,8 +631,8 @@ sub get_protein_relationship_count
 
 my $sql =<<"  END";
 		SELECT  AB.ATLAS_BUILD_ID,COUNT(BR.RELATED_BIOSEQUENCE_ID) NPROTS
-		FROM $TBAT_PROTEIN_IDENTIFICATION PID
-		INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BR
+		FROM $BUILD_DB.PROTEIN_IDENTIFICATION PID
+		INNER JOIN $BUILD_DB.BIOSEQUENCE_RELATIONSHIP BR
 			ON ( BR.REFERENCE_BIOSEQUENCE_ID = PID.BIOSEQUENCE_ID AND
 				 BR.ATLAS_BUILD_ID = PID.ATLAS_BUILD_ID )
 		INNER JOIN $TBAT_ATLAS_BUILD AB
