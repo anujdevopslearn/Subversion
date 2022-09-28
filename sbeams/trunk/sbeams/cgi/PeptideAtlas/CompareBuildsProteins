@@ -694,7 +694,7 @@ sub handle_request {
         $venn1
         $venn2 
       ~;
-      my $percent = 0;# sprintf("%4.1f", 100 * $n_rows / $n_canonicals[1]);
+      my $percent = sprintf("%4.1f", 100 * $n_rows / $n_canonicals[1]);
       if (($comparison_type eq "intersection") || ($comparison_type eq "build_1_not_build_2")) {
        	 $venn_html .= " ($percent% of Build 1 total)";
       }
