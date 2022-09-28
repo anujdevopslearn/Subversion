@@ -42,6 +42,7 @@ use SBEAMS::BioLink::Tables;
 
 use Venn::Chart;
 
+
 use lib "$FindBin::Bin";
 use DBI;
 
@@ -118,7 +119,6 @@ sub main {
   );
      #$sbeams->printDebuggingInfo($q);
 
-
   #### Process generic "state" parameters before we start
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
@@ -133,15 +133,13 @@ sub main {
         atlas_build_id => $parameters{atlas_build_id}
       );
 
-    $sbeamsMOD->display_page_header(project_id => $project_id);
+    $sbeamsMOD->display_page_header(project_id => $project_id, use_tabbed_panes => 1,);
 
     handle_request(ref_parameters=>\%parameters);
 
     $sbeamsMOD->display_page_footer();
 
   }
-
-
 
 } # end main
 
@@ -181,9 +179,9 @@ sub handle_request {
     print"<script>document.title = 'PeptideAtlas: Compare Proteins in 2 Builds';</script>\n";
   }
 
-
   #### Get the current atlas_build_ids based on parameters or session
   my @atlas_build_id;
+  my @atlas_build_name;
 # Print statements for debugging SWAP button
 #print "build1 = $parameters{atlas_build_id}<br>\n";
 #print "build1 = $atlas_build_id[1]<br>\n";
@@ -197,45 +195,20 @@ sub handle_request {
       parameters_ref => \%parameters,
       secondary_build => 1,
   );
+  
   if (defined($atlas_build_id[1]) && $atlas_build_id[1] < 0) {
     return;
   }
   if (defined($atlas_build_id[2]) && $atlas_build_id[2] < 0) {
     return;
   }
+  $atlas_build_name[1] = $sbeamsMOD->getBuildName(build_id => $atlas_build_id[1]);
+  $atlas_build_name[2] = $sbeamsMOD->getBuildName(build_id => $atlas_build_id[2]);
+
+
 
   $parameters{atlas_build_id} = $atlas_build_id[1];
   $parameters{atlas_build_id_2} = $atlas_build_id[2];
-
-# Print statements for debugging SWAP button
-#print "build1 = $parameters{atlas_build_id}<br>\n";
-#print "build1 = $atlas_build_id[1]<br>\n";
-#print "build2 = $parameters{atlas_build_id_2}<br>\n";
-#print "build2 = $atlas_build_id[2]<br>\n";
-
-
-#  $atlas_build_id[2] = $parameters{atlas_build_id_2};
-#  if ( ( !defined ($atlas_build_id[2]) ) || ($atlas_build_id[2] < 0)) {
-#    $atlas_build_id[2] = $atlas_build_id[1];
-#    $parameters{atlas_build_id_2} = $atlas_build_id[2];
-#  }
-
-### I think we're taking care of this elsewhere.
-#  if ($parameters{swap_builds}) {
-#    my $tmp = $parameters{atlas_build_id};
-#    $parameters{atlas_build_id} = $parameters{atlas_build_id_2};
-#    #$atlas_build_id[1] = $parameters{atlas_build_id};
-#    $parameters{atlas_build_id_2} = $tmp;
-#    #$atlas_build_id[2] = $parameters{atlas_build_id_2};
-#
-#    $atlas_build_id[1] = $sbeamsMOD->getCurrentAtlasBuildID(
-#	parameters_ref => \%parameters,
-#    );
-#    $atlas_build_id[2] = $sbeamsMOD->getCurrentAtlasBuildID(
-#	parameters_ref => \%parameters,
-#	secondary_build => 1,
-#    );
-#  }
 
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
@@ -301,14 +274,9 @@ sub handle_request {
     PROGRAM_FILE_NAME=>$PROG_NAME,
     parameters_ref=>\%parameters,
     input_types_ref=>\%input_types,
-    mask_user_context=> '1',
+    mask_user_context=> 1,
+    use_tabbed_panes => 1,
   );
-
-# Print statements for debugging SWAP button
-#print "build1 = $parameters{atlas_build_id}<br>\n";
-#print "build1 = $atlas_build_id[1]<br>\n";
-#print "build2 = $parameters{atlas_build_id_2}<br>\n";
-#print "build2 = $atlas_build_id[2]<br>\n";
 
   #### Display button for swapping Build 1/2.
   #### Code stolen from display_form_buttons() and
@@ -327,7 +295,7 @@ sub handle_request {
 
 
   #### Display the form action buttons
-  $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
+  $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME, use_tabbed_panes => 1);
 
 
   #########################################################################
@@ -347,125 +315,123 @@ sub handle_request {
   my @atlas_build_clause;
   my @bsr_atlas_build_clause;
 
+  my %canonicals_build1;
   my @canonicals_arefs;
-  my @canonicals_hrefs;
   my @exhaust_hrefs;
   my @n_canonicals;
-
+  my @exhaust_prot_sqls;
+  my @canonical_sqls;
+ 
+  my $module = $sbeams->getSBEAMS_SUBDIR();
+	my $DATABASE = $DBPREFIX{$module};
+  $DATABASE=~ s/\.$//;
+ 
+  my $database_1 = $DATABASE; 
+  my $database_2 = $DATABASE;
+ 
+  my $sql = qq~SELECT NAME FROM MASTER..SYSDATABASES WHERE NAME LIKE 'PEPTIDEATLAS_BUILD%'~;
+  my @result = $sbeams->selectOneColumn($sql);
+  foreach my $row(@result){
+    if ($row =~ /build$atlas_build_id[1]$/){
+      $database_1 = "$row.dbo"; 
+    }
+    if ($row =~ /build$atlas_build_id[2]$/){
+      $database_2 = "$row.dbo";
+    }
+  }
+  my %databases =( 1=> $database_1, 2=>$database_2);;
+ 
   #### Construct constraints, gather data for each build
   for my $i (1, 2) {
-
-    #### Build ATLAS_BUILD constraint
-    $atlas_build_clause[$i] = $sbeams->parseConstraint2SQL(
-      constraint_column=>"PID$i.atlas_build_id",
-      constraint_type=>"int_list",
-      constraint_name=>"Atlas Build $i",
-      constraint_value=>$atlas_build_id[$i] );
-    return if ($atlas_build_clause[$i] eq '-1');
-
-    #### Build BSR_ATLAS_BUILD constraint
-    $bsr_atlas_build_clause[$i] = $sbeams->parseConstraint2SQL(
-      constraint_column=>"BSR$i.atlas_build_id",
-      constraint_type=>"int_list",
-      constraint_name=>"Atlas Build $i",
-      constraint_value=>$atlas_build_id[$i] );
-    return if ($bsr_atlas_build_clause[$i] eq '-1');
 
     #### Get total PSMs for calculating obs per 100,000
     my $pep_count = $sbeams->selectrow_hashref( <<"    PEP" );
       SELECT COUNT(*) cnt,  SUM(n_observations) obs
-      FROM $TBAT_PEPTIDE_INSTANCE
+      FROM $databases{$i}.PEPTIDE_INSTANCE
       WHERE atlas_build_id = $atlas_build_id[$i];
     PEP
     $total_obs[$i] = sprintf( "%0.1f", $pep_count->{obs});
 
-    #### Get canonicals
-    $sql = qq~
-	SELECT BS.biosequence_name 
-	FROM $TBAT_PROTEIN_IDENTIFICATION PID
-	  JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL ON
-	   PPL.protein_presence_level_id = PID.presence_level_id
-	  JOIN $TBAT_BIOSEQUENCE BS ON
-	   BS.biosequence_id = PID.biosequence_id
-	WHERE PID.atlas_build_id = $atlas_build_id[$i]
-	AND PPL.level_name = 'canonical'
-	~;
-    my @canonicals = $sbeams->selectOneColumn($sql);
+		#### canonical sql
+		my $sql = qq~
+			SELECT BS$i.biosequence_name AS BIOSEQUENCE_NAME, 
+						 PPL$i.level_name, 
+						 BS_REP$i.biosequence_name AS REP_BIOSEQUENCE_NAME,
+						 PID$i.n_observations,
+             PID$i.percentage_coverage,
+             PID$i.n_distinct_peptides,
+             PID$i.norm_PSMs_per_100K,
+             BS$i.biosequence_desc
+			FROM  $databases{$i}.PROTEIN_IDENTIFICATION PID$i
+			JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL$i ON PPL$i.protein_presence_level_id = PID$i.presence_level_id
+			JOIN $TBAT_BIOSEQUENCE BS$i ON BS$i.biosequence_id = PID$i.biosequence_id
+			JOIN $TBAT_BIOSEQUENCE BS_REP$i ON BS_REP$i.biosequence_id = PID$i.represented_by_biosequence_id
+			WHERE PID$i.atlas_build_id = $atlas_build_id[$i]
+			AND PPL$i.level_name = 'canonical'
+      AND (BS$i.biosequence_name not like 'DECOY%' AND BS$i.biosequence_name not like 'CONTAM%')
+		~;
+    $canonical_sqls[$i] = $sql;
+    
+    #### sql exhaust protids 
+    my $exhaust_prot_sql = qq~
+			 (SELECT BS$i.BIOSEQUENCE_NAME AS BIOSEQUENCE_NAME, 
+               PRL$i.LEVEL_NAME AS LEVEL_NAME,
+               BS_REP$i.BIOSEQUENCE_NAME AS REP_BIOSEQUENCE_NAME,
+               NULL  AS REF_biosequence_name,
+               PID$i.norm_PSMs_per_100K,
+               PID$i.N_OBSERVATIONS AS N_OBSERVATIONS,
+               PID$i.n_distinct_peptides,
+               PID$i.percentage_coverage
+			 FROM $databases{$i}.PROTEIN_IDENTIFICATION PID$i
+			 JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PRL$i ON (PID$i.PRESENCE_LEVEL_ID = PRL$i.PROTEIN_PRESENCE_LEVEL_ID)
+       JOIN $TBAT_BIOSEQUENCE BS$i ON (BS$i.biosequence_id = PID$i.biosequence_id)
+       JOIN $TBAT_BIOSEQUENCE BS_REP$i ON (BS_REP$i.biosequence_id = PID$i.represented_by_biosequence_id)
+			 WHERE PID$i.atlas_build_id IN ($atlas_build_id[$i])
+       AND (BS$i.biosequence_name not like 'DECOY%' AND BS$i.biosequence_name not like 'CONTAM%')
+       )
+			 UNION
+			 (SELECT BS2$i.biosequence_name as BIOSEQUENCE_NAME, 
+              BRT$i.RELATIONSHIP_NAME AS LEVEL_NAME, 
+              BS_REP2$i.BIOSEQUENCE_NAME AS REP_BIOSEQUENCE_NAME,
+              BS_REF2$i.BIOSEQUENCE_NAME AS REF_biosequence_name,
+              NULL AS norm_PSMs_per_100K,
+              NULL AS N_OBSERVATIONS,
+              NULL AS n_distinct_peptides, 
+              BR$i.related_biosequence_percentage_coverage as percentage_coverage
+			 FROM  $databases{$i}.BIOSEQUENCE_RELATIONSHIP BR$i
+			 JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT$i ON (BR$i.RELATIONSHIP_TYPE_ID = BRT$i.BIOSEQUENCE_RELATIONSHIP_TYPE_ID)
+       JOIN $databases{$i}.PROTEIN_IDENTIFICATION PID2$i ON (PID2$i.biosequence_id = BR$i.reference_biosequence_id)
+       JOIN $TBAT_BIOSEQUENCE BS2$i ON (BS2$i.BIOSEQUENCE_ID = BR$i.RELATED_BIOSEQUENCE_ID)
+       JOIN $TBAT_BIOSEQUENCE BS_REP2$i ON (BS_REP2$i.BIOSEQUENCE_ID =PID2$i.REPRESENTED_BY_BIOSEQUENCE_ID)
+       JOIN $TBAT_BIOSEQUENCE BS_REF2$i ON (BS_REF2$i.BIOSEQUENCE_ID = BR$i.reference_biosequence_id) 
+			 WHERE PID2$i.atlas_build_id IN ($atlas_build_id[$i])
+       AND (BS2$i.biosequence_name not like 'DECOY%' AND BS2$i.biosequence_name not like 'CONTAM%')
+       )
+		~;
+    $exhaust_prot_sqls[$i] = $exhaust_prot_sql;
+		my @rows = $sbeams->selectSeveralColumns($exhaust_prot_sql) or
+							 die "\nERROR: Unable to get protein identifications with $sql\n\n";
+    my @canonicals;
+    for my $row (@rows) {
+      my ($protid,$level,$rep_protid, $ref_prot_id, $nobs)=@$row;
+      $exhaust_hrefs[$i]->{$protid} =1;
+      push @canonicals, $protid if ($level eq 'canonical');
+    }
+    $n_canonicals[$i] = scalar @canonicals;
+    $canonicals_arefs[$i] = \@canonicals;
     if (! scalar @canonicals ) {
-	 print "\nSorry, Build $i does not have its protein ".
+			 print "\nSorry, Build $i does not have its protein ".
                 "identifications classified as canonical, ".
                 "possibly distinguished, and subsumed. It may be an ".
                 "older build or a specialty build.\n\n";
          exit;
     }
-    $canonicals_arefs[$i] = \@canonicals;
-    $n_canonicals[$i] = scalar @canonicals;
-    # Store in a hash for easy set operations later
-    for my $protid (@canonicals) {
-      $canonicals_hrefs[$i]->{$protid} = 1;
-    }
-
-    #### Get all protids with a presence level
-    $sql = qq~
-	SELECT BS.biosequence_name 
-	FROM $TBAT_PROTEIN_IDENTIFICATION PID
-	  JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL ON
-	   PPL.protein_presence_level_id = PID.presence_level_id
-	  JOIN $TBAT_BIOSEQUENCE BS ON
-	   BS.biosequence_id = PID.biosequence_id
-	WHERE PID.atlas_build_id = $atlas_build_id[$i]
-	~;
-    my @pids = $sbeams->selectOneColumn($sql) or
-	 die "\nERROR: Unable to get protein identifications with $sql\n\n";
-
-    #### Get indistinguishables & identicals
-    $sql = qq~
-	SELECT BS.biosequence_name
-	FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BSR
-	  JOIN $TBAT_BIOSEQUENCE BS ON
-	   BS.biosequence_id = BSR.related_biosequence_id
-	WHERE BSR.atlas_build_id = $atlas_build_id[$i]
-	~;
-    my @indist = $sbeams->selectOneColumn($sql) or
-	 die "\nERROR: Unable to get indistinguishables/identicals with $sql\n\n";
-    #### Combine lists into exhaustive set
-    for my $protid (@pids, @indist) {
-      $exhaust_hrefs[$i]->{$protid} = 1;
-    }
   }
+	if ( ! ($total_obs[1] && $total_obs[2]) ) {
+		print "Can't find total observations for both atlases. ".
+					"Found $total_obs[1] and $total_obs[2].<br>\n";
+	}
 
-  my %combined_exhaustive = %{$exhaust_hrefs[1]};;
-  for my $protid (keys  %{$exhaust_hrefs[2]}) {
-    $combined_exhaustive{$protid} = 1;
-  }
-  my @combined_exhaustive = keys %combined_exhaustive;
-
-  if ( ! ($total_obs[1] && $total_obs[2]) ) {
-    print "Can't find total observations for both atlases. ".
-          "Found $total_obs[1] and $total_obs[2].<br>\n";
-  }
-
-  #### Do various set operations on canonicals, exhaustive
-  my (@intersection, @difference, @build2_novel_canonicals);
-
-  #### Get the intersection (build 1 canonicals also in build 2
-  #### exhaustive set) and the difference (build 1 canonicals NOT in
-  #### build 2 exhaustive set).
-  for my $protid (keys %{$canonicals_hrefs[1]}) {
-    if ( defined $exhaust_hrefs[2]->{$protid}) {
-      push (@intersection, $protid);
-    } else {
-      push (@difference, $protid);
-    }
-  }
-  #### We will approximate the union of the canonical sets by starting with
-  #### the canonicals for build 1, then adding in any build 2
-  #### canonicals that aren't in the exhaustive set for build 1.
-  for my $protid (keys %{$canonicals_hrefs[2]}) {
-    if ( ! defined $exhaust_hrefs[1]->{$protid}) {
-      push (@build2_novel_canonicals, $protid);
-    }
-  }
 
 
   ## get organism_id to pass on to url_cols
@@ -473,16 +439,14 @@ sub handle_request {
       SELECT BSS.organism_id
       FROM $TBAT_BIOSEQUENCE_SET BSS
       JOIN $TBAT_ATLAS_BUILD AB
-	ON (AB.biosequence_set_id = BSS.biosequence_set_id)
+			ON (AB.biosequence_set_id = BSS.biosequence_set_id)
       WHERE AB.atlas_build_id ='$atlas_build_id[1]'
       ~;
  
    my ($organism_id) = $sbeams->selectOneColumn($sql) or
-       die "\nERROR: Unable to find the organism_id" .
-       " with $sql\n\n";
+       die "\nERROR: Unable to find the organism_id with $sql\n\n";
 
   $parameters{organism_id} = $organism_id;
-
 
   #### Build ROWCOUNT constraint
   $parameters{row_limit} = 5000
@@ -494,26 +458,14 @@ sub handle_request {
   ### Construct SQL for each item to be SELECTed
   my $biosequence_name_sql = "bs.biosequence_name";
   my $enrichment_sql =
-    "(CASE WHEN PID2.n_observations > 0 ".
-    "THEN (pid1.n_observations/$total_obs[1])/".
-    "(pid2.n_observations/$total_obs[2]) ".
-    "ELSE (pid1.n_observations/$total_obs[1])/".
-    "(0.3/$total_obs[2]) END)";
-  my $enrichment_no_pid2_sql =
-      "(pid1.n_observations/$total_obs[1])/(0.3/$total_obs[2])";
+    "(CASE WHEN build2.n_observations > 0 ".
+    "THEN (build1.n_observations/$total_obs[1])/(build2.n_observations/$total_obs[2]) ".
+    "ELSE (build1.n_observations/$total_obs[1])/(0.3/$total_obs[2]) END)";
 
-  my (@presence_level_sql, @n_obs_sql, @per_100K_sql);
-  my @represented_by_biosequence_sql;
+  my @per_100K_sql;
   for my $i (1, 2) {
-    $presence_level_sql[$i] = "ppl$i.level_name";
-    $n_obs_sql[$i] = "pid$i.n_observations";
-    #$per_100K_sql[$i] = "100000.0*(pid$i.n_observations/$total_obs[$i])";
-    $per_100K_sql[$i] = "STR(pid$i.norm_PSMs_per_100K,7,3)";
-    $represented_by_biosequence_sql[$i] = "bs_rep$i.biosequence_name";
+    $per_100K_sql[$i] = "case when (build$i.norm_PSMs_per_100K is null) then STR(build$i.norm_PSMs_per_100K,7,3) else '' end";
   }
-  my $indist_from_sql = "bs_ref.biosequence_name";
-  my $biosequence_description_sql = "cast(bs.biosequence_desc as varchar(255))";
-  
 
   #### Set flag to display SQL statement if user selected
   if ( $parameters{display_options} =~ /ShowSQL/ ) {
@@ -523,21 +475,22 @@ sub handle_request {
   ### Gather info for columns to be displayed:
   ### column name in SQL results, value, and column header to print.
   my @column_array = (
-      ["biosequence_name",$biosequence_name_sql,"Biosequence Name"],
+      ["biosequence_name","isnull(build1.biosequence_name, build2.biosequence_name)","Biosequence Name"],
       ["enrichment",$enrichment_sql,"Enrichment"],
-      ["presence_level_1",$presence_level_sql[1],"Presence Level Build 1"],
-      ["n_observations_1",$n_obs_sql[1],"N Obs Build 1"],
-      ["obs_per_100K_1",$per_100K_sql[1],"Norm Obs per 100K Build 1"],
-      ["represented_by_biosequence_1",$represented_by_biosequence_sql[1],
-          "Build 1 Protein Group"],
-      ["indist_from",$indist_from_sql,"Indistinguishable from in Build 2"],
-      ["presence_level_2",$presence_level_sql[2],"Presence Level Build 2"],
-      ["n_observations_2",$n_obs_sql[2],"N Obs Build 2"],
-      ["obs_per_100K_2",$per_100K_sql[2],"Norm Obs per 100K Build 2"],
-      ["represented_by_biosequence_2",$represented_by_biosequence_sql[2],
-          "Build 2 Protein Group"],
-      ["biosequence_description",$biosequence_description_sql,
-          "Protein Description"],
+      ["presence_level_1","build1.level_name","Presence Level Build 1"],
+      ["n_observations_1","build1.n_observations","N Obs Build 1"],
+      ["pct_coverage_1","build1.percentage_coverage", "Percent Coverage 1"],
+      ["n_distinct_peptides_1","build1.n_distinct_peptides", "# Distinct Peptides 1"],
+      ["obs_per_100K_1","$per_100K_sql[1]","Norm Obs per 100K Build 1"],
+      ["represented_by_biosequence_1","build1.rep_biosequence_name", "Build 1 Protein Group"],
+      ["indist_from","build2.ref_biosequence_name","Indistinguishable from in Build 2"],
+      ["presence_level_2","build2.level_name","Presence Level Build 2"],
+      ["n_observations_2","build2.n_observations","N Obs Build 2"],
+      ["n_distinct_peptides_2","build2.n_distinct_peptides", "# Distinct Peptides 2"],
+      ["pct_coverage_2","build2.percentage_coverage", "Percent Coverage 2"],
+      ["obs_per_100K_2","$per_100K_sql[2]","Norm Obs per 100K Build 2"],
+      ["represented_by_biosequence_2","build2.rep_biosequence_name","Build 2 Protein Group"],
+      ["biosequence_description","cast(build1.biosequence_desc as varchar(255))","Protein Description"],
   );
 
   ### Combine the above info into SQL for the SELECT part of the query
@@ -553,270 +506,48 @@ sub handle_request {
 		      column_titles_ref=>\@column_titles
     );
 
-  my @requested_protids;
+
+  my $select = qq~ 
+    SELECT
+		$limit_clause
+		$columns_clause
+  ~;
+
+  my $sql ='';
   if ($comparison_type eq "intersection") {
-    @requested_protids = @intersection;
+   #### Get the intersection (build 1 canonicals also in build 2 exhaustive set) 
+    $sql .= qq~
+        $select 
+        FROM ($canonical_sqls[1] )build1
+        JOIN ($exhaust_prot_sqls[2]) build2 on (build1.biosequence_name = build2.biosequence_name)
+        WHERE 1=1
+     ~; 
   } elsif ($comparison_type eq "build_1_not_build_2") {
-    @requested_protids = @difference;
+    #### Get the difference (build 1 canonicals NOT in build 2 exhaustive set). 
+    $sql .= qq~
+			$select
+			FROM ($canonical_sqls[1] )build1
+		  LEFT JOIN ($exhaust_prot_sqls[2]) build2 ON ( build1.biosequence_name = build2.biosequence_name)
+			WHERE 1=1 
+      AND build2.biosequence_name is null 
+    ~;
   } elsif ($comparison_type eq "enrich_build_1") {
-    @requested_protids = @{$canonicals_arefs[1]};
+    $sql .= qq~
+      $select
+      FROM ($canonical_sqls[1] )build1
+      LEFT JOIN ($exhaust_prot_sqls[2]) build2 ON ( build1.biosequence_name = build2.biosequence_name)
+      WHERE 1=1
+      AND build1.biosequence_name is not null
+    ~;
   } elsif ($comparison_type eq "union") {
-    @requested_protids = @{$canonicals_arefs[1]};
+    $sql .= qq~
+      $select
+      FROM ($canonical_sqls[1] )build1
+      FULL JOIN ($exhaust_prot_sqls[2]) build2 ON ( build1.biosequence_name = build2.biosequence_name)
+      WHERE 1=1
+      AND (build1.biosequence_name is not null OR (build1.biosequence_name is  null and build2.level_name='canonical'))
+    ~;
   }
-
-  my $protids_sql = list2sql(\@requested_protids);
-  if ( ! scalar @requested_protids) {
-    $protids_sql = "( 'foobarbaz' )";
-  }
-
-  ### Convert a perl list into a string that SQL can understand
-  sub list2sql {
-    my $list_ref = shift;
- 
-    my $sql = "( '";
-    for my $item ( @{$list_ref} ) {
-      $sql .= $item . "','";
-    }
-    chop $sql;
-    chop $sql;
-    $sql .= ")";
-    return $sql;
-  }
-
-  ### Build the SQL query by first constructing several subqueries.
-  my $build1_joins = qq~
-    INNER JOIN $TBAT_PROTEIN_IDENTIFICATION pid1
-      ON pid1.biosequence_id = bs.biosequence_id
-    INNER JOIN $TBAT_ATLAS_BUILD AB1
-      ON ( AB1.atlas_build_id = PID1.atlas_build_id )
-    INNER JOIN $TBAT_BIOSEQUENCE_SET BSS1
-      ON ( BSS1.biosequence_set_id = AB1.biosequence_set_id )
-    INNER JOIN $TBAT_BIOSEQUENCE BS_REP1
-      ON ( BS_REP1.biosequence_id = PID1.represented_by_biosequence_id )
-      AND ( BS_REP1.biosequence_set_id = BSS1.biosequence_set_id)
-    JOIN $TBAT_PROTEIN_PRESENCE_LEVEL ppl1
-      ON ppl1.protein_presence_level_id = pid1.presence_level_id
-  ~;
-
-  my $build2_joins = qq~
-    INNER JOIN $TBAT_PROTEIN_IDENTIFICATION pid2
-      ON pid2.biosequence_id = bs.biosequence_id
-      $atlas_build_clause[2]
-    INNER JOIN $TBAT_ATLAS_BUILD AB2
-      ON ( AB2.atlas_build_id = PID2.atlas_build_id )
-    INNER JOIN $TBAT_BIOSEQUENCE_SET BSS2
-      ON ( BSS2.biosequence_set_id = AB2.biosequence_set_id )
-    INNER JOIN $TBAT_BIOSEQUENCE BS_REP2
-      ON ( BS_REP2.biosequence_id = PID2.represented_by_biosequence_id )
-      AND ( BS_REP2.biosequence_set_id = BSS2.biosequence_set_id)
-    INNER JOIN $TBAT_PROTEIN_PRESENCE_LEVEL ppl2
-      ON ppl2.protein_presence_level_id = pid2.presence_level_id
-  ~;
-
-  ### Get all canonical protids in build 1 that have a protein
-  ### identification in build 2
-  my $canonicals_build1_pid_build2_sql = qq~
-    SELECT
-      $limit_clause
-      $biosequence_name_sql,
-      $enrichment_sql AS 'enrichment',
-      $presence_level_sql[1],
-      $n_obs_sql[1],
-      $per_100K_sql[1],
-      $represented_by_biosequence_sql[1],
-      NULL as '$indist_from_sql',
-      $presence_level_sql[2],
-      $n_obs_sql[2],
-      $per_100K_sql[2],
-      $represented_by_biosequence_sql[2],
-      $biosequence_description_sql
-    FROM $TBAT_BIOSEQUENCE bs
-      $build1_joins
-      $build2_joins
-    WHERE
-     1=1
-     $atlas_build_clause[1]
-    AND bs.biosequence_name in $protids_sql
-  ~;
-
-
-  ### Get all canonical protids in build 1 that are indistinguishable in
-  ### build 2. Can't use $build2_joins; it has BS instead of BS_REF
-  my $canonicals_build1_indist_build2_sql = qq~
-    SELECT
-      $limit_clause
-      $columns_clause
-    FROM $TBAT_BIOSEQUENCE bs
-      $build1_joins
-    INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP bsr2
-      ON bsr2.related_biosequence_id = bs.biosequence_id
-    INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE bsrt
-      ON bsrt.biosequence_relationship_type_id = bsr2.relationship_type_id
-    INNER JOIN $TBAT_BIOSEQUENCE bs_ref
-      ON bs_ref.biosequence_id = bsr2.reference_biosequence_id
-    INNER JOIN $TBAT_PROTEIN_IDENTIFICATION pid2
-      ON pid2.biosequence_id = bs_ref.biosequence_id
-    INNER JOIN $TBAT_ATLAS_BUILD AB2
-      ON ( AB2.atlas_build_id = PID2.atlas_build_id )
-    INNER JOIN $TBAT_BIOSEQUENCE_SET BSS2
-      ON ( BSS2.biosequence_set_id = AB2.biosequence_set_id )
-    INNER JOIN $TBAT_BIOSEQUENCE BS_REP2
-      ON ( BS_REP2.biosequence_id = PID2.represented_by_biosequence_id )
-    AND ( BS_REP2.biosequence_set_id = BSS2.biosequence_set_id)
-    INNER JOIN $TBAT_PROTEIN_PRESENCE_LEVEL ppl2
-      ON ppl2.protein_presence_level_id = pid2.presence_level_id
-    WHERE
-     1=1
-     $atlas_build_clause[1]
-     $atlas_build_clause[2]
-     $bsr_atlas_build_clause[2]
-    AND bs.biosequence_name in $protids_sql
-  ~;
-
-
-  ### Get all canonical protids in build 1 that are identical to an
-  ### indistinguishable in build 2
-  my $canonicals_build1_ident_build2_sql = qq~
-    SELECT
-      $limit_clause
-      $columns_clause
-    FROM $TBAT_BIOSEQUENCE bs   
-      $build1_joins
-    INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP bsr1  
-      ON bsr1.related_biosequence_id = bs.biosequence_id
-    INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE bsrt1  
-      ON bsrt1.biosequence_relationship_type_id = bsr1.relationship_type_id
-    INNER JOIN $TBAT_BIOSEQUENCE bs_ref 
-      ON bs_ref.biosequence_id = bsr1.reference_biosequence_id
-    INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP bsr2 
-      ON bsr2.related_biosequence_id = bs_ref.biosequence_id
-    INNER JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE bsrt 
-      ON bsrt.biosequence_relationship_type_id = bsr2.relationship_type_id
-    INNER JOIN $TBAT_BIOSEQUENCE bs_ref2  
-      ON bs_ref2.biosequence_id = bsr2.reference_biosequence_id
-    INNER JOIN $TBAT_PROTEIN_IDENTIFICATION pid2  
-      ON pid2.biosequence_id = bs_ref2.biosequence_id
-    INNER JOIN $TBAT_ATLAS_BUILD AB2
-      ON ( AB2.atlas_build_id = PID2.atlas_build_id )
-    INNER JOIN $TBAT_BIOSEQUENCE_SET BSS2
-      ON ( BSS2.biosequence_set_id = AB2.biosequence_set_id )
-    INNER JOIN $TBAT_BIOSEQUENCE BS_REP2
-      ON ( BS_REP2.biosequence_id = PID2.represented_by_biosequence_id )
-      AND ( BS_REP2.biosequence_set_id = BSS2.biosequence_set_id)
-    INNER JOIN $TBAT_PROTEIN_PRESENCE_LEVEL ppl2  
-      ON ppl2.protein_presence_level_id = pid2.presence_level_id
-    WHERE
-     1=1
-     $atlas_build_clause[1]
-     $atlas_build_clause[2]
-     $bsr_atlas_build_clause[1]
-     $bsr_atlas_build_clause[2]
-    AND bs.biosequence_name in $protids_sql
-    AND bsrt1.relationship_name = 'identical'
-    AND bsrt.relationship_name = 'indistinguishable'
-  ~;
-
-  #### The three clauses above will be used only in combination.
-  #### Join them with UNIONs.
-  my $canonicals_build1_in_build2_sql = qq~
-    ( $canonicals_build1_pid_build2_sql )
-   UNION
-    ( $canonicals_build1_indist_build2_sql )
-   UNION
-    ( $canonicals_build1_ident_build2_sql )
-  ~;
-
-
-  ### Get all canonical protids in build 1 that are completely absent
-  ### in build 2
-  my $canonicals_build1_not_build2_sql;
-  if (scalar @difference) {
-    $protids_sql = list2sql(\@difference);
-  } else {
-    $protids_sql = "( 'foobarbaz' )";
-  }
-  $canonicals_build1_not_build2_sql = qq~
-    SELECT
-      $limit_clause
-      $biosequence_name_sql,
-      $enrichment_no_pid2_sql AS 'enrichment',
-      $presence_level_sql[1],
-      $n_obs_sql[1],
-      $per_100K_sql[1],
-      $represented_by_biosequence_sql[1],
-      NULL as '$indist_from_sql',
-      NULL as '$presence_level_sql[2]',
-      NULL as '$n_obs_sql[2]',
-      NULL as '$per_100K_sql[2]',
-      NULL as '$represented_by_biosequence_sql[2]',
-      $biosequence_description_sql
-    FROM $TBAT_BIOSEQUENCE bs
-      $build1_joins
-    WHERE
-     1=1
-     $atlas_build_clause[1]
-      AND bs.biosequence_name in $protids_sql
-  ~;
-
-
-  ### Get all canonical protids in build 2 that are completely absent
-  ### in build 1
-  if (scalar @build2_novel_canonicals) {
-    $protids_sql = list2sql(\@build2_novel_canonicals);
-  } else {
-    $protids_sql = "( 'foobarbaz' )";
-  }
-  my $canonicals_build2_not_build1_sql = qq~
-    SELECT
-      $limit_clause
-      $biosequence_name_sql,
-      NULL as 'enrichment',
-      NULL as '$presence_level_sql[1]',
-      NULL as '$n_obs_sql[1]',
-      NULL as '$per_100K_sql[1]',
-      NULL as '$represented_by_biosequence_sql[1]',
-      NULL as '$indist_from_sql',
-      $presence_level_sql[2],
-      $n_obs_sql[2],
-      $per_100K_sql[2],
-      $represented_by_biosequence_sql[2],
-      $biosequence_description_sql
-    FROM $TBAT_BIOSEQUENCE bs   
-      $build2_joins
-    WHERE
-      bs.biosequence_name in $protids_sql
-  ~;
-
-
-  #### Build core SQL for each comparison type by combining
-  #### the clauses constructed above
-  if ($comparison_type eq "enrich_build_1") {
-    $sql = qq~
-     ( $canonicals_build1_in_build2_sql )
-    UNION
-     ( $canonicals_build1_not_build2_sql )
-      ~;
-  } elsif ($comparison_type eq "union") {
-    $sql = qq~
-     ( $canonicals_build1_in_build2_sql )
-    UNION
-     ( $canonicals_build1_not_build2_sql )
-    UNION
-     ( $canonicals_build2_not_build1_sql )
-      ~;
-  } elsif ( $comparison_type eq "build_1_not_build_2") {
-    $sql = $canonicals_build1_not_build2_sql;
-  } elsif ( $comparison_type eq "intersection") {
-    $sql = $canonicals_build1_in_build2_sql;
-  }
-
-  #### Finally, add the ORDER BY sql
-  $sql .= qq~
-    ORDER BY
-    enrichment DESC,
-    pid1.n_observations DESC
-    ;
-  ~;
 
   #### Certain types of actions should be passed to links
   my $pass_action = "QUERY";
@@ -839,7 +570,6 @@ sub handle_request {
 
 
   #### Define the hypertext links for columns that need them
-  # %NV inserts the value of column N
   %url_cols = (
           'Biosequence Name' => "$CGI_BASE_DIR/PeptideAtlas/GetProtein?protein_name=\%$colnameidx{biosequence_name}V&apply_action=$pass_action",
           'Biosequence Name_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein\'; return true"',
@@ -847,6 +577,7 @@ sub handle_request {
           'Build 1 Protein Group_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Display all biosequences in this group\'; return true"',
           'Indistinguishable from in Build 2' => "$CGI_BASE_DIR/PeptideAtlas/GetProtein?protein_name=\%$colnameidx{indist_from}V&apply_action=$pass_action&atlas_build_id=$atlas_build_id[2]",
           'Indistinguishable from in Build 2_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein\'; return true"',
+          'Presence Level Build 2' => "$CGI_BASE_DIR/PeptideAtlas/GetProtein?protein_name=\%$colnameidx{biosequence_name}V&apply_action=$pass_action&atlas_build_id=$atlas_build_id[2]",
           'Build 2 Protein Group' => "$CGI_BASE_DIR/PeptideAtlas/GetProteins?protein_group_representative_constraint=\%$colnameidx{protein_group_representative}V&apply_action=$pass_action&atlas_build_id=$atlas_build_id[2]",
           'Build 2 Protein Group_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Display all biosequences in this group\'; return true"',
   );        
@@ -855,19 +586,6 @@ sub handle_request {
   #### Define columns that should be hidden in the output table
   # biosequence_accessor is prefix to compose URL
   # biosequence_accessor_suffix is suffix for same
-
-  %hidden_cols = (
-                  # 'Group Number' => 1,
-                  # 'Chromosome' => 1,
-		  # 'biosequence_accession' => 1,
-		  # 'biosequence_accessor' => 1,
-		  # 'biosequence_accessor_suffix' => 1,
-	          # 'ppl_sort_order' => 1,
-                  # 'brt_sort_order' => 1,
-                  # 'Organism' => 1,
-  );
-
-
 
 
   #########################################################################
@@ -912,7 +630,7 @@ sub handle_request {
 
       #### Show the SQL that will be or was executed
       if ($show_sql) {
-	  $sbeams->display_sql(sql=>$sql);
+				$sbeams->display_sql(sql=>$sql,use_tabbed_panes => 1,);
       }
 
       #### Fetch the results from the database server
@@ -922,136 +640,66 @@ sub handle_request {
       );
     }
 
+    my $venn_html='';
     #### Define explanatory text depending on set operation.
     if ($sbeams->output_mode() eq 'html') {
       my $explanatory_text;
       if ($comparison_type eq "intersection") {
-	$explanatory_text =
-	    "from Build 1 found in exhaustive set for Build 2";
+	      $explanatory_text = "from Build 1 found in exhaustive set for Build 2";
       } elsif ($comparison_type eq "build_1_not_build_2") {
-	$explanatory_text =
-	    "from Build 1 not found in exhaustive set for Build 2";
+      	$explanatory_text = "from Build 1 not found in exhaustive set for Build 2";
       } elsif ($comparison_type eq "enrich_build_1") {
-	$explanatory_text = "from Build 1 displayed";
+	      $explanatory_text = "from Build 1 displayed";
       } elsif ($comparison_type eq "union") {
-	$explanatory_text = "in Build 1 and Build 2 combined.<br>";
-	$explanatory_text .=
-	   "Note: Combining of canonicals from two builds employs ".
-	   "a heuristic process to eliminate redundant identifiers, and is not ".
-	   "a symmetric operation.<br>If you swap builds, the results will ".
-	   "be somewhat different.";
+      	$explanatory_text = "in Build 1 and Build 2 combined.<br>";
+      	$explanatory_text .= "Note: Combining of canonicals from two builds employs ".
+														 "a heuristic process to eliminate redundant identifiers, and is not ".
+														 "a symmetric operation.<br>If you swap builds, the results will ".
+														 "be somewhat different.";
       }
 
       #### Draw graphical depiction of the overlap between the two
       #### atlases.
-
-      # Draw canonical-1/canonical-2
-      my $VennChart = new Venn::Chart( 280, 280 ) or die("error : $!");
-      $VennChart->set( -title => 'Protein Identifiers' );
-      $VennChart->set_legends( 'Build 1 Canonical', 'Build 2 Canonical');
-      my $gd_venn = $VennChart->plot($canonicals_arefs[1], $canonicals_arefs[2]);
-      my $pid = $$;
-      my $venn_file_name = $pid . "CBP_Venn2.png";
-      my $tmp_img_path = "images/tmp";
-      my $venn_img_file2 = "$PHYSICAL_BASE_DIR/$tmp_img_path/$venn_file_name";
-      open( my $fh_venn, '>', $venn_img_file2 );
-      binmode $fh_venn;
-      print {$fh_venn} $gd_venn->png;
-      close($fh_venn);
-      
-      # Create a histogram image of the same data
-      my $gd_histogram = $VennChart->plot_histogram;
-      my $histo_file_name = $pid . "CBP_histo.png";
-      my $histo_img_file = "$PHYSICAL_BASE_DIR/$tmp_img_path/$histo_file_name";
-
-      open( my $fh_histo, '>', $histo_img_file );
-      binmode $fh_histo;
-      print {$fh_histo} $gd_histogram->png;
-      close($fh_histo);
-      
-      # Draw canonical-1/canonical-2/exhaustive-2
-      my @build2_exhaust = keys %{$exhaust_hrefs[2]};
-      my $n_exhaust = scalar @build2_exhaust;
-      $VennChart = new Venn::Chart( 280, 280 ) or die("error : $!");
-      $VennChart->set( -title => 'Protein Identifiers' );
-      $VennChart->set_legends( "Build 1 Canonical ($n_canonicals[1])",
-	 "Build 2 Canonical ($n_canonicals[2])",
-	 "Build 2 Exhaustive ($n_exhaust)");
-      my $gd_venn = $VennChart->plot($canonicals_arefs[1], $canonicals_arefs[2],
-	     \@build2_exhaust);
-      my $pid = $$;
-      my $venn_file_name = $pid . "CBP_Venn3.png";
-      my $venn_img_file3 = "$PHYSICAL_BASE_DIR/$tmp_img_path/$venn_file_name";
-      open( my $fh_venn, '>', $venn_img_file3 );
-      binmode $fh_venn;
-      print {$fh_venn} $gd_venn->png;
-      close($fh_venn);
-      
-      # Get data list for each intersection or unique region between the 3
-      # lists (from synopsis for Venn::Chart)
-#      my @ref_lists = $VennChart->get_list_regions();
-#      my $list_number = 1;
-#      foreach my $ref_region ( @ref_lists ) {
-#        print "List $list_number : @{ $ref_region }\n";
-#        $list_number++;
-#      }
-
-      # Draw the diagrams on the page.
-      print "<table><tr>";
-      my $alt_text;
-
-# Don't see how these ever worked...
-#      $venn_img_file3 =~ s|/net/dblocal/www/html|http://db|;
-#      $venn_img_file2 =~ s|/net/dblocal/www/html|http://db|;
-#      $histo_img_file =~ s|/net/dblocal/www/html|http://db|;
-
-      $histo_img_file = "$HTML_BASE_DIR/$tmp_img_path/$pid" . 'CBP_histo.png';
-      $venn_img_file2 = "$HTML_BASE_DIR/$tmp_img_path/$pid" . 'CBP_Venn2.png';
-      $venn_img_file3 = "$HTML_BASE_DIR/$tmp_img_path/$pid" . 'CBP_Venn3.png';
-
-
-      $alt_text = "Venn diagram showing overlap of canonical protein identifiers for two builds with exhaustive identifiers for second build.";
-      print "<td><img src=\"$venn_img_file3\" alt=\"$alt_text\"></td>\n";
-
-      $alt_text = "Venn diagram showing overlap of canonical protein identifiers in two builds.)";
-      print "<td><img src=\"$venn_img_file2\" alt=\"$alt_text\"></td>\n";
-
-      print "<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>\n";
-
-      $alt_text = "Histogram showing overlap of canonical protein identifiers in two builds.)";
-      print "<td><img src=\"$histo_img_file\" alt=\"$alt_text\"></td>";
-
-      print "<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>\n";
-    
-      print "</tr></table>\n";
-
-
-      # Delete the image files now that we're done with them.
-      # (enable once the images are actually displayed; for now we need
-      #  the image files to persist so that we can open them separately)
-  #    system "rm -f $venn_img_file2 $venn_img_file3 $histo_img_file";
+       my @build2_exhaust = keys %{$exhaust_hrefs[2]};
+       my $n_build2_exhaust = scalar @build2_exhaust;
+       my $venn1 = $sbeamsMOD->draw_venn(data => [($canonicals_arefs[1], $canonicals_arefs[2])],
+																				 data_label=> [("Build 1 Canonical", "Build 2 Canonical")],
+																				 title => "Protein Identifiers",
+																				 id => 'venn1',
+                                         proportion=> 'no');
+       
+       my $venn2 = $sbeamsMOD->draw_venn(data => [($canonicals_arefs[1], $canonicals_arefs[2], \@build2_exhaust)],
+                                         data_label=> [("Build 1 Canonical", "Build 2 Canonical", "Build 2 Exhaustive")],
+                                         title => "Protein Identifiers",
+                                         id => 'venn2',
+                                         proportion=> 'no');
 
       #### Display statistics about the resultset
+
       my $n_rows = scalar(@{$resultset_ref->{data_ref}});
   #    print "<p>&nbsp;<p>";
-      print "<b>$n_rows canonical protein sequences</b> $explanatory_text.<br>\n";
-      my $percent = sprintf("%4.1f", 100 * $n_rows / $n_canonicals[1]);
-  #    print "<p>";
-  #    if (($comparison_type eq "intersection") ||
-  #	($comparison_type eq "build_1_not_build_2") ||
-  #	($comparison_type eq "union")) {
-  #      print "<b>Build 1:</b> $n_canonicals[1] total canonicals";
-  #    }
-      if (($comparison_type eq "intersection") ||
-	  ($comparison_type eq "build_1_not_build_2")) {
-	print " ($percent% of Build 1 total)";
+      $venn_html = qq~
+        <TABLE>
+        <tr>
+        <td><div id="venn1"></div></td>
+        <td><div id="venn2"></div></td>
+        </tr>
+        </TABLE>
+        <ul style="font-weight: bold">
+          <li> Build 1 ($atlas_build_name[1]) canonical ($n_canonicals[1]) </li>
+          <li> Build 2 ($atlas_build_name[2]) canonical ($n_canonicals[2]) </li>
+          <li> Build 2 exhaustive ($n_build2_exhaust) </li>
+        </ul>
+        <b>$n_rows canonical protein sequences</b> $explanatory_text.<br>
+        $venn1
+        $venn2 
+      ~;
+      my $percent = 0;# sprintf("%4.1f", 100 * $n_rows / $n_canonicals[1]);
+      if (($comparison_type eq "intersection") || ($comparison_type eq "build_1_not_build_2")) {
+       	 $venn_html .= " ($percent% of Build 1 total)";
       }
-      print "<br>\n";
-  #    print "<b>Build 2</b>: $n_canonicals[2] total canonicals<br>\n";
-  #    print "<p>&nbsp;<p>&nbsp;</p>\n";
-  #    print "</b>";
-
-  }
+      $venn_html . "<br>\n";
+    }
 
     #### Store the resultset and parameters to disk resultset cache
     $rs_params{set_name} = "SETME";
@@ -1062,30 +710,28 @@ sub handle_request {
       resultset_params_ref=>\%rs_params,
       query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
       column_titles_ref=>\@column_titles,
+      use_tabbed_panes => 1, 
     );
-
-    #### Finish the upper part of the page and go begin the full-width
-    #### data portion of the page
-    $sbeams->display_page_footer(close_tables=>'YES',
-      separator_bar=>'YES',display_footer=>'NO');
 
 
     #### Display table help
     my $obs_help = get_table_help( 'proteins' );
-    my $tr = "";
-    print qq~ <TABLE><TR $tr><TD ALIGN=left>$obs_help</TD></TR></TABLE>
+    my $tr = qq~ $venn_html
+              <TABLE><TR><TD ALIGN=left>$obs_help</TD></TR></TABLE>
       ~ if ( $sbeams->output_mode() eq 'html' );
-
+ 
     #### Display the resultset
     $sbeams->displayResultSet(
       resultset_ref=>$resultset_ref,
       query_parameters_ref=>\%parameters,
       rs_params_ref=>\%rs_params,
+      column_help=>$tr, 
       url_cols_ref=>\%url_cols,
       hidden_cols_ref=>\%hidden_cols,
       max_widths=>\%max_widths,
       column_titles_ref=>\@column_titles,
       base_url=>$base_url,
+      use_tabbed_panes => 1,
     );
 
 
@@ -1095,6 +741,7 @@ sub handle_request {
       query_parameters_ref=>\%parameters,
       rs_params_ref=>\%rs_params,
       base_url=>$base_url,
+      use_tabbed_panes => 1,
     );
 
 
@@ -1105,7 +752,13 @@ sub handle_request {
       query_parameters_ref=>\%parameters,
       column_titles_ref=>\@column_titles,
       base_url=>$base_url,
+      use_tabbed_panes => 1,
     );
+    #### Finish the upper part of the page and go begin the full-width
+    #### data portion of the page
+    $sbeams->display_page_footer(close_tables=>'YES',use_tabbed_panes => 1,
+      separator_bar=>'YES',display_footer=>'NO');
+
 
   #### If QUERY was not selected, then tell the user to enter some parameters
   } else {

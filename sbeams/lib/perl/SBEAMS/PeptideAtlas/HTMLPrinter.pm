@@ -4023,6 +4023,105 @@ sub draw_tree{
 }
 
 
+sub draw_venn {
+  my $self = shift;
+  my %args =@_;
+  my @data = @{$args{data}};
+  my $data_label = $args{data_label} || ();
+  my $title = $args{title} || '';
+  my $divid = $args{id} || 'venn';
+  my $proportion = $args{proportion} || 'yes';
+
+  return '' if (! @data || @data == 1 );
+  my %values = ();
+  my %summary = ();
+  my %unique=();
+  my $n_set = scalar @data ;
+  my $i=1;
+  my @n = (0..$n_set-1);
+
+  sub combine;
+  while ($i <= $n_set){
+    foreach (combine [@n], $i){
+      $summary{join(",", @$_)} = 0
+    } 
+    $i++;
+  }
+
+  for (my $i=0; $i<$n_set; $i++){
+    my $n=scalar @{$data[$i]};
+    $summary{$i} = $n;
+    foreach my $val (@{$data[$i]}){
+			$values{$val}{$i}=1;
+    }
+  }
+
+  foreach my $val (keys %values){
+    my $set  = join(',', sort {$a <=> $b} keys %{$values{$val}});
+    if ($set =~ /,/){
+      $summary{$set}++;
+    }else{
+      $unique{$set}++;
+    }
+  }
+
+  my $html = qq~
+		<script src="../../usr/javascript/d3_venn/d3.v4.min.js"></script>
+		<script src="../../usr/javascript/d3_venn/venn.js"></script>
+    <script> 
+    var sets=[~;
+
+  my $sep = ''; 
+  foreach my $s (sort {$a <=> $b} keys %summary){
+    my $text = '';
+    if ($s !~ /,/){
+      $text = "$data_label->[$s] ". ($unique{$s} || 0);
+    }else{
+      $text ="$summary{$s}";
+    }
+    if( $proportion eq 'no'){
+      my $size = 100;
+      if (length($s) > 1){
+        my @m = $s =~ /(\d+)/g;
+        my $n = scalar @m;
+        $size = ($n-1)/($n_set-1) * 50;
+      }
+      $html .= qq~$sep\n{"sets": [$s], "label": "$text", "size": $size}~;
+    }else{
+      $html .= qq~$sep\n{"sets": [$s], "label": "$text", "size":$summary{$s}}~;
+    }
+    $sep = ',';
+  }
+  $html .= "];\n";
+  $html .=qq~
+      var chart = venn.VennDiagram()
+                             .width(300)
+                             .height(300);
+			d3.select("#$divid").datum(sets).call(chart);
+      var areas = d3.selectAll("#$divid g");
+      areas.select("text")
+           .style("fill-opacity", 1)
+					.style("font-weight", "bold");
+
+   </script>
+  ~;
+
+}
+
+sub combine {
+
+  my ($list, $n) = @_;
+  die "Insufficient list members" if $n > @$list;
+  return map [$_], @$list if $n <= 1;
+  my @comb;
+  for (my $i = 0; $i+$n <= @$list; ++$i) {
+    my $val  = $list->[$i];
+    my @rest = @$list[$i+1..$#$list];
+    push @comb, [$val, @$_] for combine \@rest, $n-1;
+  }
+  return @comb;
+}
+
 1;
 
 __END__
