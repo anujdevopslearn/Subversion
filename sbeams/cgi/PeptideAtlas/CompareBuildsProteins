@@ -390,22 +390,46 @@ sub handle_request {
        AND (BS$i.biosequence_name not like 'DECOY%' AND BS$i.biosequence_name not like 'CONTAM%')
        )
 			 UNION
-			 (SELECT BS2$i.biosequence_name as BIOSEQUENCE_NAME, 
+			 (SELECT BS$i.biosequence_name as BIOSEQUENCE_NAME, 
               BRT$i.RELATIONSHIP_NAME AS LEVEL_NAME, 
-              BS_REP2$i.BIOSEQUENCE_NAME AS REP_BIOSEQUENCE_NAME,
-              BS_REF2$i.BIOSEQUENCE_NAME AS REF_biosequence_name,
+              BS_REP$i.BIOSEQUENCE_NAME AS REP_BIOSEQUENCE_NAME,
+              BS_REF$i.BIOSEQUENCE_NAME AS REF_biosequence_name,
               NULL AS norm_PSMs_per_100K,
               NULL AS N_OBSERVATIONS,
               NULL AS n_distinct_peptides, 
               BR$i.related_biosequence_percentage_coverage as percentage_coverage
-			 FROM  $databases{$i}.BIOSEQUENCE_RELATIONSHIP BR$i
+			 FROM $databases{$i}.BIOSEQUENCE_RELATIONSHIP BR$i
 			 JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT$i ON (BR$i.RELATIONSHIP_TYPE_ID = BRT$i.BIOSEQUENCE_RELATIONSHIP_TYPE_ID)
-       JOIN $databases{$i}.PROTEIN_IDENTIFICATION PID2$i ON (PID2$i.biosequence_id = BR$i.reference_biosequence_id)
-       JOIN $TBAT_BIOSEQUENCE BS2$i ON (BS2$i.BIOSEQUENCE_ID = BR$i.RELATED_BIOSEQUENCE_ID)
-       JOIN $TBAT_BIOSEQUENCE BS_REP2$i ON (BS_REP2$i.BIOSEQUENCE_ID =PID2$i.REPRESENTED_BY_BIOSEQUENCE_ID)
-       JOIN $TBAT_BIOSEQUENCE BS_REF2$i ON (BS_REF2$i.BIOSEQUENCE_ID = BR$i.reference_biosequence_id) 
-			 WHERE PID2$i.atlas_build_id IN ($atlas_build_id[$i])
-       AND (BS2$i.biosequence_name not like 'DECOY%' AND BS2$i.biosequence_name not like 'CONTAM%')
+       JOIN $databases{$i}.PROTEIN_IDENTIFICATION PID$i ON (PID$i.biosequence_id = BR$i.reference_biosequence_id)
+       JOIN $TBAT_BIOSEQUENCE BS$i ON (BS$i.BIOSEQUENCE_ID = BR$i.RELATED_BIOSEQUENCE_ID)
+       JOIN $TBAT_BIOSEQUENCE BS_REP$i ON (BS_REP$i.BIOSEQUENCE_ID =PID$i.REPRESENTED_BY_BIOSEQUENCE_ID)
+       JOIN $TBAT_BIOSEQUENCE BS_REF$i ON (BS_REF$i.BIOSEQUENCE_ID = BR$i.reference_biosequence_id) 
+			 WHERE PID$i.atlas_build_id IN ($atlas_build_id[$i])
+       AND BR$i.atlas_build_id IN ($atlas_build_id[$i])
+       AND (BS$i.biosequence_name not like 'DECOY%' AND BS$i.biosequence_name not like 'CONTAM%')
+       )
+       UNION
+       (
+       SELECT BS$i.biosequence_name as BIOSEQUENCE_NAME,
+              BRT$i.RELATIONSHIP_NAME AS LEVEL_NAME,
+              BS_REP$i.BIOSEQUENCE_NAME AS REP_BIOSEQUENCE_NAME,
+              BS_REF$i.BIOSEQUENCE_NAME AS REF_biosequence_name,
+              NULL AS norm_PSMs_per_100K,
+              NULL AS N_OBSERVATIONS,
+              NULL AS n_distinct_peptides,
+              BR2$i.related_biosequence_percentage_coverage as percentage_coverage
+       FROM $databases{$i}.BIOSEQUENCE_RELATIONSHIP BR$i
+       JOIN $databases{$i}.BIOSEQUENCE_RELATIONSHIP BR2$i 
+            ON (BR$i.reference_biosequence_id = BR2$i.related_biosequence_id
+            and BR2$i.atlas_build_id = $atlas_build_id[$i]
+            and BR$i.atlas_build_id  = $atlas_build_id[$i]) 
+       JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT$i ON (BR$i.RELATIONSHIP_TYPE_ID = BRT$i.BIOSEQUENCE_RELATIONSHIP_TYPE_ID)
+       JOIN $databases{$i}.PROTEIN_IDENTIFICATION PID$i ON (PID$i.biosequence_id = BR2$i.reference_biosequence_id)
+       JOIN $TBAT_BIOSEQUENCE BS$i ON (BS$i.BIOSEQUENCE_ID = BR$i.RELATED_BIOSEQUENCE_ID)
+       JOIN $TBAT_BIOSEQUENCE BS_REP$i ON (BS_REP$i.BIOSEQUENCE_ID =PID$i.REPRESENTED_BY_BIOSEQUENCE_ID)
+       JOIN $TBAT_BIOSEQUENCE BS_REF$i ON (BS_REF$i.BIOSEQUENCE_ID = BR$i.reference_biosequence_id)
+       WHERE PID$i.atlas_build_id IN ($atlas_build_id[$i])
+       AND (BS$i.biosequence_name not like 'DECOY%' AND BS$i.biosequence_name not like 'CONTAM%')
        )
 		~;
     $exhaust_prot_sqls[$i] = $exhaust_prot_sql;
