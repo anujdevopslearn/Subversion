@@ -650,6 +650,7 @@ sub get_color_def {
                  'uniq_non_tryptic'  => '#C5B4E3',
                  'multi_tryptic'     => 'firebrick',
                  'multi_non_tryptic' => '#ffad4e',
+                 'uniq_prot_calling' => 'cornflowerblue',
 														 Signal => 'cornflowerblue',
 														 Anchor => 'lightskyblue',
 											Transmembrane => 'royalblue',
