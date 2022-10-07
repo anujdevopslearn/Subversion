@@ -2223,12 +2223,16 @@ sub get_sequence_graphic {
       my $source_tag = 'multi_non_tryptic';
       if ($args{pep_info}->{$pep}{is_unique} eq ''){
         $source_tag = 'Observed';
-      }elsif ( $args{pep_info}->{$pep}{is_unique} eq 'Y'){
+      }elsif ( $args{pep_info}->{$pep}{is_unique}  =~ /[YC]/){
         $is_unique_peptide_col=1;
-        $source_tag = 'uniq_non_tryptic';
-				if ($args{pep_info}->{$pep}{highest_n_enzymatic_termini} == 2){
-					$source_tag =~ s/non_//;
-				}
+        if ($args{pep_info}->{$pep}{is_unique}  eq 'Y'){
+           $source_tag = 'uniq_prot_calling';
+        }else{
+					$source_tag = 'uniq_non_tryptic';
+					if ($args{pep_info}->{$pep}{highest_n_enzymatic_termini} == 2){
+						$source_tag =~ s/non_//;
+					}
+        }
       }else{
         $is_unique_peptide_col =1;
       }
@@ -2851,7 +2855,8 @@ sub get_sequence_graphic {
                 ok => "Likely to be observed",
               );
  
-   if ($is_unique_peptide_col == 1){ 
+   if ($is_unique_peptide_col == 1){
+     push @legend, "<TR><TD style='background:$colors{uniq_prot_calling};'><TD class=sm_txt>Uniquely-mapping protein calling peptide</TD></TR>\n"; 
 		 push @legend, "<TR><TD style='background:$colors{uniq_tryptic};'><TD class=sm_txt>Uniquely-mapping tryptic peptide</TD></TR>\n";
 		 push @legend, "<TR><TD style='background:$colors{uniq_non_tryptic};'><TD class=sm_txt>Uniquely-mapping non-tryptic peptide</TD></TR>\n";
 		 push @legend, "<TR><TD style='background:$colors{multi_tryptic};'><TD class=sm_txt>Multi-mapping and tryptic peptide</TD></TR>\n";
