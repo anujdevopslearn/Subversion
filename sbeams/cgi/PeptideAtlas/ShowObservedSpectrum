@@ -2017,9 +2017,10 @@ sub getSpectrumFromMzmlFile {
 
   #### Create a virtual filename to fetch the spectrum
   #### Note that we have to use an EL7 compiled version while the server is still on EL7
-  my $filename = "/proteomics/sw/tpp-6.0.0/bin/readmzXML $filePath $scanNumber |";
+  #my $READMZXML = "/proteomics/sw/tpp-6.0.0/bin/readmzXML";
   # Switch temporarily to Luis's compiled version
-  #my $filename = "/proteomics/lmendoza/sw/tpp/bin/readmzXML $filePath $scanNumber |";
+  my $READMZXML = "/proteomics/lmendoza/sw/misc/readmzXML_TPP600";
+  my $filename = "$READMZXML $filePath $scanNumber |";
   print "Fetch command: $filename\n" if ($verbose);
 
   #### Try to open the spectrum for reading
@@ -2032,6 +2033,7 @@ sub getSpectrumFromMzmlFile {
   #### Read the spectrum data
   my @mz_intensities;
   my $observedPrecursorMz = 0;
+  my $precursorScan = 0;
   my $charge = 0;
   my $nativeId = '';
   my $filterLine = '';
@@ -2046,6 +2048,11 @@ sub getSpectrumFromMzmlFile {
     }
     if ( $line =~ /precursorZ: ([\d]+)/ ) {
       $charge = $1;
+      next;
+    }
+
+    if ( $line =~ /precursorScan: ([\d]+)/ ) {
+      $precursorScan = $1;
       next;
     }
 
@@ -2103,6 +2110,29 @@ sub getSpectrumFromMzmlFile {
   $proxiSpectrum->{mzs} = \@mzs;
   $proxiSpectrum->{intensities} = \@intensities;
   $response->{proxiSpectrum} = $proxiSpectrum;
+
+
+  #### Try to read the precursor scan if there is one
+  if ( $precursorScan == 0 ) {
+    return $response;
+  }
+
+  $filename = "$READMZXML $filePath $precursorScan |";
+  unless (open(DTAFILE,$filename)) {
+    $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'MsRunFileNotReadable', statusCode=>500, verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
+      message=>"Specified filePath '$filePath' exists, but cannot be read");
+    return $response;
+  }
+
+  #### Read the spectrum data
+  print "*** Precursor spectrum ***<BR>\n" if ($verbose);
+  while (my $line = <DTAFILE>) {
+    $line =~ s/[\r\n]//g;
+    print "$line<BR>\n" if ($verbose);
+  }
+
+  close(DTAFILE);
+
 
   return $response;
 
