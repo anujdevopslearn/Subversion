@@ -7,7 +7,7 @@ package SBEAMS::Proteomics::SpecViewer;
 #
 # Description : Contains utilities to display spectra in the Lorikeet viewer
 #
-# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2022 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -135,6 +135,7 @@ sub convertMods {
 
 	    if (defined($mass_diff)) {
 	        my $losses = '';
+		# custom neutral losses (other than NH3, H2O, and H3PO4, which are already built into Lorikeet)
 		if ($aa eq "M" && ($mass_diff-15.9949 < 0.01)) {  #Ox
 		  if (!$losses) {
 		    $losses = '[ ';
@@ -142,9 +143,17 @@ sub convertMods {
 		    $losses .= ', ';
 		  }
 		  $losses .= '{ monoLossMass: 63.998285, avgLossMass: 64.11, formula: "CH3SOH" }';
-		  #s.maxNeutralLossCount++;
 		}
-		# add elsif(s) for other losses here, when necessary
+                elsif (($aa eq "S" || $aa eq "T")  && ($mass_diff-27.9949 < 0.01)) {  #Formyl
+                  if (!$losses) {
+                    $losses = '[ ';
+                  } else {
+                    $losses .= ', ';
+                  }
+                  $losses .= '{ monoLossMass: 27.9949, avgLossMass: 28.0101 , formula: "CO" }';
+		}
+		# add more elsif(s) for other losses here, when necessary
+
 		if ($losses) {
 		  $losses = ", losses: $losses ] ";
 		  $nlosses++;
