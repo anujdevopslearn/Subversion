@@ -276,10 +276,11 @@ sub processRequest {
       print("<PRE>\n");
       $sbeams->printDebuggingInfo($q);
       print("</PRE>\n");
-  }
+    }
 
     #### Define the spectrum array. Need something fancier than this
     my @spectrum_array;
+    my @spectrum_array_ms1;
     my $charge = $parameters{assumed_charge};
     my $peptidoform = $parameters{peptide};
     my $convertedPeptidoformStr = $parameters{peptide};
@@ -287,6 +288,9 @@ sub processRequest {
     my $nativeId = '';
     my $spectrumProperties = { 'filterLine'=> '', 'fragmentation_type_id'=> '' };
     my $observedPrecursorMz = 0.0;
+    my $precursorScanNumber = 0;
+    my $selWinLow = 0.0;
+    my $selWinHigh = 0.0;
     my $spectrumName = '';
 
 
@@ -340,7 +344,11 @@ sub processRequest {
 	  my $getSpectrumResult = getSpectrumFromMzmlFile( filePath=> $filePath, scanNumber=>$scanNumber, verbose=>$verbose, debug=>0, quiet=>0, outputDestination=>'STDERR' );
 	  if ( $getSpectrumResult->{status} eq 'OK' ) {
 	    @spectrum_array = @{$getSpectrumResult->{mz}};
+	    @spectrum_array_ms1 = @{$getSpectrumResult->{mz1}};
 	    $observedPrecursorMz = $getSpectrumResult->{observedPrecursorMz};
+	    $precursorScanNumber = $getSpectrumResult->{mz1_scan};
+	    $selWinLow = $getSpectrumResult->{isolation_low};
+	    $selWinHigh = $getSpectrumResult->{isolation_high};
 	    $nativeId = $getSpectrumResult->{nativeId} if ($getSpectrumResult->{nativeId});
 	    $spectrumProperties->{'filterLine'} = $getSpectrumResult->{'filterLine'} if ($getSpectrumResult->{'filterLine'});
 	    $spectrumProperties->{'fragmentation_type_id'} = $getSpectrumResult->{'fragmentation_type_id'} if ($getSpectrumResult->{'fragmentation_type_id'});
@@ -387,13 +395,17 @@ sub processRequest {
 
         }
 
-
       #### Otherwise this USI not available
       } else {
 	writeResponse(response=>$result, output_mode=>$output_mode);
 	if ( $output_mode eq 'HTML' ) {
           #print("<BR><BR><BR><H1><font color=\"red\">One of the main PeptideAtlas storage disk arrays has failed. The disk array is being rebuilt and all data must be restored from backup tape. This process is expected to be complete by January 24, 2020. Until then, the spectrum you have requested is unavailable. We apologize for the problem.</font></H1><BR><BR>\n");
-	  print("<BR><BR><BR><H1><font color=\"red\">The spectrum you have requested is not found in the expected location. Please report this problem.</font></H1><BR><BR>\n");
+	  if ($result->{message}) {
+	    print("<br><br><br><h1 style='color:red'>$result->{message}</h1><br><br>\n");
+	  }
+	  else {
+	    print("<br><br><br><h1 style='color:red'>The spectrum you have requested is not found in the expected location. Please report this problem.</h1><br><br>\n");
+	  }
         }
         return;
       }
@@ -732,10 +744,10 @@ sub processRequest {
           y_ions            => $parameters{'ShowY'},
           z_ions            => $parameters{'ShowZ'},
           spectrum          => \@spectrum_array,
-          selWinLow         => $parameters{selWinLow},
-          selWinHigh        => $parameters{selWinHigh},
-          ms1scanLabel      => $parameters{ms1scanLabel},
-          ms1peaks          => $parameters{ms1peaks},
+          selWinLow         => $selWinLow,
+          selWinHigh        => $selWinHigh,
+          ms1scanLabel      => $precursorScanNumber,
+          ms1peaks          => \@spectrum_array_ms1,
        jsSpectrumDataString => $jsSpectrumDataString
       );
       #### If this is an ion trap spectrum, then set low resolution parameters
@@ -2034,6 +2046,8 @@ sub getSpectrumFromMzmlFile {
   my @mz_intensities;
   my $observedPrecursorMz = 0;
   my $precursorScan = 0;
+  my $selWinLow = 0;
+  my $selWinHigh = 0;
   my $charge = 0;
   my $nativeId = '';
   my $filterLine = '';
@@ -2054,6 +2068,14 @@ sub getSpectrumFromMzmlFile {
     if ( $line =~ /precursorScan: ([\d]+)/ ) {
       $precursorScan = $1;
       next;
+    }
+
+    if ( $line =~ /isolationLower: ([\d\.]+)/ ) {
+      $selWinLow = $1;
+    }
+
+    if ( $line =~ /isolationUpper: ([\d\.]+)/ ) {
+      $selWinHigh = $1;
     }
 
     if ( $line =~ /nativeId:\s*(.+)/ ) {
@@ -2111,6 +2133,11 @@ sub getSpectrumFromMzmlFile {
   $proxiSpectrum->{intensities} = \@intensities;
   $response->{proxiSpectrum} = $proxiSpectrum;
 
+  # Set to defaults to avoid errors 
+  $response->{mz1} = [];
+  $response->{mz1_scan} = $precursorScan;
+  $response->{isolation_low} = $selWinLow;
+  $response->{isolation_high} = $selWinHigh;
 
   #### Try to read the precursor scan if there is one
   if ( $precursorScan == 0 ) {
@@ -2126,13 +2153,26 @@ sub getSpectrumFromMzmlFile {
 
   #### Read the spectrum data
   print "*** Precursor spectrum ***<BR>\n" if ($verbose);
+  my @mz1_intensities;
   while (my $line = <DTAFILE>) {
     $line =~ s/[\r\n]//g;
     print "$line<BR>\n" if ($verbose);
-  }
 
+    #### Skip if this isn't a mass intensity line
+    next if ($line !~ /mass.*inten/);
+
+    #### Extract and store mass intensity information
+    $line =~ /mass\s+(\S+)\s+inten\s+(\S+)/;
+    my $mz = $1 * 1.0;
+    my $intensity = $2 * 1.0;
+    push(@mz1_intensities,[$mz, $intensity]);
+  }
   close(DTAFILE);
 
+  $response->{mz1} = \@mz1_intensities;
+  $response->{mz1_scan} = $precursorScan;
+  $response->{isolation_low} = $selWinLow;
+  $response->{isolation_high} = $selWinHigh;
 
   return $response;
 
