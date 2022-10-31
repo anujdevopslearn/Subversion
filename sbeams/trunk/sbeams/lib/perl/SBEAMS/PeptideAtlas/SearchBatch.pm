@@ -233,9 +233,10 @@ sub findPepXMLFile  {
 
         # prefer iProphet output over PeptideProphet
 	push @possible_names,
-                        'interact-combined.pep.xml',  #iProphet
                         'interact-ipro.pep.xml',      #iProphet
                         'interact-ipro.pep.xml.gz',
+                        'interact-ipro-ptm.pep.xml',
+                        'interact-combined.pep.xml',  #iProphet
                         'interact-prob.pep.xml',
                         'interact-prob.xml',
                         'interact.pep.xml',
@@ -271,27 +272,44 @@ sub getNSpecFromFlatFiles {
 	my $self = shift;
   my %args = @_;
 	$args{search_path} ||= $args{search_batch_path};
-
-  my $pepXMLfile = $self->findPepXMLFile( %args ) || return '';
-  
-	#%spectra = ();
-  #if (-e $pepXMLfile) {
-	  print STDERR "parsing XML file: $pepXMLfile!\n";
-
-  #  my $parser = new XML::Parser( );
-  #  $parser->setHandlers(Start => \&local_start_handler);
-  #  $parser->parsefile($pepXMLfile);
-  #}
-  #my $n0 = keys %spectra;
-  my $cmd = 'perl -ne \'/.*spectrum="([^"]+)(\.\d+)\.\d+.\d+".*/;$scan{$1} =1; $spec{"$1$2"}=1; END {print scalar keys %scan ; print "," . scalar keys %spec ; print "\n"}\'';
-  my $n0;
-  if ($pepXMLfile =~ /.gz$/){
-    $n0 = `zgrep '<spectrum_query' $pepXMLfile|$cmd`;
+  my $n_searched_spectra = 0;
+  my $n_run = 0;
+  my $file = "$args{search_path}/../data/study_metadata.json";
+  if (-e "$file"){
+     my @n_ms2_spectra = `grep n_ms2_spectra $file`;
+     pop @n_ms2_spectra; 
+     foreach my $line (@n_ms2_spectra){
+       chomp $line;
+       if ($line =~ /.*n_ms2_spectra":\s+(\d+)/){
+         $n_searched_spectra += $1;
+         $n_run++;
+       }else{
+          die "ERROR parsing $line in \n\t$file\n";
+       }
+     } 
   }else{
-    $n0 = `grep '<spectrum_query' $pepXMLfile|$cmd`;
+     die "ERROR: missing $file\n"; 
   }
-  chomp $n0;
-  return split(",", $n0);
+
+  if (! $n_run || ! $n_searched_spectra){
+    die "Failed to get n_run and n_searched_spectra in $file\n";
+  }
+
+  return ($n_run, $n_searched_spectra);
+
+#  my $pepXMLfile = $self->findPepXMLFile( %args ) || return '';
+#  if (-e $pepXMLfile) {
+#	  print STDERR "parsing XML file: $pepXMLfile!\n";
+#  }
+#  my $cmd = 'perl -ne \'/.*spectrum="([^"]+)(\.\d+)\.\d+.\d+".*/;$scan{$1} =1; $spec{"$1$2"}=1; END {print scalar keys %scan ; print "," . scalar keys %spec ; print "\n"}\'';
+#  my $n0;
+#  if ($pepXMLfile =~ /.gz$/){
+#    $n0 = `zgrep '<spectrum_query' $pepXMLfile|$cmd`;
+#  }else{
+#    $n0 = `grep '<spectrum_query' $pepXMLfile|$cmd`;
+#  }
+#  chomp $n0;
+#  return split(",", $n0);
 
 
 } # End getNSpectraFromFlatFiles  
