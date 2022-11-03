@@ -1071,12 +1071,22 @@ sub handle_request {
   if ($parameters{dataset_id}){
     $sql .= qq~
       WHERE PROT.biosequence_id in (
+      (
 			SELECT BIABSB.BIOSEQUENCE_ID
 			FROM $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH BIABSB
 			JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
 			ON (ABSB.ATLAS_BUILD_SEARCH_BATCH_ID = BIABSB.ATLAS_BUILD_SEARCH_BATCH_ID AND ABSB.atlas_build_id = $atlas_build_id)
 			JOIN $TBAT_SAMPLE S ON (S.sample_id = ABSB.sample_id)
 			WHERE S.repository_identifiers = '$parameters{dataset_id}'
+      )
+      UNION 
+      (
+      SELECT BIABSB.BIOSEQUENCE_ID
+      FROM $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH BIABSB
+      JOIN $TBAT_SAMPLE S
+      ON (S.repository_identifiers = BIABSB.repository_identifiers AND BIABSB.atlas_build_id = $atlas_build_id)
+      WHERE S.repository_identifiers = '$parameters{dataset_id}'
+      )
       ) 
 	 ~;
   }
@@ -1997,6 +2007,7 @@ sub get_table_help {
   if ( $name eq 'proteins' ) {
     @entries = (
       { key => 'Biosequence Name', value => 'Sequence database accession' },
+      { key => 'Percent Coverage', value => '% of observed sequence'},
       { key => 'Covering Set', value => 'Whether this sequence is part of a minimal set explaining all observed peptides' },
       { key => 'Presence Level', value => 'canonical=member of minimally redundant set<br>possibly distinguished=at least one pep diff from all canonicals<br>subsumed=all peps contained in a canon. or poss. dist.<br>ntt-subsumed=subsumed and >=1 pep lacks tryptic terminus' },
       { key => 'Protein Prophet Prob', value => 'Probability this protein exists in sample, according to Protein Prophet.' },
