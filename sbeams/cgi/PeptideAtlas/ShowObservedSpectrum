@@ -332,7 +332,6 @@ sub processRequest {
               writeSpectrum(proxiSpectrum=>$getSpectrumResult->{proxiSpectrum}, output_mode=>$output_mode);
               return;
             }
-
           } else {
 	    print "ERROR: Unable to read peaks.\n";
             return;
@@ -449,6 +448,12 @@ sub processRequest {
 	  $massmax = $mass if ($mass > $massmax);
 	  $intenmax = $intensity if ($intensity > $intenmax);
         }
+
+	@spectrum_array_ms1 = @{$spectrum{mz1}};
+	$observedPrecursorMz = $spectrum{observedPrecursorMz};
+	$precursorScanNumber = $spectrum{mz1_scan};
+	$selWinLow = $spectrum{isolation_low};
+	$selWinHigh = $spectrum{isolation_high};
       }
 
       #### Then also find the mass modifications
@@ -1233,6 +1238,10 @@ sub get_spectrum
     $spectrum{nativeId} = $result->{nativeId};
     $spectrum{filterLine} = $result->{filterLine};
     $spectrum{fragmentation_type_id} = $result->{fragmentation_type_id};
+    $spectrum{mz1} = $result->{mz1};
+    $spectrum{mz1_scan} = $result->{mz1_scan};
+    $spectrum{isolation_low} = $result->{isolation_low};
+    $spectrum{isolation_high} = $result->{isolation_high};
     #### Silliness to fool later if statements. ugh.
     @mass_intensities = ( [1,1] );
   }
@@ -2146,8 +2155,9 @@ sub getSpectrumFromMzmlFile {
 
   $filename = "$READMZXML $filePath $precursorScan |";
   unless (open(DTAFILE,$filename)) {
-    $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'MsRunFileNotReadable', statusCode=>500, verbose=>$verbose, debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
-      message=>"Specified filePath '$filePath' exists, but cannot be read");
+    $response->logEvent( status=>'ERROR', level=>'ERROR', errorCode=>'MsRunFileNotReadable', statusCode=>500, verbose=>$verbose,
+			 debug=>$debug, quiet=>$quiet, outputDestination=>$outputDestination, 
+			 message=>"Specified filePath '$filePath' exists, but cannot be read");
     return $response;
   }
 
