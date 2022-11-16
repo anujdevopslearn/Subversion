@@ -680,7 +680,6 @@ sub handle_request {
     return;
   }
 
-
   #########################################################################
   #### If QUERY,  display the data
   if ($apply_action =~ /QUERY|GO/i ) {
@@ -1780,12 +1779,14 @@ sub postProcessResultset {
   my $has_header_info = 0;
   my $has_ptm_score = 0;
   my $n_rows = scalar(@{$resultset_ref->{data_ref}});
-
+  my %processed_spec=();
+  my @processed_data;
  for (my $i=0; $i<$n_rows; $i++) {
     #### Loops through resultset and do formatting
     my $pep = $resultset_ref->{data_ref}->[$i];
       # Get mzML filename, cycle, and charge from spectrum name
       $pep->[$name_idx] =~ /(\S+)\.(\d+?)\.(\d+?)\.(\d)/;
+      $processed_spec{$pep->[$name_idx] . '-'. $pep->[$smpl_idx] }++;
       my $mzml_basename = $1;
       my $cycle = $2;
       my $cycle2 = $3;
@@ -1817,57 +1818,57 @@ sub postProcessResultset {
         my @rows = $sbeams->selectSeveralColumns($sql);
         my %site_ptm_info = ();
         if (scalar @rows) {
-	  my $first_row = shift @rows;
-	  my ($qt5500_transition_group_id,
-	      $mzml_filename, $mzml_pathname, $cycle, $precursor_charge,
-	      $precursor_mz, $rt) = @{$first_row};
-	  $mzml_pathname .= "/$mzml_filename";
+					my $first_row = shift @rows;
+					my ($qt5500_transition_group_id,
+							$mzml_filename, $mzml_pathname, $cycle, $precursor_charge,
+							$precursor_mz, $rt) = @{$first_row};
+					$mzml_pathname .= "/$mzml_filename";
 
-	  my ($q1, $q1_charge2, $q1_charge3, $precursor_neutral_mass);
+					my ($q1, $q1_charge2, $q1_charge3, $precursor_neutral_mass);
 
-	  # Compute precursor neutral mass for this peptide
-	  # (Could also compute theoretical mass from pepseq + mods)
-	  my $precursor_charged_mass = $precursor_mz * $precursor_charge;
-	  # Subtract mass for each proton added when precursor was charged
-	  $precursor_neutral_mass = $precursor_charged_mass -
-	      ($precursor_charge * 1.00727638);
+					# Compute precursor neutral mass for this peptide
+					# (Could also compute theoretical mass from pepseq + mods)
+					my $precursor_charged_mass = $precursor_mz * $precursor_charge;
+					# Subtract mass for each proton added when precursor was charged
+					$precursor_neutral_mass = $precursor_charged_mass -
+							($precursor_charge * 1.00727638);
 
-	  # We must invent the ion because we don't have transition list
-	  my $ion = "y1";        ### INVENTED!!!
-	  my $ion_charge = '1';    ### INVENTED!!!
-	  # remove mods from pepseq
-	  my $modified_pepseq = $pep->[$mseq_idx];
-	  my $pepseq = $modified_pepseq;
-	  $pepseq =~ s/\[.+?\]//g;
-	  my $fragmentor = 125;  ### INVENTED!!! but maybe unused.
-	  # There are fields for CE & RT in the Spectrum table,
-	  # but unfortunately for SRM atlas these values are not loaded.
-	  my $ce = $pep->[$ce_idx] ?  $pep->[$ce_idx] : 99;
-	  if (! $rt ) {
-	    $rt = $pep->[$rt_idx] ?  $pep->[$rt_idx] : 99;
-	  }
-	  my $delta_rt = 5.00;   ### INVENTED!!! but maybe unused.
+					# We must invent the ion because we don't have transition list
+					my $ion = "y1";        ### INVENTED!!!
+					my $ion_charge = '1';    ### INVENTED!!!
+					# remove mods from pepseq
+					my $modified_pepseq = $pep->[$mseq_idx];
+					my $pepseq = $modified_pepseq;
+					$pepseq =~ s/\[.+?\]//g;
+					my $fragmentor = 125;  ### INVENTED!!! but maybe unused.
+					# There are fields for CE & RT in the Spectrum table,
+					# but unfortunately for SRM atlas these values are not loaded.
+					my $ce = $pep->[$ce_idx] ?  $pep->[$ce_idx] : 99;
+					if (! $rt ) {
+						$rt = $pep->[$rt_idx] ?  $pep->[$rt_idx] : 99;
+					}
+					my $delta_rt = 5.00;   ### INVENTED!!! but maybe unused.
 
-	  $at_least_one_chromatogram = 1;
-	  my $chrom_img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/chromatogram.gif' TITLE='View chromatogram for $pep->[$mseq_idx] (+$pep->[$chrg_idx])'>";
+					$at_least_one_chromatogram = 1;
+					my $chrom_img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/chromatogram.gif' TITLE='View chromatogram for $pep->[$mseq_idx] (+$pep->[$chrg_idx])'>";
 
-	  #print "<p>Charge $precursor_charge Precursor Neutral Mass $precursor_neutral_mass Precursor Charged Mass $precursor_charged_mass<br>\n";
+					#print "<p>Charge $precursor_charge Precursor Neutral Mass $precursor_neutral_mass Precursor Charged Mass $precursor_charged_mass<br>\n";
 
-	  $chromatogram_entry =
-	      qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowChromatogram?~;
-	  $chromatogram_entry .= ""
-	      ."&pepseq=$pepseq"
-	      ."&modified_pepseq=$modified_pepseq"
-	      ."&spectrum_basename=$mzml_basename"
-	      ."&spectrum_pathname=$mzml_pathname"
-	      ."&delta_rt=$delta_rt"
-	      ."&fragmentor=$fragmentor"
-	      ."&precursor_neutral_mass=$precursor_neutral_mass";
+					$chromatogram_entry =
+							qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowChromatogram?~;
+					$chromatogram_entry .= ""
+							."&pepseq=$pepseq"
+							."&modified_pepseq=$modified_pepseq"
+							."&spectrum_basename=$mzml_basename"
+							."&spectrum_pathname=$mzml_pathname"
+							."&delta_rt=$delta_rt"
+							."&fragmentor=$fragmentor"
+							."&precursor_neutral_mass=$precursor_neutral_mass";
 
-	  $chromatogram_entry =
-	      qq~$chromatogram_entry" TARGET=blank>$chrom_img</A>~;
+					$chromatogram_entry =
+							qq~$chromatogram_entry" TARGET=blank>$chrom_img</A>~;
 
-	} # end if there is info for this pep in the QT5500_transition_group table
+				} # end if there is info for this pep in the QT5500_transition_group table
       } # end if Qtrap 5500
 
       $pep->[$prob_idx] = sprintf("%0.3f", $pep->[$prob_idx]) unless $pep->[$prob_idx] == 1;
@@ -2006,9 +2007,13 @@ sub postProcessResultset {
       $pep->[$rt_idx] = ( $pep->[$rt_idx] ) ? sprintf( "%0.1f", $pep->[$rt_idx]/60 ) : $sbeams->makeInactiveText('n/a'); 
       $pep->[$ce_idx] = ( $pep->[$ce_idx] ) ? sprintf( "%0.1f", $pep->[$ce_idx] ) : $sbeams->makeInactiveText('n/a'); 
     }
-    $resultset_ref->{data_ref}->[$i] = $pep; 
+    if ($processed_spec{$pep->[$name_idx]. '-'. $pep->[$smpl_idx]} == 1){
+      push @processed_data,  $resultset_ref->{data_ref}->[$i];
+    }
  } # end for each pep
-     
+  
+  $resultset_ref->{data_ref} = \@processed_data;
+  
   if ($has_ptm_score){
     #sort_ptm_peps($ptm_peps_ref);
   }
