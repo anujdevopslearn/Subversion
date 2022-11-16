@@ -2890,23 +2890,22 @@ sub displayProt_PTM_plotly{
 
 	my $seqlen = length($sequence);
   foreach my $ptm_type (@ptm_types){
-		my $dataTable = "var data$div_counter=[";
+		my $dataTable = "var data$div_counter=[['','','','','','','','',''],\n";
 		my $totalObs = "var totalObs$div_counter=[";
 		my $maxnobs  = 0;
-		my $tickvals   = "var tickvals$div_counter =["; 
-
+		my $tickvals   = "var tickvals$div_counter =['0'"; 
 		#$sequence =~ s/\*.*//g;
 		my @aas = split(//, $sequence);
-		my $sep = '';
+		my $sep = ',';
 		foreach my $pos (0..$#aas){
 			my $aa=$aas[$pos];
 			my $nobs = '';
 			#if ($aa =~ /[$residue]/i){
 			if (defined $data->{$ptm_type}{$protein}{$pos}){
-        my $mod_aa = '';
+        my $flag = 0;
         foreach my $row(@{$data->{$ptm_type}{$protein}{$pos}}){ 
           $nobs ='';
-          $mod_aa = $row->[0];
+          $flag = 1 if($row->[0] !~ /[nc]/);
 					$dataTable .= "['$row->[0]'";
 					#foreach my $c (qw (nP<.01 nP<.05 nP<.20 nP.2-.8 nP>.80 nP>.95 nP>.99 no-choice)){
           foreach my $i (5..12){
@@ -2917,33 +2916,29 @@ sub displayProt_PTM_plotly{
 						$nobs += $row->[$i]; 
 					}
 					$dataTable .= "],\n";
-					$tickvals .= "$sep"; 
-					$tickvals .=$pos+1; 
+          $tickvals .= "$sep'";
+					$tickvals .= $pos+1;
+          $tickvals .= "<br>$row->[0]'";
 					$totalObs .= "$sep";
 					$totalObs .= $nobs;
-          $sep = ",";
         }
-        if (@{$data->{$ptm_type}{$protein}{$pos}} == 1 && 
-            $mod_aa ne $aa){
+        ### n-terminal AA not modified 
+        if (! $flag){
             $dataTable .= "['$aa','','','','','','','',''],\n";
-						$tickvals .= "$sep";
-						$tickvals .=$pos+1;
-						$totalObs .= "$sep''";
-						$sep = ",";
-            next;
+						$tickvals .= "$sep'";
+						$tickvals .= $pos+1;
+            $tickvals .= "<br>$aa'";
+						$totalObs .= "$sep". '';
         } 
         next;
-			} else {
-				$dataTable .= "['$aa','','','','','','','',''],\n";
 			}
-			#} else {
-			#   $dataTable .= "['$aa','','','','','','','',''],\n";
-			#}
-			$tickvals .= "$sep"; 
+ 
+			$dataTable .= "['$aa','','','','','','','',''],\n";
+			$tickvals .= "$sep'"; 
 			$tickvals .=$pos+1;
+      $tickvals .= "<br>$aa'";
 			$totalObs .= "$sep";
 			$totalObs .= $nobs;
-			$sep = ",";
 		}
 		$dataTable =~ s/,$//;
 		$dataTable =~ s/\n$//;
@@ -2977,7 +2972,7 @@ sub displayProt_PTM_plotly{
       myPlots.push (myDiv$div_counter);
       var xvals$div_counter = [];
       for(var i=0; i<tickvals$div_counter.length; i++){
-        xvals$div_counter.push(i);
+        xvals$div_counter.push(tickvals$div_counter\[i]);
       }
 
 			$trace
@@ -2987,15 +2982,17 @@ sub displayProt_PTM_plotly{
 				barmode:'stack',
 				yaxis:{title:'nObs',rangemode:'tozero'},
         xaxis:{tickvals: xvals$div_counter,
-               dtick:50, 
+               type: 'category',
+               dtick:50,
+               tick0: '0',
                tickmode:'linear',
                ticktext:tickvals$div_counter},
 			};
 		 
 			for ( var i = 0 ; i < tickvals$div_counter.length; i++ ) {
-				if (totalObs$div_counter\[i] > 0){
-					var result= {
-						x: xvals$div_counter\[i], 
+				if (totalObs$div_counter\[i] !== null && totalObs$div_counter\[i] > 0){
+					var anno = {
+						x: i, 
 						y: totalObs$div_counter\[i], 
 						text: '<b>'+totalObs$div_counter\[i]+'</b>',
 						xanchor: 'center',
@@ -3003,19 +3000,12 @@ sub displayProt_PTM_plotly{
 						yshift:30,
 						showarrow: false
 					};
-					layout$div_counter.annotations.push(result);
+					layout$div_counter.annotations.push(anno);
 			 }
 		 }
 		 plotdata$div_counter= [trace1,trace2,trace3,trace4,trace5,trace6,trace7,trace8];
 		 Plotly.newPlot(myDiv$div_counter, plotdata$div_counter, layout$div_counter, {scrollZoom: true});
      ~;
-		 $plot_js .= qq~
-       var ticklabels=[];
-			 for (var i in tickvals$div_counter){
-					ticklabels\[i]= tickvals$div_counter\[i]+ '<br>'+col1[i];
-			 }
-       allTicklabels.push(ticklabels);
-		 ~;
      $div_counter++;
    }
 
@@ -3029,20 +3019,18 @@ sub displayProt_PTM_plotly{
 
    $plot_js .=  qq~
 	 function relayout(eventdata, div) {
-     if (Object.entries(eventdata).length === 0) {return;}
 		 //alert(JSON.stringify(eventdata));
+     if (Object.entries(eventdata).length === 0) {return;}
 			var xmax=eventdata['xaxis.range[1]'];
 			var xmin=eventdata['xaxis.range[0]'];
 			var data;
 			var totalObs;
       var xvals;
-      var ticklabels;
       for (var i=0; i<myPlots.length; i++){
 				if (div == myPlots[i] ){
 						data = allData[i];
 						totalObs=allObs[i];
             xvals=allXvals[i];
-            ticklabels=allTicklabels[i];
 				}
 		  }
 
@@ -3060,13 +3048,12 @@ sub displayProt_PTM_plotly{
 				}    
 			}
 			ymax = ymax + 5;
-			if ( xmax- xmin <= 40){
+			if ( xmax- xmin <= 50){
 			 var update = {
 				 xaxis:{
-				 tickmode:'array',
-					tickvals:xvals,
-					ticktext:ticklabels,
+          type: 'category',
 					tickangle:0,
+          tickmode:'array',
 					range: [xmin, xmax], 
 				 },
 				 yaxis:{
@@ -3076,7 +3063,7 @@ sub displayProt_PTM_plotly{
 			 };
 				Plotly.relayout(div, update);
 			}
-			if ( xmax- xmin > 40){	
+			if ( xmax- xmin > 50){	
 				 if (xmin < 0){
 					 xmin=0;
 				 }
@@ -3085,8 +3072,10 @@ sub displayProt_PTM_plotly{
 				 }
 				 var update = {
 					 xaxis:{
-					 tickmode:'linear',
-						 dtick:50,
+					  tickmode:'linear',
+					  dtick:50,
+            tick0: xvals[xmin],
+            type: 'category',
 						range: [xmin, xmax], 
 					 },
 					 yaxis:{
@@ -3096,16 +3085,19 @@ sub displayProt_PTM_plotly{
 				 };
 				 Plotly.relayout(div, update);
 			 }
-			 if (eventdata['xaxis.autorange'] && eventdata['yaxis.autorange'] ){ 
-				 var update = {
-					 xaxis:{
-					 tickmode:'linear',
-					 dtick:50,
-						yaxis:{title:'nObs',rangemode:'tozero'}
-				 }
-				};
-				Plotly.relayout(div, update);
-			 }
+       if (eventdata['xaxis.autorange'] && eventdata['yaxis.autorange'] ){
+         var update = {
+           yaxis:{title:'nObs',rangemode:'tozero'},
+           xaxis:{
+             tickmode:'linear',
+             ticktext:xvals,
+             dtick:50,
+             tick0:'0'
+           }
+         };
+         Plotly.relayout(div, update);
+       }
+
    };
 	 myPlots.forEach(div => {
 			div.on("plotly_relayout", function(ed) {
@@ -3442,13 +3434,13 @@ sub plotly_pie {
   my %args = @_;
   my $data = $args{data};
   my $names = $args{names};
-  my $divname = $args{divName} || '';
+  my $divname = $args{divName} || 'pie_div';
   
   my $values = join(",", @$data);
   my $labels = join('","', @$names);
     
+  ###<script src="https://cdn.plot.ly/plotly-latest.min.js"></script> 
 	my $plot_js = qq~
-   <script type="text/javascript" src="https://cdn.plot.ly/plotly-latest.min.js"></script>
    <script type="text/javascript" charset="utf-8">
    var data=[{
       values: [$values],
@@ -3457,11 +3449,11 @@ sub plotly_pie {
       //textinfo: "label+percent",
 
     }]
-		var layout = {
+		var pie_layout = {
 			height: 400,
 			width: 800
 		};
-    Plotly.newPlot("$divname", data, layout);
+    Plotly.newPlot("$divname", data, pie_layout);
 	 </script>
   ~;
   return $plot_js;
@@ -3522,7 +3514,7 @@ sub plotly_barchart {
         Plotly.newPlot('$divname', data, layout);
    ~;
   my $chart = qq~
-    <script type="text/javascript" src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script> 
 		<script type="text/javascript" charset="utf-8">
       $plot_js
 		</script>
