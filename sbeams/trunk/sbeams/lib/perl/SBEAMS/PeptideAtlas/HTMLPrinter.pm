@@ -1518,7 +1518,8 @@ sub getPTMTableDisplay {
   my $SUB_NAME = 'getPTMTableDisplay';
   my $cols = $args{cols};
   my $data = $args{data};
-  my $self_build_id = $args{atlas_build_id}; 
+  my $ptm_type = $args{ptm_type};
+  my $atlas_build_id = $args{atlas_build_id}; 
   my $biosequence_name = $args{biosequence_name};
   my @rows;
   shift @$cols;
@@ -1529,7 +1530,10 @@ sub getPTMTableDisplay {
     foreach my $pos (sort {$a <=> $b} keys %{$data->{$prot}}){
       foreach my $vals (@{$data->{$prot}{$pos}}){
 				my @row = ();
-				push @row, $pos+1; 
+        my $site = $pos+1;
+        my $residue=$vals->[0]; 
+				push @row,$site; 
+        my $link='';
         #my @columns = ('Residue','nObs', 'One_mod', 'Two_mods', 'Over_two_mods',
         #         'nP<.01', 'nP<.05', 'nP<.20', 'nP.2-.8', 'nP>.80', 'nP>.95', 'nP>.99',
         #                  'no-choice','enriched-with-mod','enriched-but-non-mod','non-enriched',
@@ -1537,15 +1541,32 @@ sub getPTMTableDisplay {
 				if ($vals->[1] > 0 || $vals->[16] eq 'yes' || $vals->[17] eq 'yes'){
 					my $start_in_biosequence = $pos + 1;
 					my $link = "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?".
-										 "atlas_build_id=$self_build_id&searchWithinThis=Peptide+Sequence&searchForThis=".
+										 "atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Sequence&searchForThis=".
 										 "$vals->[18]&apply_action=QUERY"; 
-					$vals->[0] = $self->make_pa_tooltip( tip_text => "Get peptide sequence covering this site",
+					$vals->[0] = $self->make_pa_tooltip( tip_text => "Get most observed peptide sequence covering this site",
 																								link_text => "<a href='$link' target='_blank'>$vals->[0]</a>" );
 				}
 				foreach my $i (0..$n_cols-2){ 
 					if ( $vals->[$i] eq '0' ||  $vals->[$i] eq 'no'){
 						$vals->[$i] = '-';
 					}
+          ## make links for nP>.95 and nP>.99 ids 
+          if ($vals->[10] > 0){
+            $link ="$CGI_BASE_DIR/PeptideAtlas/GetPTMSpectra?".
+                   "atlas_build_id=$atlas_build_id&site=$site&min_ptm_score=0.95&biosequence_name=$prot".
+                   "&ptm_type=$ptm_type&residue=$residue&apply_action=QUERY";
+            $vals->[10] = $self->make_pa_tooltip( tip_text => "Get observed spectra covering this site with ptm scores >=0.95",
+                                                 link_text => "<a href='$link' target='_blank'>$vals->[10]</a>" );
+
+          }
+          if ($vals->[11] > 0){
+            $link ="$CGI_BASE_DIR/PeptideAtlas/GetPTMSpectra?".
+                   "atlas_build_id=$atlas_build_id&site=$site&min_ptm_score=0.99&biosequence_name=$prot".
+                   "&ptm_type=$ptm_type&residue=$residue&apply_action=QUERY";
+            $vals->[11] = $self->make_pa_tooltip( tip_text => "Get observed spectra covering this site with ptm scores >=0.99",
+                                                 link_text => "<a href='$link' target='_blank'>$vals->[11]</a>" );
+
+          }
           push@row, $vals->[$i]; 
 			  }	
         push @rows , [@row];
@@ -3155,6 +3176,7 @@ sub displayProt_PTM_plotly{
   foreach my $ptm_type(@ptm_types){ 
     my @names = @column_names;
     my $PTM_table_Display = $self->getPTMTableDisplay( cols => \@names,
+                    ptm_type => $ptm_type,
                     data => $data->{$ptm_type},
                     atlas_build_id => $atlas_build_id,
                     biosequence_name => $protein,
