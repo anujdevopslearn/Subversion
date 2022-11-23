@@ -238,7 +238,7 @@
                     if(!diff || d < diff) {
                         x = pk[0];
                         y = pk[1];
-                        diff = d;
+                        diff = d ? d : 0.00001;
                     }
                 }
                 if(diff <= 0.5) {
@@ -401,7 +401,7 @@
             grid: { show: true,
                     hoverable: true,
                     clickable: false,
-                    autoHighlight: false,
+                    autoHighlight: true,
                     borderWidth: 1,
                     labelMargin: 1},
             xaxis: { tickLength: 3, tickColor: "#000",
@@ -500,12 +500,12 @@
         var ms1zoomRange = container.data("ms1zoomRange");
         var options = container.data("options");
 
-	var data = [{data: options.ms1peaks, color: "#bbbbbb", labelType: 'none', hoverable: false, clickable: false}];
+	var data = [{data: options.ms1peaks, color: "#bbbbbb", labelType: 'none', hoverable: true, clickable: false}];
 	if(options.precursorPeaks) {
 	    if(options.precursorPeakClickFn)
 		data.push({data: options.precursorPeaks, color: "#ff0000", hoverable: true, clickable: true});
 	    else
-		data.push({data: options.precursorPeaks, color: "#ff0000", hoverable: false, clickable: false});
+		data.push({data: options.precursorPeaks, color: "#ff0000", hoverable: true, clickable: false});
 	}
 
 	// the MS/MS plot should have been created by now.  This is a hack to get the plots aligned.
@@ -555,7 +555,7 @@
             ctx.lineTo(o.left-10, o.top-5);
             ctx.fillStyle = "#008800";
             ctx.fill();
-            placeholder.append('<div style="position:absolute;left:' + (o.left + 4) + 'px;top:' + (o.top-4) + 'px;color:#000;font-size:smaller">'+options.precursorMz.toFixed(2)+'</div>');
+            placeholder.append('<div style="position:absolute;left:' + (o.left + 4) + 'px;top:' + (o.top-4) + 'px;color:#000;font-size:smaller">'+options.precursorMz.toFixed(4)+'</div>');
 
 	}
 
@@ -612,6 +612,11 @@
 		}
 	    });
 	}
+
+        // TOOLTIPS
+        placeholder.bind("plothover", function (event, pos, item) {
+            displayTooltip(item, container, options, "m/z", "intensity");
+        });
 
 	// allow zooming the plot
 	placeholder.bind("plotselected", function (event, ranges) {
@@ -733,7 +738,7 @@
             series:{data:data, points:{show:true, fill:true, radius:1}, shadowSize:0},
             grid:{ show:true,
                    hoverable:true,
-                   autoHighlight:false,
+                   autoHighlight:true,
                    clickable:false,
                    borderWidth:1,
                    labelMargin:1,
@@ -790,8 +795,8 @@
                     container.data("previousPoint", item.datapoint);
 
                     $(getElementSelector(container, elementIds.msmstooltip)).remove();
-                    var x = item.datapoint[0].toFixed(2),
-                    y = item.datapoint[1].toFixed(2);
+                    var x = item.datapoint[0].toFixed(4),
+                    y = item.datapoint[1].toFixed(4);
 
                     showTooltip(container, item.pageX, item.pageY,
 				tooltip_xlabel + ": " + x + "<br>" + tooltip_ylabel + ": " + y, options);
@@ -1259,7 +1264,7 @@
                     if (match.bestPeak) {
                         precursorMzMatches.push([match.bestPeak[0], match.bestPeak[1]]);
                         labels.push(label + " " + loss.label());
-                        options.antic += match.bestPeak[1];
+                        antic += match.bestPeak[1];
                     }
                 }
                 if (precursorMzMatches.length > 0)
