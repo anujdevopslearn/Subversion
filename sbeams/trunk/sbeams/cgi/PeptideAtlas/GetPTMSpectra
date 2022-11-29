@@ -309,10 +309,10 @@ sub handle_request {
         colnameidx_ref => \%colnameidx,
 				hidden_cols => \%hidden_cols);
 
-#      $rs_params{set_name} = "SETME";
-#      my %write_params = ( rs_table => $TBAT_ATLAS_BUILD,
-#                           key_field => 'atlas_build_id',
-#                           key_value => $parameters{atlas_build_id} );
+      $rs_params{set_name} = "SETME";
+      my %write_params = ( rs_table => $TBAT_ATLAS_BUILD,
+                           key_field => 'atlas_build_id',
+                           key_value => $parameters{atlas_build_id} );
       $sbeams->writeResultSet(
         resultset_file_ref=>\$rs_params{set_name},
         resultset_ref=>$resultset_ref,
@@ -405,7 +405,9 @@ sub postProcessResultset {
   my $query_parameters_ref = $args{'query_parameters_ref'};
   my $column_titles_ref = $args{'column_titles_ref'};
   my $colnameidx_ref = $args{'colnameidx_ref'};
-  my $min_ptm_score = $query_parameters_ref->{min_ptm_score} || 0;
+  my $min_ptm_score = $query_parameters_ref->{min} || 0;
+  my $max_ptm_score = $query_parameters_ref->{max} || 1.1;
+  my $nochoice_id = $query_parameters_ref->{nochoice} || 0;
   my $query_site = $query_parameters_ref->{site};
   my $residue = $query_parameters_ref->{residue};
 
@@ -480,21 +482,33 @@ sub postProcessResultset {
 		my $modified_pepseq = $pep->[$mseq_idx];
     my $start_in_biosequence = $pep->[$start_idx];
 #      $pep->[$mseq_idx] =   $sbeamsMOD->formatMassMods($pep->[$mseq_idx]);
-    ## filter using offset and ptm_min_ptm_score
+    ## filter using offset and min_score
     my $pass = 0;
 		if ($pep->[$ptm_idx]){
-      $pep->[$ptm_type_idx] =~ /^(\w+):.*/;
+      $pep->[$ptm_type_idx] =~ /^(.*):(.*)$/;
       my $ptm_residues=$1;
+      my $ptm_name = $2;
       my $ptm_sequence = $pep->[$ptm_idx];
       my @elms = split(/\)/, $ptm_sequence);
       
-      ### filter no choice ids 
-      my @m = $ptm_sequence =~ /([${ptm_residues}])/g;
-      my @n = $modified_pepseq =~ /([${ptm_residues}])\[/g;
-      if (scalar @m == scalar @n){
-         ## no choice 
-         next;
+      ### filter no choice ids
+      my $modified_pepseq_w_n = $modified_pepseq;
+      if ($ptm_residues =~ /n/ && $modified_pepseq !~ /^n/){
+        $modified_pepseq_w_n = 'n'. $modified_pepseq_w_n;
       }
+          
+      my @m = $ptm_sequence =~ /([${ptm_residues}])/g;
+      my @n = $modified_pepseq_w_n =~ /([${ptm_residues}]\[${ptm_name}\])/g;
+      my $m = scalar @m;
+      my $n = scalar @n;
+      my $nochoice = 0;
+      if ($n == $m){
+        if (! $nochoice_id){
+          next; 
+        }
+        $nochoice = 1;
+      }
+
       if($ptm_sequence =~ /^n/ && $ptm_sequence !~ /n\(/){
         $ptm_sequence=~ s/n//;
       }
@@ -505,13 +519,21 @@ sub postProcessResultset {
            my $aas = $1;
 					 my $ptm_score = $2;
 					 $cur_pos = $cur_pos + length($aas);
-           #print "$ptm_sequence $query_site $aas $pep->[$start_idx] $cur_pos ptm_min_ptm_score=$min_ptm_score $ptm_score<BR>";
+           #print "$ptm_sequence $query_site $aas $pep->[$start_idx] $cur_pos min_score=$min_ptm_score $ptm_score<BR>";
            if ($query_site && $cur_pos == $query_site){
-              if($min_ptm_score ne '' && $ptm_score >= $min_ptm_score){
-                $pass =1;
-                $pep->[$site_ptm_score_idx] = $ptm_score;
-                last;
+              if ($nochoice ){
+                if ($nochoice_id ){
+									$pass = 1 ;
+									$pep->[$site_ptm_score_idx] = $ptm_score;
+                }
+              }else{
+                next if ($nochoice_id);
+                if ($ptm_score >= $min_ptm_score && $ptm_score < $max_ptm_score){
+									$pep->[$site_ptm_score_idx] = $ptm_score;
+									$pass =1;
+                }
               }
+              last;
            }
            $cur_pos-- if ($aas eq 'n'); 
 				} else {
@@ -520,197 +542,22 @@ sub postProcessResultset {
       }
     }
     next if(! $pass);
-
-#    my @ptm_pep =();
-#    if ($pep->[$ptm_idx]){
-#      $pep->[$ptm_type_idx] =~ /^(\w+):.*/;
-#      my $ptm_residues=$1; 
-#      foreach my $i (0..10){
-#				push @ptm_pep, $pep->[$i];
-#      }
-#      my $ptm_sequence = $pep->[$ptm_idx];
-#      my $new_modified_pepseq = '';
-#      my %mods = ();
-#      my %ptm_score = ();
-#
-#      if ($modified_pepseq =~ /^n/ && $ptm_sequence !~ /^n/){
-#         $ptm_sequence = "n$ptm_sequence";
-#      }elsif($ptm_sequence =~ /^n/ && $modified_pepseq !~ /^n/){
-#         $modified_pepseq = "n$modified_pepseq";
-#      }elsif ($ptm_sequence !~ /^n/ && $modified_pepseq !~ /^n/){
-#         $ptm_sequence = "n$ptm_sequence";
-#         $modified_pepseq = "n$modified_pepseq"; 
-#      }
-#
-#      my $pos = -1;
-#      my @elms = split(/\]/, $modified_pepseq);
-#      foreach my $str (@elms){
-#        $str =~ s/^-//;
-#        $str =~ s/-\[/[/;
-#				if ($str =~ /(.*)\[(.*)/){
-#					$pos += length ($1);
-#					$mods{$pos} = $2;
-#				} else {
-#					$pos += length ($str);
-#				}
-#      }
-#
-#      @elms = split(/\)/, $ptm_sequence);
-#      if (@elms > 1){ $has_ptm_score = 1;}
-#      $pos = -1;
-#      foreach my $str (@elms){
-#				if ($str =~ /(.*)\((.*)/){
-#					$pos += length ($1);
-#					$ptm_score{$pos} = $2;
-#				} else {
-#					$pos += length ($str);
-#				}
-#      }
-#
-#      $pos= 0;
-#      @elms =  split(/(?=[a-zA-Z])/, $ptm_sequence) ;
-##      for (my $i=0; $i<=$#elms;$i++){
-##				my $pstr = $elms[$i];
-##				$pstr =~ /([a-zA-Z])/;
-##				my $aa = $1;
-##				my $score='';
-##				if ($aa !~ /[$ptm_residues]/){
-##					$ptm_score_summary_ref->{$pep->[$ptm_type_idx]}{$pos}{aa} = $aa;
-##					foreach my $s (qw(obsll obsml obsl obsm obsh obsmh obshh)){
-##						$ptm_score_summary_ref->{$pep->[$ptm_type_idx]}{$pos}{$s}='';
-##					}
-##					$pos++;
-##					next;
-##				}
-##				$ptm_score_summary_ref->{$pep->[$ptm_type_idx]}{$pos}{aa} = $aa;
-##				if ($pstr =~ /[$ptm_residues]\(/){ 
-##					$pstr =~ /([\d\.]+)/;
-##					$score = $1;
-##					if($score >= 0.99 ){
-##						$ptm_score_summary_ref->{$pep->[$ptm_type_idx]}{$pos}{obshh}++;
-##					} elsif($score >= 0.95 && $score < 0.99 ){
-##						$ptm_score_summary_ref->{$pep->[$ptm_type_idx]}{$pos}{obsmh}++;
-##					} elsif ($score >= 0.81 && $score < 0.95){
-##						$ptm_score_summary_ref->{$pep->[$ptm_type_idx]}{$pos}{obsh}++;
-##					} elsif($score >= 0.19 && $score < 0.81 ){
-##						$ptm_score_summary_ref->{$pep->[$ptm_type_idx]}{$pos}{obsm}++;
-##					} elsif($score >= 0.05 && $score < 0.19){
-##						$ptm_score_summary_ref->{$pep->[$ptm_type_idx]}{$pos}{obsl}++;
-##					} elsif($score >= 0.01 && $score < 0.05){
-##						$ptm_score_summary_ref->{$pep->[$ptm_type_idx]}{$pos}{obsml}++;
-##					} elsif($score < 0.01){
-##						$ptm_score_summary_ref->{$pep->[$ptm_type_idx]}{$pos}{obsll}++;
-##					}
-##				}
-##				$pos++;
-##      }
-#      
-#      $modified_pepseq =~ s/\[[^\]]+\]//g;
-#			$modified_pepseq =~ s/\-//g;
-#      my @aas = split(//, $modified_pepseq);
-#
-#      for(my $i=0; $i<=$#aas; $i++){
-#				if(defined $mods{$i} && defined $ptm_score{$i}){
-#					$new_modified_pepseq .= "$aas[$i]\[$mods{$i}\]($ptm_score{$i})";
-#				} elsif(defined $mods{$i} && not defined $ptm_score{$i}){
-#					$new_modified_pepseq .= "$aas[$i]\[$mods{$i}\]";
-#				} elsif(defined $ptm_score{$i} && not defined $mods{$i}){
-#					$new_modified_pepseq .= "$aas[$i]($ptm_score{$i})";
-#				} else {
-#					$new_modified_pepseq .= $aas[$i];
-#				}
-#      }
-#      $ptm_pep[$mseq_idx] = $new_modified_pepseq; 
-#      $ptm_pep[$frag_idx] = $pep->[$frag_idx];
-#      $ptm_pep[$ptm_lability_idx] =  $pep->[$ptm_lability_idx];
-#    }
     
     $pep->[$it_idx] = ( $pep->[$it_idx] ) ?  sprintf("%.2f", $pep->[$it_idx]/1000000) : $sbeams->makeInactiveText('n/a'); 
     $pep->[$tic_idx] = ( $pep->[$tic_idx] ) ?  sprintf("%.2f", $pep->[$tic_idx]/1000000): $sbeams->makeInactiveText('n/a');
     $pep->[$sn_idx] = ( $pep->[$sn_idx] ) ? sprintf("%.0f", $pep->[$sn_idx]) : $sbeams->makeInactiveText('n/a');
-
-    if ($pep->[$ptm_idx]){
-#      $ptm_pep[$it_idx] = $pep->[$it_idx];
-#      $ptm_pep[$tic_idx] = $pep->[$tic_idx];
-#      $ptm_pep[$sn_idx] = $pep->[$sn_idx];
-      #push @{$ptm_peps_ref->{$pep->[$ptm_type_idx]}}, \@ptm_pep;
-    }
 
       $pep->[$rt_idx] = ( $pep->[$rt_idx] ) ? sprintf( "%0.1f", $pep->[$rt_idx]/60 ) : $sbeams->makeInactiveText('n/a'); 
       $pep->[$ce_idx] = ( $pep->[$ce_idx] ) ? sprintf( "%0.1f", $pep->[$ce_idx] ) : $sbeams->makeInactiveText('n/a'); 
     #if ($processed_spec{$pep->[$name_idx]. '-'. $pep->[$smpl_idx]} == 1){
       push @processed_data,  $resultset_ref->{data_ref}->[$i];
     #}
- } # end for each pep
+  } # end for each pep
   
   $resultset_ref->{data_ref} = \@processed_data;
   
   if ($has_ptm_score){
     #sort_ptm_peps($ptm_peps_ref);
   }
-}
-
-sub sort_ptm_peps {
-  my $rows = shift;
-  my $heading = shift @$rows;
-  my %peptide = ();
-  my $idx = 0;
-
-  foreach my $row (@$rows){
-    my $pos = '';
-    my $entry = $row->[0];
-    my @matches = ($entry =~ /\[\d+\]\(([\d\.]+)\)/g);
-    my $total_ptm_score =0;
-    foreach my $m (@matches){
-      $total_ptm_score += $m;
-    } 
-    my $modified_pep= $entry;
-    $modified_pep =~ s/\([\d\.]+\)//g;
-    if ($peptide{scalar @matches}{$modified_pep}{max_score} < $total_ptm_score){
-      $peptide{scalar @matches}{$modified_pep}{max_score}  = $total_ptm_score;
-    }
-    push @{$peptide{scalar @matches}{$modified_pep}{entry}}, [$total_ptm_score, $idx];
-    $idx++;
-  }
-  my @sorted_rows = ();
-  push @sorted_rows, $heading ;
-  foreach my $n_ptm_site (sort {$b <=> $a} keys %peptide){
-    foreach my $modified_pep (sort {$peptide{$n_ptm_site}{$b}{max_score} <=> 
-                                    $peptide{$n_ptm_site}{$a}{max_score}} keys %{$peptide{$n_ptm_site}}){
-      my @entries = @{$peptide{$n_ptm_site}{$modified_pep}{entry}};
-      my @sorted_entries = sort {$b->[0] <=> $a->[0]} @entries;
-      foreach my $entry (@sorted_entries){
-          #print "$n_ptm_site $modified_pep ". join(",", @$entry) ."\n";
-          my $idx = $entry -> [1];
-          push @sorted_rows, $rows->[$idx];
-        
-      }
-    }
-  }
-  @$rows = @sorted_rows;
-}
-
-
-#######################################################################
-# get_atlas_build_name -- get atlas_build_name, given id
-# @param atlas_build_id
-# @return atlas_build_name
-#######################################################################
-sub get_atlas_build_name
-{
-    my %args = @_;
-
-    my $atlas_build_id = $args{atlas_build_id}
-      || die "need atlas_build_id";
-
-    my $sql = qq~
-        SELECT atlas_build_name
-        FROM $TBAT_ATLAS_BUILD
-        WHERE atlas_build_id = '$atlas_build_id'
-    ~;
-
-    my ($atlas_build_name) = $sbeams->selectOneColumn($sql);
-
-    return $atlas_build_name;
 }
 

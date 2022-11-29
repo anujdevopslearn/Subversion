@@ -789,14 +789,15 @@ sub encodeSectionTable {
     push @table_attrs, 'WIDTH', $args{width};
   }
   my $tr_info = $args{tr_info} || 'NOOP=1 ';
+  my $y_scroll = $args{y_scroll} || '';
   my $tab = SBEAMS::Connection::DataTable->new( @table_attrs,
 						__use_thead => 1,
 						__tr_info => $tr_info,
+            __y_scroll => $y_scroll,
 						CLASS => $class_def,
 						ID => $id  );
+
   my $num_cols = 0;
-
-
   my $rs_link = '';
   my $rs_name = '';
 
@@ -858,10 +859,10 @@ sub encodeSectionTable {
       }
 
     } elsif ( $args{bkg_interval} ) { # alternate on n_rows
-	unless ( $rcnt % $args{bkg_interval} ) {
-#        $bgcolor = ( $bgcolor eq '#C0D0C0' ) ? '#F5F5F5' : '#C0D0C0';
-	  $bgcolor = ( $bgcolor eq '#f3f1e4' ) ? '#d3d1c4' : '#f3f1e4';
-      }
+				unless ( $rcnt % $args{bkg_interval} ) {
+			#        $bgcolor = ( $bgcolor eq '#C0D0C0' ) ? '#F5F5F5' : '#C0D0C0';
+					$bgcolor = ( $bgcolor eq '#f3f1e4' ) ? '#d3d1c4' : '#f3f1e4';
+						}
     } elsif ( $args{bg_color} ) { # single solid color
       $bgcolor = $args{bg_color};
     }
@@ -926,6 +927,9 @@ sub encodeSectionTable {
     } else {
       $tab->setRowAttr( ROWS => [1], BGCOLOR => '#003F72', CLASS => 'sortheader' );
     }
+		if ($args{header_sticky}){
+			$tab->setRowAttr( ROWS => [1], STYLE=>'position:sticky;top:0;')
+		}
     $tab->setRowAttr( ROWS => [1], ALIGN => 'CENTER' ) unless $args{nocenter};
   }
 
@@ -1553,19 +1557,25 @@ sub getPTMTableDisplay {
           ## make links for nP>.95 and nP>.99 ids 
           if ($vals->[10] > 0){
             $link ="$CGI_BASE_DIR/PeptideAtlas/GetPTMSpectra?".
-                   "atlas_build_id=$atlas_build_id&site=$site&min_ptm_score=0.95&biosequence_name=$prot".
+                   "atlas_build_id=$atlas_build_id&site=$site&min=0.95&max=0.99&biosequence_name=$prot".
                    "&ptm_type=$ptm_type&residue=$residue&apply_action=QUERY";
-            $vals->[10] = $self->make_pa_tooltip( tip_text => "Get observed spectra covering this site with ptm scores >=0.95",
+            $vals->[10] = $self->make_pa_tooltip( tip_text => "Get observed spectra covering this site with ptm scores within 0.95-0.99",
                                                  link_text => "<a href='$link' target='_blank'>$vals->[10]</a>" );
 
           }
           if ($vals->[11] > 0){
             $link ="$CGI_BASE_DIR/PeptideAtlas/GetPTMSpectra?".
-                   "atlas_build_id=$atlas_build_id&site=$site&min_ptm_score=0.99&biosequence_name=$prot".
+                   "atlas_build_id=$atlas_build_id&site=$site&min=0.99&biosequence_name=$prot".
                    "&ptm_type=$ptm_type&residue=$residue&apply_action=QUERY";
-            $vals->[11] = $self->make_pa_tooltip( tip_text => "Get observed spectra covering this site with ptm scores >=0.99",
+            $vals->[11] = $self->make_pa_tooltip( tip_text => "Get observed spectra covering this site with ptm scores within 0.99-1.0",
                                                  link_text => "<a href='$link' target='_blank'>$vals->[11]</a>" );
 
+          }
+          if ($vals->[12] > 0){
+            $link ="$CGI_BASE_DIR/PeptideAtlas/GetPTMSpectra?".
+                   "atlas_build_id=$atlas_build_id&site=$site&nochoice=1&biosequence_name=$prot".
+                   "&ptm_type=$ptm_type&residue=$residue&apply_action=QUERY";
+            $vals->[12] = $self->make_pa_tooltip( tip_text => "Get observed spectra covering this site that have no choice in the localization of the PTM ", link_text => "<a href='$link' target='_blank'>$vals->[12]</a>" );
           }
           push@row, $vals->[$i]; 
 			  }	
@@ -1577,15 +1587,28 @@ sub getPTMTableDisplay {
   foreach my $i(0..15){
     push @align, 'center';
   }
-  my $table = $self->encodeSectionTable( header => 1,
-                                         unified_widgets => 1,
-                                         set_download => 1,
-                                         align  => [@align],
-																				 bkg_interval => 3,
-                                         rows_to_show => $args{rows_to_show},
-                                         max_rows => $args{max_rows},
-                                         file_prefix => 'ptm_',
-                                         rows => \@rows );
+  my $tr_info = '';
+  my $table = '';
+  if (@rows > 15){
+     $table = $self->encodeSectionTable( header => 1,
+															 header_sticky => 1,
+															 y_scroll => 'style="overflow-y:scroll; height:300px; display:block;" ', 
+															 unified_widgets => 1,
+															 set_download => 1,
+															 align  => [@align],
+															 bkg_interval => 3,
+															 file_prefix => 'ptm_',
+															 rows => \@rows );
+  }else{
+    $table = $self->encodeSectionTable( header => 1,
+															 unified_widgets => 1,
+															 set_download => 1,
+															 align  => [@align],
+															 bkg_interval => 3,
+															 file_prefix => 'ptm_',
+															 rows => \@rows );
+
+  }
   return $table;
 }
 
@@ -1640,13 +1663,17 @@ sub get_individual_spectra_display {
 
   my $align = [qw(left center center center left center center center center center center center center center left center center)];
 
-  my $html = $self->encodeSectionTable( header => 1,
+
+  my $html = '';
+  if (@data > 15){
+     $html =  $self->encodeSectionTable( header => 1,
+          header_sticky => 1,
+          y_scroll => 'style="overflow-y:scroll; height:300px; display:block;" ',
 					unified_widgets => 1,
 					set_download => 1,
 					colspan => 3,
 					align  => $align,
 					rows => \@data,
-					rows_to_show => 10,
 					max_rows => 500,
 					nowrap => [1],
 					bkg_interval => 3,
@@ -1657,8 +1684,23 @@ sub get_individual_spectra_display {
 					table_id => $table_id,
 					truncate_msg => '  <b>Use link in Modified Peptides section to filter results</b>.',
       );
-
-  return "<TABLE>$html\n";
+    }else{
+     $html =  $self->encodeSectionTable( header => 1,
+					unified_widgets => 1,
+					set_download => 1,
+					colspan => 3,
+					align  => $align,
+					rows => \@data,
+					nowrap => [1],
+					bkg_interval => 3,
+					rs_headings => \@$column_titles_ref, 
+					bg_color => '#EAEAEA',
+					sortable => 1,
+					close_table => 1,
+					table_id => $table_id,
+      );
+    }
+    return "<TABLE>$html\n";
 
 
 } # end 
@@ -3179,9 +3221,9 @@ sub displayProt_PTM_plotly{
                     ptm_type => $ptm_type,
                     data => $data->{$ptm_type},
                     atlas_build_id => $atlas_build_id,
-                    biosequence_name => $protein,
-                    rows_to_show => 10,
-                    max_rows => 500);
+                    biosequence_name => $protein,);
+                    #rows_to_show => 10,
+                    #max_rows => 500);
     @names = @column_names[1..$#column_names-1];
     my $ptm_table_help = $self->get_table_help(column_titles_ref=>\@names);
 		my $text = $ptm_type;
@@ -3709,7 +3751,7 @@ sub display_spectra_ptm_table {
 		my $GV = SBEAMS::Connection::GoogleVisualization->new();
 		my $ptm_summary_chart = $GV->drawPTMHisChart(data=> $ptm_score_summary_ref->{$ptm_type},ptm_type=>$ptm_type );
     my $func_name = "drawVisualization_$ptm_type";
-    $func_name =~ s/[:\.\-\+]/_/g;
+    $func_name =~ s/[:\.\-\+\(\)]/_/g;
 		if ($counter == 1){
 			$spectraHTML .= "<div  id ='$ptm_type' style='display:block' class='tabcontent'>\n";
 		}else{
