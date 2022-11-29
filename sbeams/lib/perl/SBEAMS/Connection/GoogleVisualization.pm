@@ -312,7 +312,7 @@ sub drawPTMHisChart {
   my $ptm_type = $args{ptm_type} || die "parameter residues is missing\n";
   $ptm_type =~ /(^.*):.*/;
   my $ptm_residues = $1;
-  $ptm_type =~ s/[:\.\-\+]/_/g; 
+  $ptm_type =~ s/[:\.\-\+\(\)]/_/g; 
 
   my $dataTable = qq~ 
    var data = new google.visualization.DataTable();

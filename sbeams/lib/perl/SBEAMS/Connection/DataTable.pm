@@ -332,6 +332,9 @@ sub _delimitData {
 sub _getTable {
   my $this = shift;
   my $tabdef = "<TABLE $this->{__tr_info}";
+  if ($this->{__y_scroll}){
+    $tabdef = "<TABLE $this->{__tr_info} $this->{__y_scroll}";
+  }
   foreach my $att ( keys ( %$this ) ) {
     next if $att =~ /^__/;
     $tabdef .= "$att='$this->{$att}' ";
