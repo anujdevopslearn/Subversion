@@ -92,12 +92,6 @@ sub getTabMenu {
        $current_tab=2;
        $current_subtab=3;
 
-    } elsif ( ($PROG_NAME =~ /^SearchProteins/) ||
-	      ($PROG_NAME =~ /SearchProteins\?(\S+)/ ))
-    {
-       $current_tab=4;
-       $current_subtab=5;
-
     } elsif( ($PROG_NAME =~ /^Search/) ||
 	     ($PROG_NAME =~ /^Search\?(\S+)/ ))
     {
@@ -108,12 +102,12 @@ sub getTabMenu {
     {
        $current_tab=4;
 
-    } elsif ($PROG_NAME=~ /^GetNextProtChromMapping/ || 
-	     $PROG_NAME =~ /^GetNextProtChromMapping\?(\S+)/ ) {
+    } elsif ($PROG_NAME=~ /^GetCoreProteomeMapping/ || 
+	     $PROG_NAME =~ /^GetCoreProteomeMapping\?(\S+)/ ) {
        $current_tab=4;
        $current_subtab=3;
 
-     }elsif( ($PROG_NAME =~ /^GetPeptide/) ||
+     } elsif( ($PROG_NAME =~ /^GetPeptide/) ||
 	     ($PROG_NAME =~ /^GetPeptide\?(\S+)/ ))
     {
        $current_tab=3;
@@ -124,21 +118,33 @@ sub getTabMenu {
        $current_tab=4;
        $current_subtab=2;
 
-    } elsif ( ($PROG_NAME =~ /^CompareBuildsProteins/) ||
-	      ($PROG_NAME =~ /CompareBuildsProteins\?(\S+)/ ))
+    } elsif ( ($PROG_NAME =~ /^GetPTMSummary/) ||
+        ($PROG_NAME =~ /GetPTMSummary\?(\S+)/ ))
     {
        $current_tab=4;
        $current_subtab=4;
+
+    }elsif ( ($PROG_NAME =~ /^SearchProteins/) ||
+        ($PROG_NAME =~ /SearchProteins\?(\S+)/ ))
+    {
+       $current_tab=4;
+       $current_subtab=5;
+
+    }  elsif ( ($PROG_NAME =~ /^CompareBuildsProteins/) ||
+	      ($PROG_NAME =~ /CompareBuildsProteins\?(\S+)/ ))
+    {
+       $current_tab=4;
+       $current_subtab=6;
 
     } elsif ( ($PROG_NAME =~ /^showPathways/) ||
 	      ($PROG_NAME =~ /showPathways\?(\S+)/ ))
     {
        $current_tab=4;
-       $current_subtab=6;
+       $current_subtab=7;
 
     } elsif ( ($PROG_NAME =~ /proteinList/) || ($PROG_NAME =~ /MapSearch/ )) {
        $current_tab=4;
-       $current_subtab=7;
+       $current_subtab=8;
 
     } elsif ( ($PROG_NAME =~ /^GetTransitions/) ||
 	      ($PROG_NAME =~ /ViewSRMList\?(\S+)/ ))
@@ -190,8 +196,6 @@ sub getTabMenu {
     {
        $current_tab=5;
        $current_subtab=5;
-
-
     #### PeptideAtlas Submission System PASS tabs
     } elsif ($PROG_NAME =~ /^PASS_Summary/) {
        $current_tab=6;
@@ -202,8 +206,6 @@ sub getTabMenu {
     } elsif ($PROG_NAME =~ /^PASS_View/) {
        $current_tab=6;
        $current_subtab=3;
- 
-
     #### SWATH Atlas tabs
     } elsif ($PROG_NAME =~ /DIA_library_download/) {
        $current_tab=7;
@@ -318,6 +320,12 @@ sub getTabMenu {
 			 helptext => 'Browsing Core Proteome Chromosome mapping and PeptideAtlas observabiligy',
 			 url => "$CGI_BASE_DIR/PeptideAtlas/GetCoreProteomeMapping"
 			 );
+
+    $tabmenu->addMenuItem( tablabel => 'Queries',
+       label => 'Browse PTM Summary',
+       helptext => 'Browsing PTM Summary Table in PTM Builds',
+       url => "$CGI_BASE_DIR/PeptideAtlas/GetPTMSummary"
+       );
 
     $tabmenu->addMenuItem( tablabel => 'Queries',
 			   label => 'Compare Proteins in 2 Builds',
