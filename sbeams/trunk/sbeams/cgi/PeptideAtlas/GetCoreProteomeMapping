@@ -174,6 +174,7 @@ sub handle_request {
   my $resultset_ref = \%resultset;
   my (%url_cols,%hidden_cols,%max_widths,$show_sql);
 
+  
   #### Read in the standard form values
   my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
   my $TABLE_NAME = $parameters{'QUERY_NAME'};
@@ -440,7 +441,8 @@ sub handle_request {
       ["Protein_existence", "NCM.Protein_existence", "Protein Evidence"],
       ["PeptideAtlas_Category", "NCM.PeptideAtlas_Category", "PeptideAtlas"],
       ["nobs", "NCM.n_obs", "N Distinct Peptides"],
-      ["Description", "NCM.Description", "Description"]
+      ["Description", "NCM.Description", "Description"],
+      ["accession", "replace(NCM.nextprot_accession,'PeptideAtlas_', '')","Accession"],
     );
 
 
@@ -452,7 +454,7 @@ sub handle_request {
     colnameidx_ref=>\%colnameidx,
     column_titles_ref=>\@column_titles
   );
-
+  $hidden_cols{Accession} = 1;
 
   my $sql = qq~
 		SELECT $columns_clause
@@ -485,7 +487,7 @@ sub handle_request {
   $url_cols{'PeptideAtlas'} = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=".$parameters{atlas_build_id}
                               ."&apply_action=$pass_action&protein_name=\%1V"; 
   if ($build_name =~ /^Arabidopsis/){ 
-    $url_cols{'Gene Accession'} = "https://www.arabidopsis.org/servlets/Search?type=general&search_action=detail&method=1&show_obsolete=F&name=\%1V&".
+    $url_cols{'Gene Accession'} = "https://www.arabidopsis.org/servlets/Search?type=general&search_action=detail&method=1&show_obsolete=F&name=\%14V&".
                                 "sub_type=gene&SEARCH_EXACT=4&SEARCH_CONTAINS=1";
   }elsif($build_name =~ /human/i){
     $url_cols{'Gene Accession'} = "http://www.nextprot.org/db/entry/\%1V";
