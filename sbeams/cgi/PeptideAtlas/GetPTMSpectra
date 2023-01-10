@@ -484,6 +484,7 @@ sub postProcessResultset {
 #      $pep->[$mseq_idx] =   $sbeamsMOD->formatMassMods($pep->[$mseq_idx]);
     ## filter using offset and min_score
     my $pass = 0;
+
 		if ($pep->[$ptm_idx]){
       $pep->[$ptm_type_idx] =~ /^(.*):(.*)$/;
       my $ptm_residues=$1;
@@ -499,6 +500,11 @@ sub postProcessResultset {
           
       my @m = $ptm_sequence =~ /([${ptm_residues}])/g;
       my @n = $modified_pepseq_w_n =~ /([${ptm_residues}]\[${ptm_name}\])/g;
+      ## for human phospho 2022-04 build
+      if ($modified_pepseq_w_n =~ /[${ptm_residues}]\[/ && $modified_pepseq_w_n !~ /${ptm_name}/){
+        @n = $modified_pepseq_w_n =~ /([${ptm_residues}]\[)/g;
+      }
+ 
       my $m = scalar @m;
       my $n = scalar @n;
       my $nochoice = 0;
