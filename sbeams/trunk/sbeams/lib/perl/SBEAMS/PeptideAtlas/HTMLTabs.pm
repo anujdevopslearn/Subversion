@@ -75,124 +75,85 @@ sub getTabMenu {
     my $current_tab=1;
     my $current_subtab=1;
 
-    if ( ($PROG_NAME =~ /^main.cgi|buildDetails/) ||
-	 ($PROG_NAME =~ /^main.cgi\?(\S+)/ ))
+    if ( ($PROG_NAME =~ /^main.cgi|buildDetails/) ||($PROG_NAME =~ /^main.cgi\?(\S+)/ ))
     {
        $current_tab=2;
-
-    } elsif ( ($PROG_NAME =~ /^buildInfo/) ||
-	      ($PROG_NAME =~ /buildInfo\?(\S+)/ ))
+    } elsif ( ($PROG_NAME =~ /^buildInfo/) ||   ($PROG_NAME =~ /buildInfo\?(\S+)/ ))
     {
        $current_tab=2;
        $current_subtab=2;
-
-    } elsif ( ($PROG_NAME =~ /^defaultBuildsPepsProts/) ||
-	      ($PROG_NAME =~ /defaultBuildsPepsProts\?(\S+)/ ))
+    } elsif ( ($PROG_NAME =~ /^defaultBuildsPepsProts/) ||   ($PROG_NAME =~ /defaultBuildsPepsProts\?(\S+)/ ))
     {
        $current_tab=2;
        $current_subtab=3;
-
-    } elsif( ($PROG_NAME =~ /^Search/) ||
-	     ($PROG_NAME =~ /^Search\?(\S+)/ ))
+    }elsif ( ($PROG_NAME =~ /^Summarize_Peptide/) || ($PROG_NAME =~ /Summarize_Peptide\?(\S+)/ ))
+    {
+       $current_tab=2;
+       $current_subtab=4;
+    }elsif ( ($PROG_NAME =~ /^viewOrthologs/) || ($PROG_NAME =~ /viewOrthologs\?(\S+)/ ))
+    {
+       $current_tab=2;
+       $current_subtab=5;
+    } elsif( ($PROG_NAME =~ /^Search/) ||  ($PROG_NAME =~ /^Search\?(\S+)/ ))
     {
        $current_tab=1;
-
-    } elsif( ($PROG_NAME =~ /^GetPeptides/) ||
-	     ($PROG_NAME =~ /^GetPeptides\?(\S+)/ ))
-    {
-       $current_tab=4;
-
-    } elsif ($PROG_NAME=~ /^GetCoreProteomeMapping/ || 
-	     $PROG_NAME =~ /^GetCoreProteomeMapping\?(\S+)/ ) {
-       $current_tab=4;
-       $current_subtab=3;
-
-     } elsif( ($PROG_NAME =~ /^GetPeptide/) ||
-	     ($PROG_NAME =~ /^GetPeptide\?(\S+)/ ))
+    } elsif( ($PROG_NAME =~ /^GetPeptide/) || ($PROG_NAME =~ /^GetPeptide\?(\S+)/ ))
     {
        $current_tab=3;
+    } elsif ( ($PROG_NAME =~ /^GetProtein/) || ($PROG_NAME =~ /GetProtein\?(\S+)/ ))
+    {
+       $current_tab=3;
+       $current_subtab=2;
 
-    } elsif ( ($PROG_NAME =~ /^GetProteins/) ||
-	      ($PROG_NAME =~ /GetProteins\?(\S+)/ ))
+    } elsif( ($PROG_NAME =~ /^GetPeptides/) ||  ($PROG_NAME =~ /^GetPeptides\?(\S+)/ ))
+    {
+       $current_tab=4;
+    } elsif ( ($PROG_NAME =~ /^GetProteins/) ||   ($PROG_NAME =~ /GetProteins\?(\S+)/ ))
     {
        $current_tab=4;
        $current_subtab=2;
-
-    } elsif ( ($PROG_NAME =~ /^GetPTMSummary/) ||
-        ($PROG_NAME =~ /GetPTMSummary\?(\S+)/ ))
+    } elsif ($PROG_NAME=~ /^GetCoreProteomeMapping/ || $PROG_NAME =~ /^GetCoreProteomeMapping\?(\S+)/ ) {
+       $current_tab=4;
+       $current_subtab=3;
+    } elsif ( ($PROG_NAME =~ /^GetPTMSummary/) ||  ($PROG_NAME =~ /GetPTMSummary\?(\S+)/ ))
     {
        $current_tab=4;
        $current_subtab=4;
-
-    }elsif ( ($PROG_NAME =~ /^SearchProteins/) ||
-        ($PROG_NAME =~ /SearchProteins\?(\S+)/ ))
+    }elsif ( ($PROG_NAME =~ /^SearchProteins/) ||   ($PROG_NAME =~ /SearchProteins\?(\S+)/ ))
     {
        $current_tab=4;
        $current_subtab=5;
-
-    }  elsif ( ($PROG_NAME =~ /^CompareBuildsProteins/) ||
-	      ($PROG_NAME =~ /CompareBuildsProteins\?(\S+)/ ))
+    }  elsif ( ($PROG_NAME =~ /^CompareBuildsProteins/) ||($PROG_NAME =~ /CompareBuildsProteins\?(\S+)/ ))
     {
        $current_tab=4;
        $current_subtab=6;
-
-    } elsif ( ($PROG_NAME =~ /^showPathways/) ||
-	      ($PROG_NAME =~ /showPathways\?(\S+)/ ))
+    } elsif ( ($PROG_NAME =~ /^showPathways/) || ($PROG_NAME =~ /showPathways\?(\S+)/ ))
     {
        $current_tab=4;
        $current_subtab=7;
-
     } elsif ( ($PROG_NAME =~ /proteinList/) || ($PROG_NAME =~ /MapSearch/ )) {
        $current_tab=4;
        $current_subtab=8;
-
-    } elsif ( ($PROG_NAME =~ /^GetTransitions/) ||
-	      ($PROG_NAME =~ /ViewSRMList\?(\S+)/ ))
+    } elsif ( ($PROG_NAME =~ /^GetTransitions/) || ($PROG_NAME =~ /ViewSRMList\?(\S+)/ ))
+    {
+       $current_tab=5;
+    } elsif ( ($PROG_NAME =~ /^quant_info/) || ($PROG_NAME =~ /ViewSRMList\?(\S+)/ ))
     {
        $current_tab=5;
        $current_subtab=1;
-
-    } elsif ( ($PROG_NAME =~ /^quant_info/) ||
-	      ($PROG_NAME =~ /ViewSRMList\?(\S+)/ ))
-    {
-       $current_tab=5;
-       $current_subtab=1;
-
-    } elsif ( ($PROG_NAME =~ /^GetProtein/) ||
-	      ($PROG_NAME =~ /GetProtein\?(\S+)/ ))
-    {
-       $current_tab=3;
-       $current_subtab=2;
-
-    }elsif ( ($PROG_NAME =~ /^Summarize_Peptide/) ||
-	     ($PROG_NAME =~ /Summarize_Peptide\?(\S+)/ ))
-    {
-       $current_tab=2;
-       $current_subtab=4;
-
-    }elsif ( ($PROG_NAME =~ /^viewOrthologs/) ||
-	     ($PROG_NAME =~ /viewOrthologs\?(\S+)/ ))
-    {
-       $current_tab=2;
-       $current_subtab=5;
-
-    }elsif ( ($PROG_NAME =~ /^GetTransitionLists/) ||
-	     ($PROG_NAME =~ /GetTransitionLists\?(\S+)/ ))
+    }elsif ( ($PROG_NAME =~ /^GetTransitionLists/) || ($PROG_NAME =~ /GetTransitionLists\?(\S+)/ ))
     {
        $current_tab=5;
        $current_subtab=2;
-    }elsif ( ($PROG_NAME =~ /^ViewSRMBuild/) ||
-	     ($PROG_NAME =~ /ViewSRMBuild\?(\S+)/ ))
+    }elsif ( ($PROG_NAME =~ /^ViewSRMBuild/) || ($PROG_NAME =~ /ViewSRMBuild\?(\S+)/ ))
     {
        $current_tab=5;
        $current_subtab=3;
-    }elsif ( ($PROG_NAME =~ /^GetSELExperiments/) ||
-	     ($PROG_NAME =~ /GetSELExperiments\?(\S+)/ ))
+    }elsif ( ($PROG_NAME =~ /^GetSELExperiments/) ||  ($PROG_NAME =~ /GetSELExperiments\?(\S+)/ ))
     {
        $current_tab=5;
        $current_subtab=4;
-    }elsif ( ($PROG_NAME =~ /^GetSELTransitions/) ||
-	     ($PROG_NAME =~ /GetSELTransitions\?(\S+)/ ))
+    }elsif ( ($PROG_NAME =~ /^GetSELTransitions/) || ($PROG_NAME =~ /GetSELTransitions\?(\S+)/ ))
     {
        $current_tab=5;
        $current_subtab=5;
@@ -219,7 +180,6 @@ sub getTabMenu {
     } elsif ($PROG_NAME =~ /AssessDIALib/) {
        $current_tab=7;
        $current_subtab=4;
-
     } elsif ($PROG_NAME eq 'none') {
       $current_tab=99;
     }
