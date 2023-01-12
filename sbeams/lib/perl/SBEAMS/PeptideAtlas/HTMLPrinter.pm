@@ -2366,7 +2366,7 @@ sub get_ptm_coverage {
     push @col_names, 'Database';
     foreach my $residue (sort {$a cmp $b} keys %ptm_residues){
       push @col_names, ("total_".$residue."_sites", "obs_protein_$residue"."_sites", "covered_$residue"."_sites"
-                        ,"nP>.80","nP>.95","nP>.99","no-choice");
+                        ,"nP.80-.95","nP.95-.99","nP.99-1","no-choice");
     }
   }else{
     return;
@@ -2727,23 +2727,34 @@ sub get_what_is_new {
 				       sortable => 1 );
   $table .= '</table>';
   ## new sample table:
+  print "current_build=$build_id\n";
+  print "previous_build_id=$previous_build_id\n";
   $sql = qq~
     SELECT SAMPLE_ID
     FROM $TBAT_SAMPLE 
-    WHERE REPOSITORY_IDENTIFIERS 
-    IN ( 
+    WHERE REPOSITORY_IDENTIFIERS IN ( 
       SELECT SA.REPOSITORY_IDENTIFIERS 
       FROM $TBAT_ATLAS_BUILD_SAMPLE A 
       JOIN $TBAT_SAMPLE SA ON (A.sample_id = SA.sample_id)
       WHERE A.ATLAS_BUILD_ID IN ($build_id)
-    ) 
-    AND REPOSITORY_IDENTIFIERS
-    NOT IN ( 
+    )
+    AND SAMPLE_ID in (
+     SELECT A.sample_id 
+      FROM $TBAT_ATLAS_BUILD_SAMPLE A
+      WHERE A.ATLAS_BUILD_ID IN ($build_id)
+    )
+    AND REPOSITORY_IDENTIFIERS NOT IN ( 
       SELECT SB.REPOSITORY_IDENTIFIERS 
       FROM $TBAT_ATLAS_BUILD_SAMPLE B
       JOIN $TBAT_SAMPLE SB ON (B.sample_id = SB.sample_id) 
       WHERE B.ATLAS_BUILD_ID IN ($previous_build_id)
-    ) 
+    )
+    AND SAMPLE_ID not IN(
+     SELECT B.sample_id
+      FROM $TBAT_ATLAS_BUILD_SAMPLE B
+      WHERE B.ATLAS_BUILD_ID IN ($previous_build_id)
+    )
+    order by REPOSITORY_IDENTIFIERS 
   ~;
 
   my @sample_ids = $sbeams->selectOneColumn($sql);

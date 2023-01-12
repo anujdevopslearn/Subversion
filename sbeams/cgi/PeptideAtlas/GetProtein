@@ -1563,7 +1563,7 @@ sub handle_request {
       my %ptm_obs = ();
       my $ptm_type = '';
       my @columns = ('Protein', 'Offset', 'Residue','nObs', 'One_mod', 'Two_mods', 'Over_two_mods',
-		     'nP<.01', 'nP<.05', 'nP<.20', 'nP.2-.8', 'nP>.80', 'nP>.95', 'nP>.99',
+		     'nP0-.01', 'nP.01-.05', 'nP.05-.20', 'nP.20-.80', 'nP.80-.95', 'nP.95-.99', 'nP.99-1',
          'no-choice','enriched-with-mod','enriched-but-non-mod','non-enriched',
          'InNextProt','InUniprot','peptide');
       foreach my $row  (@ptm_results){
@@ -1572,9 +1572,6 @@ sub handle_request {
         $ptm_type = pop @vals; 
         $ptm_obs{$ptm_type} = 1 if ($vals[3] > 0);
         push  @{$data{$ptm_type}{$vals[0]}{$vals[1]}},[@vals[2..$#vals]];
-				#for my $i (2..$#vals){
-			  #	$data{$ptm_type}{$vals[0]}{$vals[1]}{$columns[$i]} = $vals[$i];
-				#}
       }
 		  my $ptm_summary_chart = $sbeamsMOD->displayProt_PTM_plotly(data=> \%data,
 					 protein=>$protein_name,
