@@ -1121,7 +1121,7 @@ sub displayEditMetaDataForm {
      }
 
      #### Print the entry form
-     print "<tr><td class='bold_text'>Dataset type</td>"; # (Please select the broad category classifying the dataset. This will aid in determining how to process it.)<BR>\n";
+     print "<tr><td class='bold_text'>Dataset type</td><td></td><td>"; # (Please select the broad category classifying the dataset. This will aid in determining how to process it.)<BR>\n";
 
      # do not allow edits to this field - 202108 LM
      #print qq~<select name="datasetType">~;
@@ -1133,7 +1133,8 @@ sub displayEditMetaDataForm {
      #}
      #print "</select>\n";
 
-     print "<td></td><td> $parameters{'datasetType'} </td><td></td></tr>\n";
+     print $q->hidden(-name=>"datasetType",-value=>$parameters{'datasetType'});
+     print " $parameters{'datasetType'} </td><td></td></tr>\n";
      print "<tr><td colspan='4'><HR></td></tr>\n";
 
      print "<tr><td class='bold_text'>Dataset tag</td>";
