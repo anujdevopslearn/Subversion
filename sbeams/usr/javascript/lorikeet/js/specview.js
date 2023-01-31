@@ -24,6 +24,7 @@
                 variableMods: [],
                 ntermMod: 0, // additional mass to be added to the n-term
                 ctermMod: 0, // additional mass to be added to the c-term
+	        labileModSum: 0,
                 maxNeutralLossCount: 1,
                 peaks: [],
                 showA:[],
@@ -161,7 +162,8 @@
         options.variableMods = parsedVarMods;
 
         var peptide = new Peptide(options.sequence, options.staticMods, options.variableMods,
-                                  options.ntermMod, options.ctermMod, options.maxNeutralLossCount);
+                                  options.ntermMod, options.ctermMod, options.maxNeutralLossCount,
+				  options.labileModSum);
         options.peptide = peptide;
 
         // Calculate a theoretical m/z from the given sequence and charge
@@ -377,7 +379,7 @@
         container.data("ionSeriesLabels", {a: [], b: [], c: [], x: [], y: [], z: []});
         container.data("ionSeriesMatch", {a: [], b: [], c: [], x: [], y: [], z: []});
         container.data("ionSeriesAntic", {a: [], b: [], c: [], x: [], y: [], z: []}); // total annotated ion current
-        container.data("anticPrecursor", 0); // total annotated ion current: precursor peak
+        container.data("anticPrecursor", 0); // total annotated ion current: precursor peaks
         container.data("anticImmonium", 0); // total annotated ion current: immonium ions
         container.data("anticReporter", 0); // total annotated ion current: reporter ions
         container.data("totalIonCurrent", getTotalIonCurrent(options.peaks)); // total ion current
@@ -475,7 +477,7 @@
     }
 
     function setMassError(container) {
-        var options = container.data("options");
+	var options = container.data("options");
 	var me = parseFloat($(getElementSelector(container, elementIds.massError)).val());
 	var unit = getMassErrorUnit(container);
 	if(me !== options.massError) {
@@ -555,7 +557,7 @@
             ctx.lineTo(o.left-10, o.top-5);
             ctx.fillStyle = "#008800";
             ctx.fill();
-            placeholder.append('<div style="position:absolute;left:' + (o.left + 4) + 'px;top:' + (o.top-4) + 'px;color:#000;font-size:smaller">'+options.precursorMz.toFixed(4)+'</div>');
+            placeholder.append('<div style="position:absolute;left:' + (o.left + 4) + 'px;top:' + (o.top-4) + 'px;color:#000;font-size:smaller">'+round(options.precursorMz)+'</div>');
 
 	}
 
@@ -653,7 +655,7 @@
 									 + (o.left + plot.width() - 20) + 'px;top:' + (o.top+4) + 'px"></div>');
 
 	    $(getElementSelector(container, elementIds.ms2plot_zoom_out)).click( function() {
-                resetZoom(container);
+		resetZoom(container);
 	    });
 	}
 
@@ -795,8 +797,8 @@
                     container.data("previousPoint", item.datapoint);
 
                     $(getElementSelector(container, elementIds.msmstooltip)).remove();
-                    var x = item.datapoint[0].toFixed(4),
-                    y = item.datapoint[1].toFixed(4);
+                    var x = round(item.datapoint[0]),
+                    y = item.datapoint[1].toFixed(2);
 
                     showTooltip(container, item.pageX, item.pageY,
 				tooltip_xlabel + ": " + x + "<br>" + tooltip_ylabel + ": " + y, options);
@@ -948,7 +950,6 @@
     }
 
     function resetAxisZoom(container) {
-
         var plot = container.data("plot");
         var plotOptions = container.data("plotOptions");
 
@@ -992,7 +993,6 @@
     }
 
     function makePlotResizable(container) {
-
         var options = container.data("options");
 
 	$(getElementSelector(container, elementIds.slider_width)).slider({
@@ -1039,7 +1039,6 @@
     }
 
     function printPlot(container) {
-
 	$(getElementSelector(container, elementIds.printLink)).click(function() {
 
             var parent = container.parent();
@@ -1140,11 +1139,10 @@
         if(labelPrecursorPeak(container))
         {
             // Recalculate if the following have changed: mass error, peak assignment type, selected neutral loss
-            // Changing mass type only chanages the fragmentMassType not the precursorMassType, so the labeled precursor peaks will not change.
-            if(container.data("massErrorChanged") || container.data("peakAssignmentTypeChanged") || container.data("selectedNeutralLossChanged"))
-            {
-                calculatePrecursorPeak(container);
-            }
+            // Changing mass type only changes the fragmentMassType not the precursorMassType, so the labeled precursor peaks will not change.
+            //if(container.data("massErrorChanged") || container.data("peakAssignmentTypeChanged") || container.data("selectedNeutralLossChanged"))
+            calculatePrecursorPeak(container);
+
             if (container.data("precursorPeak"))
             {
                 data.push(container.data("precursorPeak"));
@@ -1237,39 +1235,51 @@
             var precursorMzMatches = [];
             var labels = [];
 
-            var peaks = options.peaks;
-            var precursorMz = options.theoreticalMz;
-            var charge = options.charge ? options.charge : 1;
-            var label = 'M';
+	    var peaks = options.peaks;
+	    var charge = options.charge ? options.charge : 1;
 
-            // Label all possible precursor charge states
-            for (var i = 1; i <= charge; i += 1) {
-                label += "+";
-                var pmz = (((precursorMz - MASS_PROTON) * charge) / i) + MASS_PROTON;
-                //console.log("for charge:"+i+" -- m/z:"+pmz);
+	    var precmassdiffs = [0];
+	    if(options.labileModSum || options.labileModSum > 0)
+		precmassdiffs.push(options.labileModSum);
+	    if(options.ntermMod || options.ntermMod > 0)
+		precmassdiffs.push(options.ntermMod);
 
-                var match = getMatchingPeakForMz(container, peaks, pmz);
-                if (match.bestPeak) {
-                    precursorMzMatches.push([match.bestPeak[0], match.bestPeak[1]]);
-                    labels.push(label);
-                    antic += match.bestPeak[1];
-                }
+	    for (pmd of precmassdiffs) {
+		var precursorMz = options.theoreticalMz - (pmd / charge);
+		var label = 'M';
+		if (pmd)
+		    label += '(-'+pmd.toFixed(0)+')';
 
-                var neutralLosses = getNeutralLosses(container);
-                for (var lossKey in neutralLosses) {
-                    var loss = neutralLosses[lossKey];
-                    // console.log("Neutral loss:"+lossKey+" -- Label:"+loss.label());
+		// Label all possible precursor charge states
+		for (var i = 1; i <= charge; i += 1) {
+		    label += "+";
+		    var pmz = (((precursorMz - MASS_PROTON) * charge) / i) + MASS_PROTON;
+		    // console.log("for charge:"+i+" -- m/z:"+pmz);
 
-                    match = getMatchingPeakForMz(container, peaks, pmz - (loss.monoLossMass / charge));
-                    if (match.bestPeak) {
-                        precursorMzMatches.push([match.bestPeak[0], match.bestPeak[1]]);
-                        labels.push(label + " " + loss.label());
-                        antic += match.bestPeak[1];
-                    }
-                }
-                if (precursorMzMatches.length > 0)
-                    container.data("precursorPeak", {data: precursorMzMatches, labels: labels, color: "#ffd700"});
-            }
+		    var match = getMatchingPeakForMz(container, peaks, pmz);
+		    if (match.bestPeak) {
+			precursorMzMatches.push([match.bestPeak[0], match.bestPeak[1]]);
+			labels.push(label);
+			antic += match.bestPeak[1];
+		    }
+
+		    var neutralLosses = getNeutralLosses(container);
+		    for (var lossKey in neutralLosses) {
+			var loss = neutralLosses[lossKey];
+			// console.log("Neutral loss:"+lossKey+" -- Label:"+loss.label());
+
+			match = getMatchingPeakForMz(container, peaks, pmz - (loss.monoLossMass / charge));
+			if (match.bestPeak) {
+			    precursorMzMatches.push([match.bestPeak[0], match.bestPeak[1]]);
+			    labels.push(label + " " + loss.label());
+			    antic += match.bestPeak[1];
+			}
+		    }
+		}
+
+		if (precursorMzMatches.length > 0)
+		    container.data("precursorPeak", {data: precursorMzMatches, labels: labels, color: "#ffd700"});
+	    }
         }
         container.data("anticPrecursor", antic);
     }
@@ -1591,9 +1601,7 @@
         var peaks = getPeaks(container);
 
 
-
 	for(var j = 0; j < selectedIonTypes.length; j += 1) {
-
 	    var ion = selectedIonTypes[j];
 
 	    if(ion.type == "a") {
@@ -1717,7 +1725,6 @@
 	var peptide = container.data("options").peptide;
 
 	for(var i = 0; i < ionSeries.length; i += 1) {
-
 	    var sion = ionSeries[i];
 
 	    // get match for water and / or ammonia loss.
@@ -1928,11 +1935,11 @@
             }
 
             var mean = totalIntensity / peakCount;
-	    if(peakCount <= 2 && intensity >= maxIntensity * 0.8)
-	    {
-		sparsePeaks.push(peak);
-	    }
-	    else if(peakCount <= 10 && intensity == maxIntensity)
+            if(peakCount <= 2 && intensity >= maxIntensity * 0.8)
+            {
+                sparsePeaks.push(peak);
+            }
+            else if(peakCount <= 10 && intensity == maxIntensity)
             {
                 sparsePeaks.push(peak);
             }
@@ -2232,9 +2239,9 @@
             options.theoreticalMz = mz;
 
 	    var mass = neutralMass + Ion.MASS_PROTON;
-	    specinfo += ', MH+ '+mass.toFixed(4);
+	    specinfo += ', MH+ '+round(mass);
 	    if(mz)
-		specinfo += ', m/z '+mz.toFixed(4);
+		specinfo += ', m/z '+round(mz);
 	    specinfo += '</div>';
 
 	}
@@ -2389,6 +2396,10 @@
 	    modInfo += '</div>';
 	}
 
+	if(options.labileModSum || options.labileModSum > 0) {
+	    modInfo += '<div style="margin-top:5px;">Total Labile Mass Loss: <b>'+round(options.labileModSum)+'</b></div>';
+	}
+
 	$(getElementSelector(container, elementIds.modInfo)).append(modInfo);
     }
 
@@ -2396,8 +2407,12 @@
     // ANTIC INFO
     //---------------------------------------------------------
     function showAnticInfo (container) {
+	var antic = 0;
 
-        var antic = container.data("anticPrecursor");
+	if(labelPrecursorPeak(container))
+	{
+	    antic += container.data("anticPrecursor");
+	}
         if(labelImmoniumIons(container))
         {
             antic += container.data("anticImmonium");
@@ -2420,7 +2435,7 @@
             antic += container.data("anticUserReporterIons");
         }
 
-	var percent = 100*round(antic / container.data("totalIonCurrent"));
+	var percent = (100*round(antic / container.data("totalIonCurrent"))).toFixed(2);
 
 	var anticInfo = '<div id="'+getElementId(container, elementIds.anticInfo)+'" style="margin-top:5px;">';
 	anticInfo += 'Annotated Ion Current: ';

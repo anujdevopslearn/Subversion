@@ -1043,7 +1043,7 @@ sub showSpectrumText {
 
   my $spectrum = Proteomics::Spectra::Spectrum->new(peptideIon=>$peptideIon);
 
-  #### If ETD is specified, then set that fragmenation type to ETD
+  #### If ETD is specified, then set that fragmentation type to ETD
   if ($parameters->{SAWB_fragmentation} eq 'ETD') {
     $spectrum->setFragmentationType('ETD');
   }
@@ -1244,6 +1244,9 @@ sub get_spectrum
     $spectrum{isolation_high} = $result->{isolation_high};
     #### Silliness to fool later if statements. ugh.
     @mass_intensities = ( [1,1] );
+  }
+  else {
+    $spectrum{mz1} = [];
   }
 
   if ( ! @mass_intensities) {
