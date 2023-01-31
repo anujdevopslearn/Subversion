@@ -7,7 +7,7 @@ package SBEAMS::Proteomics::SpecViewer;
 #
 # Description : Contains utilities to display spectra in the Lorikeet viewer
 #
-# SBEAMS is Copyright (C) 2000-2022 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2023 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -135,8 +135,17 @@ sub convertMods {
 
 	    if (defined($mass_diff)) {
 	        my $losses = '';
-		# custom neutral losses (other than NH3, H2O, and H3PO4, which are already built into Lorikeet)
-		if ($aa eq "M" && ($mass_diff-15.9949 < 0.01)) {  #Ox
+		# custom neutral losses (other than NH3 and H2O, [ RETIRED:H3PO4,] which are already built into Lorikeet)
+		if (abs($mass_diff-79.966331) < 0.01) {  #Phos
+		  if (!$losses) {
+		    $losses = '[ ';
+		  } else {
+		    $losses .= ', ';
+		  }
+		  $losses .= '{ monoLossMass: 97.976896, avgLossMass: 97.9952, formula: "H3PO4", label: "p" }, ';
+		  $losses .= '{ monoLossMass: 79.966331, avgLossMass: 79.9799, formula: "HPO3" }';
+		}
+		elsif ($aa eq "M" && (abs($mass_diff-15.9949) < 0.01)) {  #Ox
 		  if (!$losses) {
 		    $losses = '[ ';
 		  } else {
@@ -144,7 +153,7 @@ sub convertMods {
 		  }
 		  $losses .= '{ monoLossMass: 63.998285, avgLossMass: 64.11, formula: "CH3SOH" }';
 		}
-                elsif (($aa eq "S" || $aa eq "T")  && ($mass_diff-27.9949 < 0.01)) {  #Formyl
+                elsif (($aa eq "S" || $aa eq "T")  && (abs($mass_diff-27.9949) < 0.01)) {  #Formyl
                   if (!$losses) {
                     $losses = '[ ';
                   } else {
@@ -239,7 +248,7 @@ sub generateSpectrum {
     my $lorikeet_html = qq%
 	<!--[if IE]><script language="javascript" type="text/javascript" src="$lorikeet_resources/js/excanvas.min.js"></script><![endif]-->
 	<script type="text/javascript" src="$lorikeet_resources/js/jquery.min.js"></script>
-	<script type="text/javascript" src="$lorikeet_resources/js/jquery-ui.min.js"></script>
+	<script type="text/javascript" src="$lorikeet_resources/js/jquery-ui.slider.min.js"></script>
 	<script type="text/javascript" src="$lorikeet_resources/js/jquery.flot.js"></script>
 	<script type="text/javascript" src="$lorikeet_resources/js/jquery.flot.selection.js"></script>
 	<script type="text/javascript" src="$lorikeet_resources/js/specview.js"></script>
@@ -247,6 +256,7 @@ sub generateSpectrum {
 	<script type="text/javascript" src="$lorikeet_resources/js/aminoacid.js"></script>
 	<script type="text/javascript" src="$lorikeet_resources/js/ion.js"></script>
 	<link REL="stylesheet" TYPE="text/css" HREF="$lorikeet_resources/css/lorikeet.css">
+	<link REL="stylesheet" TYPE="text/css" HREF="$lorikeet_resources/css/jquery-ui.slider.min.css">
 
 	<div id="$html_id"></div>
 
