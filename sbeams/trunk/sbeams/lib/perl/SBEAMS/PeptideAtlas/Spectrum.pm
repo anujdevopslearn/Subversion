@@ -43,12 +43,16 @@ use SBEAMS::Proteomics::Tables;
 use vars qw($VERBOSE $TESTONLY $sbeams);
 use Time::HiRes qw( usleep ualarm gettimeofday tv_interval);
 
+our $fhs;
+our $pk_counter;
 
 ###############################################################################
 # Constructor
 ###############################################################################
 sub new {
     my $this = shift;
+    $fhs = shift;
+    $pk_counter = shift;
     my $class = ref($this) || $this;
     my $self = {};
     bless $self, $class;
@@ -123,7 +127,7 @@ sub loadBuildSpectra {
   #### We now support two different file types
   #### First try to find the PAidentlist file
   my $filetype = 'PAidentlist';
-  my $expected_n_columns = 20;
+  my $expected_n_columns = 21;
   my $peplist_file = "$atlas_build_directory/".
     "PeptideAtlasInput_concat.PAidentlist";
 
@@ -163,14 +167,32 @@ sub loadBuildSpectra {
       return;
     }
   }
-
+  
+  my $exp_list_file = "$atlas_build_directory/../Experiments.list"; 
+  my $sql = qq~
+    SELECT FRAGMENTATION_TYPE, FRAGMENTATION_TYPE_ID
+    FROM $TBAT_FRAGMENTATION_TYPE
+  ~;
+  my %fragmentation_name2id = $sbeams->selectTwoColumnHash($sql);
+  my %exp_loc = ();
+  open (EXP, "<$exp_list_file" ) or die "cannot open $exp_list_file\n";
+  while (my $line =<EXP>){
+    chomp $line;
+    next if ($line =~ /^#/ || $line =~ /^$/);
+    my ($id, $loc) = split(/\s+/, $line);
+    $exp_loc{$id} = $loc;
+  }
+  close EXP;
 
   #### Loop through all spectrum identifications and load
-  my $spectrum_identifications;
-  open ($spectrum_identifications, ">spectrum_identifications.txt");
+  my $spectrum_identification_fh;
+  open ($spectrum_identification_fh, ">spectrum_identifications.txt") 
+     if (! $fhs->{spectrum_identification});
   my @columns;
   my $pre_search_batch_id;
   my $spec_counter =0;
+  my %fragmentation_type_ids =();
+
   while ( my $line = <INFILE>) {
     $spec_counter++;
     chomp $line;
@@ -178,27 +200,18 @@ sub loadBuildSpectra {
     #  next;
     #}
     @columns = split("\t",$line,-1);
-    unless (scalar(@columns) == $expected_n_columns) {
-      #if (($expected_n_columns == 17|| $expected_n_columns == 18) && (scalar(@columns) == 15 || scalar(@columns) == 14)) {
-        ## won't happen now. All spectra should has S/N value, then should have 17/18 columns
-			#	print "WARNING: Unexpected number of columns (".
-			#	scalar(@columns)."!=$expected_n_columns) in\n$line\n".
-			#		"This is likely missing ProteinProphet information, which is bad, but we will allow it until this bug is fixed.\n";
-      #} 
+    unless (scalar(@columns) == $expected_n_columns || scalar(@columns) == $expected_n_columns-2) {
       #18 retention_time_sec
-      if (scalar(@columns) == 20 || scalar(@columns) == 21 || scalar(@columns) == 19) {
-				
-      } else {
+     # 19 20 ptms
 				die("ERROR: Unexpected number of columns (".
 				scalar(@columns)."!=$expected_n_columns) in\n$line");
-      }
     }
 
     my ($search_batch_id,$spectrum_name,$peptide_accession,$peptide_sequence,
         $preceding_residue,$modified_sequence,$following_residue,$charge,
         $probability,$massdiff,$protein_name,$proteinProphet_probability,
         $n_proteinProphet_observations,$n_sibling_peptides,
-        $SpectraST_probability, $ptm_sequence,$precursor_intensity,
+        $SpectraST_probability, $ptm_sequence,$precursor_intensity,$ptm_lability,
         $total_ion_current,$signal_to_noise,$retention_time_sec,$chimera_level);
     if ($filetype eq 'peplist') {
       ($search_batch_id,$peptide_sequence,$modified_sequence,$charge,
@@ -223,38 +236,71 @@ sub loadBuildSpectra {
 				$signal_to_noise,
         $retention_time_sec,
 				$chimera_level,
-        $ptm_sequence) = @columns;
+        $ptm_sequence,
+        $ptm_lability) = @columns;
       #### Correction for occasional value '+-0.000000'
       $massdiff =~ s/\+\-//;
     } else {
       die("ERROR: Unexpected filetype '$filetype'");
     }
 
-    $self->insertSpectrumIdentification(
-       atlas_build_id => $atlas_build_id,
-       search_batch_id => $search_batch_id,
-       modified_sequence => $modified_sequence,
-       ptm_sequence => $ptm_sequence,
-       charge => $charge,
-       probability => $probability,
-       protein_name => $protein_name,
-       spectrum_name => $spectrum_name,
-       massdiff => $massdiff,
-			 precursor_intensity => $precursor_intensity,
-			 total_ion_current => $total_ion_current,
-			 signal_to_noise => $signal_to_noise,
-       retention_time_sec => $retention_time_sec,
-       chimera_level => $chimera_level, 
-       spectrum_identifications => $spectrum_identifications,
-       );
-
     if($pre_search_batch_id ne $search_batch_id){
+
       print "\nsearch_batch_id: $pre_search_batch_id, $spec_counter records processed\n";
+      %fragmentation_type_ids = ();
+
+      ## read fragmentation_types.tsv files
+      my $dir = "$exp_loc{$search_batch_id}/../data/";
+      if (-d "$dir"){
+        opendir ( DIR, $dir) || die "Error in opening dir $dir\n";
+        while( (my $filename = readdir(DIR))) {
+           next if($filename !~ /^(.*)\.fragmentation_types.tsv/);
+           my $run_name = $1;
+           open (FRAG, "<$dir/$filename");
+           while (my $line =<FRAG>){
+              chomp $line;
+              my ($scan, $name) = split(/\t/, $line);
+              next if(not defined $fragmentation_name2id{$name});
+              $fragmentation_type_ids{$run_name}{$scan} = $fragmentation_name2id{$name};
+           }
+        }
+        close FRAG;
+        closedir(DIR);
+      }
+      if (! %fragmentation_type_ids){
+         print "WARNING: no fragmentation_type_id file in $dir\n";
+      }
+    }
+
+    if ($peptide_sequence !~ /[JUO]/){
+
+			$self->insertSpectrumIdentification(
+				 atlas_build_id => $atlas_build_id,
+				 search_batch_id => $search_batch_id,
+				 modified_sequence => $modified_sequence,
+				 ptm_sequence => $ptm_sequence,
+				 ptm_lability => $ptm_lability,
+				 charge => $charge,
+				 probability => $probability,
+				 protein_name => $protein_name,
+				 spectrum_name => $spectrum_name,
+				 massdiff => $massdiff,
+				 precursor_intensity => $precursor_intensity,
+				 total_ion_current => $total_ion_current,
+				 signal_to_noise => $signal_to_noise,
+				 retention_time_sec => $retention_time_sec,
+				 chimera_level => $chimera_level, 
+				 spectrum_identification_fh => $spectrum_identification_fh,
+         fragmentation_type_ids => \%fragmentation_type_ids
+			);
     }
     $pre_search_batch_id = $search_batch_id;
     #print "$spec_counter... " if ($spec_counter %10000 == 0);
   }
-  close $spectrum_identifications;
+  close $spectrum_identification_fh if (! $fhs->{spectrum_identification});
+
+  return if ($fhs->{spectrum_identification});
+
 	my $commit_interval = 1000;
   open (IN, "<spectrum_identifications.txt"); 
 	print  localtime() .": insert spectrum_identifications\n";
@@ -344,7 +390,7 @@ sub loadBuildPTMSpectra {
     #  next;
     #}
     @columns = split("\t",$line,-1);
-    unless (scalar(@columns) == 20 || scalar(@columns) == 21 || scalar(@columns) == 19 ){
+    unless (scalar(@columns) == 21 || scalar(@columns) == 20 ){
       die("ERROR: Unexpected number of columns (scalar(@columns)) !=$expected_n_columns) in\n$line\n");
     }
 
@@ -353,7 +399,7 @@ sub loadBuildPTMSpectra {
         $probability,$massdiff,$protein_name,$proteinProphet_probability,
         $n_proteinProphet_observations,$n_sibling_peptides,
         $SpectraST_probability, $ptm_sequence,$precursor_intensity,
-        $total_ion_current,$signal_to_noise,$retention_time_sec,$chimera_level,$ptm_sequence);
+        $total_ion_current,$signal_to_noise,$retention_time_sec,$chimera_level,$ptm_lability);
     if ($filetype eq 'peplist') {
       ($search_batch_id,$peptide_sequence,$modified_sequence,$charge,
         $probability,$protein_name,$spectrum_name) = @columns;
@@ -377,7 +423,8 @@ sub loadBuildPTMSpectra {
 				$signal_to_noise,
         $retention_time_sec,
 				$chimera_level,
-        $ptm_sequence) = @columns;
+        $ptm_sequence,
+        $ptm_lability) = @columns;
       #### Correction for occasional value '+-0.000000'
       $massdiff =~ s/\+\-//;
     } else {
@@ -420,7 +467,7 @@ sub loadBuildPTMSpectra {
  
 				);
         if (! $ptm_spectrum_identification_id){
-				  print $ptm_spectrum_identifications "$spectrum_identification_id,$ptm_sequence\n";
+				  print $ptm_spectrum_identifications "$spectrum_identification_id;$ptm_sequence;$ptm_lability\n";
         }
       }else{
         print "WARNNING: no spectrum_identification_id for spectrum_id=$spectrum_id, name=$spectrum_name\n";
@@ -432,7 +479,6 @@ sub loadBuildPTMSpectra {
     }
     $pre_search_batch_id = $search_batch_id;
     print "$spec_counter... " if ($spec_counter %10000 == 0);
- 
   }
   close $ptm_spectrum_identifications;
 	my $commit_interval = 1000;
@@ -442,11 +488,11 @@ sub loadBuildPTMSpectra {
 	$sbeams->initiate_transaction(); 
 	while (my $line =<IN>){
     chomp $line;
-		my ($spectrum_identification_id, $ptm_sequence) = split(",", $line);
-    
+		my ($spectrum_identification_id, $ptm_sequence,$ptm_lability) = split(";", $line);
 		my $spectrum_identification_id = $self->insertSpectrumPTMIdentificationRecord(
 		  spectrum_identification_id => $spectrum_identification_id,	
 			ptm_sequence => $ptm_sequence,
+      ptm_lability => $ptm_lability
 		 );
 		 $cnt++;
 		 unless ($cnt % $commit_interval){
@@ -475,7 +521,8 @@ sub insertPTMSpectrumIdentification {
     or die("ERROR[$METHOD]: Parameter search_batch_id not passed");
   my $modified_sequence = $args{modified_sequence}
     or die("ERROR[$METHOD]: Parameter modified_sequence not passed");
-  my $ptm_sequence = $args{ptm_sequence} || ''; 
+  my $ptm_sequence = $args{ptm_sequence} || '';
+  my $ptm_lability = $args{ptm_lability} || ''; 
   my $charge = $args{charge}
     or die("ERROR[$METHOD]: Parameter charge not passed");
   my $protein_name = $args{protein_name}
@@ -528,14 +575,18 @@ sub insertSpectrumIdentification {
   my $modified_sequence = $args{modified_sequence}
     or die("ERROR[$METHOD]: Parameter modified_sequence not passed");
   my $ptm_sequence = $args{ptm_sequence} || ''; 
+  my $ptm_lability = $args{ptm_lability} || '';
+
   my $charge = $args{charge}
     or die("ERROR[$METHOD]: Parameter charge not passed");
   my $protein_name = $args{protein_name}
     or die("ERROR[$METHOD]: Parameter protein_name not passed");
   my $spectrum_name = $args{spectrum_name}
     or die("ERROR[$METHOD]: Parameter spectrum_name not passed");
-  #my $ptm_spectrum_identifications = $args{ptm_spectrum_identifications};
-  my $spectrum_identifications = $args{spectrum_identifications};
+  my $spectrum_identification_fh = $args{spectrum_identification_fh};
+
+  my $fragmentation_type_ids = $args{fragmentation_type_ids}
+    or die("ERROR[$METHOD]: Parameter  fragmentation_type_ids not passed");
 
   my $massdiff = $args{massdiff};
   my $chimera_level = $args{chimera_level}; 
@@ -545,7 +596,6 @@ sub insertSpectrumIdentification {
   my $total_ion_current = $args{total_ion_current};
   my $signal_to_noise = $args{signal_to_noise};
   my $retention_time_sec = $args{retention_time_sec};
-  return if ($modified_sequence =~ /[JUO]/);
   our $counter;
 
   #### Get the modified_peptide_instance_id for this peptide
@@ -586,6 +636,7 @@ sub insertSpectrumIdentification {
       total_ion_current => $total_ion_current,
       signal_to_noise => $signal_to_noise,
       retention_time_sec => $retention_time_sec,
+      fragmentation_type_ids=>$fragmentation_type_ids
     );
     $counter++;
     print "$counter..." if ($counter/1000 == int($counter/1000));
@@ -599,9 +650,27 @@ sub insertSpectrumIdentification {
 
   #### If not, save to array and insert later 
   unless ($spectrum_identification_id) {
-    print $spectrum_identifications  "$spectrum_id,$modified_peptide_instance_id,$atlas_search_batch_id,$probability,$massdiff\n";
-  }
+    if ($fhs->{spectrum_identification}){
+      my $fh = $fhs->{spectrum_identification};
+      print $fh "$pk_counter->{spectrum_identification}\t$modified_peptide_instance_id\t$probability\t$spectrum_id\t$atlas_search_batch_id\t$massdiff\n";
+			if ($ptm_sequence){
+				$fh = $fhs->{spectrum_ptm_identification};
+				my @ptm_sequences = split(",", $ptm_sequence);
+				my @ptm_labilities = split(",",$ptm_lability);
 
+				for (my $i=0; $i<=$#ptm_sequences;$i++){
+					my $sequence = $ptm_sequences[$i];
+					my $lability = $ptm_labilities[$i];
+					$sequence =~ /\[(\S+)\](.*)/;
+					print $fh "$pk_counter->{spectrum_ptm_identification}\t$pk_counter->{spectrum_identification}\t$2\t$1\t$lability\n";
+					$pk_counter->{spectrum_ptm_identification}++;
+				}
+			}
+      $pk_counter->{spectrum_identification}++;
+    }else{
+      print $spectrum_identification_fh  "$spectrum_id,$modified_peptide_instance_id,$atlas_search_batch_id,$probability,$massdiff\n";
+    }
+  }
 } # end insertSpectrumIdentification
 
 
@@ -627,24 +696,43 @@ sub get_modified_peptide_instance_id {
   our %modified_peptide_instance_ids;
   unless (%modified_peptide_instance_ids) {
     print "[INFO] Loading all modified_peptide_instance_ids...\n";
-    my $sql = qq~
-      SELECT modified_peptide_instance_id,modified_peptide_sequence,
-             peptide_charge
-        FROM $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI
-        JOIN $TBAT_PEPTIDE_INSTANCE PI
-             ON ( MPI.peptide_instance_id = PI.peptide_instance_id )
-       WHERE PI.atlas_build_id = $atlas_build_id
-    ~;
+		my $cnt = 0;
+    if ($fhs->{spectrum_identification}){
+       ## read from file
+       my $builds_directory = get_atlas_build_directory (atlas_build_id=> $atlas_build_id);
+       my $modified_peptide_instance_file = "$builds_directory/../PeptideAtlas_build$atlas_build_id/modified_peptide_instance.txt";
 
-    my $sth = $sbeams->get_statement_handle( $sql );
-    #### Loop through all rows and store in hash
-    my $cnt = 0;
-    while ( my $row = $sth->fetchrow_arrayref() ) {
-      $cnt++;
-      my $modified_peptide_instance_id = $row->[0];
-      #my $key = $row->[1].'/'.$row->[2];
-      #$modified_peptide_instance_ids{$key} = $modified_peptide_instance_id;
-      $modified_peptide_instance_ids{$row->[2]}{$row->[1]} = $modified_peptide_instance_id;
+       if (-e "$modified_peptide_instance_file"){
+          open (M,"<$modified_peptide_instance_file") or die "cannot open $modified_peptide_instance_file\n";
+          while(my $line =<M>){
+             my @row = split("\t", $line);
+             #modified_peptide_instance_id = $row[0];
+             #modified_peptide_sequence = $row[2];
+             #charge = $row[3];
+             $modified_peptide_instance_ids{$row[3]}{$row[2]} = $row[0];
+          } 
+       }else{
+         die "ERROR: $modified_peptide_instance_file not found\n"; 
+       }
+    }else{
+			my $sql = qq~
+				SELECT modified_peptide_instance_id,modified_peptide_sequence,
+							 peptide_charge
+					FROM $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI
+					JOIN $TBAT_PEPTIDE_INSTANCE PI
+							 ON ( MPI.peptide_instance_id = PI.peptide_instance_id )
+				 WHERE PI.atlas_build_id = $atlas_build_id
+			~;
+
+			my $sth = $sbeams->get_statement_handle( $sql );
+			#### Loop through all rows and store in hash
+			while ( my $row = $sth->fetchrow_arrayref() ) {
+				$cnt++;
+				my $modified_peptide_instance_id = $row->[0];
+				#my $key = $row->[1].'/'.$row->[2];
+				#$modified_peptide_instance_ids{$key} = $modified_peptide_instance_id;
+				$modified_peptide_instance_ids{$row->[2]}{$row->[1]} = $modified_peptide_instance_id;
+			}
     }
     print "       $cnt loaded...\n";
     print "       modified_peptide_instance_ids size: ". total_size(\%modified_peptide_instance_ids)/100000 ."MB\n";
@@ -836,6 +924,10 @@ sub insertSpectrumRecord {
   my $total_ion_current = $args{total_ion_current};
   my $signal_to_noise = $args{signal_to_noise};
   my $retention_time_sec = $args{retention_time_sec};
+  my $fragmentation_type_ids = $args{fragmentation_type_ids}
+     or die("ERROR[$METHOD]: Parameter  fragmentation_type_ids not passed");
+
+  my $fragmentation_type_id = '';
 
   #### Parse the name into components
   my ($fraction_tag,$start_scan,$end_scan);
@@ -853,46 +945,68 @@ sub insertSpectrumRecord {
     die("ERROR: Unable to parse fraction name from '$spectrum_name'");
   }
 
-  #### Define the attributes to insert
-  my %rowdata = (
-    sample_id => $sample_id,
-    spectrum_name => $spectrum_name,
-    start_scan => $start_scan,
-    end_scan => $end_scan,
-    chimera_level => $chimera_level,
-    scan_index => -1,
-    precursor_intensity => $precursor_intensity,
-    total_ion_current => $total_ion_current,
-    signal_to_noise => $signal_to_noise,
-    retention_time_sec=>$retention_time_sec
-  );
+  my $scan = $start_scan;
+  $scan =~ s/^0+//;
+  if (defined $fragmentation_type_ids->{$fraction_tag}){
+    if (defined $fragmentation_type_ids->{$fraction_tag}{'*'}){
+       $fragmentation_type_id = $fragmentation_type_ids->{$fraction_tag}{'*'};
+    }elsif(defined $fragmentation_type_ids->{$fraction_tag}{$scan}){
+       $fragmentation_type_id = $fragmentation_type_ids->{$fraction_tag}{$scan};
+    }else{
+       print "WARNING: $spectrum_name fragmentation_type_id not found\n";
+    }
+  }
+
+  my $spectrum_id ;
+  if ($fhs->{spectrum}){
+    my $fh = $fhs->{spectrum};
+    $spectrum_id = $pk_counter->{spectrum};
+    if ($chimera_level eq 'NULL'){
+      $chimera_level = '';
+    }
+    print $fh "$spectrum_id\t$sample_id\t$spectrum_name\t$start_scan\t$end_scan\t".
+                     "-1\t$precursor_intensity\t$total_ion_current\t\t\t\t\t\t$fragmentation_type_id\t".
+                     "$chimera_level\t$signal_to_noise\t$retention_time_sec\n";
+    $pk_counter->{spectrum}++;
+
+  }else{
+		#### Define the attributes to insert
+		my %rowdata = (
+			sample_id => $sample_id,
+			spectrum_name => $spectrum_name,
+			start_scan => $start_scan,
+			end_scan => $end_scan,
+			chimera_level => $chimera_level,
+			scan_index => -1,
+			precursor_intensity => $precursor_intensity,
+			total_ion_current => $total_ion_current,
+			signal_to_noise => $signal_to_noise,
+			retention_time_sec=>$retention_time_sec
+		);
 
 
-  #### Insert spectrum record
-  my $spectrum_id = $sbeams->updateOrInsertRow(
-    insert=>1,
-    table_name=>$TBAT_SPECTRUM,
-    rowdata_ref=>\%rowdata,
-    PK => 'spectrum_id',
-    return_PK => 1,
-    verbose=>$VERBOSE,
-    testonly=>$TESTONLY,
-  );
-
+		#### Insert spectrum record
+		$spectrum_id = $sbeams->updateOrInsertRow(
+			insert=>1,
+			table_name=>$TBAT_SPECTRUM,
+			rowdata_ref=>\%rowdata,
+			PK => 'spectrum_id',
+			return_PK => 1,
+			verbose=>$VERBOSE,
+			testonly=>$TESTONLY,
+		);
+  }
 
   #### Add it to the cache
   our %spectrum_ids;
   my $key = "$sample_id$spectrum_name";
   $spectrum_ids{$key} = $spectrum_id;
-
-
 #  #### Get the spectrum peaks
 #  my mz_intensitities = $self->getSpectrumPeaks(
 #    proteomics_search_batch_id => $search_batch_id,
 #    spectrum_name => $spectrum_name,
 #    fraction_tag => $fraction_tag,
 #  );
-
 
   return($spectrum_id);
 
@@ -1278,7 +1392,7 @@ sub getSpectrumPeaks {
     if ($spectrum_number) {
       #$filename = "$PHYSICAL_BASE_DIR/lib/c/Proteomics/getSpectrum/".
       #  "getSpectrum $spectrum_number $mzXML_filename |";
-      $filename = "/proteomics/sw/tpp/bin/readmzXML -s ".
+      $filename = "/proteomics/lmendoza/sw/misc/readmzXML_TPP600 -s ".
                   "$mzXML_filename $spectrum_number |"
     }
 
@@ -1556,28 +1670,39 @@ sub insertSpectrumPTMIdentificationRecord {
     or die("ERROR[$METHOD]: Parameter spectrum_identification_id not passed");
   my $ptm_sequence = $args{ptm_sequence}
     or die("ERROR[$METHOD]: Parameter ptm_sequence not passed");
+  my $ptm_lability = $args{ptm_lability} 
+    or die("ERROR[$METHOD]: Parameter ptm_lability not passed");
 
   #### Define the attributes to insert
-  $ptm_sequence =~ /\[(\S+)\](.*)/;
-  my $ptm_type = $1;
-  $ptm_sequence = $2;
-  my %rowdata = (
-    ptm_sequence => $ptm_sequence,
-    spectrum_identification_id => $spectrum_identification_id,
-    ptm_type => $ptm_type,
-  );
+  my @ptm_sequences = split(",", $ptm_sequence);
+  my @ptm_labilities = split(",", $ptm_lability); 
+  my $spectrum_ptm_identification_id;
 
-  #### Insert spectrum PTM identification record
-  my $spectrum_ptm_identification_id = $sbeams->updateOrInsertRow(
-    insert=>1,
-    table_name=>$TBAT_SPECTRUM_PTM_IDENTIFICATION,
-    rowdata_ref=>\%rowdata,
-    PK => 'spectrum_ptm_identification_id',
-    return_PK => 1,
-    verbose=>$VERBOSE,
-    testonly=>$TESTONLY,
-  );
+  for (my $i=0; $i<=$#ptm_sequences;$i++){
+    my $sequence = $ptm_sequences[$i];
+    my $lability = $ptm_labilities[$i];
 
+		$sequence =~ /\[(\S+)\](.*)/;
+		my $ptm_type = $1;
+		$sequence = $2;
+		my %rowdata = (
+			ptm_sequence => $sequence,
+			spectrum_identification_id => $spectrum_identification_id,
+			ptm_type => $ptm_type,
+      ptm_lability => $lability
+		);
+
+		#### Insert spectrum PTM identification record
+		$spectrum_ptm_identification_id = $sbeams->updateOrInsertRow(
+			insert=>1,
+			table_name=>$TBAT_SPECTRUM_PTM_IDENTIFICATION,
+			rowdata_ref=>\%rowdata,
+			PK => 'spectrum_ptm_identification_id',
+			return_PK => 1,
+			verbose=>$VERBOSE,
+			testonly=>$TESTONLY,
+		);
+  }
   return($spectrum_ptm_identification_id);
 
 } # end insertSpectrumPTMIdentificationRecord
@@ -1624,7 +1749,6 @@ sub loadSpectrum_Fragmentation_Type {
       WHERE ABSB.ATLAS_BUILD_ID = $atlas_build_id
       AND SP.FRAGMENTATION_TYPE_ID IS NULL
       AND ASB.DATA_LOCATION = '$dir'
-      ORDER BY SP.SPECTRUM_NAME
     ~;
     my @rows = $sbeams->selectSeveralColumns($sql);
     my %scan2spectrum_id=();
@@ -2067,6 +2191,43 @@ sub get_fragmentation_type {
   }
   close $fh;
 
+}
+###############################################################################
+# get_atlas_build_directory  --  get atlas build directory
+# @param atlas_build_id
+# @return atlas_build:data_path
+###############################################################################
+sub get_atlas_build_directory
+{
+    my %args = @_;
+    my $atlas_build_id = $args{atlas_build_id} or die "need atlas build id";
+    my $path;
+
+    my $sql = qq~
+        SELECT data_path
+        FROM $TBAT_ATLAS_BUILD
+        WHERE atlas_build_id = '$atlas_build_id'
+        AND record_status != 'D'
+    ~;
+
+    ($path) = $sbeams->selectOneColumn($sql) or
+        die "\nERROR: Unable to find the data_path in atlas_build record".
+        " with $sql\n\n";
+
+    ## get the global variable PeptideAtlas_PIPELINE_DIRECTORY
+    my $pipeline_dir = $CONFIG_SETTING{PeptideAtlas_PIPELINE_DIRECTORY};
+
+    $path = "$pipeline_dir/$path";
+
+    ## check that path exists
+    unless ( -e $path)
+    {
+        die "\n Can't find path $path in file system.  Please check ".
+        " the record for atlas_build with atlas_build_id=$atlas_build_id";
+
+    }
+
+    return $path;
 }
 
 sub get_type_id{
