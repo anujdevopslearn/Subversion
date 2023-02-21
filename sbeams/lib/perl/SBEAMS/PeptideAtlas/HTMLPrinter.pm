@@ -2132,18 +2132,20 @@ sub get_proteome_coverage_new {
   my %biosqeuences = ();
   my %entry_cnt = ();
   my %obs=();
+  my %missing_prot = (); 
   my %ptm_summary =();
   my $sql = qq~
-		  SELECT B.BIOSEQUENCE_ID,B.BIOSEQUENCE_NAME, B.BIOSEQUENCE_Desc
+		  SELECT B.BIOSEQUENCE_ID,B.BIOSEQUENCE_NAME, B.BIOSEQUENCE_Desc, B.BIOSEQUENCE_seq
 			FROM $TBAT_ATLAS_BUILD AB
 			JOIN $TBAT_BIOSEQUENCE B ON B.BIOSEQUENCE_SET_ID = AB.BIOSEQUENCE_SET_ID
 			WHERE atlas_build_id = $build_id
   ~;
   my @rows = $sbeams->selectSeveralColumns($sql);
   foreach my $row(@rows){
-    my ($id, $name, $desc) = @$row;
+    my ($id, $name, $desc,$seq) = @$row;
     $biosqeuences{$id}{accession} = $name;
     $biosqeuences{$id}{desc} = $desc;
+    $biosqeuences{$id}{seq} = $seq;
   }
 
   my $obs_sql = qq~
@@ -2155,42 +2157,41 @@ sub get_proteome_coverage_new {
 		--AND B2.BIOSEQUENCE_NAME LIKE 'CONTAM%' 
    ~;
   my %biosqeuence_id_obs = $sbeams->selectTwoColumnHash($obs_sql);
-
+ 
   foreach my $line (@patterns){
     my ($org_id, $name, $type, $pat_str)  = split(/,/, $line);
     my @pats = split(/;/, $pat_str);
+    my %processed = (); 
     my $or = '';
     push @names, $name;
     foreach my $id (keys %biosqeuences){
       my $flag = 0;
-			if ($type =~ /accession$/i){
-				foreach my $pat (@pats){
-          if ($biosqeuences{$id}{accession} =~ /^$pat/){
-            $flag =1;
-            last;
-          }
-				} 
-			}elsif($biosqeuences{$id}{desc} && $type =~ /^description/i){
-				foreach my $pat (@pats){
-          if ($biosqeuences{$id}{desc} =~ /$pat/){
-            $flag =1;
-            last;
-          }
-				}
-			}elsif($type =~ /AccessionDescription/i){
-        my $s = $biosqeuences{$id}{accession}. " " . $biosqeuences{$id}{desc};
-        foreach my $pat (@pats){
-          if ($s =~ /$pat/){
-             $flag =1;
-            last;
-          }
+      my $s = '';
+      if ($type =~ /^accession$/i){
+        $s = $biosqeuences{$id}{accession};
+      }elsif($type =~ /^description$/i){
+        $s =  $biosqeuences{$id}{desc};
+      }elsif($type =~ /^AccessionDescription$/i){
+        $s = $biosqeuences{$id}{accession}. " " . $biosqeuences{$id}{desc};
+      }
+      foreach my $pat (@pats){
+			 if (($type =~ /accession/i && $s =~ /^$pat/) ||
+			  	($type !~ /accession/i && $s =~ /^$pat/)){
+           $flag =1;
+          last;
         }
       }
+
       if ($flag){
-        $entry_cnt{$name}++;
-        if (defined $biosqeuence_id_obs{$id} ){
-          $obs{$name}++;
+        if (not defined $processed{$line}{$biosqeuences{$id}{seq}}){
+					$entry_cnt{$name}++;
+					if (defined $biosqeuence_id_obs{$id} ){
+						$obs{$name}++;
+					}else{
+						push @{$missing_prot{$name}}, $id;
+					}
         }
+        $processed{$line}{$biosqeuences{$id}{seq}} =1;
       }
     }
   }
@@ -2200,13 +2201,15 @@ sub get_proteome_coverage_new {
   my %heading_defs = ( Database => 'Name of database, which collectively form the reference database for this build',
                     N_Prots => 'Total number of entries in subject database',
                     N_Obs_Prots => 'Number of proteins within the subject database to which at least one observed peptide maps',
+                    N_unObs_Prots => 'Number of proteins within the subject database to which none of the peptide maps',
                     Pct_Obs => 'The percentage of the subject proteome covered by one or more observed peptides' );
 
-  for my $col_name ( qw( Database N_Prots N_Obs_Prots Pct_Obs ) ) {
+  for my $col_name ( qw( Database N_Prots N_Obs_Prots Pct_Obs N_unObs_Prots ) ) {
     push @headings, $col_name, $heading_defs{$col_name};
   }
   my $headings = $self->make_sort_headings( headings => \@headings, default => 'Database' );
-  my @result = ( $headings );
+  my %result;
+  @{$result{table}} = ( $headings );
 
   for my $name ( @names ) {
     my $db = $name;
@@ -2216,9 +2219,9 @@ sub get_proteome_coverage_new {
     if ( $obs && $n_entry ) {
         $pct = sprintf( "%0.1f", 100*($obs/$n_entry) );
     }
-    push @result, [ $db, $n_entry, $obs, $pct];
+    push  @{$result{table}}, [ $db, $n_entry, $obs, $pct, $n_entry-$obs];
   }
-  return '' if ( @result == 1);
+  return '' if (  @{$result{table}} == 1);
   my $table = '<table>';
 
   $table .= $self->encodeSectionHeader(
@@ -2227,7 +2230,7 @@ sub get_proteome_coverage_new {
       LMTABS => 1
   );
 
-  $table .= $self->encodeSectionTable( rows => \@result, 
+  $table .= $self->encodeSectionTable( rows => $result{table}, 
 				       header => 1, 
 				       table_id => 'proteome_cover',
 				       align => [ qw(left left left left left left left left left left left ) ],
@@ -2238,9 +2241,10 @@ sub get_proteome_coverage_new {
   $table .= '</table>';
 
   if ($data_only){
-    shift @result;
-    unshift @result ,[qw(Database N_Prots N_Obs_Prots Pct_Obs)]; 
-    return \@result;
+    shift @{$result{table}};
+    unshift @{$result{table}} ,[qw(Database N_Prots N_Obs_Prots Pct_Obs N_unObs_Prots)]; 
+    $result{missing_prot} = \%missing_prot;
+    return \%result;
   }else{
     return $table;
   }
@@ -2275,10 +2279,7 @@ sub get_ptm_coverage {
     my ($id, $name, $desc,$seq) = @$row;
     $biosqeuences{$id}{accession} = $name;
     $biosqeuences{$id}{desc} = $desc;
-    foreach my $site (qw(A S T Y)){
-			my @m = $seq =~ /$site/g;
-			$biosqeuence_id_ptm{$id}{$site} = scalar @m;
-    }
+    $biosqeuences{$id}{seq} = $seq;
   }
 
   my $ptm_sql = qq~
@@ -2312,7 +2313,7 @@ sub get_ptm_coverage {
     $biosqeuence_id_ptm_obs{$id}{$residue}{obsL3}++ if ($np100);
     $biosqeuence_id_ptm_obs{$id}{$residue}{obsL4}++ if ($nochoice); 
   }
-
+  my %processed;
   foreach my $line (@patterns){
     my ($org_id, $name, $type, $pat_str)  = split(/,/, $line);
     my @pats = split(/;/, $pat_str);
@@ -2320,22 +2321,31 @@ sub get_ptm_coverage {
     push @names, $name;
     foreach my $id (keys %biosqeuences){
       my $flag = 0;
-			if ($type =~ /accession/i){
-				foreach my $pat (@pats){
-          if ($biosqeuences{$id}{accession} =~ /^$pat/){
-            $flag =1;
-            last;
-          }
-				} 
-			}elsif($biosqeuences{$id}{desc} && $type =~ /description/i){
-				foreach my $pat (@pats){
-          if ($biosqeuences{$id}{desc} =~ /$pat/){
-            $flag =1;
-            last;
-          }
+      my $s = '';
+      if ($type =~ /^accession$/i){
+        $s = $biosqeuences{$id}{accession};
+      }elsif($type =~ /^description$/i){
+        $s =  $biosqeuences{$id}{desc};
+      }elsif($type =~ /^AccessionDescription$/i){
+        $s = $biosqeuences{$id}{accession}. " " . $biosqeuences{$id}{desc};
+      } 
+			foreach my $pat (@pats){
+				if (($type =~ /accession/i && $s =~ /^$pat/) || 
+            ($type !~ /accession/i && $s =~ /^$pat/)){
+					 $flag =1;
+					last;
 				}
 			}
+
       if ($flag){
+        next if(defined $processed{$line}{$biosqeuences{$id}{seq}});
+        $processed{$line}{$biosqeuences{$id}{seq}} =1;
+
+			  foreach my $site (qw(A S T Y)){
+					my @m = $biosqeuences{$id}{seq} =~ /$site/g;
+					$biosqeuence_id_ptm{$id}{$site} = scalar @m;
+				}
+
         foreach my $residue (sort {$a cmp $b} keys %ptm_residues){
           $ptm_summary{$name}{"total_$residue"} += $biosqeuence_id_ptm{$id}{$residue};
         }
@@ -2864,6 +2874,7 @@ sub display_peptide_sample_category_plotly{
   my $obs_per_million_str = join(",", @obs_per_million);
   my $nc = $#sample_category + 1;
   my $height = $nc*40 > 1100? 1100:$nc*40; 
+  $height = $height < 300?300:$height;
   my $plot_js = qq~
 			var pepcnt = {
 				y: ['$sample_category_str'],

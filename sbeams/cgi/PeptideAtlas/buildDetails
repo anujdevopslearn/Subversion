@@ -247,7 +247,7 @@ my $show_image = 0;
         print $page;
       }
 
-      if ($organism =~ /(human|Arabidopsis)/i){ 
+      if ($organism =~ /(human|Arabidopsis|Maize|Bburgdorferi)/i){ 
 				my $sql = qq~
 				SELECT SC.name as NAME,
 							 SC.ID, 
@@ -880,7 +880,8 @@ sub get_sample_info {
 
   # Massage/format some of the columns in the sample info just retrieved
   my %hidden_cols = ();
-  if ($organism !~ /(human|Arabidopsis)/i){
+
+  if ($organism !~ /(human|Arabidopsis|Maize|Bburgdorferi)/i){
     $hidden_cols{'sample_category'} = 1;
   }
   #$hidden_cols{'sample_id'} = 1;
@@ -1473,7 +1474,7 @@ sub generate_html_from_file {
    dataset_contrib_table => [qw(left center center center center center center center center center center center center center center)], 
    dataset_protein_info => [qw(left center center center center center center center center)], 
    dataset_spec_protein_info => [qw(left center center center center center center center center)], 
-   proteome_coverage => [qw(left)],
+   proteome_coverage => [qw(left center center center center)],
    ptm_coverage =>  [qw(left)],
  
  );
@@ -1561,7 +1562,21 @@ sub generate_html_from_file {
        my @noWrap = (1);
        @noWrap = (3,17,19,20) if ($pre_table eq 'exp_contrib_table');
        my $table_width = 800;
-       $table_width = 400 if ($pre_table eq 'proteome_coverage');
+       if ($pre_table eq 'proteome_coverage'){
+         ## remove last column
+         $table_width = 400;
+         my $missing_prot_url = "$CGI_BASE_DIR/PeptideAtlas/GetMissingProteins?atlas_build_id=$build_id".
+                                '&SwissProt&action=QUERY&proteome_component=';
+         if (scalar @$headings == 6){
+						foreach my $row (@data){
+							pop @$row; 
+              ## add link to col5
+              $row->[4] = "<a href='$missing_prot_url$row->[0]' target='_blank'>$row->[4]</a>";
+              $row->[3] .= '%'; 
+						}
+						pop @$headings;
+         }
+       }
        add_url (table_id => $pre_table,
                 data_ref=>\@data,
                 column_name_ref => $headings,

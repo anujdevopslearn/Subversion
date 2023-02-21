@@ -1,0 +1,431 @@
+#!/usr/local/bin/perl
+
+use strict;
+use Getopt::Long;
+use FindBin;
+use Data::Dumper;
+use List::MoreUtils qw(uniq);
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+##use CGI::Carp qw(fatalsToBrowser croak);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::ConsensusSpectrum;
+use SBEAMS::PeptideAtlas::ModificationHelper;
+use SBEAMS::PeptideAtlas::Utilities;
+use SBEAMS::PeptideAtlas::ProtInfo qw(is_uniprot_identifier);
+
+use SBEAMS::Proteomics::PeptideMassCalculator;
+my $massCalculator = new SBEAMS::Proteomics::PeptideMassCalculator;
+
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+my $htmlmode;
+my $current_page = { organism => '', atlas_build_id => '' };
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    #permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin'],
+    # connect_read_only=>1,
+    allow_anonymous_access=>1,
+  ));
+
+
+  #### Read in the default input parameters
+  my %parameters;
+
+  $parameters{uploaded_file_not_saved} = 1;
+
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+     #$sbeams->printDebuggingInfo($q);
+
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+  #### Decide what action to take based on information so far
+  if ($parameters{action} eq "???") {
+
+    # Some action
+
+  } else {
+
+    my $project_id = $sbeamsMOD->getProjectID(
+        atlas_build_id => $parameters{atlas_build_id}
+        );
+
+    $sbeamsMOD->display_page_header( project_id => $project_id,
+                                     use_tabbed_panes => 1
+                                   );
+    handle_request(ref_parameters=>\%parameters);
+
+    $sbeamsMOD->display_page_footer( use_tabbed_panes => 1 );
+
+  }
+
+
+} # end main
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+
+  my %args = @_;
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+
+
+  #### Show current user context information
+  #$sbeams->printUserContext();
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $sbeamsMOD->getTabMenu(
+    parameters_ref => \%parameters,
+    program_name => $PROG_NAME,
+  );
+  if ($sbeams->output_mode() eq 'html') {
+    print $tabMenu->asHTML();
+    print "<script>document.title = 'PeptideAtlas: Get Missing Proteins';</script>";
+  }
+
+  #### Get the current atlas_build_id based on parameters or session
+  my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
+    parameters_ref => \%parameters,
+  );
+
+  if ( (defined($atlas_build_id) && $atlas_build_id < 0) || ! $parameters{proteome_component} ) {
+    return;
+  }
+  $parameters{atlas_build_id} = $atlas_build_id;
+
+  my $build_data_path = $sbeamsMOD->get_build_data_directory( atlas_build_id => $atlas_build_id );
+  ## get list of missing proteins
+  my %missing_prot = ();
+  my $data_file = "$build_data_path/../analysis/build_detail_tables.tsv";
+  if (-e $data_file) {
+    if(open (IN, "<$data_file")){
+       while (my $line =<IN>){
+         next if ($line !~ /proteome_coverage/);
+         next if ($line =~ /Database/);
+         chomp $line;
+         my @data = split("\t", $line);
+         if (scalar @data == 6){
+            $data[0] =~ s/proteome_coverage.//;
+            $missing_prot{$data[0]} = $data[5];
+         }else{
+           return;
+         }
+       }
+    }else{
+       return;
+    }
+  }else{
+    return;
+  }
+  #### Define some generic variables
+  my ($i,$element,$key,$value,$line,$result,$sql,$proteome_component, $biosequence_ids);
+  $proteome_component = $parameters{proteome_component};
+  $biosequence_ids = $missing_prot{$proteome_component} || '';
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+  #### Read in the standard form values
+  my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+  #### Set some specific settings for this program
+  my $CATEGORY="Get Missing Proteins";
+  my $PROGRAM_FILE_NAME = $PROG_NAME;
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+  my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
+
+
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+  if ($apply_action =~ /VIEWRESULTSET|VIEWPLOT/ ) {
+    $sbeams->readResultSet(
+        resultset_file=>$rs_params{set_name},
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters
+    );
+  }
+
+  #### Build ATLAS_BUILD constraint
+  my $atlas_build_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"AB.atlas_build_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Atlas Build",
+    constraint_value=>$parameters{atlas_build_id} );
+  return if ($atlas_build_clause eq '-1');
+
+	my %colnameidx = ();
+	my @column_titles = ();
+	my @column_array = (
+    ["proteome", "'$proteome_component'","proteome"],
+    ["biosequence_name", "BS.biosequence_name","Biosequence Name"],
+    ["biosequence_seq", "BS.biosequence_seq", "biosequence_seq"], 
+    ["length", "'length'", "length"],
+    ["mass", "'mass'", "mass"],
+		["pI", "'pI'","pI"],
+    ["biosequence_desc", "BS.biosequence_desc", "biosequence_desc"]
+	);
+	my $columns_clause = $sbeams->build_SQL_columns_list(
+		column_array_ref=>\@column_array,
+		colnameidx_ref=>\%colnameidx,
+		column_titles_ref=>\@column_titles
+	);
+
+  my $sql = qq~
+    select $columns_clause 
+	  FROM $TBAT_ATLAS_BUILD AB 
+    JOIN $TBAT_BIOSEQUENCE BS ON  (BS.BIOSEQUENCE_SET_ID = AB.BIOSEQUENCE_SET_ID ) 
+    WHERE 1=1
+    $atlas_build_clause 
+    AND BS.biosequence_id in ($biosequence_ids) 
+  ~;
+  my $show_sql = 0;
+  $hidden_cols{'biosequence_seq'} = 1;
+
+  #### Apply any parameter adjustment logic
+  if ( $parameters{display_options} =~ /ShowSQL/ ) {
+    $show_sql = 1;
+  }
+
+  $sbeams->display_sql( sql => $sql,use_tabbed_panes => 0 ) if ($show_sql);
+
+ #########################################################################
+  #### If QUERY or VIEWRESULTSET was selected, display the data
+  if ($apply_action =~ /QUERY|VIEWRESULTSET|VIEWPLOT/i ) {
+    if ($apply_action =~ /QUERY/){
+      $sbeams->fetchResultSet(
+        sql_query=>$sql,
+        resultset_ref=>$resultset_ref,
+        use_caching => 0 
+      );
+      postProcessResultset(
+				rs_params_ref=>\%rs_params,
+				resultset_ref=>$resultset_ref,
+				query_parameters_ref=>\%parameters,
+				column_titles_ref=>\@column_titles,
+        colnameidx_ref => \%colnameidx,
+				hidden_cols => \%hidden_cols);
+
+      $rs_params{set_name} = "SETME";
+      my %write_params = ( rs_table => $TBAT_ATLAS_BUILD,
+                           key_field => 'atlas_build_id',
+                           key_value => $parameters{atlas_build_id} );
+      $sbeams->writeResultSet(
+        resultset_file_ref=>\$rs_params{set_name},
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters,
+        resultset_params_ref=>\%rs_params,
+        query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+        column_titles_ref=>\@column_titles,
+        %write_params
+      );
+    }
+    #### Construct table help
+    my $obs_help = ''; # get_table_help( 'spectra' );
+    #### Display the resultset
+    $sbeams->displayResultSet(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      url_cols_ref=>\%url_cols,
+      hidden_cols_ref=>\%hidden_cols,
+      max_widths=>\%max_widths,
+      use_tabbed_panes => 1,
+      column_titles_ref=>\@column_titles,
+      column_help=>$obs_help,
+      base_url=>$base_url,
+    );
+
+    #### Display the resultset controls
+    $sbeams->displayResultSetControls(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      use_tabbed_panes => 1,
+      base_url=>$base_url,
+    );
+
+    #### Display a plot of data from the resultset
+#    $sbeams->displayResultSetPlot_plotly(
+#      rs_params_ref=>\%rs_params,
+#      resultset_ref=>$resultset_ref,
+#      query_parameters_ref=>\%parameters,
+#      column_titles_ref=>\@column_titles,
+#      use_tabbed_panes => 1,
+#      mouseover_column => 'peptide_sequence',
+#      mouseover_url => $url_cols{'Peptide Sequence'},
+#      mouseover_tag => '%1V',
+#      base_url=>$base_url,
+#    );
+  }else{
+    if ($sbeams->invocation_mode() eq 'http') {
+      print "<H4>Select parameters above and press QUERY</H4>\n";
+    } else {
+      print "You need to supply some parameters to contrain the query\n";
+    }
+  }
+
+ }
+
+#################################################################################
+
+sub postProcessResultset {
+  my %args = @_;
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+  #### Process the arguments list
+  my $resultset_ref = $args{'resultset_ref'};
+  my $rs_params_ref = $args{'rs_params_ref'};
+  my $query_parameters_ref = $args{'query_parameters_ref'};
+  my $column_titles_ref = $args{'column_titles_ref'};
+  my $colnameidx_ref = $args{'colnameidx_ref'};
+
+  my $seq_idx =$colnameidx_ref->{biosequence_seq};
+  my $length_idx = $colnameidx_ref->{length};
+  my $mass_idx = $colnameidx_ref->{mass};
+  my $pi_idx = $colnameidx_ref->{pI};
+
+  my $n_rows = scalar(@{$resultset_ref->{data_ref}});
+
+
+  for (my $i=0; $i<$n_rows; $i++) {
+    #### Loops through resultset and do formatting
+    my $data = $resultset_ref->{data_ref}->[$i];
+    my $seq = $data->[$seq_idx];
+    $data->[$length_idx]  = length($seq);
+    $data->[$pi_idx] = $sbeamsMOD->calculatePeptidePI( sequence => $seq );
+
+    my $mass=calc_mass($seq);
+    $data->[$mass_idx] = sprintf ("%.0f", $mass) ;
+  }
+}
+sub calc_mass {
+    my $seq = shift;
+    my $x = length $a;
+    my @aa = split (//, $seq);
+    my %mass = (
+        #/usr/local/share/perl5/InSilicoSpectro/config/insilicodef.xml
+        'A' => '71.0788',
+        'R' => '156.1875',
+        'N' => '114.1038',
+        'D' => '115.0886',
+        'C' => '103.1388',
+        'E' => '129.1155',
+        'Q' => '128.1307',
+        'G' => '57.0519',
+        'H' => '137.1411',
+        'I' => '113.1594',
+        'L' => '113.1594',
+        'K' => '128.1741',
+        'M' => '131.1926',
+        'F' => '147.1766',
+        'P' => '97.1167',
+        'S' => '87.0782',
+        'T' => '101.1051',
+        'W' => '186.2132',
+        'Y' => '163.1760',
+        'V' => '99.1326',
+         # UW
+            'U' => '150.3079',
+            'O' => '237.29816',
+#           'G' => '57.05132',
+#           'A' => '71.0779',
+#           'S' => '87.0773',
+#           'P' => '97.11518',
+#           'V' => '99.13106',
+#           'T' => '101.10388',
+#           'C' => '103.1429',
+#           'L' => '113.15764',
+#           'I' => '113.15764',
+#           'N' => '114.10264',
+#           'D' => '115.0874',
+#           'Q' => '128.12922',
+#           'K' => '128.17228',
+#           'E' => '129.11398',
+    );
+
+    my %hEls=();
+    foreach (@aa){
+      $hEls{"$_"}++;
+    }
+    my $cTerm = 1.00797594155 + 15.99930509008 ; # getMass('el_H')+getMass('el_O');
+    my $nTerm = 1.00797594155 ; # getMass('el_H');
+    my $m = $nTerm+$cTerm;
+    foreach (keys %hEls){
+      next if (not defined $mass{$_});
+      $m+=$hEls{$_}*$mass{$_};
+    }
+    return $m;
+}
+
+
