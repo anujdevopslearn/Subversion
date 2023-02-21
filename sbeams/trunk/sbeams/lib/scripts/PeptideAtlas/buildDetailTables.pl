@@ -41,7 +41,7 @@ my $fh;
 open ($fh, ">$build_path/analysis/build_detail_tables.tsv") or die "cannot open $build_path/analysis/build_detail_tables.tsv\n";
 $fh->autoflush;
 
-###Build Overview
+##Build Overview
 print "getting build_overview table\n";
 get_build_overview ($fh, $build_id );
 
@@ -53,6 +53,7 @@ if ($what_is_new){
 	}
 	print $fh "what_is_new|sample_ids\t", join(",", @$new_sample_ids) ."\n";
 }
+undef $what_is_new;
 
 print "getting proteome coverage\n";
 my $proteomeComponentOrder_file = "$PHYSICAL_BASE_DIR/lib/conf/PeptideAtlas/ProteomeComponentOrder.txt";
@@ -68,27 +69,46 @@ if (open (O, "<$proteomeComponentOrder_file")){
 	 }
 }
 my $proteome_coverage;
+my $ptm_coverage;
 if (@patterns){
   $proteome_coverage = $atlas->get_proteome_coverage_new ($build_id,\@patterns, 1);
+  $ptm_coverage = $atlas->get_ptm_coverage ($build_id,\@patterns, 1);
 }else{
   $proteome_coverage  = $atlas->get_proteome_coverage ($build_id, 1);
 }
 
-shift @$proteome_coverage;
-print $fh "proteome_coverage|Database\tN_Prots\tN_Obs_Prots\tPct_Obs\n";
-foreach my $row (@$proteome_coverage){
-  print $fh "proteome_coverage|".  join("\t", @$row) ."\n";
+#shift @$proteome_coverage;
+#print $fh "proteome_coverage|Database\tN_Prots\tN_Obs_Prots\tPct_Obs\n";
+foreach my $row (@{$proteome_coverage->{table}}){
+  #next if($row->[1] == 0);
+  print $fh "proteome_coverage|".  join("\t", @$row);
+  if ($proteome_coverage->{missing_prot}{$row->[0]}){
+    print $fh "\t". join(",", @{$proteome_coverage->{missing_prot}{$row->[0]}}) ."\n";
+  }else{
+    print $fh "\t\n";
+  }
 }
-      
+
+undef $proteome_coverage;
+
+if ($ptm_coverage){
+	foreach my $row (@$ptm_coverage){
+		print $fh "ptm_coverage|".  join("\t", @$row) ."\n";
+	}
+	undef $ptm_coverage;
+}
+
 print "getting Experiment Contribution table\n";
 my $exp_contrib_table = get_sample_info( $build_id );
 foreach my $row (@$exp_contrib_table){
-  if ($organism !~ /(human|Arabidopsis|Maize)/i){
+  if ($organism !~ /(human|Arabidopsis|Maize|Bburgdorferi|mouse)/i){
 		 pop @$row;
 		 pop @$row;
   } 
   print $fh "exp_contrib_table|".  join("\t", @$row) ."\n";
 }
+
+undef $exp_contrib_table;
 
 print "getting Dataset Contribution table\n";
 my $dataset_contrib_table = get_dataset_contrib_info($build_id);
@@ -109,7 +129,9 @@ foreach my $row (@$dataset_spec_protein_info){
   print $fh "dataset_spec_protein_info|".  join("\t", @$row) ."\n";
 }
 print $fh "\n";
-if ($organism =~ /(human|Arabidopsis)/i){ 
+
+if ($organism =~ /(human|Arabidopsis|Maize|Bburgdorferi|mouse)/i){ 
+
   print "getting plot Peptide Identification by Sample Category data\n";
 
 	my $sql = qq~
@@ -123,7 +145,7 @@ if ($organism =~ /(human|Arabidopsis)/i){
 				WHERE 1=1
 				AND PI.ATLAS_BUILD_ID = $build_id 
 				GROUP BY SC.NAME,SC.ID
-        ORDER BY SC.NAME
+        ORDER BY SC.NAME DESC
 			 ~;
       
 	my @result = $sbeams->selectSeveralColumns($sql);
@@ -301,55 +323,76 @@ sub get_build_overview {
 #  for my $k ( keys( %$build_info ) ) { print STDERR "$k => $build_info->{$k}\n"; }
   my $build_name = $build_info->{atlas_build_name};
   my $phospho_info;
-  if ($build_name =~ /human.*phospho/i){
-    $phospho_info =  $sbeams->selectrow_hashref( <<"  PHOS" );
-  SELECT PS.atlas_build_id, 
-         count(distinct PS.biosequence_id) as '#_neXtProt_(PE=1-4)', 
-         count(offset) as #_observed_phosphorylation_sites, 
-         sum(case when residue = 'S'  then 1 else 0 end) as S_sites,
-         sum(case when residue = 'T'  then 1 else 0 end) as T_sites,
-         sum(case when residue = 'Y'  then 1 else 0 end) as Y_sites
-  FROM $TBAT_PTM_SUMMARY PS 
-  JOIN $TBAT_BIOSEQUENCE B ON PS.BIOSEQUENCE_ID = B.BIOSEQUENCE_ID
-  WHERE PS.atlas_build_id = $build_id
-  AND B.dbxref_id = 65
-  --AND B.BIOSEQUENCE_DESC NOT LIKE '%PE=5%'
-  GROUP BY PS.atlas_build_id
-  PHOS
- 
-		my $sql =qq~ 
-		( SELECT PI.ATLAS_BUILD_ID, 'singly_phosphorylated' as type, count(distinct mp.modified_peptide_sequence) as cnt
-			FROM $TBAT_PEPTIDE_INSTANCE PI
-			JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MP 
-			ON (PI.PEPTIDE_INSTANCE_ID = MP.PEPTIDE_INSTANCE_ID)
-			WHERE PI.ATLAS_BUILD_ID = $build_id 
-			AND (MODIFIED_PEPTIDE_SEQUENCE LIKE '%[STY]_[0-9]%' AND 
-					 MODIFIED_PEPTIDE_SEQUENCE NOT LIKE '%[STY]_[0-9]%[STY]_[0-9]%')
-			GROUP BY PI.ATLAS_BUILD_ID
-		)UNION
-			( SELECT PI.ATLAS_BUILD_ID, 'doubly_phosphorylated' as type, count(distinct mp.modified_peptide_sequence) as cnt
-			FROM $TBAT_PEPTIDE_INSTANCE PI
-			JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MP
-			ON (PI.PEPTIDE_INSTANCE_ID = MP.PEPTIDE_INSTANCE_ID)
-			WHERE PI.ATLAS_BUILD_ID = $build_id
-			AND (MODIFIED_PEPTIDE_SEQUENCE LIKE '%[STY]_[0-9]%[STY]_[0-9]%' 
-					 AND MODIFIED_PEPTIDE_SEQUENCE NOT LIKE '%[STY]_[0-9]%[STY]_[0-9]%[STY]_[0-9]%')
-			GROUP BY PI.ATLAS_BUILD_ID
-		)UNION
-		( SELECT PI.ATLAS_BUILD_ID, 'over_2_phosphorylated' as type , count(distinct mp.modified_peptide_sequence) as cnt
-			FROM $TBAT_PEPTIDE_INSTANCE PI
-			JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MP
-			ON (PI.PEPTIDE_INSTANCE_ID = MP.PEPTIDE_INSTANCE_ID)
-			WHERE PI.ATLAS_BUILD_ID = $build_id
-			AND (MODIFIED_PEPTIDE_SEQUENCE LIKE '%[STY]_[0-9]%[STY]_[0-9]%[STY]_[0-9]%') 
-			GROUP BY PI.ATLAS_BUILD_ID
-	  )
-		~;
-   my @rows = $sbeams->selectSeveralColumns($sql);
-   foreach my $row(@rows){
-     my ($id, $type,$cnt) = @$row;
-     $phospho_info->{$type} = $cnt;
-   }
+  if ($build_name =~ /phospho/i){
+#    my ($id_col_name, $protein_name_contraint);
+#    $id_col_name = '#_proteins';
+#    if ($build_name =~ /human/i){
+#      $id_col_name = '#_neXtProt_(PE=1-4)';
+#      $protein_name_contraint = 'AND B.dbxref_id = 65';
+#    }elsif($build_name =~ /Plasmodium/i){
+#      $protein_name_contraint ="AND B.biosequence_name like 'PF3D7%'";
+#    }else{
+#      $protein_name_contraint =" AND B.biosequence_name not like 'CONTAM%' AND B.biosequence_name not like 'DECOY%'";
+#    }
+#    my $sql = qq~
+#		SELECT PS.atlas_build_id, 
+#					 count(distinct PS.biosequence_id) as '$id_col_name', 
+#					 sum(case when PS.nobs > 0 then 1 else 0 end ) as #_observed_phosphorylation_sites,
+#           count(offset) as #_observed_phosphorylation_sites_total, 
+#					 sum(case when residue = 'S' and PS.nobs > 0 then 1 else 0 end) as S_sites,
+#					 sum(case when residue = 'T' and PS.nobs > 0 then 1 else 0 end) as T_sites,
+#					 sum(case when residue = 'Y' and PS.nobs > 0 then 1 else 0 end) as Y_sites,
+#           sum(case when residue = 'S' then 1 else 0 end) as S_sites_total,
+#           sum(case when residue = 'T' then 1 else 0 end) as T_sites_total,
+#           sum(case when residue = 'Y' then 1 else 0 end) as Y_sites_total
+#		FROM $TBAT_PTM_SUMMARY PS 
+#		JOIN $TBAT_BIOSEQUENCE B ON PS.BIOSEQUENCE_ID = B.BIOSEQUENCE_ID
+#		WHERE  B.biosequence_set_id in (
+#      SELECT BSS.biosequence_set_id 
+#      FROM $TBAT_ATLAS_BUILD AB 
+#      JOIN $TBAT_BIOSEQUENCE_SET BSS ON (BSS.biosequence_set_id = AB.biosequence_set_id)
+#      WHERE AB.atlas_build_id = $build_id )
+#    AND PS.atlas_build_id = $build_id
+#		$protein_name_contraint
+#		GROUP BY PS.atlas_build_id
+#    ~;
+#
+#    $phospho_info =  $sbeams->selectrow_hashref($sql);
+#    foreach my $type (keys %$phospho_info){
+#      next if($type !~ /sites$/); 
+#      $phospho_info->{$type} = sprintf("%d \(%.2f%\)", $phospho_info->{$type}, $phospho_info->{$type}*100/$phospho_info->{$type."_total"});
+#      delete $phospho_info->{$type."_total"};
+#
+#    }
+#     
+
+		my $sql = qq~
+			 SELECT mp.modified_peptide_sequence
+			 FROM $TBAT_PEPTIDE_INSTANCE PI
+			 JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MP ON (PI.PEPTIDE_INSTANCE_ID = MP.PEPTIDE_INSTANCE_ID)
+			 JOIN $TBAT_PEPTIDE_MAPPING PM ON (PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID)
+			 JOIN $TBAT_BIOSEQUENCE B ON (B.BIOSEQUENCE_ID = PM.MATCHED_BIOSEQUENCE_ID)
+			 AND PI.ATLAS_BUILD_ID = $build_id
+		 ~;
+
+		 my @rows = $sbeams->selectSeveralColumns($sql);
+		 my %result =();
+		 foreach my $row(@rows){
+			 my ($mod_pep) = @$row;
+			 $mod_pep =~ s/([^ASTY])\[\d+\]/$1/g;
+			 $mod_pep =~ s/[nc]//g;
+       my @m = $mod_pep =~ /[ASTY]\[/g;
+       if (@m == 1){
+			   $result{'singly_phosphorylated'}{$mod_pep} =1;
+       }elsif(@m == 2){
+          $result{'doubly_phosphorylated'}{$mod_pep} =1;
+       }else{
+          $result{'over_2_phosphorylated'}{$mod_pep} =1;
+       }
+		 }
+		 foreach my $type(keys %result){
+			 $phospho_info->{$type} = scalar keys %{$result{$type}};
+		 }
   }
 
   my $pep_count = $sbeams->selectrow_hashref( <<"  PEP" );
@@ -637,22 +680,26 @@ sub get_dataset_contrib_info {
 sub get_dataset_protein_info {
   my %args = @_;
   my $atlas_build_id = $args{build_id};
-  my $sql =qq~;
-    SELECT SAMPLE_ID, REPOSITORY_IDENTIFIERS 
-    FROM $TBAT_SAMPLE 
-    WHERE REPOSITORY_IDENTIFIERS IS NOT NULL
-    AND REPOSITORY_IDENTIFIERS != ''
-  ~;
-  my %sample_repository_ids = $sbeams->selectTwoColumnHash($sql);
 
+  my $sql = qq~
+    SELECT biosequence_id, repository_identifiers 
+    FROM $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH 
+    WHERE atlas_build_id = $atlas_build_id 
+  ~;
+  
+  my %biosequence_id_sample_id;
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my ($biosequence_id, $repository_id);
+  while( ($biosequence_id, $repository_id) = $sth->fetchrow_array() ) {
+    $biosequence_id_sample_id{$biosequence_id}{$repository_id} =1;
+  } 
+
+  print "biosequence_id_sample_id keys=" . scalar keys %biosequence_id_sample_id;
+  print "\n";
   $sql = qq~
-		 SELECT BS.BIOSEQUENCE_NAME, PR.NAME, S.sample_id
-			FROM $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH BIABSB
-			JOIN $TBAT_BIOSEQUENCE BS ON ( BIABSB.BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID )
-			JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
-			ON (ABSB.ATLAS_BUILD_SEARCH_BATCH_ID = BIABSB.ATLAS_BUILD_SEARCH_BATCH_ID
-				 AND ABSB.atlas_build_id = $atlas_build_id )
-			JOIN $TBAT_SAMPLE S ON (S.sample_id = ABSB.sample_id)
+		 SELECT BS.biosequence_id, BS.BIOSEQUENCE_NAME, PR.NAME
+		 FROM $TBAT_BIOSEQUENCE BS 
+     JOIN $TBAT_ATLAS_BUILD AB ON (AB.biosequence_set_id = BS.biosequence_set_id)
      JOIN (	
 			 SELECT A.NAME, A.ID  
 			 FROM (
@@ -673,27 +720,30 @@ sub get_dataset_protein_info {
 							 AND atlas_build_id IN ($atlas_build_id)
 			 ) AS A ) PR  ON (PR.ID = BS.biosequence_id) 
      WHERE 1 = 1
-          AND ABSB.atlas_build_id IN ( $atlas_build_id )
+         AND AB.atlas_build_id = $atlas_build_id
           AND BS.BIOSEQUENCE_ID NOT IN (
             SELECT BR.RELATED_BIOSEQUENCE_ID
              FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR
              WHERE RELATIONSHIP_TYPE_ID = 2
           )
   ~;
-  my @rows = $sbeams->selectSeveralColumns($sql);
   my %dataset_prot_cnt;
   my $possibly_distinguished = 0;
   my $noncore_canonical = 0;
-  foreach my $row(@rows){
-    my ($bs_name,$protein_level, $sample_id ) =@$row;
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while( my $row = $sth->fetchrow_arrayref() ) {
+    my ($bs_id, $bs_name,$protein_level ) =@$row;
     next if ($bs_name =~ /(decoy|contam)/i);
-    if ($protein_level =~ /possibly_distinguished/i){
-       $possibly_distinguished++;
+    foreach my $repository_id (keys %{$biosequence_id_sample_id{$bs_id}}){
+			if ($protein_level =~ /possibly_distinguished/i){
+				 $possibly_distinguished++;
+			}
+			if ($protein_level =~ /noncore/){
+				 $noncore_canonical =1;
+			}
+      
+			$dataset_prot_cnt{$repository_id}{$protein_level}{$bs_name} =1;
     }
-    if ($protein_level =~ /noncore/){
-       $noncore_canonical =1;
-    }
-    $dataset_prot_cnt{$sample_repository_ids{$sample_id}}{$protein_level}{$bs_name} =1;
   }
   ## older builds, skip
   return [] if ($possibly_distinguished > 0);
@@ -708,7 +758,145 @@ sub get_dataset_protein_info {
   my %protein_level_ids = $sbeams->selectTwoColumnHash($sql);
 
   my @level_names = ('canonical','indistinguishable representative'  ,'representative'
-                     ,'marginally distinguished','weak','insufficient evidence','indistinguishable','subsumed'); 
+                     ,'marginally distinguished','weak','insufficient evidence'); 
+  if ($noncore_canonical){
+    splice @level_names, 1, 0, 'noncore-canonical';
+  }
+
+  my @headings =('Dataset',@level_names);
+  my @sortable=();
+  my @align=();
+  for my $col ( @headings ) {
+    $col =~ s/(\w+)/\u$1/g;
+    push @sortable, $col,$col;
+    push @align, 'center';
+  }
+  $align[0] = 'left';
+  my @records = ();
+  foreach my $repository_id (sort {$a cmp $b} keys %dataset_prot_cnt){
+    my @row =();
+    push @row , $repository_id; 
+    foreach my $level_name (@level_names){
+      my $cnt = scalar keys %{$dataset_prot_cnt{$repository_id}{$level_name}} || 0;
+      if ( $cnt){
+         push @row , $cnt;
+      }else{
+         push @row ,'';
+      }
+    }
+    push @records, \@row;
+  }
+  unshift  @records, \@headings;
+  return \@records;
+}
+sub get_dataset_protein_info_old {
+  my %args = @_;
+  my $atlas_build_id = $args{build_id};
+  my $sql =qq~;
+    SELECT S.SAMPLE_ID, S.REPOSITORY_IDENTIFIERS, ABSB.ATLAS_BUILD_SEARCH_BATCH_ID
+    FROM $TBAT_SAMPLE  S
+    JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON (S.sample_id = ABSB.sample_id)
+    WHERE REPOSITORY_IDENTIFIERS IS NOT NULL
+    AND ABSB.atlas_build_id = $atlas_build_id
+    AND REPOSITORY_IDENTIFIERS != ''
+  ~;
+  my %sample_repository_ids = ();
+  my %absb2sample_id =();
+   my @rows = $sbeams->selectSeveralColumns($sql);
+  foreach my $row(@rows){
+    my ($sample_id,$repository_id, $absb_id) = @$row;
+    $absb2sample_id{$absb_id} = $sample_id; 
+    $sample_repository_ids{$sample_id} = $repository_id;
+  }
+
+  print "sample_ids=". scalar keys %sample_repository_ids;
+  print "\n";
+
+  my $join = '';
+  if ($TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH =~ /peptideatlas_2/i){
+    $join = qq~
+     JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
+     ON (ABSB.ATLAS_BUILD_SEARCH_BATCH_ID = BIABSB.ATLAS_BUILD_SEARCH_BATCH_ID)
+     WHERE ABSB.atlas_build_id = $atlas_build_id
+    ~;
+  }
+  $sql = qq~
+    SELECT BIABSB.biosequence_id, BIABSB.ATLAS_BUILD_SEARCH_BATCH_ID 
+    FROM $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH BIABSB
+    $join
+  ~;
+  
+  my %biosequence_id_sample_id;
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my ($biosequence_id, $absb_id);
+  while(($biosequence_id, $absb_id) = $sth->fetchrow_array() ) {
+    $biosequence_id_sample_id{$biosequence_id}{$absb2sample_id{$absb_id}} =1;
+  } 
+
+  print "biosequence_id_sample_id keys=" . scalar keys %biosequence_id_sample_id;
+  print "\n";
+  $sql = qq~
+		 SELECT BS.biosequence_id, BS.BIOSEQUENCE_NAME, PR.NAME
+		 FROM $TBAT_BIOSEQUENCE BS 
+     JOIN $TBAT_ATLAS_BUILD AB ON (AB.biosequence_set_id = BS.biosequence_set_id)
+     JOIN (	
+			 SELECT A.NAME, A.ID  
+			 FROM (
+				 SELECT PRL.LEVEL_NAME AS NAME,
+								PID.biosequence_id as ID
+				 FROM $TBAT_PROTEIN_IDENTIFICATION PID 
+				 JOIN  $TBAT_PROTEIN_PRESENCE_LEVEL PRL
+				 ON (PID.PRESENCE_LEVEL_ID = PRL.PROTEIN_PRESENCE_LEVEL_ID)
+				 WHERE 1 = 1
+							 AND atlas_build_id IN ($atlas_build_id)
+				 UNION
+				 SELECT BRT.RELATIONSHIP_NAME AS NAME, 
+								BR.RELATED_BIOSEQUENCE_ID as ID 
+				 FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR
+				 JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT
+				 ON (BR.RELATIONSHIP_TYPE_ID = BRT.BIOSEQUENCE_RELATIONSHIP_TYPE_ID)
+				 WHERE 1 = 1
+							 AND atlas_build_id IN ($atlas_build_id)
+			 ) AS A ) PR  ON (PR.ID = BS.biosequence_id) 
+     WHERE 1 = 1
+         AND AB.atlas_build_id = $atlas_build_id
+          AND BS.BIOSEQUENCE_ID NOT IN (
+            SELECT BR.RELATED_BIOSEQUENCE_ID
+             FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR
+             WHERE RELATIONSHIP_TYPE_ID = 2
+          )
+  ~;
+  my %dataset_prot_cnt;
+  my $possibly_distinguished = 0;
+  my $noncore_canonical = 0;
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while( my $row = $sth->fetchrow_arrayref() ) {
+    my ($bs_id, $bs_name,$protein_level ) =@$row;
+    next if ($bs_name =~ /(decoy|contam)/i);
+    foreach my $sample_id (keys %{$biosequence_id_sample_id{$bs_id}}){
+			if ($protein_level =~ /possibly_distinguished/i){
+				 $possibly_distinguished++;
+			}
+			if ($protein_level =~ /noncore/){
+				 $noncore_canonical =1;
+			}
+			$dataset_prot_cnt{$sample_repository_ids{$sample_id}}{$protein_level}{$bs_name} =1;
+    }
+  }
+  ## older builds, skip
+  return [] if ($possibly_distinguished > 0);
+  return [] if (scalar keys %dataset_prot_cnt == 0);
+  my $sql =qq~;
+    SELECT LEVEL_NAME AS NAME, PROTEIN_PRESENCE_LEVEL_ID AS ID
+    FROM $TBAT_PROTEIN_PRESENCE_LEVEL
+    UNION
+    SELECT RELATIONSHIP_NAME AS NAME, BIOSEQUENCE_RELATIONSHIP_TYPE_ID AS ID
+    FROM $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE
+  ~;
+  my %protein_level_ids = $sbeams->selectTwoColumnHash($sql);
+
+  my @level_names = ('canonical','indistinguishable representative'  ,'representative'
+                     ,'marginally distinguished','weak','insufficient evidence'); 
   if ($noncore_canonical){
     splice @level_names, 1, 0, 'noncore-canonical';
   }

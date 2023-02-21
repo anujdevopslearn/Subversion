@@ -589,8 +589,9 @@ Counts only primary reference proteome entries, so final tally may be smaller th
        #Proteome Coverage (exhaustive)
        'Database' => 'Name of database, which collectively form the reference database for this build',
        'N_Prots' => 'Total number of entries in subject database',
-       'N_Obs_Prots' => 'Number of proteins within the subject database to which at least one observed peptide maps',
+       'N_Obs_Prots' => 'Number of distinct protein sequences within the subject database to which at least one observed peptide maps',
        'Pct_Obs' => 'The percentage of the subject proteome covered by one or more observed peptides',
+       'N_unObs_Prots' => 'Number of distinct protein sequences within the subject database to which no observed peptide maps',
        'total_S_sites' => 'total S sites',
        'obs_protein_S_sites' => 'total S sites in the observed proteins',
        'covered_S_sites' => 'covered S sites in the observed proteins',
