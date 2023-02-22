@@ -324,48 +324,6 @@ sub get_build_overview {
   my $build_name = $build_info->{atlas_build_name};
   my $phospho_info;
   if ($build_name =~ /phospho/i){
-#    my ($id_col_name, $protein_name_contraint);
-#    $id_col_name = '#_proteins';
-#    if ($build_name =~ /human/i){
-#      $id_col_name = '#_neXtProt_(PE=1-4)';
-#      $protein_name_contraint = 'AND B.dbxref_id = 65';
-#    }elsif($build_name =~ /Plasmodium/i){
-#      $protein_name_contraint ="AND B.biosequence_name like 'PF3D7%'";
-#    }else{
-#      $protein_name_contraint =" AND B.biosequence_name not like 'CONTAM%' AND B.biosequence_name not like 'DECOY%'";
-#    }
-#    my $sql = qq~
-#		SELECT PS.atlas_build_id, 
-#					 count(distinct PS.biosequence_id) as '$id_col_name', 
-#					 sum(case when PS.nobs > 0 then 1 else 0 end ) as #_observed_phosphorylation_sites,
-#           count(offset) as #_observed_phosphorylation_sites_total, 
-#					 sum(case when residue = 'S' and PS.nobs > 0 then 1 else 0 end) as S_sites,
-#					 sum(case when residue = 'T' and PS.nobs > 0 then 1 else 0 end) as T_sites,
-#					 sum(case when residue = 'Y' and PS.nobs > 0 then 1 else 0 end) as Y_sites,
-#           sum(case when residue = 'S' then 1 else 0 end) as S_sites_total,
-#           sum(case when residue = 'T' then 1 else 0 end) as T_sites_total,
-#           sum(case when residue = 'Y' then 1 else 0 end) as Y_sites_total
-#		FROM $TBAT_PTM_SUMMARY PS 
-#		JOIN $TBAT_BIOSEQUENCE B ON PS.BIOSEQUENCE_ID = B.BIOSEQUENCE_ID
-#		WHERE  B.biosequence_set_id in (
-#      SELECT BSS.biosequence_set_id 
-#      FROM $TBAT_ATLAS_BUILD AB 
-#      JOIN $TBAT_BIOSEQUENCE_SET BSS ON (BSS.biosequence_set_id = AB.biosequence_set_id)
-#      WHERE AB.atlas_build_id = $build_id )
-#    AND PS.atlas_build_id = $build_id
-#		$protein_name_contraint
-#		GROUP BY PS.atlas_build_id
-#    ~;
-#
-#    $phospho_info =  $sbeams->selectrow_hashref($sql);
-#    foreach my $type (keys %$phospho_info){
-#      next if($type !~ /sites$/); 
-#      $phospho_info->{$type} = sprintf("%d \(%.2f%\)", $phospho_info->{$type}, $phospho_info->{$type}*100/$phospho_info->{$type."_total"});
-#      delete $phospho_info->{$type."_total"};
-#
-#    }
-#     
-
 		my $sql = qq~
 			 SELECT mp.modified_peptide_sequence
 			 FROM $TBAT_PEPTIDE_INSTANCE PI
@@ -418,6 +376,13 @@ sub get_build_overview {
   WHERE atlas_build_id = $build_id
   SMPL
 
+  my $dataset_count = $sbeams->selectrow_hashref( <<"  DATASET" );
+  SELECT  COUNT(*) cnt, SUM(cast (n_searched_spectra as bigint)) n_searched_spectra 
+  FROM $TBAT_DATASET_STATISTICS
+  WHERE ATLAS_BUILD_ID = $build_id
+  DATASET
+
+
   my %prot_count = $sbeams->selectTwoColumnHash( <<"  PROT" );
   SELECT PPL.level_name, COUNT(BS.biosequence_name) cnt
   FROM $TBAT_PROTEIN_IDENTIFICATION PID
@@ -444,8 +409,10 @@ sub get_build_overview {
   print $fh "build_overview|set_name\t$build_info->{set_name}\n";
   print $fh "build_overview|build_date\t$build_info->{build_date}\n";
   print $fh "build_overview|smpl_count\t$smpl_count->{cnt}\n";
+  print $fh "build_overview|dataset_count\t$dataset_count->{cnt}\n";
   print $fh "build_overview|protpro_PSM_FDR_per_expt\t$build_info->{protpro_PSM_FDR_per_expt}\n";
   print $fh "build_overview|probability_threshold\t$build_info->{probability_threshold}\n";
+  print $fh "build_overview|n_searched_spectra\t$dataset_count->{n_searched_spectra}\n";
   print $fh "build_overview|pep_count_obs\t$pep_count->{obs}\n";
   print $fh "build_overview|pep_count_cnt\t$pep_count->{cnt}\n";
   foreach my $key (sort {$a cmp $b} keys %prot_count){

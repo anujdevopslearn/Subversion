@@ -734,6 +734,15 @@ sub build_overview_html {
 				       value => $build_info->{build_date} ) . "\n";
   $table .= $atlas->encodeSectionItem( key   => '# Experiments', tr_info => $tr,
 				       value => $build_info->{smpl_count}, align => 'right' ) . "\n";
+  if ($build_info->{dataset_count}){
+    $table .= $atlas->encodeSectionItem( key   => '# Datasets', tr_info => $tr,
+               value => $build_info->{dataset_count}, align => 'right' ) . "\n" 
+  }
+  if ($build_info->{n_searched_spectra}){
+    $table .= $atlas->encodeSectionItem( key   => '# Searched Spectra', tr_info => $tr,
+               value => $build_info->{n_searched_spectra}, align => 'right' ) . "\n"
+  }
+
   $table .= $atlas->encodeSectionItem( key   => 'PSM FDR threshold', tr_info => $tr,
 				       value => $build_info->{protpro_PSM_FDR_per_expt}, align => 'right' ) . "\n";
   $table .= $atlas->encodeSectionItem( key   => 'Probability threshold', tr_info => $tr,
