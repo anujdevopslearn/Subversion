@@ -4,6 +4,9 @@ use strict;
 use Getopt::Long;
 use FindBin;
 use Data::Dumper;
+use Bio::PrimarySeq;
+use Bio::Tools::SeqStats;
+
 use List::MoreUtils qw(uniq);
 use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
@@ -257,6 +260,7 @@ sub handle_request {
     ["length", "'length'", "length"],
     ["mass", "'mass'", "mass"],
 		["pI", "'pI'","pI"],
+    ["gravy","'gravy'","gravy"],
     ["biosequence_desc", "BS.biosequence_desc", "biosequence_desc"]
 	);
 	my $columns_clause = $sbeams->build_SQL_columns_list(
@@ -378,7 +382,7 @@ sub postProcessResultset {
   my $length_idx = $colnameidx_ref->{length};
   my $mass_idx = $colnameidx_ref->{mass};
   my $pi_idx = $colnameidx_ref->{pI};
-
+  my $gravy_idx = $colnameidx_ref->{gravy};
   my $n_rows = scalar(@{$resultset_ref->{data_ref}});
 
 
@@ -389,67 +393,74 @@ sub postProcessResultset {
     $data->[$length_idx]  = length($seq);
     $data->[$pi_idx] = $sbeamsMOD->calculatePeptidePI( sequence => $seq );
 
-    my $mass=calc_mass($seq);
-    $data->[$mass_idx] = sprintf ("%.0f", $mass) ;
+
+    #my $hydro_score = getRelativeHydrophobicity( $seq);
+    $seq =~ s/X//g;
+		my $prot_obj = Bio::PrimarySeq->new(-seq=>$seq,
+																		-alphabet=>'protein');
+		$data->[$gravy_idx] = sprintf ("%.2f", Bio::Tools::SeqStats->hydropathicity($prot_obj));
+    my $weight = Bio::Tools::SeqStats->get_mol_wt($prot_obj);
+    #my $weight=calc_mass($seq);
+    #$data->[$mass_idx] = sprintf ("%.0f", $weight) ;
+    #print "$$w[0] - $$w[1];,";
+    $data->[$mass_idx] = sprintf ("%.0f", $$weight[0]) 
   }
 }
-sub calc_mass {
-    my $seq = shift;
-    my $x = length $a;
-    my @aa = split (//, $seq);
-    my %mass = (
-        #/usr/local/share/perl5/InSilicoSpectro/config/insilicodef.xml
-        'A' => '71.0788',
-        'R' => '156.1875',
-        'N' => '114.1038',
-        'D' => '115.0886',
-        'C' => '103.1388',
-        'E' => '129.1155',
-        'Q' => '128.1307',
-        'G' => '57.0519',
-        'H' => '137.1411',
-        'I' => '113.1594',
-        'L' => '113.1594',
-        'K' => '128.1741',
-        'M' => '131.1926',
-        'F' => '147.1766',
-        'P' => '97.1167',
-        'S' => '87.0782',
-        'T' => '101.1051',
-        'W' => '186.2132',
-        'Y' => '163.1760',
-        'V' => '99.1326',
-         # UW
-            'U' => '150.3079',
-            'O' => '237.29816',
-#           'G' => '57.05132',
-#           'A' => '71.0779',
-#           'S' => '87.0773',
-#           'P' => '97.11518',
-#           'V' => '99.13106',
-#           'T' => '101.10388',
-#           'C' => '103.1429',
-#           'L' => '113.15764',
-#           'I' => '113.15764',
-#           'N' => '114.10264',
-#           'D' => '115.0874',
-#           'Q' => '128.12922',
-#           'K' => '128.17228',
-#           'E' => '129.11398',
-    );
-
-    my %hEls=();
-    foreach (@aa){
-      $hEls{"$_"}++;
-    }
-    my $cTerm = 1.00797594155 + 15.99930509008 ; # getMass('el_H')+getMass('el_O');
-    my $nTerm = 1.00797594155 ; # getMass('el_H');
-    my $m = $nTerm+$cTerm;
-    foreach (keys %hEls){
-      next if (not defined $mass{$_});
-      $m+=$hEls{$_}*$mass{$_};
-    }
-    return $m;
-}
-
-
+#sub calc_mass {
+#    my $seq = shift;
+#    my $x = length $a;
+#    my @aa = split (//, $seq);
+#    my %mass = (
+#        #/usr/local/share/perl5/InSilicoSpectro/config/insilicodef.xml
+#        'A' => '71.0788',
+#        'R' => '156.1875',
+#        'N' => '114.1038',
+#        'D' => '115.0886',
+#        'C' => '103.1388',
+#        'E' => '129.1155',
+#        'Q' => '128.1307',
+#        'G' => '57.0519',
+#        'H' => '137.1411',
+#        'I' => '113.1594',
+#        'L' => '113.1594',
+#        'K' => '128.1741',
+#        'M' => '131.1926',
+#        'F' => '147.1766',
+#        'P' => '97.1167',
+#        'S' => '87.0782',
+#        'T' => '101.1051',
+#        'W' => '186.2132',
+#        'Y' => '163.1760',
+#        'V' => '99.1326',
+#         # UW
+#            'U' => '150.3079',
+#            'O' => '237.29816',
+##           'G' => '57.05132',
+##           'A' => '71.0779',
+##           'S' => '87.0773',
+##           'P' => '97.11518',
+##           'V' => '99.13106',
+##           'T' => '101.10388',
+##           'C' => '103.1429',
+##           'L' => '113.15764',
+##           'I' => '113.15764',
+##           'N' => '114.10264',
+##           'D' => '115.0874',
+##           'Q' => '128.12922',
+##           'K' => '128.17228',
+##           'E' => '129.11398',
+#    );
+#
+#    my %hEls=();
+#    foreach (@aa){
+#      $hEls{"$_"}++;
+#    }
+#    my $cTerm = 1.00797594155 + 15.99930509008 ; # getMass('el_H')+getMass('el_O');
+#    my $nTerm = 1.00797594155 ; # getMass('el_H');
+#    my $m = $nTerm+$cTerm;
+#    foreach (keys %hEls){
+#      next if (not defined $mass{$_});
+#      $m+=$hEls{$_}*$mass{$_};
+#    }
+#    return $m;
+#}
