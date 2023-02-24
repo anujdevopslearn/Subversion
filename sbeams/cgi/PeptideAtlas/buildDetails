@@ -1575,7 +1575,7 @@ sub generate_html_from_file {
          ## remove last column
          $table_width = 400;
          my $missing_prot_url = "$CGI_BASE_DIR/PeptideAtlas/GetMissingProteins?atlas_build_id=$build_id".
-                                '&SwissProt&action=QUERY&proteome_component=';
+                                '&action=QUERY&proteome_component=';
          if (scalar @$headings == 6){
 						foreach my $row (@data){
 							pop @$row; 

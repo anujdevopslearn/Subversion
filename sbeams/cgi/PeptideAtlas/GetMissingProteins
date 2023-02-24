@@ -156,39 +156,10 @@ sub handle_request {
     parameters_ref => \%parameters,
   );
 
-  if ( (defined($atlas_build_id) && $atlas_build_id < 0) || ! $parameters{proteome_component} ) {
-    return;
-  }
-  $parameters{atlas_build_id} = $atlas_build_id;
 
-  my $build_data_path = $sbeamsMOD->get_build_data_directory( atlas_build_id => $atlas_build_id );
-  ## get list of missing proteins
-  my %missing_prot = ();
-  my $data_file = "$build_data_path/../analysis/build_detail_tables.tsv";
-  if (-e $data_file) {
-    if(open (IN, "<$data_file")){
-       while (my $line =<IN>){
-         next if ($line !~ /proteome_coverage/);
-         next if ($line =~ /Database/);
-         chomp $line;
-         my @data = split("\t", $line);
-         if (scalar @data == 6){
-            $data[0] =~ s/proteome_coverage.//;
-            $missing_prot{$data[0]} = $data[5];
-         }else{
-           return;
-         }
-       }
-    }else{
-       return;
-    }
-  }else{
-    return;
-  }
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql,$proteome_component, $biosequence_ids);
   $proteome_component = $parameters{proteome_component};
-  $biosequence_ids = $missing_prot{$proteome_component} || '';
 
   #### Define some variables for a query and resultset
   my %resultset = ();
@@ -198,6 +169,16 @@ sub handle_request {
   #### Read in the standard form values
   my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
   my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+  if ($apply_action =~ /query/i && ((defined($atlas_build_id) && $atlas_build_id < 0) || ! $parameters{proteome_component}) ) {
+			$sbeams->reportException(
+				state => 'ERROR',
+				type => 'MISSING PARAMETER',
+				message => 'needs atlas_build_id and proteome_component values',
+			);
+ 
+  }
+  $parameters{atlas_build_id} = $atlas_build_id;
 
   #### Set some specific settings for this program
   my $CATEGORY="Get Missing Proteins";
@@ -209,6 +190,7 @@ sub handle_request {
   #### If the apply action was to recall a previous resultset, do it
   my %rs_params = $sbeams->parseResultSetParams(q=>$q);
   if ($apply_action =~ /VIEWRESULTSET|VIEWPLOT/ ) {
+
     $sbeams->readResultSet(
         resultset_file=>$rs_params{set_name},
         resultset_ref=>$resultset_ref,
@@ -216,6 +198,48 @@ sub handle_request {
     );
   }
 
+  my $build_data_path = $sbeamsMOD->get_build_data_directory( atlas_build_id => $atlas_build_id );
+  ## get list of missing proteins
+  my %missing_prot = ();
+  my $data_file = "$build_data_path/../analysis/build_detail_tables.tsv";
+  if ($apply_action =~ /QUERY/i){
+		if (-e $data_file) {
+			if(open (IN, "<$data_file")){
+				 while (my $line =<IN>){
+					 next if ($line !~ /proteome_coverage/);
+					 next if ($line =~ /Database/);
+					 chomp $line;
+					 my @data = split("\t", $line);
+					 if (scalar @data == 6){
+							$data[0] =~ s/proteome_coverage.//;
+							$missing_prot{$data[0]} = $data[5];
+					 }else{
+						  $sbeams->reportException(
+								state => 'ERROR',
+								type => 'MISSING VALUE',
+								message => 'no missing protein id in the coverage table',
+							);
+ 
+					 }
+				 }
+			}else{
+				  $sbeams->reportException(
+						state => 'ERROR',
+						type => "FILE ERROR",
+						message => "can't open build_detail_tables.tsv file"
+					);
+			}
+		}else{
+				$sbeams->reportException(
+					state => 'ERROR',
+					type => "FILE MISSING",
+					message => "build_detail_tables.tsv file missing"
+				);
+
+		}
+  }
+
+  $biosequence_ids = $missing_prot{$proteome_component} || '';
   #### Build ATLAS_BUILD constraint
   my $atlas_build_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"AB.atlas_build_id",
