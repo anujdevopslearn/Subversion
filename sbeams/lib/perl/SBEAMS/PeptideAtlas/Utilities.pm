@@ -4012,7 +4012,7 @@ sub get_alignment_display {
     $args{bioseq_id} .= join( ",", @bioseq_ids);
     #print "<br>bioseq_id = |$args{bioseq_id}|<br>\n";
     my @ids = split (",", $args{bioseq_id});
-    @bioseq_ids = @bioseq_ids, @ids;
+    @bioseq_ids = (@bioseq_ids, @ids);
 
     my $n_ids = scalar @bioseq_ids;
     if ( $n_ids < 2 ) {
@@ -4171,7 +4171,6 @@ sub get_alignment_display {
 #	4	biosequence_id
 #	5 biosequence_desc
   my %seen;
-  my %coverage;
   my @seqs;
   $log->debug( "loopin:" .time() );
   my %seqtype = ( decoy => 0, fwd => 0 );
@@ -4320,7 +4319,7 @@ sub get_alignment_display {
                                               accessions => $peptide_map{'protein_list'},
                                               );
 
-      $clustal_display .= $self->get_clustal_alignemnt_display( alignments => $clustal, 
+      $clustal_display .= $self->get_clustal_alignment_display( alignments => $clustal, 
 					       dup_seqs => \%dup_seqs,
 					       pepseq => $peptide,
 					       coverage => \%coverage,
@@ -4457,7 +4456,7 @@ sub get_peptide_mapping_display_graphic{
 	my $width = ( $track_len <= 4000 ) ? 1500 : int( $track_len/5 );
   my %pep_info;
   my $cnt=1;
-  my $i=0;
+  $i=0;
   for my $map_prot (split / /, $peptide_map->{'protein_list'}) {
     my $sequences = $sequence_with_gap{$map_prot};
     $sequences =~ s/\-//g;
@@ -4606,7 +4605,7 @@ sub get_peptide_mapping_display_graphic{
 }
 
 
-sub get_clustal_alignemnt_display {
+sub get_clustal_alignment_display {
   my $self = shift;
   my $sbeams = $self->getSBEAMS();
   my %args = ( acc_color => '#0090D0', @_ );
@@ -4813,7 +4812,7 @@ sub highlight_sites2 {
   my $span_closed = 1;
   my $i=0;
   for my $aa ( @aas ) {
-    if ( $aa eq '-' ) {
+    if ( $aa =~ /[\-\*]/ ) {
       if ( $in_coverage && !$span_closed ) {
 				$return_seq .= "</span>$aa";
 				$span_closed++;
@@ -4856,6 +4855,48 @@ sub highlight_sites2 {
     $return_seq .= '</span>';
   }
   return $return_seq;
+}
+
+###############################################################################
+# get_atlas_build_directory  --  get atlas build directory
+# @param atlas_build_id
+# @return atlas_build:data_path
+###############################################################################
+sub get_build_data_directory
+{
+  my $self = shift; 
+  my %args = @_;
+	my $sbeams = $self->getSBEAMS();
+
+	my $atlas_build_id = $args{atlas_build_id} or die "need atlas build id";
+
+	my $path;
+
+	my $sql = qq~
+			SELECT data_path
+			FROM $TBAT_ATLAS_BUILD
+			WHERE atlas_build_id = '$atlas_build_id'
+			AND record_status != 'D'
+	~;
+
+	($path) = $sbeams->selectOneColumn($sql) or
+			die "\nERROR: Unable to find the data_path in atlas_build record".
+			" with $sql\n\n";
+
+	## get the global variable PeptideAtlas_PIPELINE_DIRECTORY
+	my $pipeline_dir = $CONFIG_SETTING{PeptideAtlas_PIPELINE_DIRECTORY};
+
+	$path = "$pipeline_dir/$path";
+
+	## check that path exists
+	unless ( -e $path)
+	{
+			die "\n Can't find path $path in file system.  Please check ".
+			" the record for atlas_build with atlas_build_id=$atlas_build_id";
+
+	}
+
+    return $path;
 }
 
 1;
