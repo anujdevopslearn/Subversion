@@ -1710,7 +1710,7 @@ sub add_url {
         }elsif($cols{$i} =~ /Experiment Tag/){
            if ($exp_id_idx){
               $row->[$i] = '<a href="https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/ManageTable.cgi?TABLE_NAME=AT_SAMPLE&sample_id=' .
-                           $row->[$exp_id_idx] . '">'. $row->[$i] ."</a>\n";
+                           $row->[$exp_id_idx] . '">'. $row->[$i] ."</a>";
            }
         }elsif($cols{$i} =~ /Pubmed/){
           my @ids = split(",", $row->[$i]);
