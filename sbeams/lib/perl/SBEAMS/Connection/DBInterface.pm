@@ -1767,47 +1767,28 @@ sub executeSQL {
     #### If the prepare() succeeds, execute
     if ($sth) {
       my $rows = '';
-      my $n_try = 1;
-      while ($n_try <= 5){
-				eval {
-						 $rows  = $sth->execute();
-						 };
-				if ( $@ ) {
-					$log->error( "Caught error: $@" );
-					$log->error( "DBI errorstring is $DBI::errstr" );
-				}
+			eval {
+					 $rows  = $sth->execute();
+					 };
+			if ( $@ ) {
+				$log->error( "Caught error: $@" );
+				$log->error( "DBI errorstring is $DBI::errstr" );
+			}
 
-				if ($rows) {
-					if (ref($return_error)) {
-						$$return_error = '';
-					}
-					return $rows;
-				} elsif ($return_error) {
-					if (ref($return_error)) {
-						$$return_error = $dbh->errstr;
-					}
-          if ($n_try == 5){
-				  	return 0;
-          }else{
-            print "Execute try $n_try\n";
-            print "ERROR on SQL execute():\n$sql\n\n".$dbh->errstr;
-            $dbh->disconnect();
-            $dbh = $self->getDBHandle(); 
-            $n_try++;
-          }
-				} else {
-					$log->error( "Error on execute DBI errorstring is $DBI::errstr" );
-          if ($n_try == 5){
-            print "Execute try $n_try.\n";
-						die("ERROR on SQL execute():\n$sql\n\n".$dbh->errstr);
-          }
-          print "Execute try $n_try. Sleep 10sec\n";
-          print "ERROR on SQL execute():\n$sql\n\n".$dbh->errstr;
-          $dbh->disconnect();
-          $dbh = $self->getDBHandle(); 
-          $n_try++;
+			if ($rows) {
+				if (ref($return_error)) {
+					$$return_error = '';
 				}
-      }
+				return $rows;
+			} elsif ($return_error) {
+				if (ref($return_error)) {
+					$$return_error = $dbh->errstr;
+				}
+				return 0;
+			} else {
+				$log->error( "Error on execute DBI errorstring is $DBI::errstr" );
+				die("ERROR on SQL execute():\n$sql\n\n".$dbh->errstr);
+			}
     #### If the prepare() fails
     } elsif ($return_error) {
       if (ref($return_error)) {
@@ -1916,10 +1897,8 @@ sub deleteRecordsAndChildren {
     %table_PK_column_names = %{$table_PK_column_names};
   }
 
-
   #### If there are child tables, process them first
   if (defined($table_child_relationship->{$table_name})) {
-
     my @sub_tables = split(",",$table_child_relationship->{$table_name});
     foreach my $element (@sub_tables) {
       if ($element =~ /^([\w_\-\d]+)\(([A-Z]+)\)$/) {
@@ -3889,7 +3868,7 @@ sub displayResultSetPlot_plotly {
   	    if ( $rs_params{rs_plot_type} ne 'discrete_histogram') { # continuous
           $result = $self->histogram( data_array_ref => $hdata, quiet => 1 );
           if ( $result->{result} ne 'SUCCESS' ) {
-            print $self->makeInfoText('Unable to compute continuous histogram, falling back to discrete');
+            print $self->makeInfoText('Unable to compute continuous histogram, falling back to discrete<BR>');
           }
         }
 
@@ -3908,7 +3887,7 @@ sub displayResultSetPlot_plotly {
            # Deprecated, calculating below.
 #          $result = $self->discrete_value_histogram( data_array_ref => $hdata );
           
-          if ( $result->{result} ne 'SUCCESS' ) {
+        if ( $result->{result} ne 'SUCCESS' ) {
             my %tally;
             for my $val ( @{$hdata} ) {
               $val = '' if !defined $val;
@@ -3930,18 +3909,22 @@ sub displayResultSetPlot_plotly {
             }
             $result->{result} = 'SUCCESS';
           }
+          if (! $result->{yaxis} || $result->{xaxis_disp}){
+            $result=undef; 
+          }else{
+						my $ystr = join( ',', @{$result->{yaxis}} );
+						my $xstr = "'" . join( "','", @{$result->{xaxis_disp}} ) . "'";
 
-          my $ystr = join( ',', @{$result->{yaxis}} );
-          my $xstr = "'" . join( "','", @{$result->{xaxis_disp}} ) . "'";
-          $plot_data = qq~
-           x: [$xstr],
-           y: [$ystr],
-           type: 'bar',
-          ~;
+						$plot_data = qq~
+						 x: [$xstr],
+						 y: [$ystr],
+						 type: 'bar',
+						~;
+          }
         }
         if ($result->{result} ne 'SUCCESS') {
           print "ERROR: Unable to calculate histogram for column ".$rs_params{rs_columnA};
-          return '';
+          $result = undef; 
         } else {
           $plot .= qq~
           <script type="text/javascript" charset="utf-8">
@@ -3965,47 +3948,52 @@ sub displayResultSetPlot_plotly {
         } else {
   
           # Prepare data
-          my $xstr = join( ',', @{$column_info->{A}->{data}} );
-          my $ystr = join( ',', @{$column_info->{B}->{data}} );
-          my $data_label = ( scalar(keys(@mouseover_text)) ) ? "'" . join( "','", @mouseover_text) . "'" : $xstr;
+          if (! $column_info->{A}->{data} || ! $column_info->{B}->{data}){
+            print $self->makeInfoText( "Scatter plots can only be made with two numeric columns" );
+            $result = undef;
+          }else{  
+						my $xstr = join( ',', @{$column_info->{A}->{data}} );
+						my $ystr = join( ',', @{$column_info->{B}->{data}} );
+						my $data_label = ( scalar(keys(@mouseover_text)) ) ? "'" . join( "','", @mouseover_text) . "'" : $xstr;
 
-          # Print plotting code
-          $plot .= qq~ 
-          <script type="text/javascript" charset="utf-8">
-          var trace = {
-           x: [$xstr],
-           y: [$ystr],
-           mode: 'markers',
-           type: 'scatter',
-           text: [$data_label],
-           marker: { size: 4 }
-           };
-           var data = [ trace ];
-           var layout = {
-           title:'$column_info->{A}->{name} vs $column_info->{B}->{name}',
-           // highlight closest in x,y sense
-           hovermode: 'closest',
-           };
-           Plotly.newPlot('plot_div', data, layout);
-           var myPlot = document.getElementById('plot_div');
+						# Print plotting code
+						$plot .= qq~ 
+						<script type="text/javascript" charset="utf-8">
+						var trace = {
+						 x: [$xstr],
+						 y: [$ystr],
+						 mode: 'markers',
+						 type: 'scatter',
+						 text: [$data_label],
+						 marker: { size: 4 }
+						 };
+						 var data = [ trace ];
+						 var layout = {
+						 title:'$column_info->{A}->{name} vs $column_info->{B}->{name}',
+						 // highlight closest in x,y sense
+						 hovermode: 'closest',
+						 };
+						 Plotly.newPlot('plot_div', data, layout);
+						 var myPlot = document.getElementById('plot_div');
 
-           // Add plotly_click event handler to allow click to link 
-           myPlot.on('plotly_click', function( data ){
-             for(var i=0; i < data.points.length; i++){
-               var idx = data.points[i]['pointNumber'];
-               var seq = data.points[i]['data']['text'][idx];
-               var url = "$args{mouseover_url}";
-               url = url.replace('$regex_tag',seq);
-               window.open(url);
-             };
-           });
-          </script>
-          ~;
-          $result->{result} = 'SUCCESS';
+						 // Add plotly_click event handler to allow click to link 
+						 myPlot.on('plotly_click', function( data ){
+							 for(var i=0; i < data.points.length; i++){
+								 var idx = data.points[i]['pointNumber'];
+								 var seq = data.points[i]['data']['text'][idx];
+								 var url = "$args{mouseover_url}";
+								 url = url.replace('$regex_tag',seq);
+								 window.open(url);
+							 };
+						 });
+						</script>
+						~;
+						$result->{result} = 'SUCCESS';
+          }
         }
       } else { # unknow plot type
         print STDERR "Unknown plot type $rs_params{rs_plot_type}\n";
-        return;
+        $result = undef; 
       }
       print $plot if $result->{result} eq 'SUCCESS';
 
@@ -4582,7 +4570,6 @@ sub parseResultSetParams {
   $rs_params{page_number} = $rs_params{rs_page_number}
     if ($rs_params{rs_page_number});
 
-
   #### Add some defaults if nothing was provided
   unless (defined($rs_params{page_size}) && $rs_params{page_size} > 0) {
     $rs_params{page_size} = 50;
@@ -4628,6 +4615,7 @@ sub readResultSet {
 
     #### Read in the query parameters
     my $infile = "$RESULTSET_DIR/${resultset_file}.params";
+
     if ( ! -e $infile ) {
         return 0;
     }
@@ -5119,7 +5107,6 @@ sub parse_input_parameters {
     }
     $self-> update_PA_table_variables($ref_parameters->{build_id});
   }
-
 
   return $n_params_found;
 
