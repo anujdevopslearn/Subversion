@@ -148,11 +148,14 @@ sub handle_request {
   my $tabMenu = $sbeamsMOD->getTabMenu(
     parameters_ref => \%parameters,
     program_name => $PROG_NAME,
+
   );
+
   if ($sbeams->output_mode() eq 'html') {
     print $tabMenu->asHTML();
     print "<script>document.title = 'PeptideAtlas: Get Missing Proteins';</script>";
   }
+
 
   #### Get the current atlas_build_id based on parameters or session
   my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
@@ -189,6 +192,8 @@ sub handle_request {
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
   my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
 
+  my $spacer =  $sbeams->getTabbedPanesDHTML()."<br/>\n";
+  print "<h1>$CATEGORY</h1>\n$spacer\n";
 
   #### If the apply action was to recall a previous resultset, do it
   my %rs_params = $sbeams->parseResultSetParams(q=>$q);
@@ -294,7 +299,7 @@ sub handle_request {
       $sbeams->fetchResultSet(
         sql_query=>$sql,
         resultset_ref=>$resultset_ref,
-        use_caching => 0 
+        use_caching => 1 
       );
       postProcessResultset(
 				rs_params_ref=>\%rs_params,
@@ -344,17 +349,18 @@ sub handle_request {
     );
 
     #### Display a plot of data from the resultset
-#    $sbeams->displayResultSetPlot_plotly(
-#      rs_params_ref=>\%rs_params,
-#      resultset_ref=>$resultset_ref,
-#      query_parameters_ref=>\%parameters,
-#      column_titles_ref=>\@column_titles,
-#      use_tabbed_panes => 1,
-#      mouseover_column => 'peptide_sequence',
-#      mouseover_url => $url_cols{'Peptide Sequence'},
-#      mouseover_tag => '%1V',
-#      base_url=>$base_url,
-#    );
+    $sbeams->displayResultSetPlot_plotly(
+      rs_params_ref=>\%rs_params,
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      column_titles_ref=>\@column_titles,
+      use_tabbed_panes => 1,
+      mouseover_column => 'biosequence_name',
+      mouseover_url => $url_cols{'Biosequence Name'},
+      mouseover_tag => '%1V',
+      base_url=>$base_url,
+    );
+
   }else{
     if ($sbeams->invocation_mode() eq 'http') {
       print "<H4>Select parameters above and press QUERY</H4>\n";
