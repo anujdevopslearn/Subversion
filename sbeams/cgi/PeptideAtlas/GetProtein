@@ -7,7 +7,7 @@
 # Description : Prints summary of a given protein given selection
 #               atlas build and protein name.
 #
-# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2023 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -1025,10 +1025,15 @@ sub handle_request {
     my $had_peff = 0;
     while ($biosequence->{biosequence_desc} =~ m/\\([^=]+)=([^\\]+)/g) {
       $had_peff++;
+      my $peffval = $2;
+      if (length($peffval) > 1500) {
+	my $htmlid = "_htmlpeffheader$1";
+	$peffval = substr($2,0,1480)."<span onclick='document.getElementById(\"$htmlid\").className=\"\";this.innerHTML=\"\";' class='pa-textlink'> ...more</span><span id='$htmlid' class='hidden'>".substr($2,1480)."</span>";
+      }
       $htmlcontent .= $sbeamsMOD->encodeSectionItem(
 	key=>"&nbsp;&nbsp;&nbsp;<span class='pa_snp_warn_font'>PEFF</span> $1",
 	tr_info => $tr,
-	value=>$2
+	value=>$peffval
 	  );
     }
     # otherwise...
@@ -1080,22 +1085,22 @@ sub handle_request {
     my $cluster_id_file = "$build_path/Orthogroups.txt";
     if (-e $cluster_id_file){
       if (open (C, "<$cluster_id_file")){
-         while (my $line = <C>){
-            my @prot_in_isolates =split(/\s+/,$line);
-            next if (@prot_in_isolates == 1);
-            foreach my $p(@prot_in_isolates){
-              if ($p eq $biosequence->{biosequence_name}){
-                my $s ="<a href='$CGI_BASE_DIR/PeptideAtlas/CompareIsolates?". 
-                      "atlas_build_id=$atlas_build_id&protein_name=$p&apply_action=QUERY'" .
-                      ">$p</a>"; 
-								$htmlcontent .= $sbeamsMOD->encodeSectionItem(
-									key=>'Compare Isolate Sequences',
-									tr_info => $tr,
-									value=>$s,
-								);
-              } 
-            }
-         }
+	while (my $line = <C>){
+	  my @prot_in_isolates =split(/\s+/,$line);
+	  next if (@prot_in_isolates == 1);
+	  foreach my $p(@prot_in_isolates){
+	    if ($p eq $biosequence->{biosequence_name}){
+	      my $s ="<a href='$CGI_BASE_DIR/PeptideAtlas/CompareIsolates?". 
+		  "atlas_build_id=$atlas_build_id&protein_name=$p&apply_action=QUERY'" .
+		  ">$p</a>"; 
+	      $htmlcontent .= $sbeamsMOD->encodeSectionItem(
+		key=>'Compare Isolate Sequences',
+		tr_info => $tr,
+		value=>$s,
+		  );
+	    } 
+	  }
+	}
 
       }
     }
@@ -1506,7 +1511,7 @@ sub handle_request {
     #############################################################################
     ## Chuck in provisional peptide likelihood table
     #############################################################################
-    my @rows = ( [qw( Sequence Status Start End )] );;
+    my @rows = ( [qw( Sequence Status Start End )] );
     for my $pep ( @{$likely->{peptides}} ) {
       push @rows, [ $pep->{seq}, $pep->{status}, $pep->{start}, $pep->{end} ];
     }
@@ -2143,7 +2148,7 @@ sub get_synthesized_peptides {
 #-
 sub get_sequence_graphic {
   ## read passed args, set up variables ##
-  my %args = @_;;
+  my %args = @_;
 
   my $tmhmm = $args{protein_data}->{transmembrane_topology};
   my $id =  $args{protein_data}->{biosequence_id};
@@ -2892,12 +2897,13 @@ sub get_sequence_graphic {
        push @legend, "<TR><TD style='background:$colors{uniq};'><TD class=sm_txt>Uniquely-mapping peptide</TD></TR>\n";
        push @legend, "<TR><TD style='background:$colors{multi};'><TD class=sm_txt>Multi-mapping peptide</TD></TR>\n";
      }else{
-			 push @legend, "<TR><TD style='background:$colors{uniq_prot_calling};'><TD class=sm_txt>Uniquely-mapping protein calling peptide</TD></TR>\n"; 
-			 push @legend, "<TR><TD style='background:$colors{uniq_tryptic};'><TD class=sm_txt>Uniquely-mapping tryptic peptide</TD></TR>\n";
-			 push @legend, "<TR><TD style='background:$colors{uniq_non_tryptic};'><TD class=sm_txt>Uniquely-mapping non-tryptic peptide</TD></TR>\n";
-			 push @legend, "<TR><TD style='background:$colors{multi_tryptic};'><TD class=sm_txt>Multi-mapping and tryptic peptide</TD></TR>\n";
-			 push @legend, "<TR><TD style='background:$colors{multi_non_tryptic};'><TD class=sm_txt>Multi-mapping and non-tryptic peptide</TD></TR>\n";
+       push @legend, "<TR><TD style='background:$colors{uniq_prot_calling};'><TD class=sm_txt>Uniquely-mapping protein calling peptide</TD></TR>\n"; 
+       push @legend, "<TR><TD style='background:$colors{uniq_tryptic};'><TD class=sm_txt>Uniquely-mapping tryptic peptide</TD></TR>\n";
+       push @legend, "<TR><TD style='background:$colors{uniq_non_tryptic};'><TD class=sm_txt>Uniquely-mapping non-tryptic peptide</TD></TR>\n";
+       push @legend, "<TR><TD style='background:$colors{multi_tryptic};'><TD class=sm_txt>Multi-mapping and tryptic peptide</TD></TR>\n";
+       push @legend, "<TR><TD style='background:$colors{multi_non_tryptic};'><TD class=sm_txt>Multi-mapping and non-tryptic peptide</TD></TR>\n";
      }
+
    }else{
      push @legend, "<TR> <TD CLASS=lgnd_obs_sing>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{obs_sing}'>Observed peptide with single genome mapping</SPAN></TD> </TR>\n" if $single;
      push @legend, "<TR> <TD CLASS=lgnd_obs_multi>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{obs_multi}'>Observed peptide with ambiguous genome mapping</SPAN></TD> </TR>\n" if $multi;
@@ -3160,9 +3166,9 @@ sub displayAnnotatedSequence {
 #  print ' (' . int(($observed_residues)/($seq_length-$cnt)*1000)/10,"% of likely observable sequence)";
 
   my %observed = ( start => [],
-									 end => [],
-									 class => 'pa_observed_sequence',
-									 number => 0,
+		   end => [],
+		   class => 'pa_observed_sequence',
+		   number => 0,
                    snp_start=>[], 
                    snp_end=>[],
                    snp_class=> 'pa_snp_observed_sequence' );
@@ -3173,11 +3179,11 @@ sub displayAnnotatedSequence {
 		#print $tags[0] ."<BR>"; 
    if ($tags[0] eq 'S'){
       #print "$tags[0] ". $f->start() . " and ends at " . $f->end() ."<BR>";
-			push @{$observed{snp_start}}, $f->start() - 1;
-			push @{$observed{snp_end}}, $f->end() - 1;
-    }
-		push @{$observed{start}}, $f->start() - 1;
-		push @{$observed{end}}, $f->end() - 1;
+     push @{$observed{snp_start}}, $f->start() - 1;
+     push @{$observed{snp_end}}, $f->end() - 1;
+   }
+    push @{$observed{start}}, $f->start() - 1;
+    push @{$observed{end}}, $f->end() - 1;
     $observed{number}++;
   }
 
@@ -3952,7 +3958,7 @@ sub displayExternalLinksSection {
   $external_links .= qq~
   <tr class="hoverable">
 	<td class="key" nowrap>Google Search</td>
-	<td class="value"><a href="https://www.google.com/search?rlz=1C1CHBF_enUS861US861&q=AT5G61150.1&nfpr=1" target="_info">$biosequence->{biosequence_name}</a>
+        <td class="value"><a href="https://www.google.com/search?nfpr=1&q=$biosequence->{biosequence_name}" target="_info">$biosequence->{biosequence_name}</a>
 	</td></tr>
 	~;
 
