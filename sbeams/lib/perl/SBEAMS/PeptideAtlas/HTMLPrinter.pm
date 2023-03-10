@@ -847,8 +847,24 @@ sub encodeSectionTable {
   my $msg = '';
   for my $row ( @{$args{rows}} ) {
     $num_cols = scalar( @$row ) unless $num_cols;
+
+    ## add thousand separator to numbers 
+    for (my $i=0; $i< scalar @$row; $i++){
+      if ($row->[$i] =~ /^\d+$/){
+         my $num = $row->[$i];
+         while ($num =~ s/^(-?\d+)(\d{3}(?:,\d{3})*(?:\.\d+)*)$/$1,$2/){};
+         $row->[$i] = $num;
+      }elsif($row->[$i] =~ /^(\d+)\s([\(\)\d\.\%]+)$/){
+         my $num = $1;
+         my $pect = $2;
+         while ($num =~ s/^(-?\d+)(\d{3}(?:,\d{3})*(?:\.\d+)*)$/$1,$2/){};
+         $row->[$i] = "$num $pect";
+      }
+    }  
+
     $tab->addRow( $row );
     $rcnt++;
+
     if ( defined $args{chg_bkg_idx} ) { # alternate on index
       if ( !$chg_idx ) {
         $chg_idx = $row->[$args{chg_bkg_idx}];
@@ -2132,7 +2148,6 @@ sub get_proteome_coverage_new {
   my %biosqeuences = ();
   my %entry_cnt = ();
   my %obs=();
-  my %missing_prot = (); 
   my %ptm_summary =();
   my $sql = qq~
 		  SELECT B.BIOSEQUENCE_ID,B.BIOSEQUENCE_NAME, B.BIOSEQUENCE_Desc, B.BIOSEQUENCE_seq
@@ -2165,30 +2180,16 @@ sub get_proteome_coverage_new {
     my $or = '';
     push @names, $name;
     foreach my $id (keys %biosqeuences){
-      my $flag = 0;
-      my $s = '';
-      if ($type =~ /^accession$/i){
-        $s = $biosqeuences{$id}{accession};
-      }elsif($type =~ /^description$/i){
-        $s =  $biosqeuences{$id}{desc};
-      }elsif($type =~ /^AccessionDescription$/i){
-        $s = $biosqeuences{$id}{accession}. " " . $biosqeuences{$id}{desc};
-      }
-      foreach my $pat (@pats){
-			 if (($type =~ /accession/i && $s =~ /^$pat/) ||
-			  	($type !~ /accession/i && $s =~ /^$pat/)){
-           $flag =1;
-          last;
-        }
-      }
-
-      if ($flag){
+      my $matched = $self->match_proteome_component(pattern=>\@pats,
+                                                    source_type => $type,
+                                                    biosequence_name => $biosqeuences{$id}{accession},
+                                                    biosequence_desc => $biosqeuences{$id}{desc});
+      if ($matched == 1 ){
+        $entry_cnt{'redundant'}{$name}++;
         if (not defined $processed{$line}{$biosqeuences{$id}{seq}}){
-					$entry_cnt{$name}++;
+					$entry_cnt{'non-redundant'}{$name}++;
 					if (defined $biosqeuence_id_obs{$id} ){
 						$obs{$name}++;
-					}else{
-						push @{$missing_prot{$name}}, $id;
 					}
         }
         $processed{$line}{$biosqeuences{$id}{seq}} =1;
@@ -2214,12 +2215,13 @@ sub get_proteome_coverage_new {
   for my $name ( @names ) {
     my $db = $name;
     my $obs  = $obs{$name} || 0;
-    my $n_entry = $entry_cnt{$name} || 0;
+    my $n_entry_redundant = $entry_cnt{'redundant'}{$name} || 0;
+    my $n_entry_non_redundant = $entry_cnt{'non-redundant'}{$name} || 0;
     my $pct =0;
-    if ( $obs && $n_entry ) {
-        $pct = sprintf( "%0.1f", 100*($obs/$n_entry) );
+    if ( $obs && $n_entry_non_redundant ) {
+        $pct = sprintf( "%0.1f", 100*($obs/$n_entry_non_redundant) );
     }
-    push  @{$result{table}}, [ $db, $n_entry, $obs, $pct, $n_entry-$obs];
+    push  @{$result{table}}, [ $db, $n_entry_redundant, $n_entry_non_redundant, $obs, $pct, $n_entry_non_redundant-$obs];
   }
   return '' if (  @{$result{table}} == 1);
   my $table = '<table>';
@@ -2242,8 +2244,13 @@ sub get_proteome_coverage_new {
 
   if ($data_only){
     shift @{$result{table}};
-    unshift @{$result{table}} ,[qw(Database N_Prots N_Obs_Prots Pct_Obs N_unObs_Prots)]; 
-    $result{missing_prot} = \%missing_prot;
+    my $i=0;
+    foreach my $row(@{$result{table}}){
+      my ($org_id, $name, $type, $pat_str)  = split(/,/, $patterns[$i]);
+      $row->[0] .="|$type,$pat_str";
+      $i++;
+    } 
+    unshift @{$result{table}} ,[qw(Database N_Entries N_Prots N_Obs_Prots Pct_Obs N_unObs_Prots)]; 
     return \%result;
   }else{
     return $table;
@@ -2320,24 +2327,11 @@ sub get_ptm_coverage {
     my $or = '';
     push @names, $name;
     foreach my $id (keys %biosqeuences){
-      my $flag = 0;
-      my $s = '';
-      if ($type =~ /^accession$/i){
-        $s = $biosqeuences{$id}{accession};
-      }elsif($type =~ /^description$/i){
-        $s =  $biosqeuences{$id}{desc};
-      }elsif($type =~ /^AccessionDescription$/i){
-        $s = $biosqeuences{$id}{accession}. " " . $biosqeuences{$id}{desc};
-      } 
-			foreach my $pat (@pats){
-				if (($type =~ /accession/i && $s =~ /^$pat/) || 
-            ($type !~ /accession/i && $s =~ /^$pat/)){
-					 $flag =1;
-					last;
-				}
-			}
-
-      if ($flag){
+      my $matched = $self->match_proteome_component(pattern=>\@pats,
+                                                    source_type => $type,
+                                                    biosequence_name => $biosqeuences{$id}{accession},
+                                                    biosequence_desc => $biosqeuences{$id}{desc});
+      if ($matched == 1 ){
         next if(defined $processed{$line}{$biosqeuences{$id}{seq}});
         $processed{$line}{$biosqeuences{$id}{seq}} =1;
 
@@ -2363,12 +2357,6 @@ sub get_ptm_coverage {
       }
     }
   }
-
-#foreach my $id (keys %biosqeuence_id_ptm_obs){
-#  foreach my $s (keys %{$biosqeuence_id_ptm_obs{$id}}){
-#     print "$id\t$biosqeuence_id_ptm_obs{$id}{$s}{total}\t$biosqeuence_id_ptm_obs{$id}{$s}{obs}\n";
-#  }
-#}
 
   #$log->error($sql);
   my @col_names;
@@ -2435,7 +2423,14 @@ sub get_ptm_coverage {
 
   if ($data_only){
     shift @result;
+    my $i =0;
+    foreach my $row(@result){
+      my ($org_id, $name, $type, $pat_str)  = split(/,/, $patterns[$i]); 
+      $row->[0] .="|$type,$pat_str"; 
+      $i++;
+    }
     unshift @result ,[@col_names];
+    
     return \@result;
   }else{
     return $table;

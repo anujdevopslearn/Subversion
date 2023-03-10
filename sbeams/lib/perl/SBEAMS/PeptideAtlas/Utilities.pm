@@ -4899,4 +4899,34 @@ sub get_build_data_directory
     return $path;
 }
 
+sub match_proteome_component{
+  my $self = shift;
+  my %args = @_;
+  my $pattern = $args{pattern} || ();
+  my $source_type = $args{source_type} || ''; 
+  my $biosequence_name = $args{biosequence_name} || '';
+  my $biosequence_desc = $args{biosequence_desc} || '';
+
+  if ($source_type eq '' || ! $pattern || $biosequence_name eq ''){
+     return ''; 
+  }
+	my $matched = 0;
+	my $s = '';
+	if ($source_type =~ /^accession$/i){
+		$s = $biosequence_name;
+	}elsif($source_type =~ /^description$/i){
+		$s =  $biosequence_desc;
+	}elsif($source_type =~ /^AccessionDescription$/i){
+		$s = "$biosequence_name $biosequence_desc"; 
+	}
+	foreach my $pat (@$pattern){
+	 if (($source_type =~ /accession/i && $s =~ /^$pat/) ||
+			($source_type !~ /accession/i && $s =~ /$pat/)){
+			 $matched =1;
+			last;
+		}
+	}
+  return $matched;
+} 
+
 1;
