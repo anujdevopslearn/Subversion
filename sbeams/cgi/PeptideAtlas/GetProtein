@@ -1487,7 +1487,8 @@ sub handle_request {
 						peptide_instance_constraint => $peptide_instance_clause,
 						likely_peptides => $likely,
 						mappings => $peptide_mappings,
-						pep_info => $pep_info
+						pep_info => $pep_info,
+            is_trypsin_build => $is_trypsin_build
 	  );
 
     if ( $htmlmode ) {
@@ -2151,6 +2152,7 @@ sub get_sequence_graphic {
   my $likely = $args{likely_peptides} || {};
   my $tm_sigp_source = $args{protein_data}->{tm_sigp_source} || 'predicted';
   my $peptides = $args{peptides} || {};
+  my $is_trypsin_build = $args{is_trypsin_build} || '';
   my $sigp_source = $tm_sigp_source;
   my $tmhmm_source = $tm_sigp_source;
   if ($tm_sigp_source =~ /(TMHMM\s[\d\.]+)/){
@@ -2230,6 +2232,7 @@ sub get_sequence_graphic {
   my %pep_info;
   my ( $multi, $single);
   my $is_unique_peptide_col=0;
+
   foreach my $pep ( sort { $args{mappings}->{$a}->[0] <=> $args{mappings}->{$b}->[0] ||
                            $args{pep_info}->{$b}->{nobs} <=> $args{pep_info}->{$a}->{nobs}
                          } ( keys( %{$args{pep_info}} ) ) ) {
@@ -2242,6 +2245,8 @@ sub get_sequence_graphic {
 			my $start =  $s; 
 			my $stop  =  $s+length($pep)-1;
       my $source_tag = 'multi_non_tryptic';
+      $source_tag = 'multi' if ($is_trypsin_build eq 'N');
+
       if ($args{pep_info}->{$pep}{is_unique} eq ''){
         $source_tag = 'Observed';
       }elsif ( $args{pep_info}->{$pep}{is_unique}  =~ /[YC]/){
@@ -2249,14 +2254,19 @@ sub get_sequence_graphic {
         if ($args{pep_info}->{$pep}{is_unique}  eq 'Y'){
            $source_tag = 'uniq_prot_calling';
         }else{
-					$source_tag = 'uniq_non_tryptic';
-					if ($args{pep_info}->{$pep}{highest_n_enzymatic_termini} == 2){
-						$source_tag =~ s/non_//;
-					}
+          if ($is_trypsin_build eq 'N'){
+            $source_tag = 'uniq';
+          }else{
+					  $source_tag = 'uniq_non_tryptic';
+					  if ($args{pep_info}->{$pep}{highest_n_enzymatic_termini} == 2){
+						  $source_tag =~ s/non_//;
+				  	}
+          }
         }
       }else{
         $is_unique_peptide_col =1;
       }
+
 
 			# accession isn't necessarily unique, need compound key...
 			my $ugly_key = $acc . '::::' . $start . $stop;
@@ -2877,11 +2887,17 @@ sub get_sequence_graphic {
               );
  
    if ($is_unique_peptide_col == 1){
-     push @legend, "<TR><TD style='background:$colors{uniq_prot_calling};'><TD class=sm_txt>Uniquely-mapping protein calling peptide</TD></TR>\n"; 
-		 push @legend, "<TR><TD style='background:$colors{uniq_tryptic};'><TD class=sm_txt>Uniquely-mapping tryptic peptide</TD></TR>\n";
-		 push @legend, "<TR><TD style='background:$colors{uniq_non_tryptic};'><TD class=sm_txt>Uniquely-mapping non-tryptic peptide</TD></TR>\n";
-		 push @legend, "<TR><TD style='background:$colors{multi_tryptic};'><TD class=sm_txt>Multi-mapping and tryptic peptide</TD></TR>\n";
-		 push @legend, "<TR><TD style='background:$colors{multi_non_tryptic};'><TD class=sm_txt>Multi-mapping and non-tryptic peptide</TD></TR>\n";
+     if ($is_trypsin_build eq 'N'){
+       push @legend, "<TR><TD style='background:$colors{uniq_prot_calling};'><TD class=sm_txt>Uniquely-mapping protein calling peptide</TD></TR>\n";
+       push @legend, "<TR><TD style='background:$colors{uniq};'><TD class=sm_txt>Uniquely-mapping peptide</TD></TR>\n";
+       push @legend, "<TR><TD style='background:$colors{multi};'><TD class=sm_txt>Multi-mapping peptide</TD></TR>\n";
+     }else{
+			 push @legend, "<TR><TD style='background:$colors{uniq_prot_calling};'><TD class=sm_txt>Uniquely-mapping protein calling peptide</TD></TR>\n"; 
+			 push @legend, "<TR><TD style='background:$colors{uniq_tryptic};'><TD class=sm_txt>Uniquely-mapping tryptic peptide</TD></TR>\n";
+			 push @legend, "<TR><TD style='background:$colors{uniq_non_tryptic};'><TD class=sm_txt>Uniquely-mapping non-tryptic peptide</TD></TR>\n";
+			 push @legend, "<TR><TD style='background:$colors{multi_tryptic};'><TD class=sm_txt>Multi-mapping and tryptic peptide</TD></TR>\n";
+			 push @legend, "<TR><TD style='background:$colors{multi_non_tryptic};'><TD class=sm_txt>Multi-mapping and non-tryptic peptide</TD></TR>\n";
+     }
    }else{
      push @legend, "<TR> <TD CLASS=lgnd_obs_sing>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{obs_sing}'>Observed peptide with single genome mapping</SPAN></TD> </TR>\n" if $single;
      push @legend, "<TR> <TD CLASS=lgnd_obs_multi>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{obs_multi}'>Observed peptide with ambiguous genome mapping</SPAN></TD> </TR>\n" if $multi;
@@ -3027,6 +3043,7 @@ sub getPeptideCount {
                                     n_protein_mappings => $row->[$col{n_protein_mappings}],
                                                  n_gen => $row->[$col{n_genome_locations}],
                                              is_unique => $row->[$col{is_unique}]};
+
       push(@peptides,$row->[$col{peptide_sequence}]);
     }
 		push @{$map_info{$row->[$col{peptide_sequence}]}{start}}, $row->[$col{start_in_biosequence}];
