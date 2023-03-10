@@ -1483,10 +1483,18 @@ sub generate_html_from_file {
    dataset_contrib_table => [qw(left center center center center center center center center center center center center center center)], 
    dataset_protein_info => [qw(left center center center center center center center center)], 
    dataset_spec_protein_info => [qw(left center center center center center center center center)], 
-   proteome_coverage => [qw(left center center center center)],
+   proteome_coverage => [qw(left center center center center center)],
    ptm_coverage =>  [qw(left)],
- 
  );
+  my $sql =qq~;
+    SELECT LEVEL_NAME AS NAME, PROTEIN_PRESENCE_LEVEL_ID AS ID
+    FROM $TBAT_PROTEIN_PRESENCE_LEVEL
+    UNION
+    SELECT RELATIONSHIP_NAME AS NAME, BIOSEQUENCE_RELATIONSHIP_TYPE_ID AS ID
+    FROM $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE
+  ~;
+  my %protein_level_ids = $sbeams->selectTwoColumnHash($sql);
+
 
   open (IN , "<$file") || return '';
   my ($html, $table, $pre_table);
@@ -1496,10 +1504,16 @@ sub generate_html_from_file {
   while (my $line =<IN>){
     chomp $line;
     if ($line =~ /^build_overview/){
+       my $protein_url = "$CGI_BASE_DIR/PeptideAtlas/GetProteins?atlas_build_id=$build_id".
+                         '&redundancy_constraint=4&QUERY_NAME=AT_GetProteins&apply_action=QUERY'.
+                         '&biosequence_name_constraint=%21CONTAM%25%3B%21DECOY%25' .
+                         '&presence_level_constraint=';
+
        while ($line =~ /^build_overview/){
 				 $line =~ s/build_overview\|//;
 				 if ($line =~ /Protein Presence Levels\|(.*)\t(\d+)$/){
-						$build_info->{prot_count}->{$1} = $2;
+            my $level_id = $protein_level_ids{$1};
+						$build_info->{prot_count}->{$1} = "<a href='$protein_url$level_id' target='_blank'>$2</a>";
 				 }elsif ($line =~ /PhosphoProteome Summary\|(.*)\t(\d+)$/){
             $build_info->{phospho_info}->{$1} = $2;
 				 }else{
@@ -1562,7 +1576,7 @@ sub generate_html_from_file {
        next;
     }
 
-    $line =~ /(\S+)\|(.*)/;   
+    $line =~ /([^\|]+)\|(.*)/;   
     $table = $1;
     $line = $2;
     if (($table ne $pre_table && $pre_table ne '')){
@@ -1576,14 +1590,14 @@ sub generate_html_from_file {
          $table_width = 400;
          my $missing_prot_url = "$CGI_BASE_DIR/PeptideAtlas/GetMissingProteins?atlas_build_id=$build_id".
                                 '&action=QUERY&proteome_component=';
-         if (scalar @$headings == 6){
+         if (scalar @$headings >= 5){
 						foreach my $row (@data){
-							pop @$row; 
+              $row->[0] =~ /^(.*)\|(.*)$/;
+              $row->[0] = $1;
               ## add link to col5
-              $row->[4] = "<a href='$missing_prot_url$row->[0]' target='_blank'>$row->[4]</a>";
-              $row->[3] .= '%'; 
+              $row->[5] = "<a href='$missing_prot_url$2&database=$1' target='_blank' title='get missing proteins'>$row->[5]</a>" if ($row->[5] > 0);
+              $row->[4] .= '%'; 
 						}
-						pop @$headings;
          }
        }
        add_url (table_id => $pre_table,
@@ -1608,6 +1622,27 @@ sub generate_html_from_file {
           }
           $download_table =1;
 			 }
+
+       if ($pre_table eq 'ptm_coverage'){
+         my $ptm_summary_url = "$CGI_BASE_DIR/PeptideAtlas/GetPTMSummary?row_limit=50000&atlas_build_id=$build_id".
+                               "&display_options=proteinView&ptm_type=STY%3APhospho&action=QUERY".
+                               "&redundancy_constraint=on&proteome_component=";
+
+         my $counter = 0;
+         foreach my $row (@data){
+						## add link to col1
+					  if ($row->[0]=~ /^([^\|]+)\|(.*)$/){	
+						  $row->[0] = "<a href='$ptm_summary_url$2' target='_blank' title='get ptm protein list'>$1</a>";
+            }
+            my $n = scalar @$row;
+            if ($counter == 0){
+               for my $i (1..$n-1){
+                 push @{$column_align{$pre_table}}, 'center';
+               }
+            } 
+            $counter++;
+					}
+       }
        $download_table = 1 if ($pre_table eq 'dataset_contrib_table');
  
        $html = $atlas->create_table (data => \@data,

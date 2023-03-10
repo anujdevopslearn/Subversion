@@ -162,7 +162,7 @@ sub handle_request {
   #### Define some variables for a query and resultset
   my %resultset = ();
   my $resultset_ref = \%resultset;
-  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql,$biosequence_name_constraint);
 
   #### Read in the standard form values
   my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
@@ -362,29 +362,47 @@ sub handle_request {
 		}
   } # if upload file
 
-
   #### Build ROWCOUNT constraint
   $parameters{row_limit} = 50000 unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
   my $limit_clause = "TOP $parameters{row_limit}";
-
-  #### Define some variables needed to build the query
   my @column_array = (
         ["biosequence_name","BS.biosequence_name","Biosequence Name"],
         ["presence_level","PPL.level_phrase","Presence Level"],
-        ["ptm_type","PTM.ptm_type","PTM Type"],
-        ["nP80", "sum(PTM.nP81)","nP.80-.95"], 
-        ["nP95", "sum(PTM.nP95)","nP.95-.99"],
-        ["nP99", "sum(PTM.nP99)","nP.99-1"],
-        ["noChoice", "sum(PTM.noChoice)","no-choice"],
-        ["biosequence_gene_name","BS.biosequence_gene_name","Biosequence Gene Name"],
-        ["biosequence_desc","CAST(BS.biosequence_desc AS varchar(255))","Biosequence Description"],
+  );
+
+  my $protein_sql = '';
+  my $show_redundant_prot = $parameters{redundancy_constraint} || '';
+
+  if ($show_redundant_prot eq 'on'){
+      @column_array = (
+        @column_array,
+        ["relationship_name", "BSRT.relationship_name","Redundancy Relationship"],
+        ["reference_biosequence_name", "BS_REF.biosequence_name", "Redundant With Respect To"],
      );
+    $protein_sql = qq~
+			 LEFT JOIN $TBAT_PROTEIN_IDENTIFICATION PID ON (PID.BIOSEQUENCE_ID = PTM.BIOSEQUENCE_ID
+																								 AND PID.atlas_build_id = $atlas_build_id) 
+			 LEFT JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL ON ( PPL.PROTEIN_PRESENCE_LEVEL_ID = PID.PRESENCE_LEVEL_ID )
+			 LEFT JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BSR
+						ON ( BSR.RELATED_BIOSEQUENCE_ID = PTM.BIOSEQUENCE_ID and BSR.atlas_build_id = $atlas_build_id)
+			 LEFT JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BSRT
+						ON ( BSRT.BIOSEQUENCE_RELATIONSHIP_TYPE_ID = BSR.RELATIONSHIP_TYPE_ID )
+			 LEFT JOIN $TBAT_BIOSEQUENCE BS_REF ON ( BS_REF.biosequence_id = BSR.reference_biosequence_id )
+			 LEFT JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BSR_REF ON (BSR_REF.related_biosequence_id=BS_REF.biosequence_id )
+    ~;
+  }else{
+    $protein_sql = qq~
+       JOIN $TBAT_PROTEIN_IDENTIFICATION PID ON (PID.BIOSEQUENCE_ID = PTM.BIOSEQUENCE_ID
+                                                 AND PID.atlas_build_id = $atlas_build_id)
+       JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL ON ( PPL.PROTEIN_PRESENCE_LEVEL_ID = PID.PRESENCE_LEVEL_ID )
+    ~;
+
+  }
 
   #### Set flag to display SQL statement if user selected
   if ( $parameters{display_options} =~ /proteinResidueView/ ) {
      @column_array = (
-        ["biosequence_name","BS.biosequence_name","Biosequence Name"],
-        ["presence_level","PPL.level_phrase","Presence Level"],
+        @column_array,
 				["residue","PTM.residue","residue"],
 				["offset","PTM.offset","offset"],
         ["ptm_type","PTM.ptm_type","PTM Type"],
@@ -409,6 +427,20 @@ sub handle_request {
         ["biosequence_gene_name","BS.biosequence_gene_name","Biosequence Gene Name"],
         ["biosequence_desc","CAST(BS.biosequence_desc AS varchar(255))","Biosequence Description"],
       );
+  }else{
+		#### Define some variables needed to build the query
+		@column_array = (
+        @column_array,
+        ["ptm_type","PTM.ptm_type","PTM Type"],
+        ["ptm_residue_nPover80", "count(distinct PTM.offset)", "N_PTM_Sites nP.8-1"],
+        ["nP80", "sum(PTM.nP81)","nP.80-.95"], 
+        ["nP95", "sum(PTM.nP95)","nP.95-.99"],
+        ["nP99", "sum(PTM.nP99)","nP.99-1"],
+        ["noChoice", "sum(PTM.noChoice)","no-choice"],
+        ["biosequence_gene_name","BS.biosequence_gene_name","Biosequence Gene Name"],
+        ["biosequence_desc","CAST(BS.biosequence_desc AS varchar(255))","Biosequence Description"],
+     );
+
   }
 
   my %colnameidx = ();
@@ -419,16 +451,19 @@ sub handle_request {
     column_titles_ref=>\@column_titles
   );
 
-  my $group_by = ' GROUP BY BS.biosequence_name,BS.biosequence_gene_name,'.
-                 'PPL.level_phrase,PTM.ptm_type, CAST(BS.biosequence_desc AS varchar(255))';
+  my $group_by = 'GROUP BY BS.biosequence_name,BS.biosequence_gene_name,'.
+                 'PPL.level_phrase,PTM.ptm_type,CAST(BS.biosequence_desc AS varchar(255))';
+  if ($show_redundant_prot eq 'on'){
+    $group_by .= ",BSRT.relationship_name, BS_REF.biosequence_name";
+  }
+
   my $order_by_1 = 'ORDER BY PTM.ptm_type, BS.biosequence_name';
   my $order_by_2 = 'ORDER BY PTM.ptm_type, BS.biosequence_name, PTM.offset';
   my $sql = qq~
      SELECT $limit_clause $columns_clause
      FROM $TBAT_PTM_SUMMARY PTM 
      JOIN $TBAT_BIOSEQUENCE BS ON (BS.BIOSEQUENCE_ID = PTM.BIOSEQUENCE_ID)
-     JOIN $TBAT_PROTEIN_IDENTIFICATION PID ON (PID.BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID) 
-     JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL ON ( PPL.PROTEIN_PRESENCE_LEVEL_ID = PID.PRESENCE_LEVEL_ID )
+     $protein_sql
      WHERE 1=1
      AND PTM.nobs > 0
      $atlas_build_clause
@@ -483,8 +518,9 @@ sub handle_request {
       $sbeams->fetchResultSet(
         sql_query=>$sql,
         resultset_ref=>$resultset_ref,
-        use_caching => 1
+        use_caching => 1 
       );
+
 			#### Store the resultset and parameters to disk resultset cache
 			$rs_params{set_name} = "SETME";
 			my %write_params = ( rs_table => $TBAT_ATLAS_BUILD,
@@ -498,6 +534,14 @@ sub handle_request {
 				query_name=>"$SBEAMS_SUBDIR/$PROG_NAME",
 				column_titles_ref=>\@column_titles,
 				%write_params
+			);
+
+			#### Post process the resultset
+			postProcessResultset(
+				rs_params_ref=>\%rs_params,
+				resultset_ref=>$resultset_ref,
+				query_parameters_ref=>\%parameters,
+				column_titles_ref=>\@column_titles,
 			);
     }
 			my $obs_help = $sbeamsMOD->get_table_help(column_titles_ref=>\@column_titles); 
@@ -563,63 +607,6 @@ sub evalSQL {
 
 } # end evalSQL
 
-###############################################################################
-# postProcessResultset
-#
-# Perform some additional processing on the resultset that would otherwise
-# be very awkward to do in SQL.
-###############################################################################
-sub postProcessResultset {
-  my %args = @_;
-
-  my ($i,$element,$key,$value,$line,$result,$sql);
-
-  #### Process the arguments list
-  my $resultset_ref = $args{'resultset_ref'};
-  my $rs_params_ref = $args{'rs_params_ref'};
-  my $query_parameters_ref = $args{'query_parameters_ref'};
-  my $column_titles_ref = $args{'column_titles_ref'};
-
-  my %rs_params = %{$rs_params_ref};
-  my %parameters = %{$query_parameters_ref};
-
-  my $n_rows = scalar(@{$resultset_ref->{data_ref}});
-
-  my $cols = $resultset_ref->{column_hash_ref};                                                                                                   
-                                                                         
-  my $peptide_accession;                                                 
-  my $nprot;                                                             
-  my $nloc;                                                              
-                                                                         
-  #### TMF 06/23/09: seems that peptide_accession, n_protein_mappings,   
-  ####  and n_genome locations fields all contain biosequence_name       
-  #### I think this was copied from GetPeptides and is obsolete.         
-  for (my $i=0; $i<$n_rows; $i++) {                                      
-    $peptide_accession = $resultset_ref->{data_ref}->[$i]->[$cols->{peptide_accession}];
-    $nprot = $resultset_ref->{data_ref}->[$i]->[$cols->{n_protein_mappings}];
-    $nloc = $resultset_ref->{data_ref}->[$i]->[$cols->{n_genome_locations}];
-                                                                         
-    if ($nprot > 1) {                                                    
-      if ($nloc > 1) {                                                   
-  $peptide_accession .= "(degen_NLoc=$nloc)";                            
-      } else {                                                           
-  $peptide_accession .= "(degen)";                            
-      }
-
-      $resultset_ref->{data_ref}->[$i]->[$cols->{peptide_accession}] = $peptide_accession;
-
-    } elsif ($nloc > 1) {
-      die("ERROR: nprot <=2 but $nloc > 1. This is wrong. Please report this error.");
-    }
-
-  }
-
-  return 1;
-
-} # end postProcessResult
- 
-
-
 #######################################################################
 sub getOrganismFullName 
 {
@@ -641,60 +628,52 @@ sub getOrganismFullName
 
     return $full_name;
 }
+###############################################################################
+# postProcessResultset
+#
+# Perform some additional processing on the resultset that would otherwise
+# be very awkward to do in SQL.
+###############################################################################
+sub postProcessResultset {
+  my %args = @_;
+
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+  #### Process the arguments list
+  my $resultset_ref = $args{'resultset_ref'};
+  my $rs_params_ref = $args{'rs_params_ref'};
+  my $query_parameters_ref = $args{'query_parameters_ref'};
+  my $column_titles_ref = $args{'column_titles_ref'};
+
+  my %rs_params = %{$rs_params_ref};
+  my %parameters = %{$query_parameters_ref};
+
+  my $n_rows = scalar(@{$resultset_ref->{data_ref}});
+  my $cols = $resultset_ref->{column_hash_ref};
+  my $proteome_component = $parameters{proteome_component};
+  $proteome_component =~ /^(.*),(.*)$/;
+  my $source_type = $1;
+  my @patterns = split(/;/, $2);
+
+  my @data=();
+  for (my $i=0; $i<$n_rows; $i++) {
+    my $biosequence_name = $resultset_ref->{data_ref}->[$i]->[$cols->{biosequence_name}];
+    my $biosequence_desc = $resultset_ref->{data_ref}->[$i]->[$cols->{biosequence_desc}];
+    my $matched = $sbeamsMOD->match_proteome_component(pattern=>\@patterns,
+                                                    source_type => $source_type,
+                                                    biosequence_name => $biosequence_name, 
+                                                    biosequence_desc => $biosequence_desc);
+
+     next if (! $matched);
+     push @data, $resultset_ref->{data_ref}->[$i];
+
+   }
+   $resultset_ref->{data_ref} = \@data;
+
+  return 1;
+
+} # end postProcessResult
 
 
-#######################################################################
-sub get_table_help {
-  my $name = shift;
-  return '' unless $name;
-  my @entries;
-  my $hidetext;
-  my $showtext;
-  my $heading;
-  my $description;
-  if ( $name eq 'proteins' ) {
-    @entries = (
-      { key => 'Biosequence Name', value => 'Sequence database accession' },
-      { key => 'Percent Coverage', value => '% of observed sequence'},
-      { key => 'Covering Set', value => 'Whether this sequence is part of a minimal set explaining all observed peptides' },
-      { key => 'Presence Level', value => 'canonical=member of minimally redundant set<br>possibly distinguished=at least one pep diff from all canonicals<br>subsumed=all peps contained in a canon. or poss. dist.<br>ntt-subsumed=subsumed and >=1 pep lacks tryptic terminus' },
-      { key => 'Protein Prophet Prob', value => 'Probability this protein exists in sample, according to Protein Prophet.' },
-      { key => 'Norm Obs per 100K', value => 'N Obs, normalized to number of observable peptides in protein, expressed per 100K total observations' },
-      { key => 'Published plasma ng/ml', value => 'Physiological concentration in human plasma' },
 
-      { key => 'Mult Hyp Test Prob', value => 'Probability this protein exists in sample, according to States, et al., Nat Biotechnol, 2006' },
-      { key => 'N Obs', value => 'ProteinProphet adjusted PSM (peptide-spectrum match) count, usually lower than actual PSM count' },
-      { key => 'N Distinct Peptides', value => 'Number of sequence-distinct peptides' },
-      { key => 'Genetic Locus', value => 'Provided when available' },
-      { key => 'Start/End in Chrom', value => 'Starting/ending base number in chromosome' },
-      { key => 'Strand', value => 'Which strand of chromosome' },
-      { key => 'Source', value => 'Literature source for published ng/ml; one of Hortin, et al., Clin Chem, 2008; Polanski & Anderson, Biomarker Insights, 2006; Haab, et al., Proteomics, 2005' },
-      { key => 'Estimated ng/ml', value => 'Estimated physiological concentration, by spectral counting (only available for some builds)' },
-      { key => 'Uncertainty ng/ml', value => 'About 2/3 of estimated concentrations are within +/- this multiplicative factor' },
-      { key => 'Redundancy Relationship', value => 'This protein sequence has exactly the same peptides as a sequence with a Presence Level. "identical" if sequence-identical, else "indistinguishable"' },
-      { key => 'Redundant With Respect To', value => 'Sequence that this entry is indistinguishable from or identical to' },
-      { key => 'Protein Group', value => 'Sequence belongs to protein group of this name. Click here to see all group members.' },
-      { key => 'Seq Uniq Prots in Grp', value => 'Number of sequence-unique protein sequences in this group' },
-      { key => 'Protein Group Seq Alignmt', value => 'Click to see a sequence alignment for this protein group' },
-      { key => 'Keratin', value => 'Is keratin according to description, or is in same group as a keratin' },
-      { key => 'Ig', value => 'Is immunoglobulin according to description, or is in same group as an immunoglobulin' },
-      { key => 'Protein Description', value => 'Description as taken from sequence database fasta file' },
-    );
-    
-    $showtext = 'show column descriptions';
-    $hidetext = 'hide column descriptions';
-    $heading = 'Identified Proteins';
-    $description= 'Protein sequences mapped to by identified peptides';
-    
-  }
 
-  return unless @entries;
-  my $help = $sbeamsMOD->get_table_help_section( name => $name,
-  description => $description,
-  heading => $heading,
-  entries => \@entries,
-  showtext => $showtext,
-  hidetext => $hidetext  );
-  return $help;
-    
-} # end get_table_help

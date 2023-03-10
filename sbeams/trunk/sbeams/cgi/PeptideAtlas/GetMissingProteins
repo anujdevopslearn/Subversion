@@ -164,8 +164,9 @@ sub handle_request {
 
 
   #### Define some generic variables
-  my ($i,$element,$key,$value,$line,$result,$sql,$proteome_component, $biosequence_ids);
+  my ($i,$element,$key,$value,$line,$result,$sql,$proteome_component,$database, $missing_biosequence_ids);
   $proteome_component = $parameters{proteome_component};
+  $database =  $parameters{database};
 
   #### Define some variables for a query and resultset
   my %resultset = ();
@@ -182,7 +183,7 @@ sub handle_request {
 				type => 'MISSING PARAMETER',
 				message => 'needs atlas_build_id and proteome_component values',
 			);
- 
+      return;
   }
   $parameters{atlas_build_id} = $atlas_build_id;
 
@@ -197,8 +198,8 @@ sub handle_request {
 
   #### If the apply action was to recall a previous resultset, do it
   my %rs_params = $sbeams->parseResultSetParams(q=>$q);
-  if ($apply_action =~ /VIEWRESULTSET|VIEWPLOT/ ) {
 
+  if ($apply_action =~ /VIEWRESULTSET|VIEWPLOT/ ) {
     $sbeams->readResultSet(
         resultset_file=>$rs_params{set_name},
         resultset_ref=>$resultset_ref,
@@ -206,48 +207,6 @@ sub handle_request {
     );
   }
 
-  my $build_data_path = $sbeamsMOD->get_build_data_directory( atlas_build_id => $atlas_build_id );
-  ## get list of missing proteins
-  my %missing_prot = ();
-  my $data_file = "$build_data_path/../analysis/build_detail_tables.tsv";
-  if ($apply_action =~ /QUERY/i){
-		if (-e $data_file) {
-			if(open (IN, "<$data_file")){
-				 while (my $line =<IN>){
-					 next if ($line !~ /proteome_coverage/);
-					 next if ($line =~ /Database/);
-					 chomp $line;
-					 my @data = split("\t", $line);
-					 if (scalar @data == 6){
-							$data[0] =~ s/proteome_coverage.//;
-							$missing_prot{$data[0]} = $data[5];
-					 }else{
-						  $sbeams->reportException(
-								state => 'ERROR',
-								type => 'MISSING VALUE',
-								message => 'no missing protein id in the coverage table',
-							);
- 
-					 }
-				 }
-			}else{
-				  $sbeams->reportException(
-						state => 'ERROR',
-						type => "FILE ERROR",
-						message => "can't open build_detail_tables.tsv file"
-					);
-			}
-		}else{
-				$sbeams->reportException(
-					state => 'ERROR',
-					type => "FILE MISSING",
-					message => "build_detail_tables.tsv file missing"
-				);
-
-		}
-  }
-
-  $biosequence_ids = $missing_prot{$proteome_component} || '';
   #### Build ATLAS_BUILD constraint
   my $atlas_build_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"AB.atlas_build_id",
@@ -259,14 +218,15 @@ sub handle_request {
 	my %colnameidx = ();
 	my @column_titles = ();
 	my @column_array = (
-    ["proteome", "'$proteome_component'","proteome"],
+    ["proteome", "''","proteome"],
     ["biosequence_name", "BS.biosequence_name","Biosequence Name"],
     ["biosequence_seq", "BS.biosequence_seq", "biosequence_seq"], 
     ["length", "'length'", "length"],
     ["mass", "'mass'", "mass"],
 		["pI", "'pI'","pI"],
     ["gravy","'gravy'","gravy"],
-    ["biosequence_desc", "BS.biosequence_desc", "biosequence_desc"]
+    ["biosequence_desc", "BS.biosequence_desc", "biosequence_desc"],
+    ["peptide_instance_id", "PI.peptide_instance_id", "peptide_instance_id"],
 	);
 	my $columns_clause = $sbeams->build_SQL_columns_list(
 		column_array_ref=>\@column_array,
@@ -276,15 +236,17 @@ sub handle_request {
 
   my $sql = qq~
     select $columns_clause 
-	  FROM $TBAT_ATLAS_BUILD AB 
-    JOIN $TBAT_BIOSEQUENCE BS ON  (BS.BIOSEQUENCE_SET_ID = AB.BIOSEQUENCE_SET_ID ) 
-    WHERE 1=1
+		FROM $TBAT_ATLAS_BUILD AB
+		JOIN $TBAT_BIOSEQUENCE BS ON(AB.BIOSEQUENCE_SET_ID = BS.BIOSEQUENCE_SET_ID)
+		LEFT JOIN $TBAT_PEPTIDE_MAPPING PM ON (BS.BIOSEQUENCE_ID = PM.MATCHED_BIOSEQUENCE_ID)
+		LEFT JOIN $TBAT_PEPTIDE_INSTANCE PI ON (PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID AND 
+																						PI.atlas_build_id = $atlas_build_id) 
+		WHERE 1=1
     $atlas_build_clause 
-    AND BS.biosequence_id in ($biosequence_ids) 
   ~;
   my $show_sql = 0;
   $hidden_cols{'biosequence_seq'} = 1;
-
+  $hidden_cols{'peptide_instance_id'} = 1;
   #### Apply any parameter adjustment logic
   if ( $parameters{display_options} =~ /ShowSQL/ ) {
     $show_sql = 1;
@@ -298,30 +260,35 @@ sub handle_request {
     if ($apply_action =~ /QUERY/){
       $sbeams->fetchResultSet(
         sql_query=>$sql,
+        query_parameters_ref=>\%parameters,
         resultset_ref=>$resultset_ref,
         use_caching => 1 
       );
-      postProcessResultset(
-				rs_params_ref=>\%rs_params,
-				resultset_ref=>$resultset_ref,
-				query_parameters_ref=>\%parameters,
-				column_titles_ref=>\@column_titles,
-        colnameidx_ref => \%colnameidx,
-				hidden_cols => \%hidden_cols);
+      if (! $resultset_ref->{from_cache}){
+				postProcessResultset(
+					rs_params_ref=>\%rs_params,
+					resultset_ref=>$resultset_ref,
+					query_parameters_ref=>\%parameters,
+					column_titles_ref=>\@column_titles,
+					colnameidx_ref => \%colnameidx,
+					hidden_cols => \%hidden_cols,
+					database => $database);
 
-      $rs_params{set_name} = "SETME";
-      my %write_params = ( rs_table => $TBAT_ATLAS_BUILD,
-                           key_field => 'atlas_build_id',
-                           key_value => $parameters{atlas_build_id} );
-      $sbeams->writeResultSet(
-        resultset_file_ref=>\$rs_params{set_name},
-        resultset_ref=>$resultset_ref,
-        query_parameters_ref=>\%parameters,
-        resultset_params_ref=>\%rs_params,
-        query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
-        column_titles_ref=>\@column_titles,
-        %write_params
-      );
+				$rs_params{set_name} = "SETME";
+				my %write_params = ( rs_table => $TBAT_ATLAS_BUILD,
+														 key_field => 'atlas_build_id',
+														 key_value => $parameters{atlas_build_id} );
+				$sbeams->writeResultSet(
+					resultset_file_ref=>\$rs_params{set_name},
+					resultset_ref=>$resultset_ref,
+					query_parameters_ref=>\%parameters,
+					resultset_params_ref=>\%rs_params,
+					query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+					column_titles_ref=>\@column_titles,
+					%write_params
+				);
+
+      }
     }
     #### Construct table help
     my $obs_help = ''; # get_table_help( 'spectra' );
@@ -383,34 +350,57 @@ sub postProcessResultset {
   my $query_parameters_ref = $args{'query_parameters_ref'};
   my $column_titles_ref = $args{'column_titles_ref'};
   my $colnameidx_ref = $args{'colnameidx_ref'};
+  my $database = $args{'database'};
 
   my $seq_idx =$colnameidx_ref->{biosequence_seq};
+  my $biosequence_name_idx = $colnameidx_ref->{biosequence_name};
+  my $biosequence_desc_idx = $colnameidx_ref->{biosequence_desc};
+  my $peptide_instance_id_idx = $colnameidx_ref->{peptide_instance_id};
+
   my $length_idx = $colnameidx_ref->{length};
   my $mass_idx = $colnameidx_ref->{mass};
   my $pi_idx = $colnameidx_ref->{pI};
   my $gravy_idx = $colnameidx_ref->{gravy};
   my $n_rows = scalar(@{$resultset_ref->{data_ref}});
+  my ($pattern_type, $pat_str) = split(/,/,$query_parameters_ref->{proteome_component});
+  my @patterns = split(";", $pat_str);
+	my %processed = ();
 
-
+  my @filtered_data;
   for (my $i=0; $i<$n_rows; $i++) {
     #### Loops through resultset and do formatting
     my $data = $resultset_ref->{data_ref}->[$i];
     my $seq = $data->[$seq_idx];
+	  $data->[0] = $database; 
+		my $matched = $sbeamsMOD->match_proteome_component(pattern=>\@patterns,
+																										source_type => $pattern_type,
+																										biosequence_name => $data->[$biosequence_name_idx], 
+																										biosequence_desc => $data->[$biosequence_desc_idx]);
+
+		next if ($matched != 1);
+		next if($processed{$seq});
+		$processed{$seq} =1;
+    # observed;
+    next if($data->[$peptide_instance_id_idx] ne '');
+
     $data->[$length_idx]  = length($seq);
     $data->[$pi_idx] = $sbeamsMOD->calculatePeptidePI( sequence => $seq );
-
-
+    
     #my $hydro_score = getRelativeHydrophobicity( $seq);
-    $seq =~ s/X//g;
+    $seq =~ s/[BUOX\*\W]//g;
 		my $prot_obj = Bio::PrimarySeq->new(-seq=>$seq,
 																		-alphabet=>'protein');
 		$data->[$gravy_idx] = sprintf ("%.2f", Bio::Tools::SeqStats->hydropathicity($prot_obj));
     my $weight = Bio::Tools::SeqStats->get_mol_wt($prot_obj);
+    $data->[$mass_idx] = sprintf ("%.0f", $$weight[0]);
+
     #my $weight=calc_mass($seq);
     #$data->[$mass_idx] = sprintf ("%.0f", $weight) ;
     #print "$$w[0] - $$w[1];,";
-    $data->[$mass_idx] = sprintf ("%.0f", $$weight[0]) 
+    push @filtered_data, $data;
   }
+  $resultset_ref->{data_ref} = \@filtered_data;
+
 }
 #sub calc_mass {
 #    my $seq = shift;
