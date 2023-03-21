@@ -533,7 +533,9 @@ sub processRequest {
 	    #print("<BR><BR><BR>nativeId=$nativeId<BR><BR><BR><BR>\n");
 
 	    #### If there is a nativeId and this is not a Thermo spectrum, try to form a more complex USI
-	    if ( $nativeId && $nativeId !~ /controllerType/ ) {
+            if ( $nativeId && $nativeId =~ /^scan=(\d+)$/ ) {
+                $usiStr = "mzspec:$datasetIdentifier\:$msrunName:scan:$1:$convertedPeptidoformStr/$charge";
+	    } elsif ( $nativeId && $nativeId !~ /controllerType/ ) {
 	      my $compactNativeId = getCompactNativeId(nativeId=>$nativeId);
 	      if ( $compactNativeId ) {
 		$usiStr = "mzspec:$datasetIdentifier\:$msrunName:nativeId:$compactNativeId:$convertedPeptidoformStr/$charge";
@@ -2472,6 +2474,10 @@ sub getCompactNativeId {
   #### For SCIEX
   } elsif ( $nativeId =~ /sample=(\d+) period=(\d+) cycle=(\d+) experiment=(\d+)/ ) {
     $compactNativeId = "$1,$2,$3,$4";
+
+  #### For conversion from mzXML
+  } elsif ( $nativeId =~ /scan=(\d+)/ ) {
+    $compactNativeId = "$1";
 
   #### Not yet coded or invalid
   } else {
