@@ -137,7 +137,7 @@ sub displayInternalResearcherPageHeader {
   use LWP::UserAgent;
   use HTTP::Request;
   my $ua = LWP::UserAgent->new();
-  my $skinLink = 'http://www.peptideatlas.org';
+  my $skinLink = 'https://peptideatlas.org';
   my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/.index.dbbrowse2021.php" ) );
   my @page = split( "\n", $response->content() );
   my $skin = '';
