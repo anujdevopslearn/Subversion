@@ -1405,7 +1405,7 @@ sub handle_request {
 							 ON ( MPI.modified_peptide_instance_id = SI.modified_peptide_instance_id )
 					LEFT JOIN $TBAT_SPECTRUM_PTM_IDENTIFICATION SPI
 							 ON ( SI.spectrum_identification_id = SPI.spectrum_identification_id)
-					LEFT JOIN $TBAT_SPECTRUM S
+					JOIN $TBAT_SPECTRUM S
 							 ON ( SI.spectrum_id = S.spectrum_id )
 					LEFT JOIN $TBAT_FRAGMENTATION_TYPE FRG
 							 ON (FRG.FRAGMENTATION_TYPE_ID = S.FRAGMENTATION_TYPE_ID)
@@ -1784,109 +1784,109 @@ sub postProcessResultset {
  for (my $i=0; $i<$n_rows; $i++) {
     #### Loops through resultset and do formatting
     my $pep = $resultset_ref->{data_ref}->[$i];
-      # Get mzML filename, cycle, and charge from spectrum name
-      $pep->[$name_idx] =~ /(\S+)\.(\d+?)\.(\d+?)\.(\d)/;
-      $processed_spec{$pep->[$name_idx] . '-'. $pep->[$smpl_idx] }++;
-      my $mzml_basename = $1;
-      my $cycle = $2;
-      my $cycle2 = $3;
-      my $precursor_charge = $4;
-      $mzml_basename =~ s/\.mzML$//;    #remove .mzML if it's there
-      my $mzml_fname = "$mzml_basename.mzML";
-      my $rt;
-      my @trace_array;
-      my %trace;
-      my $chromatogram_entry = '';  #empty, unless we can find chromgram info
-      $at_least_one_chimera++ if ($pep->[$chimera_idx]);
-      #### If this is a QTRAP 5500 mzML file, get info from special
-      #### table, QT5500_TRANSITION_GROUP.
-      #### This table needs to be updated each time the Human SRMAtlas is rebuilt.
-      #### Takes ~3 days. Clear existing table, then reload with
-      #### $SBEAMS/lib/scripts/PeptideAtlas/load_Q55500_transition_groups.pl
-      #### PeptideChromatogramExtractor java code is now failing
-      #### for all QT_ZH* files (see /Appears that all the QT files/ in
-      #### Terry's log), so for now
-      #### we won't display chromatogram icons/links for them.  07/05/11
-      my $none = $sbeams->makeInactiveText( 'n/a' );
-      if ( ( ($mzml_fname =~ /^5Q/) ||
-           ( $mzml_fname =~ /^Z5Q/) ) ) {
-        my $sql = qq~
-          SELECT *
-          FROM $TBAT_QT5500_TRANSITION_GROUP QTG
-          WHERE QTG.mzml_filename = '$mzml_fname'
-        ~;
-        my @rows = $sbeams->selectSeveralColumns($sql);
-        my %site_ptm_info = ();
-        if (scalar @rows) {
-					my $first_row = shift @rows;
-					my ($qt5500_transition_group_id,
-							$mzml_filename, $mzml_pathname, $cycle, $precursor_charge,
-							$precursor_mz, $rt) = @{$first_row};
-					$mzml_pathname .= "/$mzml_filename";
+		$processed_spec{$pep->[$name_idx] . '-'. $pep->[$smpl_idx] }++;
+		# Get mzML filename, cycle, and charge from spectrum name
+		$pep->[$name_idx] =~ /(\S+)\.(\d+?)\.(\d+?)\.(\d)/;
+		my $mzml_basename = $1;
+		my $cycle = $2;
+		my $cycle2 = $3;
+		my $precursor_charge = $4;
+		$mzml_basename =~ s/\.mzML$//;    #remove .mzML if it's there
+		my $mzml_fname = "$mzml_basename.mzML";
+		my $rt;
+		my @trace_array;
+		my %trace;
+		my $chromatogram_entry = '';  #empty, unless we can find chromgram info
+		$at_least_one_chimera++ if ($pep->[$chimera_idx]);
+		#### If this is a QTRAP 5500 mzML file, get info from special
+		#### table, QT5500_TRANSITION_GROUP.
+		#### This table needs to be updated each time the Human SRMAtlas is rebuilt.
+		#### Takes ~3 days. Clear existing table, then reload with
+		#### $SBEAMS/lib/scripts/PeptideAtlas/load_Q55500_transition_groups.pl
+		#### PeptideChromatogramExtractor java code is now failing
+		#### for all QT_ZH* files (see /Appears that all the QT files/ in
+		#### Terry's log), so for now
+		#### we won't display chromatogram icons/links for them.  07/05/11
+		my $none = $sbeams->makeInactiveText( 'n/a' );
+		if ( ( ($mzml_fname =~ /^5Q/) ||
+				 ( $mzml_fname =~ /^Z5Q/) ) ) {
+			my $sql = qq~
+				SELECT *
+				FROM $TBAT_QT5500_TRANSITION_GROUP QTG
+				WHERE QTG.mzml_filename = '$mzml_fname'
+			~;
+			my @rows = $sbeams->selectSeveralColumns($sql);
+			my %site_ptm_info = ();
+			if (scalar @rows) {
+				my $first_row = shift @rows;
+				my ($qt5500_transition_group_id,
+						$mzml_filename, $mzml_pathname, $cycle, $precursor_charge,
+						$precursor_mz, $rt) = @{$first_row};
+				$mzml_pathname .= "/$mzml_filename";
 
-					my ($q1, $q1_charge2, $q1_charge3, $precursor_neutral_mass);
+				my ($q1, $q1_charge2, $q1_charge3, $precursor_neutral_mass);
 
-					# Compute precursor neutral mass for this peptide
-					# (Could also compute theoretical mass from pepseq + mods)
-					my $precursor_charged_mass = $precursor_mz * $precursor_charge;
-					# Subtract mass for each proton added when precursor was charged
-					$precursor_neutral_mass = $precursor_charged_mass -
-							($precursor_charge * 1.00727638);
+				# Compute precursor neutral mass for this peptide
+				# (Could also compute theoretical mass from pepseq + mods)
+				my $precursor_charged_mass = $precursor_mz * $precursor_charge;
+				# Subtract mass for each proton added when precursor was charged
+				$precursor_neutral_mass = $precursor_charged_mass -
+						($precursor_charge * 1.00727638);
 
-					# We must invent the ion because we don't have transition list
-					my $ion = "y1";        ### INVENTED!!!
-					my $ion_charge = '1';    ### INVENTED!!!
-					# remove mods from pepseq
-					my $modified_pepseq = $pep->[$mseq_idx];
-					my $pepseq = $modified_pepseq;
-					$pepseq =~ s/\[.+?\]//g;
-					my $fragmentor = 125;  ### INVENTED!!! but maybe unused.
-					# There are fields for CE & RT in the Spectrum table,
-					# but unfortunately for SRM atlas these values are not loaded.
-					my $ce = $pep->[$ce_idx] ?  $pep->[$ce_idx] : 99;
-					if (! $rt ) {
-						$rt = $pep->[$rt_idx] ?  $pep->[$rt_idx] : 99;
-					}
-					my $delta_rt = 5.00;   ### INVENTED!!! but maybe unused.
+				# We must invent the ion because we don't have transition list
+				my $ion = "y1";        ### INVENTED!!!
+				my $ion_charge = '1';    ### INVENTED!!!
+				# remove mods from pepseq
+				my $modified_pepseq = $pep->[$mseq_idx];
+				my $pepseq = $modified_pepseq;
+				$pepseq =~ s/\[.+?\]//g;
+				my $fragmentor = 125;  ### INVENTED!!! but maybe unused.
+				# There are fields for CE & RT in the Spectrum table,
+				# but unfortunately for SRM atlas these values are not loaded.
+				my $ce = $pep->[$ce_idx] ?  $pep->[$ce_idx] : 99;
+				if (! $rt ) {
+					$rt = $pep->[$rt_idx] ?  $pep->[$rt_idx] : 99;
+				}
+				my $delta_rt = 5.00;   ### INVENTED!!! but maybe unused.
 
-					$at_least_one_chromatogram = 1;
-					my $chrom_img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/chromatogram.gif' TITLE='View chromatogram for $pep->[$mseq_idx] (+$pep->[$chrg_idx])'>";
+				$at_least_one_chromatogram = 1;
+				my $chrom_img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/chromatogram.gif' TITLE='View chromatogram for $pep->[$mseq_idx] (+$pep->[$chrg_idx])'>";
 
-					#print "<p>Charge $precursor_charge Precursor Neutral Mass $precursor_neutral_mass Precursor Charged Mass $precursor_charged_mass<br>\n";
+				#print "<p>Charge $precursor_charge Precursor Neutral Mass $precursor_neutral_mass Precursor Charged Mass $precursor_charged_mass<br>\n";
 
-					$chromatogram_entry =
-							qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowChromatogram?~;
-					$chromatogram_entry .= ""
-							."&pepseq=$pepseq"
-							."&modified_pepseq=$modified_pepseq"
-							."&spectrum_basename=$mzml_basename"
-							."&spectrum_pathname=$mzml_pathname"
-							."&delta_rt=$delta_rt"
-							."&fragmentor=$fragmentor"
-							."&precursor_neutral_mass=$precursor_neutral_mass";
+				$chromatogram_entry =
+						qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowChromatogram?~;
+				$chromatogram_entry .= ""
+						."&pepseq=$pepseq"
+						."&modified_pepseq=$modified_pepseq"
+						."&spectrum_basename=$mzml_basename"
+						."&spectrum_pathname=$mzml_pathname"
+						."&delta_rt=$delta_rt"
+						."&fragmentor=$fragmentor"
+						."&precursor_neutral_mass=$precursor_neutral_mass";
 
-					$chromatogram_entry =
-							qq~$chromatogram_entry" TARGET=blank>$chrom_img</A>~;
+				$chromatogram_entry =
+						qq~$chromatogram_entry" TARGET=blank>$chrom_img</A>~;
 
-				} # end if there is info for this pep in the QT5500_transition_group table
-      } # end if Qtrap 5500
+			} # end if there is info for this pep in the QT5500_transition_group table
+		} # end if Qtrap 5500
 
-      $pep->[$prob_idx] = sprintf("%0.3f", $pep->[$prob_idx]) unless $pep->[$prob_idx] == 1;
-      $pep->[$prob_idx] = 1 if $pep->[$prob_idx] == 1;
-      $pep->[$inst_idx] =~ s/ +/&nbsp;/g;
-      my $build_id = $query_parameters_ref->{atlas_build_id};
-      my $img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='View spectrum for $pep->[$mseq_idx] (+$pep->[$chrg_idx])'>";
-      my $eval_string = $query_parameters_ref->{'ann'}? 'eval=1&' : '' ;
-      $pep->[$spec_idx] = qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowObservedSpectrum?${eval_string}atlas_build_id=$build_id&spectrum_identification_id=$pep->[$spec_idx]&peptide=$pep->[$mseq_idx]&assumed_charge=$pep->[$chrg_idx]&chimera_level=$pep->[$chimera_idx]&sample_id=$pep->[$smpl_idx]&spectrum_name=$pep->[$name_idx]" TARGET=blank>$img</A>~;
-      $pep->[$ann_idx] = sprintf("%0.2f", $pep->[$ann_idx]);
-      $pep->[$ann_idx] =~ s/^0// if ($pep->[$ann_idx] > 0);  #remove any zero before decimal
-      $pep->[$ann_idx] = "0" if ($pep->[$ann_idx] == 0);
-      $pep->[$ann_idx] .= "($pep->[$ann_count_idx])";
-      $pep->[$ann_idx] = $none if (!$pep->[$ann_count_idx]);
-      $pep->[$chrm_idx] = $chromatogram_entry;
-      $pep->[$chimera_idx] = '' if (!$pep->[$chimera_idx]);
-			my $modified_pepseq = $pep->[$mseq_idx];
-      $pep->[$mseq_idx] =   $sbeamsMOD->formatMassMods($pep->[$mseq_idx]);
+		$pep->[$prob_idx] = sprintf("%0.3f", $pep->[$prob_idx]) unless $pep->[$prob_idx] == 1;
+		$pep->[$prob_idx] = 1 if $pep->[$prob_idx] == 1;
+		$pep->[$inst_idx] =~ s/ +/&nbsp;/g;
+		my $build_id = $query_parameters_ref->{atlas_build_id};
+		my $img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='View spectrum for $pep->[$mseq_idx] (+$pep->[$chrg_idx])'>";
+		my $eval_string = $query_parameters_ref->{'ann'}? 'eval=1&' : '' ;
+		$pep->[$spec_idx] = qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowObservedSpectrum?${eval_string}atlas_build_id=$build_id&spectrum_identification_id=$pep->[$spec_idx]&peptide=$pep->[$mseq_idx]&assumed_charge=$pep->[$chrg_idx]&chimera_level=$pep->[$chimera_idx]&sample_id=$pep->[$smpl_idx]&spectrum_name=$pep->[$name_idx]" TARGET=blank>$img</A>~;
+		$pep->[$ann_idx] = sprintf("%0.2f", $pep->[$ann_idx]);
+		$pep->[$ann_idx] =~ s/^0// if ($pep->[$ann_idx] > 0);  #remove any zero before decimal
+		$pep->[$ann_idx] = "0" if ($pep->[$ann_idx] == 0);
+		$pep->[$ann_idx] .= "($pep->[$ann_count_idx])";
+		$pep->[$ann_idx] = $none if (!$pep->[$ann_count_idx]);
+		$pep->[$chrm_idx] = $chromatogram_entry;
+		$pep->[$chimera_idx] = '' if (!$pep->[$chimera_idx]);
+		my $modified_pepseq = $pep->[$mseq_idx];
+		$pep->[$mseq_idx] =   $sbeamsMOD->formatMassMods($pep->[$mseq_idx]);
 
     my @ptm_pep =();
     if ($pep->[$ptm_idx]){
@@ -2010,7 +2010,7 @@ sub postProcessResultset {
     if ($processed_spec{$pep->[$name_idx]. '-'. $pep->[$smpl_idx]} == 1){
       push @processed_data,  $resultset_ref->{data_ref}->[$i];
     }
- } # end for each pep
+  } # end for each pep
   
   $resultset_ref->{data_ref} = \@processed_data;
   
