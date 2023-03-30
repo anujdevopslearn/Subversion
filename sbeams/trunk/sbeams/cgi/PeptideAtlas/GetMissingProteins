@@ -173,11 +173,14 @@ sub handle_request {
   my $resultset_ref = \%resultset;
   my (%url_cols,%hidden_cols,%max_widths,$show_sql);
 
+  $TABLE_NAME = 'AT_GetMissingProteins';
+  $CATEGORY="Get Missing Proteins";
+ 
+
   #### Read in the standard form values
   my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
-  my $TABLE_NAME = $parameters{'QUERY_NAME'};
 
-  if ($apply_action =~ /query/i && ((defined($atlas_build_id) && $atlas_build_id < 0) || ! $parameters{proteome_component}) ) {
+  if ($apply_action =~ /query/i && (defined($atlas_build_id) && $atlas_build_id < 0) ) {
 			$sbeams->reportException(
 				state => 'ERROR',
 				type => 'MISSING PARAMETER',
@@ -187,14 +190,59 @@ sub handle_request {
   }
   $parameters{atlas_build_id} = $atlas_build_id;
 
+ #### Get the columns and input types for this table/query
+  my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
+  my %input_types = $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
+
+  #### Read the input parameters for each column
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters,
+    columns_ref=>\@columns,
+    input_types_ref=>\%input_types);
+   #$sbeams->printDebuggingInfo($q);
+
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+
+  #### Set some reasonable defaults if no parameters supplied
+  #unless ($n_params_found) {
+  #  $parameters{input_form_format} = "minimum_detail";
+  #  $parameters{presence_level_constraint} = "1";
+  #}
+  #### Display the user-interaction input form
+  $sbeams->display_input_form(
+    TABLE_NAME=>$TABLE_NAME,
+    CATEGORY=>$CATEGORY,
+    apply_action=>$apply_action,
+    PROGRAM_FILE_NAME=>$PROG_NAME,
+    parameters_ref=>\%parameters,
+    input_types_ref=>\%input_types,
+    mask_user_context=> '1',
+    use_tabbed_panes=> '1',
+  );
+  #### Display the form action buttons
+  $sbeams->display_form_buttons( TABLE_NAME=>$TABLE_NAME,
+                                 use_tabbed_panes => 1,
+                               );
+
+
+  #### Finish the upper part of the page and go begin the full-width
+  #### data portion of the page
+  $sbeams->display_page_footer( close_tables=>'NO',
+                                use_tabbed_panes => 1,
+                                separator_bar=>'NO',
+                                display_footer=>'NO');
+
+
+
   #### Set some specific settings for this program
   my $CATEGORY="Get Missing Proteins";
   my $PROGRAM_FILE_NAME = $PROG_NAME;
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
   my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
 
-  my $spacer =  $sbeams->getTabbedPanesDHTML()."<br/>\n";
-  print "<h1>$CATEGORY</h1>\n$spacer\n";
+  #my $spacer =  $sbeams->getTabbedPanesDHTML()."<br/>\n";
+  #print "<h1>$CATEGORY</h1>\n$spacer\n";
 
   #### If the apply action was to recall a previous resultset, do it
   my %rs_params = $sbeams->parseResultSetParams(q=>$q);
@@ -225,7 +273,7 @@ sub handle_request {
     ["mass", "'mass'", "mass"],
 		["pI", "'pI'","pI"],
     ["gravy","'gravy'","gravy"],
-    ["biosequence_desc", "BS.biosequence_desc", "biosequence_desc"],
+    ["biosequence_desc", "BS.biosequence_desc", "Protein Description"],
     ["peptide_instance_id", "PI.peptide_instance_id", "peptide_instance_id"],
 	);
 	my $columns_clause = $sbeams->build_SQL_columns_list(
@@ -242,11 +290,15 @@ sub handle_request {
 		LEFT JOIN $TBAT_PEPTIDE_INSTANCE PI ON (PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID AND 
 																						PI.atlas_build_id = $atlas_build_id) 
 		WHERE 1=1
-    $atlas_build_clause 
+    $atlas_build_clause
+    AND BS.biosequence_name not like 'DECOY%' 
+    AND BS.biosequence_name not like 'CONTAM%' 
   ~;
   my $show_sql = 0;
   $hidden_cols{'biosequence_seq'} = 1;
   $hidden_cols{'peptide_instance_id'} = 1;
+  $hidden_cols{'proteome'} = 1 if ($proteome_component eq '');
+ 
   #### Apply any parameter adjustment logic
   if ( $parameters{display_options} =~ /ShowSQL/ ) {
     $show_sql = 1;
@@ -262,8 +314,10 @@ sub handle_request {
         sql_query=>$sql,
         query_parameters_ref=>\%parameters,
         resultset_ref=>$resultset_ref,
-        use_caching => 1 
+        use_caching =>0 
       );
+
+
       if (! $resultset_ref->{from_cache}){
 				postProcessResultset(
 					rs_params_ref=>\%rs_params,
@@ -352,17 +406,19 @@ sub postProcessResultset {
   my $colnameidx_ref = $args{'colnameidx_ref'};
   my $database = $args{'database'};
 
+  my $proteome_component = $query_parameters_ref->{proteome_component} || '';
   my $seq_idx =$colnameidx_ref->{biosequence_seq};
   my $biosequence_name_idx = $colnameidx_ref->{biosequence_name};
   my $biosequence_desc_idx = $colnameidx_ref->{biosequence_desc};
   my $peptide_instance_id_idx = $colnameidx_ref->{peptide_instance_id};
 
+   
   my $length_idx = $colnameidx_ref->{length};
   my $mass_idx = $colnameidx_ref->{mass};
   my $pi_idx = $colnameidx_ref->{pI};
   my $gravy_idx = $colnameidx_ref->{gravy};
   my $n_rows = scalar(@{$resultset_ref->{data_ref}});
-  my ($pattern_type, $pat_str) = split(/,/,$query_parameters_ref->{proteome_component});
+  my ($pattern_type, $pat_str) = split(/,/,$proteome_component);
   my @patterns = split(";", $pat_str);
 	my %processed = ();
 
@@ -371,13 +427,15 @@ sub postProcessResultset {
     #### Loops through resultset and do formatting
     my $data = $resultset_ref->{data_ref}->[$i];
     my $seq = $data->[$seq_idx];
-	  $data->[0] = $database; 
-		my $matched = $sbeamsMOD->match_proteome_component(pattern=>\@patterns,
-																										source_type => $pattern_type,
-																										biosequence_name => $data->[$biosequence_name_idx], 
-																										biosequence_desc => $data->[$biosequence_desc_idx]);
+	  $data->[0] = $database;
+    if ($proteome_component){ 
+			my $matched = $sbeamsMOD->match_proteome_component(pattern=>\@patterns,
+																											source_type => $pattern_type,
+																											biosequence_name => $data->[$biosequence_name_idx], 
+																											biosequence_desc => $data->[$biosequence_desc_idx]);
 
-		next if ($matched != 1);
+			next if ($matched != 1);
+    }
 		next if($processed{$seq});
 		$processed{$seq} =1;
     # observed;
@@ -400,6 +458,7 @@ sub postProcessResultset {
     push @filtered_data, $data;
   }
   $resultset_ref->{data_ref} = \@filtered_data;
+  @{$resultset_ref->{precisions_list_ref}} = (20,8,4,6,6,6,6,255);
 
 }
 #sub calc_mass {
