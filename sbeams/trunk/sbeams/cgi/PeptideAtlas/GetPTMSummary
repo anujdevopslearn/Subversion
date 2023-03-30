@@ -518,9 +518,8 @@ sub handle_request {
       $sbeams->fetchResultSet(
         sql_query=>$sql,
         resultset_ref=>$resultset_ref,
-        use_caching => 1 
+        use_caching => 0 
       );
-
 			#### Store the resultset and parameters to disk resultset cache
 			$rs_params{set_name} = "SETME";
 			my %write_params = ( rs_table => $TBAT_ATLAS_BUILD,
@@ -650,7 +649,9 @@ sub postProcessResultset {
 
   my $n_rows = scalar(@{$resultset_ref->{data_ref}});
   my $cols = $resultset_ref->{column_hash_ref};
-  my $proteome_component = $parameters{proteome_component};
+  my $proteome_component = $parameters{proteome_component} || '';
+  return if ($proteome_component eq '');
+
   $proteome_component =~ /^(.*),(.*)$/;
   my $source_type = $1;
   my @patterns = split(/;/, $2);
