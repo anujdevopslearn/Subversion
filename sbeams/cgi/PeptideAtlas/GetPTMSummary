@@ -518,7 +518,7 @@ sub handle_request {
       $sbeams->fetchResultSet(
         sql_query=>$sql,
         resultset_ref=>$resultset_ref,
-        use_caching => 0 
+        use_caching => 1, 
       );
 			#### Store the resultset and parameters to disk resultset cache
 			$rs_params{set_name} = "SETME";
