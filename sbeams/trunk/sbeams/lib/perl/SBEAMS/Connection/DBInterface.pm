@@ -29,7 +29,8 @@ use Data::Dumper;
 use URI::Escape;
 use Storable qw(nstore retrieve);
 use Time::HiRes qw( usleep ualarm gettimeofday tv_interval );
-
+use Digest::MD5 qw( md5_hex );
+use JSON;
 use GD::Graph::bars;
 use GD::Graph::xypoints;
 
@@ -2305,7 +2306,6 @@ sub parseConstraint2SQL {
     return "   AND $constraint_column ${tmp}IN ( $constraint_string )";
   }
 
-
   die "ERROR: unrecognized constraint_type!";
 
 }
@@ -2698,6 +2698,7 @@ sub fetchResultSet {
     #### Process the arguments list
     my $sql_query = $args{'sql_query'} || croak "parameter sql_query missing";
     $resultset_ref = $args{'resultset_ref'};
+    my $query_parameters_ref = $args{'query_parameters_ref'};
 
     #### Update timing info
     $timing_info->{send_query} = [gettimeofday()];
@@ -2705,10 +2706,14 @@ sub fetchResultSet {
     #### Convert the SQL dialect if necessary
     $sql_query = $self->translateSQL(sql=>$sql_query);
 
-      my $uc_sql = uc( $sql_query );
-      use Digest::MD5 qw( md5_hex );
-      my $sql_mdsum = md5_hex( $uc_sql );
-      $resultset_ref->{sql_mdsum} = $sql_mdsum;
+		my $uc_sql = uc( $sql_query );
+		my $sql_mdsum = md5_hex( $uc_sql );
+		$resultset_ref->{sql_mdsum} = $sql_mdsum;
+    
+    my $param_mdsum = ''; 
+    if ($query_parameters_ref){
+      $param_mdsum = $self->get_query_parameters_mdsum($query_parameters_ref);
+    }
 
     if ( $args{use_caching} ) {
 
@@ -2717,6 +2722,14 @@ sub fetchResultSet {
       FROM $TB_CACHED_RESULTSET
       WHERE sql_checksum = '$sql_mdsum'
       ~;
+      if ($param_mdsum){
+        $rs_sql = qq~
+				SELECT cache_descriptor
+				FROM $TB_CACHED_RESULTSET
+				WHERE sql_checksum = '$sql_mdsum'
+        AND param_checksum = '$param_mdsum'
+				~;
+      }
 
       my $cache_descriptor;
       my $stmt_handle = $self->get_statement_handle( $rs_sql );
@@ -2957,7 +2970,7 @@ sub displayResultSet {
       my $delimiter = ( $output_mode =~ /csv/ ) ? ',' : "\t";
 
       # Print http header
-      print $header if $self->invocation_mode() eq 'http' && !$args{suppress_header};
+      print $header if $self->invocation_mode() =~ /http/ && !$args{suppress_header};
 
       #### Set a very high page size if using defaults
       $resultset_ref->{page_size} = $CONFIG_SETTING{RESULTSET_PAGE_SIZE} || 10000000
@@ -3863,80 +3876,129 @@ sub displayResultSetPlot_plotly {
       # If the plot_type is histogram, calc bins/cnts/titles 
       if ( $rs_params{rs_plot_type} =~ /histogram/) {
         my $plot_data = '';
-        my $hdata = $column_info->{A}->{data};
-    
-  	    if ( $rs_params{rs_plot_type} ne 'discrete_histogram') { # continuous
-          $result = $self->histogram( data_array_ref => $hdata, quiet => 1 );
-          if ( $result->{result} ne 'SUCCESS' ) {
-            print $self->makeInfoText('Unable to compute continuous histogram, falling back to discrete<BR>');
-          }
-        }
+        if ($rs_params{rs_plot_type} !~ /overlaid_histogram/){
+					my $hdata = $column_info->{A}->{data};
+			
+					if ( $rs_params{rs_plot_type} ne 'discrete_histogram') { # continuous
+						$result = $self->histogram( data_array_ref => $hdata, quiet => 1 );
+						if ( $result->{result} ne 'SUCCESS' ) {
+							print $self->makeInfoText('Unable to compute continuous histogram, falling back to discrete<BR>');
+						}
+					}
 
-  	    if ( $result->{result} eq 'SUCCESS' ) { # successful continuous
-          my $xstr = join( ',', @{$result->{xaxis}} );
-          my $ystr = "'" . join( "','", @{$result->{yaxis}} ) . "'";
+					if ( $result->{result} eq 'SUCCESS' ) { # successful continuous
+						my $xstr = join( ',', @{$result->{xaxis}} );
+						my $ystr = "'" . join( "','", @{$result->{yaxis}} ) . "'";
 
-          my $data_label = ( scalar(keys(@mouseover_text)) ) ? "'" . join( "','", @mouseover_text) . "'" : $xstr;
-
-          $plot_data = qq~
-           x: [$xstr],
-           y: [$ystr],
-           type: 'bar',
-          ~;
-        } else { # discrete
-           # Deprecated, calculating below.
-#          $result = $self->discrete_value_histogram( data_array_ref => $hdata );
-          
-        if ( $result->{result} ne 'SUCCESS' ) {
-            my %tally;
-            for my $val ( @{$hdata} ) {
-              $val = '' if !defined $val;
-              $val =~ s/^\s+//;
-              $val =~ s/\s+$//;
-              $val = 'n/a' if $val eq '';
-              $tally{$val}++;
-            }
-            my @keys = ( $has_char{A} ) ? sort(keys(%tally)) : sort{$a<=>$b}(keys(%tally));
-            my $hcnt = scalar( @{$hdata} );
-            for my $key ( @keys ) {
-              my $perc = ( $hcnt ) ? sprintf( "%0.1f", ($tally{$key}/$hcnt)*100 ) : 0;
-              $result->{xaxis} ||= [];
-              push @{$result->{xaxis}}, $key;
-              $result->{yaxis} ||= [];
-              push @{$result->{yaxis}}, $tally{$key};
-              $result->{xaxis_disp} ||= [];
-              push @{$result->{xaxis_disp}}, "$key ($perc " . '%)';
-            }
-            $result->{result} = 'SUCCESS';
-          }
-          if (! $result->{yaxis} || $result->{xaxis_disp}){
-            $result=undef; 
-          }else{
-						my $ystr = join( ',', @{$result->{yaxis}} );
-						my $xstr = "'" . join( "','", @{$result->{xaxis_disp}} ) . "'";
+						my $data_label = ( scalar(keys(@mouseover_text)) ) ? "'" . join( "','", @mouseover_text) . "'" : $xstr;
 
 						$plot_data = qq~
 						 x: [$xstr],
 						 y: [$ystr],
 						 type: 'bar',
 						~;
+					} else { # discrete
+						 # Deprecated, calculating below.
+	#          $result = $self->discrete_value_histogram( data_array_ref => $hdata );
+						
+						if ( $result->{result} ne 'SUCCESS' ) {
+							my %tally;
+							for my $val ( @{$hdata} ) {
+								$val = '' if !defined $val;
+								$val =~ s/^\s+//;
+								$val =~ s/\s+$//;
+								$val = 'n/a' if $val eq '';
+								$tally{$val}++;
+							}
+							my @keys = ( $has_char{A} ) ? sort(keys(%tally)) : sort{$a<=>$b}(keys(%tally));
+							my $hcnt = scalar( @{$hdata} );
+							for my $key ( @keys ) {
+								my $perc = ( $hcnt ) ? sprintf( "%0.1f", ($tally{$key}/$hcnt)*100 ) : 0;
+								$result->{xaxis} ||= [];
+								push @{$result->{xaxis}}, $key;
+								$result->{yaxis} ||= [];
+								push @{$result->{yaxis}}, $tally{$key};
+								$result->{xaxis_disp} ||= [];
+								push @{$result->{xaxis_disp}}, "$key ($perc " . '%)';
+							}
+							$result->{result} = 'SUCCESS';
+						}
+						if (! $result->{yaxis} || $result->{xaxis_disp}){
+							$result=undef; 
+						}else{
+							my $ystr = join( ',', @{$result->{yaxis}} );
+							my $xstr = "'" . join( "','", @{$result->{xaxis_disp}} ) . "'";
+
+							$plot_data = qq~
+							 x: [$xstr],
+							 y: [$ystr],
+							 type: 'bar',
+							~;
+						}
           }
-        }
-        if ($result->{result} ne 'SUCCESS') {
-          print "ERROR: Unable to calculate histogram for column ".$rs_params{rs_columnA};
-          $result = undef; 
-        } else {
-          $plot .= qq~
-          <script type="text/javascript" charset="utf-8">
-          var data = [
-          {
-           $plot_data
+					if ($result->{result} ne 'SUCCESS') {
+						print "ERROR: Unable to calculate histogram for column ".$rs_params{rs_columnA};
+						$result = undef; 
+					} else {
+						$plot .= qq~
+						<script type="text/javascript" charset="utf-8">
+						var data = [
+						{
+						 $plot_data
+						}
+						];
+						Plotly.newPlot('plot_div', data);
+						</script>
+						~;
+					}
+        }else{
+          ### histograms
+          #my $hdata_a = $column_info->{A}->{data};
+          #my $hdata_b = $column_info->{B}->{data};
+          my $counter=1;
+          my @column_names =();
+          $plot .= '<script type="text/javascript" charset="utf-8">'; 
+          foreach my $col (keys %{$column_info}){
+             $plot .= "var x$counter = [";
+             foreach my $val (@{$column_info->{$col}->{data}}){
+                $plot .= "$val," if ($val ne '');
+             }
+             $plot =~ s/,$/];/;
+             $plot .= "\n";
+             push @column_names, $column_info->{$col}->{name};
+             $counter++;
           }
-          ];
-          Plotly.newPlot('plot_div', data);
-          </script>
-          ~;
+          my $n=1;
+          while ($n < $counter){
+             $plot .= qq~
+								var trace$n = {
+									x: x$n,
+                  name: "$column_names[$n-1]",
+									opacity: 0.5, 
+									type: "histogram", 
+                };
+             ~;
+             $n++;
         }
+        $n=2;
+        $plot .= "var data = [trace1";
+        while ($n < $counter){
+          $plot .= ",trace$n";
+          $n++;
+        }
+        $plot .= "];";
+        $plot .= qq~
+           var layout = {
+							barmode: "overlay", 
+							xaxis: {title: "Value"}, 
+							yaxis: {title: "Count"}
+						};
+						Plotly.newPlot('plot_div', data, layout);
+            </script>
+         ~;
+         $result->{result} = 'SUCCESS'; 
+
+       }
       #### If the plot_type is xypoints, plot it
       } elsif ( $rs_params{rs_plot_type} eq 'xypoints') {
 
@@ -4010,12 +4072,13 @@ sub displayResultSetPlot_plotly {
 
     my %plot_type_names = (
       'histogram'=>'Continuous Value Histogram of Column A',
+      'overlaid_histogram'=>'Continuous Value Histogram of A and B',
       'discrete_histogram'=>'Discrete Value Histogram of Column A',
       'xypoints'=>'Scatterplot B vs A',
     );
 
     $rs_params{rs_plot_type} ||= '';
-    foreach $element ('histogram','discrete_histogram','xypoints') {
+    foreach $element ('histogram', 'overlaid_histogram' , 'discrete_histogram','xypoints') {
       my $selected_flag = '';
       my $option_name = $plot_type_names{$element} || $element;
       $selected_flag = 'SELECTED' if $element eq $rs_params{rs_plot_type};
@@ -4608,7 +4671,7 @@ sub readResultSet {
     my $resultset_params_ref = $args{'resultset_params_ref'};
     my $column_titles_ref = $args{'column_titles_ref'};
     my $colnameidx_ref = $args{'colnameidx_ref'};
-
+    my $param_mdsum =  $args{'param_mdsum'} || '';
 
     #### Update timing info
     $timing_info->{begin_resultset} = [gettimeofday()];
@@ -4682,7 +4745,7 @@ sub readResultSet {
     #### eval the dump
     #eval $indata;
     #%{$resultset_ref} = %{$VAR1};
-
+    
 
     #### Read in the various parameters from cached_resultset
     my $sql = qq~
@@ -4752,7 +4815,8 @@ sub writeResultSet {
 
     #### Update timing info
     $timing_info->{begin_write_resultset} = [gettimeofday()];
-
+    
+    my $param_mdsum = $self->get_query_parameters_mdsum($query_parameters_ref);
 
     #### Prepare a special hash to work around a Dumper bug or feature
     my $temp_hash_ref;
@@ -4781,15 +4845,11 @@ sub writeResultSet {
     open(OUTFILE,">$outfile") || die "Cannot open $outfile\n";
     printf OUTFILE Data::Dumper->Dump( [$temp_hash_ref] );
     close(OUTFILE);
-    my $mdsum_out = `md5sum $outfile`;
-    my @mdsum_out = split( /\s/, $mdsum_out );
-    my $param_mdsum = $mdsum_out[0];
-
     #### Write out the resultset
     $outfile = "$RESULTSET_DIR/${resultset_file}.resultset";
     nstore($resultset_ref,$outfile);
-    $mdsum_out = `md5sum $outfile`;
-    @mdsum_out = split( /\s/, $mdsum_out );
+    my $mdsum_out = `md5sum $outfile`;
+    my @mdsum_out = split( /\s/, $mdsum_out );
     my $rs_mdsum = $mdsum_out[0];
 
     my $sql_mdsum = $resultset_ref->{sql_mdsum};
@@ -8014,6 +8074,23 @@ sub update_PA_table_variables{
   my $atlas_build_id = shift;
   my $msg = SBEAMS::PeptideAtlas::Tables->update_PA_table_variables($atlas_build_id);
   return $msg; 
+
+}
+
+sub get_query_parameters_mdsum{
+  my $self = shift;
+  my $query_parameters_ref = shift;
+
+	my %query_parameters =  ();
+	foreach my $key (keys %$query_parameters_ref){
+		##exclude action param
+		if ($key !~ /action/){
+			$query_parameters{$key} = $query_parameters_ref->{$key};
+		}
+	}
+	my $json = encode_json(\%query_parameters);
+	my $param_mdsum = md5_hex( uc($json) );
+  return $param_mdsum;
 
 }
 ###############################################################################
