@@ -3753,8 +3753,12 @@ sub display_spectra_ptm_table {
 
   $counter = 1;
   foreach my $ptm_type(keys %$ptm_identification_ref){
+    my @data =();
+    foreach my $s ( sort {$b <=> $a} keys %{$ptm_identification_ref->{$ptm_type}}){
+      push @data, @{$ptm_identification_ref->{$ptm_type}{$s}};
+    }
 
-		$resultset_ref->{data_ref} = \@{$ptm_identification_ref->{$ptm_type}};
+		$resultset_ref->{data_ref} = \@data;
     delete $hidden_cols_ref->{'ptm_lability'};
 
 		my $spectra_display = $self->get_individual_spectra_display(

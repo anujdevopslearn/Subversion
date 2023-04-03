@@ -1780,7 +1780,7 @@ sub postProcessResultset {
   my $has_ptm_score = 0;
   my $n_rows = scalar(@{$resultset_ref->{data_ref}});
   my %processed_spec=();
-  my @processed_data;
+  my @processed_data =();;
  for (my $i=0; $i<$n_rows; $i++) {
     #### Loops through resultset and do formatting
     my $pep = $resultset_ref->{data_ref}->[$i];
@@ -1795,6 +1795,7 @@ sub postProcessResultset {
 		my $mzml_fname = "$mzml_basename.mzML";
 		my $rt;
 		my @trace_array;
+    my @ptm_scores = ();
 		my %trace;
 		my $chromatogram_entry = '';  #empty, unless we can find chromgram info
 		$at_least_one_chimera++ if ($pep->[$chimera_idx]);
@@ -1953,6 +1954,7 @@ sub postProcessResultset {
 				if ($pstr =~ /[$ptm_residues]\(/){ 
 					$pstr =~ /([\d\.]+)/;
 					$score = $1;
+          push @ptm_scores, $score;
 					if($score >= 0.99 ){
 						$ptm_score_summary_ref->{$pep->[$ptm_type_idx]}{$pos}{obshh}++;
 					} elsif($score >= 0.95 && $score < 0.99 ){
@@ -2000,15 +2002,16 @@ sub postProcessResultset {
       $ptm_pep[$it_idx] = $pep->[$it_idx];
       $ptm_pep[$tic_idx] = $pep->[$tic_idx];
       $ptm_pep[$sn_idx] = $pep->[$sn_idx];
-      push @{$ptm_peps_ref->{$pep->[$ptm_type_idx]}}, \@ptm_pep;
+      push @{$ptm_peps_ref->{$pep->[$ptm_type_idx]}{join(',', sort {$b <=> $a} @ptm_scores)}}, \@ptm_pep;
     }
 
     if ( $has_header_info ) {
       $pep->[$rt_idx] = ( $pep->[$rt_idx] ) ? sprintf( "%0.1f", $pep->[$rt_idx]/60 ) : $sbeams->makeInactiveText('n/a'); 
       $pep->[$ce_idx] = ( $pep->[$ce_idx] ) ? sprintf( "%0.1f", $pep->[$ce_idx] ) : $sbeams->makeInactiveText('n/a'); 
     }
+
     if ($processed_spec{$pep->[$name_idx]. '-'. $pep->[$smpl_idx]} == 1){
-      push @processed_data,  $resultset_ref->{data_ref}->[$i];
+      push @processed_data, $resultset_ref->{data_ref}->[$i];
     }
   } # end for each pep
   
