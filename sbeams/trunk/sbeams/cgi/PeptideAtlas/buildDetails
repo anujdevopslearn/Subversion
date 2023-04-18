@@ -522,44 +522,6 @@ sub get_dataset_spec_protein_info {
   return $html; 
 }
 
-# less informative sample contribution plot
-sub get_build_plots {
-  my %args = @_;
-  my $build_id = $args{build_id};
-  my $sample_array_ref = $args{sample_array_ref};
-  my $column_name_ref = $args{column_name_ref};
-  my $table = "<table>\n";
-
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'build_plot',
-                                                  visible => 1,
-                                                  tooltip => 'Show/Hide Section',
-                                                  imglink => 1,
-                                                  sticky  => 1 );
-
-  $table .= $atlas->encodeSectionHeader(
-      text => 'Experiment Contribution Plots',
-      span => 4,
-      trinfo => "class=hoverable",
-      LMTABS => 1,
-      divname => 'experiment_contribution_div',
-      no_toggle => 0,
-      link => $link,
-  );
-
-  my $chart = $atlas->displayExperiment_contri_plotly(
-      tr => $tr,
-      data_ref=>$sample_array_ref,
-      column_name_ref => $column_name_ref, 
-  );
-
-  $table .= qq~
-   $chart
-    </table>
-  ~;
- 
-  return $table;
-}
-
 # General build info, date, name, organism, specialty, default
 sub get_build_overview {
   my $build_id = shift;
@@ -610,6 +572,7 @@ sub get_build_overview {
        JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MP ON (PI.PEPTIDE_INSTANCE_ID = MP.PEPTIDE_INSTANCE_ID)
        JOIN $TBAT_PEPTIDE_MAPPING PM ON (PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID)
        JOIN $TBAT_BIOSEQUENCE B ON (B.BIOSEQUENCE_ID = PM.MATCHED_BIOSEQUENCE_ID)
+       JOIN $TBAT_BIOSEQUENCE_SET BSS ON B.BIOSEQUENCE_SET_ID = BSS.BIOSEQUENCE_SET_ID
        WHERE PI.ATLAS_BUILD_ID = $build_id
        $protein_name_contraint
      ~;
@@ -1275,35 +1238,21 @@ sub get_build_plots {
   my $build_id = $args{build_id};
   my $sample_array_ref = $args{sample_array_ref};
   my $column_name_ref = $args{column_name_ref};
-  my $table = "<TABLE WIDTH=800>\n";
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'build_plot',
-                                                  visible => 1,
-                                                  tooltip => 'Show/Hide Section',
-                                                  imglink => 1,
-                                                  sticky  => 1 );
-
-  $table .= $atlas->encodeSectionHeader(
-      text => 'Experiment Contribution Plots',
-      span => 4,
-      trinfo => "class='hoverable'",
-      LMTABS => 1,
-      divname => 'experiment_contribution_div',
-      no_toggle => 1,
-      link => $link,
-  );
-
   my $chart = $atlas->displayExperiment_contri_plotly(
-      tr => $tr,
       data_ref=>$sample_array_ref,
       column_name_ref => $column_name_ref, 
   );
 
- $table .= qq~
-    $chart
-    </TABLE>
-  ~;
+  my $html = $sbeams->make_toggle_section(
+      neutraltext =>"Experiment Contribution Plots",
+      sticky => 1,
+      barlink => 1,
+      visible => 1,
+      name => "prot_plots_div",
+      content => "<TABLE><TR><TD COLSPAN='5'>$chart</TD></TR></TABLE>",
+  );
  
-  return $table;
+  return $html;
 }
 ##################################################################################
 ### peptide charge and length distribution 
@@ -1334,21 +1283,6 @@ sub get_peptide_length_charge_distribution {
       push @peptidePerProtein_rows, [($1,$2)];
     }
   }
-
-  my $table = "<TABLE WIDTH=800>\n";
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'pepitde_length_distribution',
-                                                  visible => 1,
-                                                  tooltip => 'show/hide section',
-                                                  imglink => 1,
-                                                  sticky  => 1 );
-  $table .= $atlas->encodeSectionHeader(
-      LMTABS => 1,
-      no_toggle => 1,
-      divname => 'pepitde_length_distribution_div',
-      text => 'Peptide Length Distribution',
-      link => $link,
-      width => 920,
-  );
   my @names = ('observed distinct peptides (including semi-tryptic and miscleaved peptides)',
                'observed distinct tryptic no-missed-cleavages peptides',
                'theoretical distinct tryptic no-missed-cleavages peptides');
@@ -1357,9 +1291,9 @@ sub get_peptide_length_charge_distribution {
   push @data, [@trypPlength_rows];
   push @data, [@tlength_rows];
   
-  my $chart = $atlas->plotly_barchart (data => \@data,
+  my $chart1 = $atlas->plotly_barchart (data => \@data,
                                        names => \@names, 
-				       divName => 'length_distribution_div',
+				       divName => 'length_plot_div',
 				       xtitle => 'Peptide Length',
 				       ytitle=> 'Frequency'); 
 
@@ -1375,67 +1309,51 @@ sub get_peptide_length_charge_distribution {
                                        ytitle=> 'Spectra Count');
 
 
-
-  $table .= qq~
-    <div style="width: 80vw">
-    <div id="length_distribution_div"></div>
-    $chart
+  my $chart = qq~
+    <div style="width: 60vw">
+    <div id="length_plot_div"></div>
+    $chart1
     <div id="length_vs_psm_div"></div>
     $chart2
     </div>
-    </TABLE>
   ~;
-
-  $table .= "<TABLE WIDTH=800>\n";
-  ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'pepitde_charge_distribution',
-                                                  visible => 1,
-                                                  tooltip => 'show/hide section',
-                                                  imglink => 1,
-                                                  sticky  => 1 );
-
-  $table .= $atlas->encodeSectionHeader(
-      LMTABS => 1,
-      no_toggle => 1,
-      divname => 'pepitde_charge_distribution_div',
-      text => 'Peptide Charge Distribution',
-      link => $link,
-      width => 920,
+  my $html = $sbeams->make_toggle_section(
+      neutraltext =>"Peptide Length Distribution",
+      sticky => 1,
+      barlink => 1,
+      visible => 0,
+      name => "peptidelen_plots_div",
+      content => "<TABLE><TR><TD COLSPAN='5'>$chart</TD></TR></TABLE>",
   );
+  
   @data = ();
   @names = ();
   push @data, [@charge_rows];
   push @names , 'Charge';
   $chart = $atlas->plotly_barchart (data =>  \@data,
                                        names => \@names,
-                                       divName => 'pepitde_charge_distribution_div',
+                                       divName => 'pepitde_charge_plot_div',
                                        xtitle => 'Peptide Charge',
                                        dtick => 1,
                                        ytitle=> 'Spectra Count');
 
-   $table .= qq~
+   $chart = qq~
     <div style="width: 50vw">
-    <div id="pepitde_charge_distribution_div"></div>
+    <div id="pepitde_charge_plot_div"></div>
     $chart
     </div>
-    </TABLE>
   ~;
+  $html .= $sbeams->make_toggle_section(
+      neutraltext =>"Peptide Charge Distribution",
+      sticky => 1,
+      barlink => 1,
+      visible => 0,
+      name => "pepcharge_plots_div",
+      content => "<TABLE><TR><TD COLSPAN='5'>$chart</TD></TR></TABLE>",
+  );
+
 
   if (@peptidePerProtein_rows){
-		$table .= "<TABLE WIDTH=800>\n";
-		( $tr, $link ) = $sbeams->make_table_toggle( name    => 'pepitdePepProtein_distribution',
-																										visible => 1,
-																										tooltip => 'show/hide section',
-																										imglink => 1,
-																										sticky  => 1 );
-
-		$table .= $atlas->encodeSectionHeader(
-				LMTABS => 1,
-				no_toggle => 1,
-				divname => 'pepitdePerProtein_distribution_div',
-				text => 'Peptide Per Canonical Protein',
-				link => $link,
-				width => 920,
-		);
 		@data = ();
 		@names = ();
 		push @data, [@peptidePerProtein_rows];
@@ -1447,16 +1365,24 @@ sub get_peptide_length_charge_distribution {
 																				 dtick => 5,
 																				 ytitle=> 'Protein Count');
 
-		 $table .= qq~
+		 $chart .= qq~
 			<div style="width: 80vw">
 			<div id="pepitdePerProtein_distribution_div"></div>
 			$chart
 			</div>
-			</TABLE>
 		~;
+    my $html = $sbeams->make_toggle_section(
+      neutraltext =>"Peptide Per Protein",
+      sticky => 1,
+      barlink => 1,
+      visible => 0,
+      name => "pp_div",
+      content => "<TABLE><TR><TD COLSPAN='5'>$chart</TD></TR></TABLE>",
+    );
+
   }
 
-  return ($table);
+  return ($html);
 }
 
 ###########################################################################
@@ -1501,6 +1427,8 @@ sub generate_html_from_file {
   my @data =();
   my $build_info ={};
   my $anno =0;
+  my $cat_plot_data; 
+  my $chr_plot_data;
   while (my $line =<IN>){
     chomp $line;
     if ($line =~ /^build_overview/){
@@ -1580,81 +1508,96 @@ sub generate_html_from_file {
     $table = $1;
     $line = $2;
     if (($table ne $pre_table && $pre_table ne '')){
-       my $headings = shift @data;
-       my $download_table = 0;
-       my @noWrap = (1);
-       @noWrap = (3,17,19,20) if ($pre_table eq 'exp_contrib_table');
-       my $table_width = 800;
-       if ($pre_table eq 'proteome_coverage'){
-         ## remove last column
-         $table_width = 400;
-         my $missing_prot_url = "$CGI_BASE_DIR/PeptideAtlas/GetMissingProteins?atlas_build_id=$build_id".
-                                '&action=QUERY&proteome_component=';
-         if (scalar @$headings >= 5){
-						foreach my $row (@data){
-              $row->[0] =~ /^(.*)\|(.*)$/;
-              $row->[0] = $1;
-              ## add link to col5
-              $row->[5] = "<a href='$missing_prot_url$2&database=$1' target='_blank' title='get missing proteins'>$row->[5]</a>" if ($row->[5] > 0);
-              $row->[4] .= '%'; 
+       if ($pre_table eq 'chr_plot'){
+         @$chr_plot_data = @data;
+       }else{
+				 my $headings = shift @data;
+				 my $download_table = 0;
+				 my @noWrap = (1);
+				 @noWrap = (3,17,19,20) if ($pre_table eq 'exp_contrib_table');
+				 my $table_width = 800;
+				 if ($pre_table eq 'proteome_coverage'){
+					 ## remove last column
+					 $table_width = 400;
+					 my $missing_prot_url = "$CGI_BASE_DIR/PeptideAtlas/GetCoreProteomeMapping?action=QUERY".
+                                  "apply_action=QUERY";
+																	#'&action=QUERY&proteome_component=';
+					 if (scalar @$headings >= 5){
+							foreach my $row (@data){
+								$row->[0] =~ /^(.*)\|(.*)$/;
+								$row->[0] = $1;
+                my $mapping_id = $2;
+                my $uniprot_name_contraint = '';
+                if ($row->[0] =~ /Core/i){
+                  $uniprot_name_contraint = '&uniprot_name_constraint=%5BA-Z%5D%25';
+                }
+								## add link to col5
+		            if ($mapping_id =~ /^\d+$/){						
+								  $row->[5] = "<a href='$missing_prot_url$2&mapping_id=$mapping_id&atlas_build_id=$build_id".
+                            "&peptideatlas_category_constraint=15&redundancy_constraint=on&".
+                            "$uniprot_name_contraint' ".
+                            "target='_blank' title='get missing proteins'>$row->[5]</a>" if ($row->[5] > 0);
+                }
+								$row->[4] .= '%'; 
+							}
+					 }
+				 }
+				 add_url (table_id => $pre_table,
+									data_ref=>\@data,
+									column_name_ref => $headings,
+									build_id => $build_id,
+									align => $column_align{$pre_table},
+								 );
+				 if ($pre_table eq 'exp_contrib_table'){
+						if ($headings->[1] eq 'Experiment Annotation'){
+							 $anno=1;
 						}
-         }
-       }
-       add_url (table_id => $pre_table,
-                data_ref=>\@data,
-                column_name_ref => $headings,
-                build_id => $build_id,
-                align => $column_align{$pre_table},
-               );
-			 if ($pre_table eq 'exp_contrib_table'){
-					if ($headings->[1] eq 'Experiment Annotation'){
-						 $anno=1;
-					}
-					@sample_array =  map { [@$_] } @data;
-					@column_names = @$headings;
-          ## remove category id column 
-          my $n = $#column_names;
-          if ($column_names[$n] eq 'sample_category_id'){
-						foreach my $row (@data){ 
-							splice @$row, $n;
+						@sample_array =  map { [@$_] } @data;
+						@column_names = @$headings;
+						## remove category id column 
+						my $n = $#column_names;
+						if ($column_names[$n] eq 'sample_category_id'){
+							foreach my $row (@data){ 
+								splice @$row, $n;
+							}
+							splice @$headings, $n;
 						}
-						splice @$headings, $n;
-          }
-          $download_table =1;
-			 }
+						$download_table =1;
+				 }
 
-       if ($pre_table eq 'ptm_coverage'){
-         my $ptm_summary_url = "$CGI_BASE_DIR/PeptideAtlas/GetPTMSummary?row_limit=50000&atlas_build_id=$build_id".
-                               "&display_options=proteinView&ptm_type=STY%3APhospho&action=QUERY".
-                               "&redundancy_constraint=on&proteome_component=";
+				 if ($pre_table eq 'ptm_coverage'){
+					 my $ptm_summary_url = "$CGI_BASE_DIR/PeptideAtlas/GetPTMSummary?row_limit=50000&atlas_build_id=$build_id".
+																 "&display_options=proteinView&ptm_type=STY%3APhospho&action=QUERY".
+																 "&redundancy_constraint=on&proteome_component=";
 
-         my $counter = 0;
-         foreach my $row (@data){
-						## add link to col1
-					  if ($row->[0]=~ /^([^\|]+)\|(.*)$/){	
-						  $row->[0] = "<a href='$ptm_summary_url$2' target='_blank' title='get ptm protein list'>$1</a>";
-            }
-            my $n = scalar @$row;
-            if ($counter == 0){
-               for my $i (1..$n-1){
-                 push @{$column_align{$pre_table}}, 'center';
-               }
-            } 
-            $counter++;
-					}
-       }
-       $download_table = 1 if ($pre_table eq 'dataset_contrib_table');
- 
-       $html = $atlas->create_table (data => \@data,
-                          column_names=> $headings,
-                          table_name => $table_names{$pre_table},
-                          table_id => $pre_table,
-                          nowrap => \@noWrap,
-                          width => $table_width, 
-                          align => $column_align{$pre_table}, 
-                          sortable => 0,
-                          download_table=> $download_table);
-      print "$html";
+					 my $counter = 0;
+					 foreach my $row (@data){
+							## add link to col1
+							if ($row->[0]=~ /^([^\|]+)\|(.*)$/){	
+								$row->[0] = "<a href='$ptm_summary_url$2' target='_blank' title='get ptm protein list'>$1</a>";
+							}
+							my $n = scalar @$row;
+							if ($counter == 0){
+								 for my $i (1..$n-1){
+									 push @{$column_align{$pre_table}}, 'center';
+								 }
+							} 
+							$counter++;
+						}
+				 }
+				 $download_table = 1 if ($pre_table eq 'dataset_contrib_table');
+	 
+				 $html = $atlas->create_table (data => \@data,
+														column_names=> $headings,
+														table_name => $table_names{$pre_table},
+														table_id => $pre_table,
+														nowrap => \@noWrap,
+														width => $table_width, 
+														align => $column_align{$pre_table}, 
+														sortable => 0,
+														download_table=> $download_table);
+				print "$html";
+      }
       $html ='';
       @data = (); 
       my @values = split (/\t/, $line, -1);
@@ -1664,9 +1607,7 @@ sub generate_html_from_file {
       push @data,\@values;
     }
     $pre_table=$table;
-
   }
-  my $cat_plot_data; 
   if ($table eq 'cat_plot'){
     $cat_plot_data=\@data;
   }
@@ -1681,6 +1622,12 @@ sub generate_html_from_file {
 		$html = get_peptide_length_charge_distribution(data_path=>$charge_length_data_path);
 		print $html;
 	}
+  if ($chr_plot_data){
+    $html =  $atlas->display_chromosome_coverage_plotly(
+              data_ref=> $chr_plot_data,
+            );
+    print "$html";
+  }
 
   if ($cat_plot_data){
     $html = $atlas->display_peptide_sample_category_plotly(

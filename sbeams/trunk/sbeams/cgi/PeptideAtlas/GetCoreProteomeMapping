@@ -181,6 +181,8 @@ sub handle_request {
 
   #### Set some specific settings for this program
   my $CATEGORY="Get Core Proteome Mapping";
+  $CATEGORY="Get Proteome Mapping" if ($build_name =~ /borrelia/i);
+  
   $TABLE_NAME="AT_GetCoreProteomeMapping" unless ($TABLE_NAME);
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetCoreProteomeMapping";
 
@@ -431,16 +433,22 @@ sub handle_request {
       ["Gene_Name","NCM.Gene_Name","Gene Symbol"],
       ["nextprot_accession", "NCM.nextprot_accession","Gene Accession"],
       ["primary_isoform", "NCM.Primary_Isoform", "Primary Isoform"],
+      ["Uniprot_Accession", "NCM.Uniprot_Accession", "Uniprot"],
       ["Ensembl_Accession", "NCM.Ensembl_Accession", "Ensembl Gene"],
       ["RefSeq_Accession", "NCM.RefSeq_Accession", "RefSeq Protein"],
-      ["Uniprot_Accession", "NCM.Uniprot_Accession", "Uniprot"],
+      ["GeneBank_Accession", "NCM.GeneBank_Accession", "GeneBank Protein"],
       ["Chromosome", "NCM.Chromosome","Chromosome"],
       ["Start","NCM.Start", "Start"],
       ["End","NCM.Stop", "End"],
+      ["Strand","NCM.Strand", "Strand"],
       ["n_neXtProt_entry", "NCM.n_neXtProt_entry", "N Chromosomal Location"],
       ["Protein_existence", "NCM.Protein_existence", "Protein Evidence"],
       ["PeptideAtlas_Category", "NCM.PeptideAtlas_Category", "PeptideAtlas"],
       ["nobs", "NCM.n_obs", "N Distinct Peptides"],
+      ["mass", "NCM.mass", "mass"],
+      ["pI", "NCM.pI","pI"],
+      ["gravy","NCM.gravy","gravy"],
+      ["length", "NCM.length", "length"],
       ["Description", "NCM.Description", "Description"],
       ["accession", "replace(NCM.nextprot_accession,'PeptideAtlas_', '')","Accession"],
     );
@@ -455,6 +463,7 @@ sub handle_request {
     column_titles_ref=>\@column_titles
   );
   $hidden_cols{Accession} = 1;
+  $hidden_cols{'GeneBank Protein'} = 1 if ($build_name !~ /borrelia/i);
 
   my $sql = qq~
 		SELECT $columns_clause
@@ -484,16 +493,23 @@ sub handle_request {
   $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
 
 
-  $url_cols{'PeptideAtlas'} = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=".$parameters{atlas_build_id}
+  if ($build_name =~ /borrelia/i){
+    $url_cols{'PeptideAtlas'} = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=".$parameters{atlas_build_id}
+                              ."&apply_action=$pass_action&protein_name=\%2V";
+  }else{
+    $url_cols{'PeptideAtlas'} = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=".$parameters{atlas_build_id}
                               ."&apply_action=$pass_action&protein_name=\%1V"; 
+  }
   if ($build_name =~ /^Arabidopsis/){ 
     $url_cols{'Gene Accession'} = "https://www.arabidopsis.org/servlets/Search?type=general&search_action=detail&method=1&show_obsolete=F&name=\%14V&".
                                 "sub_type=gene&SEARCH_EXACT=4&SEARCH_CONTAINS=1";
   }elsif($build_name =~ /human/i){
     $url_cols{'Gene Accession'} = "http://www.nextprot.org/db/entry/\%1V";
   }
-  $url_cols{'RefSeq Protein'} = "https://www.ncbi.nlm.nih.gov/protein/\%4V";
-  $url_cols{'Uniprot'} = "https://www.uniprot.org/uniprot/\%5V"; 
+  $url_cols{'RefSeq Protein'} = "https://www.ncbi.nlm.nih.gov/protein/\%5V";
+  $url_cols{'Uniprot'} = "https://www.uniprot.org/uniprot/\%3V";
+  $url_cols{'GeneBank Protein'} = "https://www.ncbi.nlm.nih.gov/protein/\%6V";
+
 
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
@@ -561,7 +577,7 @@ sub handle_request {
     );
 
     #### Display a plot of data from the resultset
-    $sbeams->displayResultSetPlot(
+    $sbeams->displayResultSetPlot_plotly(
       rs_params_ref=>\%rs_params,
       resultset_ref=>$resultset_ref,
       query_parameters_ref=>\%parameters,
@@ -595,9 +611,10 @@ sub displayTableSummary{
   my %protein_level_summary = ();
   my @rows = @{$resultset_ref->{data_ref}};
   my $sum = 0;
-  
+  my $cols = $resultset_ref->{column_hash_ref};
+ 
   foreach my $row (@rows){
-    my $level = $row->[9];
+    my $level = $row->[$cols->{PeptideAtlas_Category}];
     if ($level =~ /(\s+(to|by|from)\s+.*)/){
       $level =~ s/$1//;
     }
@@ -666,13 +683,19 @@ sub postProcessResultset {
   my $cols = $resultset_ref->{column_hash_ref};
   my %accession_list = ();
   my @new_result_set = ();
+  my ($build_name) = $sbeams->selectOneColumn( "SELECT atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE atlas_build_id = $parameters{atlas_build_id}" );
 
 
   for (my $i=0; $i<$n_rows; $i++) {
-    my $nextprot_acc = $resultset_ref->{data_ref}->[$i]->[$cols->{nextprot_accession}];
-    if (not defined $accession_list{$nextprot_acc}){
+    my $nonredundant_acc =  '';
+    if ($build_name !~ /borrelia/i){
+       $nonredundant_acc = $resultset_ref->{data_ref}->[$i]->[$cols->{nextprot_accession}];
+    }else{
+       $nonredundant_acc = $resultset_ref->{data_ref}->[$i]->[$cols->{primary_isoform}];
+    }
+    if (not defined $accession_list{$nonredundant_acc}){
       push @new_result_set, $resultset_ref->{data_ref}->[$i];
-      $accession_list{$nextprot_acc} = 1;
+      $accession_list{$nonredundant_acc} = 1;
     }
   }
   $resultset_ref->{data_ref} = \@new_result_set;
