@@ -641,6 +641,16 @@ Counts only primary reference proteome entries, so final tally may be smaller th
       'Keratin' => 'Is keratin according to description, or is in same group as a keratin' ,
       'Ig' => 'Is immunoglobulin according to description, or is in same group as an immunoglobulin' ,
       'Protein Description' => 'Description as taken from sequence database fasta file' ,
+      ## GetProteinsByExperiment
+
+			'Total Obs' => 'Total number of PSM observations in the experiment.',
+			'dSIn' => 'StPeter normalized spectral indexe score. Degenerate peptides were used in protein quantitation',
+			'dSIn_percentile' => 'percentile rank of dSIn score. 100 is the highest and 1 is the lowest ranking.',
+			'SIn' => 'StPeter normalized spectral indexe score. Degenerate peptides were not used in protein quantitation ',
+			'SIn_percentile' => 'percentile rank of SIn score. 100 is the highest and 1 is the lowest ranking',
+			'dNSAF' => 'StPeter normalized spectral abundance factor value. Degenerate peptides were used.',
+			'NSAF' => 'StPeter normalized spectral abundance factor value. Degenerate peptides were not used.',
+
   );
 
   if ( $args{labels} ) {

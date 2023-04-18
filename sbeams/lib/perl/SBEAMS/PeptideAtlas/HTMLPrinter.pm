@@ -2244,12 +2244,12 @@ sub get_proteome_coverage_new {
 
   if ($data_only){
     shift @{$result{table}};
-    my $i=0;
-    foreach my $row(@{$result{table}}){
-      my ($org_id, $name, $type, $pat_str)  = split(/,/, $patterns[$i]);
-      $row->[0] .="|$type,$pat_str";
-      $i++;
-    } 
+    #my $i=0;
+    #foreach my $row(@{$result{table}}){
+    #  my ($org_id, $name, $type, $pat_str)  = split(/,/, $patterns[$i]);
+    #  $row->[0] .="|$type,$pat_str";
+    #  $i++;
+    #} 
     unshift @{$result{table}} ,[qw(Database N_Entries N_Prots N_Obs_Prots Pct_Obs N_unObs_Prots)]; 
     return \%result;
   }else{
@@ -2826,6 +2826,85 @@ sub print_html_table_to_tsv{
   }
 
 }
+sub display_chromosome_coverage_plotly{
+  my $self = shift;
+  my %args = @_;
+  my $data_ref = $args{data_ref};
+  ## column names
+  #1. organism
+  #2. chromosome
+  #3. total count
+  #4. observed count
+  my %data = ();
+  my $max = 0;
+  my $charts = '<div style="width: 60vw">';
+  my %chromosome = ();
+  foreach my $row (@$data_ref){
+    my ($org, $chr,$total, $observed) = @$row;
+    $chromosome{$chr} =1;
+    $data{$org}{total}{$chr} = $total;
+    $data{$org}{obs}{$chr} = $observed;
+    #push @{$data{$org}{total}},[$chr, $total];
+    #push @{$data{$org}{obs}} , [$chr,$observed];
+    $max = $total if ($total > $max);
+  }
+  $max = sprintf("%.0f", log($max)/log(10));
+  my $n_orgs = scalar keys %data;
+  foreach my $org (keys %data){
+    my $plot_title = '';
+    my $chart;
+    my (@bdata_a, @bdata_b);
+    foreach my $chr (sort {$a cmp $b} keys %chromosome){
+      if ($data{$org}{total}{$chr}){
+        push @bdata_a, [$chr, $data{$org}{total}{$chr}];
+        push @bdata_b, [$chr, $data{$org}{obs}{$chr}];
+      }else{
+        push @bdata_a, [$chr, ''];
+        push @bdata_b, [$chr, ''];
+      }
+    }
+
+    if ($n_orgs > 1){
+      $chart = $self->plotly_barchart (data => [\@bdata_a, \@bdata_b],
+                                       names => ['total', 'observed'],
+																			 divName => "chr_cov_div_$org",
+																			 ytitle => 'Count',
+                                       dtick => 1,
+                                       xtickangle => 'tickangle:25',
+                                       yticktype => "type:'log',range:[0,$max],dtick:1",
+                                       layoutmargin => 'b:50',
+                                       title => $org);
+     }else{
+       $chart = $self->plotly_barchart (data => [\@bdata_a, \@bdata_b],
+                                       names => ['total', 'observed'],
+                                       divName => "chr_cov_div_$org",
+                                       ytitle => 'Count',
+                                       dtick => 1,
+                                       xtickangle => 'tickangle:25',
+                                       yticktype => "type:'log',range:[0,$max],dtick:1",
+                                       layoutmargin => 'b:50',
+                                       );
+     }
+    $charts .= qq~
+      <div id="chr_cov_div_$org"</div>
+      $chart
+    ~;   
+  }
+
+  my  $html .= $sbeams->make_toggle_section(
+      neutraltext =>"Chromosome Coverage",
+      sticky => 1,
+      barlink => 1,
+      visible => 1,
+      name => "chr_plots_div",
+      content => "<TABLE><TR><TD COLSPAN='5'>$charts</div></TD></TR></TABLE>",
+  );
+ 
+  return "$html";
+
+}
+
+
 sub display_peptide_sample_category_plotly{
   my $self = shift;
   my %args = @_;
@@ -2894,7 +2973,7 @@ sub display_peptide_sample_category_plotly{
 			var layout = {
         legend:{x: 0.029,y: 1.1},
 			  height: $height,
-        font: {size: 16},
+        font: {size: 12},
 				title:'Number of Distinct Peptides Per Million Observed Spectra',
         margin:{l: 350},
         hoverlabel:{bgcolor:'white'},
@@ -2923,8 +3002,11 @@ sub display_peptide_sample_category_plotly{
         }
 			}
 		</script>
-     <TABLE>
-       <A NAME='<B>Sample Category</B>'></A><DIV CLASS="hoverabletitle"><B>Peptide Identification by Sample Category</B></DIV>
+       <A NAME='<B>Sample Category</B>'></A><DIV CLASS="hoverabletitle"i onclick="toggle_content('sample_cat_div')">
+       <IMG ID='sample_cat_div_gif'  SRC='/devZS/sbeams/images/small_gray_minus.gif'>
+       <B>Peptide Identification by Sample Category</B></DIV>
+       <DIV ID='sample_cat_div' class="visible">
+       <TABLE><TR><TD COLSPAN='5'>
        <TR> 
         <TD><button type='button' id='toggle_button' onclick=toggle_plot()>Show Distinct Peptide Per Million Observed Spectra Plot</button>
            <div style="width: 80vw">
@@ -2933,8 +3015,8 @@ sub display_peptide_sample_category_plotly{
             <br><br>
            <div>
        </TD>
-       </TR> 
-    </TABLE>
+       </TR>
+       </TD></TR></TABLE></DIV> 
 		<script type="text/javascript" charset="utf-8">
       $plot_js
 		</script>
@@ -3552,10 +3634,15 @@ sub plotly_barchart {
   my $title = $args{title} || '';
   my $dtick = $args{dtick} || 5;
   my $colors = $args{colors} ;
-  
+  my $xtickangle = $args{xtickangle} || '';
+  my $layoutmargin = $args{layoutmargin} || '';
+  my $yticktype = $args{yticktype} || '';
+
   my $plot_js = '';
   my $counter = 0;
   my @ts = ();
+  my $layout_title = "title:'$title'";
+
   foreach my $data (@$all_data){
 		my @category = () ;
 		my @cnt = () ;
@@ -3587,10 +3674,20 @@ sub plotly_barchart {
 				var data = [$ts_str];
 				var layout = {
 					barmode: 'group',
-          font: {size: 18},
-          legend:{x: 0.02,y: 1.25 ,font: { size: 12}},
-          xaxis: {type: 'category', dtick:$dtick,title: '$xtitle'},
-          yaxis: {title: '$ytitle'},
+          font: {size: 12},
+          //legend:{x: 0.02,y: 1.25 ,font: { size: 12}},
+          legend: {x:1,  xanchor: 'right',y:1, font: { size: 12}},
+          xaxis: {type: 'category',
+                  dtick:$dtick,
+                  title: '$xtitle', 
+                  ticklabeloverflow:'allow',
+                  $xtickangle
+                   },
+          yaxis: {title: '$ytitle',
+                  $yticktype
+                 },
+          $layout_title,
+          margin:{$layoutmargin}
         };
         Plotly.newPlot('$divname', data, layout);
    ~;
@@ -4098,7 +4195,6 @@ sub draw_tree{
   ~;
   return $html;
 }
-
 
 sub draw_venn {
   my $self = shift;

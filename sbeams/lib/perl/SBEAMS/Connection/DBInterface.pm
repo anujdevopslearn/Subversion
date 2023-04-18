@@ -1005,7 +1005,6 @@ sub selectSeveralColumns {
 	
     #### Convert the SQL dialect if necessary
     $sql = $self->translateSQL(sql=>$sql);
-
     my ($sth, $rv);
     eval {
       $sth = $dbh->prepare($sql) or croak $dbh->errstr;
@@ -3719,12 +3718,13 @@ sub displayResultSetControls {
 
     #### If there are plotting parameters set, include those
     my $plot_params = '';
-    foreach my $param_name ('rs_plot_type','rs_columnA','rs_columnB') {
+    foreach my $param_name ('rs_plot_type','rs_columnA','rs_columnB', 'groupbyvalue', 'groupbycolumn', 
+                            'is_equal','cmpto', 'histnorm') {
       if ($rs_params{$param_name}) {
         $plot_params .= "&$param_name=".$rs_params{$param_name};
       }
     }
-
+    #$log->error($plot_params);
 
     #### Display the URLs to reaccess these data
     if ($base_url =~ /ManageTable/) {
@@ -3876,8 +3876,8 @@ sub displayResultSetPlot_plotly {
       # If the plot_type is histogram, calc bins/cnts/titles 
       if ( $rs_params{rs_plot_type} =~ /histogram/) {
         my $plot_data = '';
-        if ($rs_params{rs_plot_type} !~ /overlaid_histogram/){
-					my $hdata = $column_info->{A}->{data};
+				my $hdata = $column_info->{A}->{data};
+        if (! $rs_params{groupbyvalue}){
 			
 					if ( $rs_params{rs_plot_type} ne 'discrete_histogram') { # continuous
 						$result = $self->histogram( data_array_ref => $hdata, quiet => 1 );
@@ -3902,6 +3902,7 @@ sub displayResultSetPlot_plotly {
 	#          $result = $self->discrete_value_histogram( data_array_ref => $hdata );
 						
 						if ( $result->{result} ne 'SUCCESS' ) {
+
 							my %tally;
 							for my $val ( @{$hdata} ) {
 								$val = '' if !defined $val;
@@ -3923,21 +3924,23 @@ sub displayResultSetPlot_plotly {
 							}
 							$result->{result} = 'SUCCESS';
 						}
-						if (! $result->{yaxis} || $result->{xaxis_disp}){
+
+						if (! $result->{yaxis} || ! $result->{xaxis_disp}){
 							$result=undef; 
 						}else{
 							my $ystr = join( ',', @{$result->{yaxis}} );
 							my $xstr = "'" . join( "','", @{$result->{xaxis_disp}} ) . "'";
 
 							$plot_data = qq~
-							 x: [$xstr],
-							 y: [$ystr],
+							 y: [$xstr],
+							 x: [$ystr],
 							 type: 'bar',
+               orientation: 'h'
 							~;
 						}
           }
 					if ($result->{result} ne 'SUCCESS') {
-						print "ERROR: Unable to calculate histogram for column ".$rs_params{rs_columnA};
+						print "ERROR: Unable to calculate histogram for column ".$rs_params{rs_columnA} ;
 						$result = undef; 
 					} else {
 						$plot .= qq~
@@ -3947,57 +3950,103 @@ sub displayResultSetPlot_plotly {
 						 $plot_data
 						}
 						];
-						Plotly.newPlot('plot_div', data);
+            var layout = {margin: {l: 200,'pad':10}};
+						Plotly.newPlot('plot_div', data, layout);
 						</script>
 						~;
 					}
         }else{
-          ### histograms
-          #my $hdata_a = $column_info->{A}->{data};
-          #my $hdata_b = $column_info->{B}->{data};
+          my ($hdata_a, $hdata_b, $is_discrete);
+          my $groupby_col = $rs_params{groupbycolumn};
+          my $groupby_value = $rs_params{groupbyvalue};
+          my $is_equal = $rs_params{is_equal};
+          my $compare_to = $rs_params{cmpto};
+
+          my $data_col = 'A';
+          $data_col  = 'B' if($groupby_col eq 'A');
+          $groupby_value =~ s/^\s+//;
+          $groupby_value =~ s/\s+$//;
+
+          my $histnorm = '';
+          my $y_label = "'Count'";
           my $counter=1;
-          my @column_names =();
+          $histnorm = "histnorm: 'percent'" if ($rs_params{histnorm} eq 'on');
+
           $plot .= '<script type="text/javascript" charset="utf-8">'; 
-          foreach my $col (keys %{$column_info}){
-             $plot .= "var x$counter = [";
-             foreach my $val (@{$column_info->{$col}->{data}}){
-                $plot .= "$val," if ($val ne '');
-             }
-             $plot =~ s/,$/];/;
-             $plot .= "\n";
-             push @column_names, $column_info->{$col}->{name};
-             $counter++;
+          my @n = grep (/[^\d\.]/, @{$column_info->{$data_col}->{data}});
+          $is_discrete = 1 if (@n);
+          for (my $i = 0; $i< @{$column_info->{$data_col}->{data}}; $i++){
+            my $val = $column_info->{$data_col}->{data}->[$i];
+            my $cat = $column_info->{$groupby_col}->{data}->[$i];
+            if ($is_discrete && $val eq ''){
+              $val = 'na';
+            }
+            next if($val eq '');
+
+            if($is_equal eq 'yes'){
+							if (lc($cat) eq lc ($groupby_value)){
+								push @$hdata_a, $val;
+							}
+              if ($compare_to eq 'all'){
+                push @$hdata_b, $val;
+              }else{
+								push @$hdata_b, $val if (lc($cat) ne lc ($groupby_value));
+							}
+            }else{
+              if (lc($cat) ne lc ($groupby_value)){
+                push @$hdata_a, $val;
+              }
+              if ($compare_to eq 'all'){
+                push @$hdata_b, $val;
+              }else{
+                push @$hdata_b, $val if (lc($cat) eq lc ($groupby_value));
+              }
+            }
           }
-          my $n=1;
-          while ($n < $counter){
-             $plot .= qq~
-								var trace$n = {
-									x: x$n,
-                  name: "$column_names[$n-1]",
-									opacity: 0.5, 
-									type: "histogram", 
-                };
-             ~;
-             $n++;
-        }
-        $n=2;
-        $plot .= "var data = [trace1";
-        while ($n < $counter){
-          $plot .= ",trace$n";
-          $n++;
-        }
-        $plot .= "];";
+          if ($is_discrete){
+            $plot .= "var xa= ['" . join("','", @$hdata_a) . "'];\n";
+            $plot .= "var xb= ['" . join("','", @$hdata_b) . "'];\n";
+          }else{
+						$plot .= 'var xa= [' . join(",", @$hdata_a) . "];\n";
+						$plot .= 'var xb= [' . join(",", @$hdata_b) . "];\n";
+          }
+          my $xname1 = "$groupby_value";
+          my $xname2 = "others";
+
+          $xname1 = "not '$groupby_value'" if ($is_equal eq 'no');
+          $xname2 = 'All' if ($compare_to eq 'all');
+          $plot .= qq~
+							var trace1 = {
+								y: xa,
+								name: "$xname1",
+								//opacity: 0.5, 
+								type: "histogram",
+								bingroup: '1',
+							  $histnorm 
+							};
+							var trace2 = {
+								y: xb,
+								name: "$xname2",
+								//opacity: 0.5,
+								type: "histogram",
+								bingroup: '1',
+							  $histnorm 
+							};
+							var data = [trace1, trace2];
+          ~;
+        my $y_label = "'Count'";
+        $y_label = "'%'" if ($rs_params{histnorm} eq 'on');
         $plot .= qq~
            var layout = {
-							barmode: "overlay", 
-							xaxis: {title: "Value"}, 
-							yaxis: {title: "Count"}
+							barmode: "bar", 
+							xaxis: {title: $y_label}, 
+							//yaxis: {title: "Value"},
+              margin: {l: 200,'pad': 10},
 						};
 						Plotly.newPlot('plot_div', data, layout);
             </script>
          ~;
          $result->{result} = 'SUCCESS'; 
-
        }
       #### If the plot_type is xypoints, plot it
       } elsif ( $rs_params{rs_plot_type} eq 'xypoints') {
@@ -4063,7 +4112,7 @@ sub displayResultSetPlot_plotly {
   
     # Continue with form
     print qq~
-    <TD VALIGN="TOP" WIDTH="50%">
+    <TD VALIGN="TOP" WIDTH="80%">
     <INPUT TYPE="hidden" NAME="rs_set_name" VALUE="$rs_params{set_name}">
     <TABLE>
     <TR><TD BGCOLOR="#E0E0E0">Plot Type</TD><TD>
@@ -4072,13 +4121,12 @@ sub displayResultSetPlot_plotly {
 
     my %plot_type_names = (
       'histogram'=>'Continuous Value Histogram of Column A',
-      'overlaid_histogram'=>'Continuous Value Histogram of A and B',
       'discrete_histogram'=>'Discrete Value Histogram of Column A',
       'xypoints'=>'Scatterplot B vs A',
     );
 
     $rs_params{rs_plot_type} ||= '';
-    foreach $element ('histogram', 'overlaid_histogram' , 'discrete_histogram','xypoints') {
+    foreach $element ('histogram','discrete_histogram','xypoints') {
       my $selected_flag = '';
       my $option_name = $plot_type_names{$element} || $element;
       $selected_flag = 'SELECTED' if $element eq $rs_params{rs_plot_type};
@@ -4086,7 +4134,7 @@ sub displayResultSetPlot_plotly {
     }
     print "</SELECT></TD></TR>";
 
-    foreach my $column_index ( 'A','B' ) {
+    foreach my $column_index ( 'A','B') {
       print qq~
         <TR><TD BGCOLOR="#E0E0E0">Column $column_index</TD>
         <TD><SELECT NAME="rs_column$column_index">
@@ -4106,7 +4154,36 @@ sub displayResultSetPlot_plotly {
     }
 
     my $plot_action = $args{use_tabbed_panes} ? 'VIEWPLOT' : 'VIEWRESULTSET';
+    my ($selectedA, $selectedB, $is_equal_yes, $is_equal_no, $cmp_all, $cmp_others,$histnorm_checkbox);
+    $selectedA = 'SELECTED' if ($rs_params{groupbycolumn} eq 'A');
+    $selectedB = 'SELECTED' if ($rs_params{groupbycolumn} eq 'B');
+    $is_equal_yes = 'SELECTED' if ($rs_params{is_equal} eq 'yes');
+    $is_equal_no = 'SELECTED' if ($rs_params{is_equal} eq 'no');
+    $cmp_all = 'SELECTED' if ($rs_params{cmpto} eq 'all');
+    $cmp_others = 'SELECTED' if ($rs_params{cmpto} eq 'others');
+    $histnorm_checkbox = '';
+    $histnorm_checkbox = 'checked="checked"' if ($rs_params{histnorm} eq 'on');
     print qq~
+      <TR><TD BGCOLOR="#E0E0E0">GroupBy</TD>
+        <TD><SELECT NAME="groupbycolumn">
+        <option $selectedA value="A">Column A</OPTION>
+        <option $selectedB value="B">Column B</OPTION>
+        </SELECT>
+        &nbsp;&nbsp;<label for="groupbyvalue" style="background-color:#E0E0E0">Selected Value</label>
+        <SELECT NAME="is_equal">
+        <option $is_equal_yes value="yes">Equal to</OPTION>
+        <option $is_equal_no value="no">Not Equal to</OPTION>
+        </SELECT>
+        <input type="text" id="groupbyvalue" name="groupbyvalue">
+        <label for="cmpto" style="background-color:#E0E0E0">Plot With</label> 
+        &nbsp;&nbsp;<SELECT NAME="cmpto">
+        <option $cmp_all value="all">All Values</OPTION> 
+        <option $cmp_others value="others">Other Values</OPTION>
+        </SELECT>
+        <label for="histnorm" style="background-color:#E0E0E0">Histnorm="percent"</label>
+        <INPUT TYPE=CHECKBOX NAME="histnorm" $histnorm_checkbox>
+       </TD>
+      </TR>
       <TR><TD></TD><TD>
       <INPUT TYPE="submit" NAME="apply_action" VALUE="$plot_action">
       </TD></TR></TABLE>
@@ -4372,7 +4449,7 @@ sub displayResultSetPlot {
       my $selected_flag = '';
       my $option_name = $plot_type_names{$element} || $element;
       $selected_flag = 'SELECTED'
-	if (defined($rs_params{rs_plot_type}) &&
+			if (defined($rs_params{rs_plot_type}) &&
 	    $element eq $rs_params{rs_plot_type});
       print "<option $selected_flag VALUE=\"$element\">$option_name\n";
     }
@@ -4623,7 +4700,6 @@ sub parseResultSetParams {
     q=>$q,parameters_ref=>\%rs_params,
     columns_ref=>\@desired_params,
     add_standard_params=>'NO');
-
 
   #### Remap them to names without the rs_.  This is crazy.
   $rs_params{set_name} = $rs_params{rs_set_name}
