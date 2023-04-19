@@ -97,10 +97,10 @@ sub getTabMenu {
     } elsif( ($PROG_NAME =~ /^Search/) ||  ($PROG_NAME =~ /^Search\?(\S+)/ ))
     {
        $current_tab=1;
-    } elsif( ($PROG_NAME =~ /^GetPeptide/) || ($PROG_NAME =~ /^GetPeptide\?(\S+)/ ))
+    } elsif( ($PROG_NAME =~ /^GetPeptide$/) || ($PROG_NAME =~ /^GetPeptide\?(\S+)/ ))
     {
        $current_tab=3;
-    } elsif ( ($PROG_NAME =~ /^GetProtein/) || ($PROG_NAME =~ /GetProtein\?(\S+)/ ))
+    } elsif ( ($PROG_NAME =~ /^GetProtein$/) || ($PROG_NAME =~ /GetProtein\?(\S+)/ ))
     {
        $current_tab=3;
        $current_subtab=2;
@@ -194,6 +194,7 @@ sub getTabMenu {
              atextColor => '5e6a71', # ISB gray
              itextColor => 'ff0000', # red
              isDropDown => '1',
+             extra_width => 650,
              # paramName => 'mytabname', # uses this as cgi param
              # maSkin => 1,   # If true, use MA look/feel
              # isSticky => 0, # If true, pass thru cgi params
