@@ -494,6 +494,8 @@ sub postProcessResultset {
       
       ### filter no choice ids
       my $modified_pepseq_w_n = $modified_pepseq;
+      next if ($residue eq 'n' && $modified_pepseq !~ /^\[/);
+
       if ($ptm_residues =~ /n/ && $modified_pepseq !~ /^n/){
         $modified_pepseq_w_n = 'n'. $modified_pepseq_w_n;
       }
