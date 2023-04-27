@@ -61,8 +61,10 @@ my $fastafile = $OPTIONS{fasta} || die $USAGE;
 my $enriched_list = $OPTIONS{"list"} || die $USAGE;
 my $all_buildpath = $OPTIONS{build_path} || die $USAGE;
 my $ptm_type = $OPTIONS{ptm_type} || die $USAGE;
-my $ptm_residue = $ptm_type;
-$ptm_residue =~ s/:.*//;
+$ptm_type =~ /^(.*):(.*)$/;
+my $ptm_residue = $1; 
+my $ptm_name = $2;
+
 
 main();
 exit;
@@ -132,15 +134,8 @@ sub main {
 #print Dumper ($peptide_obs->{GCNPLAQTGRSK});
 
   foreach my $pep (keys %$peptide_obs){
-    foreach my $modpep(keys %{$peptide_obs->{$pep}}){
+    foreach my $modpep (keys %{$peptide_obs->{$pep}}){
        my $modpep_w_term = $modpep;
-       if ($modpep_w_term !~ /n\[/){
-         $modpep_w_term = 'n'.$modpep_w_term;
-       }
-       if ($modpep_w_term !~ /c\[/){
-         $modpep_w_term = $modpep_w_term.'c';
-       }
-       
        my @elms =  split(/(?=[a-zA-Z])/, $modpep_w_term) ; 
        my $pos = 0;
        foreach my $i (0..$#elms){
@@ -171,11 +166,6 @@ sub main {
     }
   }
 
-	 #foreach my $pos (keys %{$peptides{'GNPLAQTGR'}}){
-		# foreach my $c(("enriched-but-non-mod", "non-enriched", "enriched-with-mod")){
-		# }
-	 #}
-
 	open (I, "<$ptm_PAIdentlistFile_filtered") or die "cannot open $ptm_PAIdentlistFile_filtered\n";
 	open (M, "<$ptm_peptide_mapping_file") or die "cannot open $ptm_peptide_mapping_file\n";
 
@@ -189,27 +179,42 @@ sub main {
 		my $pep = $tmp[3];
     my $ptm_sequence = $tmp[19];
     my $modified_sequence = $tmp[5];
-    my $type='';
-    next if ($ptm_sequence !~ /$ptm_type/);
-    #[STY:79.9663]RRES(0.997)RS(0.997)PPPY(0.007)EK
-    $modified_sequence = get_modified_sequence ($modified_sequence);
+    my $mod_type='';
+    
+    next if ($ptm_sequence !~ /\[$ptm_type\]/);
+    ## skip: mod seq [TMT6plex]-PK[TMT6plex]GPSGSPWYGSDR, ptm sequence [nK:Acetyl]n(0.992)PK(0.008)GPSGSPWYGSDR
+    $ptm_type =~ /^(.*):(.*)$/;
+    $mod_type = $2;
+    if ($modified_sequence !~ /$mod_type/){
+      print "WARNING: modified_sequence=$modified_sequence\tptm_sequence=$ptm_sequence\n";
+      next;
+    }
 
+
+    #[STY:79.9663]RRES(0.997)RS(0.997)PPPY(0.007)EK
 		$ptm_sequence =~ /\[$ptm_type\](\S+)/;
     $ptm_sequence = $1;
- 
     ## only obs has ptm score is counted
  		$peptides{$pep}{obsall}++;
-    if ($modified_sequence =~ /^\[[^\]]+\]\-/){ $modified_sequence =~ s/^(\[[^\]]+\])\-/n$1/; print "$modified_sequence\n";}
-    if ($modified_sequence =~ /\-\[[^\]]+\]$/){$modified_sequence =~ s/\-(\[[^\]]+\])$/c$1/;}
 
-    my @n_ptm_sites = $modified_sequence =~ /([$ptm_residue]\[)/g;
+    if ($modified_sequence !~ /^n/){
+      $modified_sequence = "n$modified_sequence";
+    }
+    if ($modified_sequence !~ /c$/){
+      $modified_sequence = "$modified_sequence";
+    }
+    $modified_sequence = get_modified_sequence ($modified_sequence);
+    #$modified_sequence =~ s/^(n|n\[[^\]]+\])-/$1/;
+    #$modified_sequence =~ s/-(c|c\[[^\]]+\])$/c$1/; 
+    #print "$modified_sequence\n";
+
+    my @n_ptm_sites = $modified_sequence =~ /([${ptm_residue}]\[${ptm_name}\])/g;
     my $n = scalar @n_ptm_sites;
     my $pep_w_term = 'n'.$pep.'c';
-    my @n_potential_sites = $pep_w_term =~ /([$ptm_residue])/g;
+    my @n_potential_sites = $pep_w_term =~ /([${ptm_residue}])/g;
 
     #print  "$modified_sequence $ptm_residue n_potential_sites=". join(",", @n_potential_sites) ."\n" if ($pep =~ /ELSPRAAELTNLFESR/);
     #print "$pep_w_term $ptm_residue n_ptm_sites=". join(",", @n_ptm_sites) ."\n" if ($pep =~ /ELSPRAAELTNLFESR/);
-
 
     if ($n >=3 ){
        $peptides{$pep}{'obs3+'}++;
@@ -224,23 +229,23 @@ sub main {
        $elms[$i] =~ /([a-zA-Z])\(([\.\d]+)\)/;
        my $score = $2;
        my $res = $1;
-       #print "$ptm_sequence $i $elms[$i],$res,$score\n";
-       if ( $score >= 0 && $score < 0.01 ){
-         $peptides{$pep}{$pos}{$res}{nP01}++;
-       }elsif($score >= 0.01 && $score < 0.05 ){ 
-        $peptides{$pep}{$pos}{$res}{nP05}++ ;
-       }elsif($score >= 0.05 && $score < 0.20 ){
-        $peptides{$pep}{$pos}{$res}{nP19}++ ;
-       }elsif ($score >= 0.20 && $score < 0.80){
-         $peptides{$pep}{$pos}{$res}{nP81}++ ;
-       }elsif ($score >= 0.80 && $score < 0.95){
-         $peptides{$pep}{$pos}{$res}{nP95}++ ;
-       }elsif ($score >= 0.95 && $score < 0.99){
-         $peptides{$pep}{$pos}{$res}{nP99}++ ;
-       }else{
-         if (scalar @n_potential_sites == scalar @n_ptm_sites && $score == 1 ){
-           $peptides{$pep}{$pos}{$res}{"no-choice"}++;
-         }else{
+
+       if (scalar @n_potential_sites == scalar @n_ptm_sites){
+          $peptides{$pep}{$pos}{$res}{"no-choice"}++;
+       }else{ 
+				 if ( $score >= 0 && $score < 0.01 ){
+					 $peptides{$pep}{$pos}{$res}{nP01}++;
+				 }elsif($score >= 0.01 && $score < 0.05 ){ 
+					$peptides{$pep}{$pos}{$res}{nP05}++ ;
+				 }elsif($score >= 0.05 && $score < 0.20 ){
+					$peptides{$pep}{$pos}{$res}{nP19}++ ;
+				 }elsif ($score >= 0.20 && $score < 0.80){
+					 $peptides{$pep}{$pos}{$res}{nP81}++ ;
+				 }elsif ($score >= 0.80 && $score < 0.95){
+					 $peptides{$pep}{$pos}{$res}{nP95}++ ;
+				 }elsif ($score >= 0.95 && $score < 0.99){
+					 $peptides{$pep}{$pos}{$res}{nP99}++ ;
+				 }else{
            $peptides{$pep}{$pos}{$res}{nP100}++ ;
          }
        }
@@ -310,19 +315,18 @@ sub main {
         $pos--;
       }
       #print "\n########### $pep $m[$cnt] $mpos $pos\n" if ($pep eq 'KPAAEKPVEEK');
-
       if (defined  $peptides{$pep}){
 				$protInfo{$prot}{$pos}{res}{$m[$cnt]}{obsall} += $peptides{$pep}{obsall};
 				$protInfo{$prot}{$pos}{res}{$m[$cnt]}{obs1} += $peptides{$pep}{obs1};
 				$protInfo{$prot}{$pos}{res}{$m[$cnt]}{obs2} += $peptides{$pep}{obs2};
 				$protInfo{$prot}{$pos}{res}{$m[$cnt]}{'obs3+'} += $peptides{$pep}{'obs3+'};
-				if (not defined  $protInfo{$prot}{$pos}{representive_peptide}){
-					 $protInfo{$prot}{$pos}{representive_peptide}{pep} = "$pep" ;
-					 $protInfo{$prot}{$pos}{representive_peptide}{cnt} = $peptides{$pep}{obsall};
+				if (not defined  $protInfo{$prot}{$pos}{$m[$cnt]}{representive_peptide}){
+					 $protInfo{$prot}{$pos}{$m[$cnt]}{representive_peptide}{pep} = "$pep" ;
+					 $protInfo{$prot}{$pos}{$m[$cnt]}{representive_peptide}{cnt} = $peptides{$pep}{obsall};
 				}else{
-					 if($peptides{$pep}{obsall} > $protInfo{$prot}{$pos}{representive_peptide}{cnt}){
-						 $protInfo{$prot}{$pos}{representive_peptide}{pep} = "$pep" ;
-						 $protInfo{$prot}{$pos}{representive_peptide}{cnt} = $peptides{$pep}{obsall};
+					 if($peptides{$pep}{obsall} > $protInfo{$prot}{$pos}{$m[$cnt]}{representive_peptide}{cnt}){
+						 $protInfo{$prot}{$pos}{$m[$cnt]}{representive_peptide}{pep} = "$pep" ;
+						 $protInfo{$prot}{$pos}{$m[$cnt]}{representive_peptide}{cnt} = $peptides{$pep}{obsall};
 					 }
 				}
         
@@ -333,7 +337,7 @@ sub main {
           #print "### $i \n" if ($pep eq 'KPAAEKPVEEK');
           foreach my $c (@prob_categories){
             if (defined $peptides{$pep}{$i}{$m[$cnt]}{$c}){
-              #print "$prot $pos $m[$cnt] $c $peptides{$pep}{$i}{$m[$cnt]}{$c} \n" if ($pep eq 'KPAAEKPVEEK') ;
+              #print "$prot $pos $m[$cnt] $c $peptides{$pep}{$i}{$m[$cnt]}{$c} \n" if ($pep eq 'PKGPSGSPWYGSDR' || $pep eq 'PKGPSGSPWYGSDRVK' ) ;
               $protInfo{$prot}{$pos}{res}{$m[$cnt]}{$c} += $peptides{$pep}{$i}{$m[$cnt]}{$c};
             }
           }
@@ -406,7 +410,7 @@ sub main {
 					}else{
 						print OUT "no\t";
 					}
-					print OUT "$protInfo{$prot}{$pos}{representive_peptide}{pep}\t$ptm_type\n";
+					print OUT "$protInfo{$prot}{$pos}{$res}{representive_peptide}{pep}\t$ptm_type\n";
 				}
       }else{
          print OUT "$prot\t$pos\t$aa\t";
@@ -460,7 +464,6 @@ sub readIdentFile {
     my $id =  $columns[0];
     my $peptideSequence = $columns[3];
     my $modifiedSequence = $columns[5];
-    
       
     ## need to consider mod mass. do it later 
     if($peptideSequence !~ /[$ptm_residue]/){
@@ -468,11 +471,19 @@ sub readIdentFile {
          next;
        }
     }
-    ## acetyl
-    $modifiedSequence = get_modified_sequence($modifiedSequence);
 
-    #print "$modifiedSequence\n" if ($line =~ /E11409_2p_5454_HanChao_T30_1.17997.17997.4/);
- 
+    if ($modifiedSequence !~ /^n/){
+      $modifiedSequence = "n$modifiedSequence";
+    }
+    if ($modifiedSequence !~ /c$/){
+      $modifiedSequence = "$modifiedSequence";
+    }
+    ## remove all non-ptm_type modes 
+    $modifiedSequence = get_modified_sequence($modifiedSequence);
+    $modifiedSequence =~ s/^(n|n\[[^\]]+\])-/$1/;
+    $modifiedSequence =~ s/-(c|c\[[^\]]+\])$/c$1/;
+    #print "$modifiedSequence\n";
+
     # non-enriched data in phospho build not used 
     if ($tag =~ /ptm/i && defined $enriched_list->{$id}){
        $peptides->{$peptideSequence}{$modifiedSequence}{enriched}++;
@@ -489,7 +500,6 @@ sub readIdentFile {
 
 }
 ###############################################################################
-# writeSummaryFile
 ###############################################################################
 sub writeSummaryFile {
 
@@ -521,17 +531,23 @@ sub writeSummaryFile {
 # #############################################################################
 sub get_modified_sequence {
   my $modified_sequence = shift;
-	if ($ptm_type =~ /[nK]/){
-		$modified_sequence =~ s/n\[43\]/z4444/g;
-		$modified_sequence =~ s/K\[170\]/K1111/g;
-		$modified_sequence =~ s/\[\d+\]//g;
-		$modified_sequence =~ s/n//;
-		$modified_sequence =~ s/z4444/n\[43\]/g;
-		$modified_sequence =~ s/K1111/K\[170\]/g;
-	}elsif($ptm_type =~ /[STY]/){
-		$modified_sequence =~ s/([ncA-RU-XZ])\[\d+\]+/$1/g;
-		$modified_sequence =~ s/[nc]//g;
-	}
+#	if ($ptm_type =~ /[nK]/){
+#		$modified_sequence =~ s/n\[43\]/z4444/g;
+#		$modified_sequence =~ s/K\[170\]/K1111/g;
+#		$modified_sequence =~ s/\[\d+\]//g;
+#		$modified_sequence =~ s/n//;
+#		$modified_sequence =~ s/z4444/n\[43\]/g;
+#		$modified_sequence =~ s/K1111/K\[170\]/g;
+#	}elsif($ptm_type =~ /[STY]/){
+#		$modified_sequence =~ s/([ncA-RU-XZ])\[\d+\]+/$1/g;
+#		$modified_sequence =~ s/[nc]//g;
+#	}
+  #print "$modified_sequence -> ";
+  $modified_sequence =~ s/([${ptm_residue}])(\[${ptm_name}\])/$1#/g;
+  $modified_sequence =~ s/\[[^\]]+\]//g;
+  $modified_sequence =~ s/#/\[${ptm_name}\]/g;
+  #print "$modified_sequence\n";
+ 
   return $modified_sequence;
 }
 
