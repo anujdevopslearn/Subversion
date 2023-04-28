@@ -28,7 +28,9 @@ use POSIX;
 use Data::Dumper;
 use URI::Escape;
 use Storable qw(nstore retrieve);
-use Time::HiRes qw( usleep ualarm gettimeofday tv_interval );
+use Time::HiRes qw( usleep ualarm gettimeofday tv_interval time);
+use POSIX qw(strftime);
+
 use Digest::MD5 qw( md5_hex );
 use JSON;
 use GD::Graph::bars;
@@ -4876,14 +4878,21 @@ sub writeResultSet {
     my $is_new_resultset = 0;
     if ($$resultset_file_ref eq "SETME") {
       $is_new_resultset = 1;
-      my ($sec,$min,$hour,$mday,$mon,$year) = localtime(time);
-      my $timestr = strftime("%Y%m%d-%H%M%S",$sec,$min,$hour,$mday,$mon,$year);
+      #my ($sec,$min,$hour,$mday,$mon,$year) = localtime(time);
+      #my $timestr = strftime("%Y%m%d-%H%M%S",$sec,$min,$hour,$mday,$mon,$year);
+      my $t = time;
+      my $timestr = strftime "%Y%m%d-%H%M%S", localtime $t;
+      $timestr .= sprintf "-%03d", ($t-int($t))*1000;
       $$resultset_file_ref = $file_prefix . $self->getCurrent_username() .
         "_" . $timestr;
     } elsif ($$resultset_file_ref =~ /SETME/ ) {
       $is_new_resultset = 1;
-      my ($sec,$min,$hour,$mday,$mon,$year) = localtime(time);
-      my $timestr = strftime("%Y%m%d-%H%M%S",$sec,$min,$hour,$mday,$mon,$year);
+      #my ($sec,$min,$hour,$mday,$mon,$year) = localtime(time);
+      #my $timestr = strftime("%Y%m%d-%H%M%S",$sec,$min,$hour,$mday,$mon,$year);
+      my $t = time;
+      my $timestr = strftime "%Y%m%d-%H%M%S", localtime $t;
+      $timestr .= sprintf "-%03d", ($t-int($t))*1000;
+
       $$resultset_file_ref =~ s/SETME/$timestr/g;
     }
     my $resultset_file = $$resultset_file_ref;
