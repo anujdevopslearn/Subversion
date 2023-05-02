@@ -1525,8 +1525,8 @@ sub generate_html_from_file {
 					 if (scalar @$headings >= 5){
 							foreach my $row (@data){
 								$row->[0] =~ /^(.*)\|(.*)$/;
-								$row->[0] = $1;
-                my $mapping_id = $2;
+								$row->[0] = $2;
+                my $mapping_id = $1;
                 my $uniprot_name_contraint = '';
                 if ($row->[0] =~ /Core/i){
                   $uniprot_name_contraint = '&uniprot_name_constraint=%5BA-Z%5D%25';
@@ -1565,16 +1565,51 @@ sub generate_html_from_file {
 						$download_table =1;
 				 }
 
+         my %ptm_plot_data =();
 				 if ($pre_table eq 'ptm_coverage'){
 					 my $ptm_summary_url = "$CGI_BASE_DIR/PeptideAtlas/GetPTMSummary?row_limit=50000&atlas_build_id=$build_id".
 																 "&display_options=proteinView&ptm_type=STY%3APhospho&action=QUERY".
 																 "&redundancy_constraint=on&proteome_component=";
 
 					 my $counter = 0;
+           my %colnames = ();
+           my %col2residue = ();
+           my $residue = '';
+           for (my $i=1; $i < @$headings; $i++){
+              if ($headings->[$i] =~ /^total_(\w)_.*$/){
+                 $residue = $1;
+              }
+              my $colname = $headings->[$i];
+              $colname =~ s/_\w_sites/_sites/;
+              $colnames{$i} = $colname;
+							$col2residue{$i} = $residue;
+           }
+
 					 foreach my $row (@data){
+							my $proteome = $row->[0];
+							$proteome =~ s/\|.*//;
 							## add link to col1
-							if ($row->[0]=~ /^([^\|]+)\|(.*)$/){	
+							if ($row->[0]=~ /^([^\|]+)\|(.*)$/){
 								$row->[0] = "<a href='$ptm_summary_url$2' target='_blank' title='get ptm protein list'>$1</a>";
+							}
+							if ($proteome =~ /(core|^Araport11$)/i){
+								foreach my $i(1..scalar @$row -1){ 
+									my $val =  $row->[$i];
+									$val =~ s/\s.*//;
+									$val =~ s/,//g;
+                  if ($colnames{$i} =~ /nP(\.\d+)\-([\.\d]+)/){
+                    my $xlabel = '';
+                    if ($2 != 1){
+                      $xlabel = "0$1<=nP>0$2";
+                    }else{
+                      $xlabel = "nP>=0$1";
+                    }
+									  push @{$ptm_plot_data{data}{$col2residue{$i}}},["$xlabel",$val];
+                  }elsif($colnames{$i} =~ /no-choice/){
+                    push @{$ptm_plot_data{data}{$col2residue{$i}}},["$colnames{$i}",$val];
+                  }
+								}
+								$ptm_plot_data{label} = $proteome;
 							}
 							my $n = scalar @$row;
 							if ($counter == 0){
@@ -1586,6 +1621,21 @@ sub generate_html_from_file {
 						}
 				 }
 				 $download_table = 1 if ($pre_table eq 'dataset_contrib_table');
+         my $plot_html = '';
+         if ($pre_table eq 'ptm_coverage' && %ptm_plot_data){
+					 $plot_html .= $atlas ->plotly_barchart (data => [$ptm_plot_data{data}{S}, $ptm_plot_data{data}{T}, $ptm_plot_data{data}{Y}],
+																				 names => ['S', 'T', 'Y'],
+																				 divName => "ptm_cov_plot_div",
+																				 ytitle => 'Count',
+																				 dtick => 1,
+																				 title => $ptm_plot_data{label},
+                                         barlabel => 1
+																				 #xtickangle => 'tickangle:25',
+																				 #yticktype => "type:'log',range:[0,$max],dtick:1",
+																				 #layoutmargin => 'b:50',
+                                         );
+				  	$plot_html .= "<div><div style=\"width: 50vw\" id=\"ptm_cov_plot_div\"</div>$plot_html</div>\n";
+         }
 	 
 				 $html = $atlas->create_table (data => \@data,
 														column_names=> $headings,
@@ -1595,7 +1645,9 @@ sub generate_html_from_file {
 														width => $table_width, 
 														align => $column_align{$pre_table}, 
 														sortable => 0,
-														download_table=> $download_table);
+                            plot_html => $plot_html,
+														download_table=> $download_table,
+                            );
 				print "$html";
       }
       $html ='';
