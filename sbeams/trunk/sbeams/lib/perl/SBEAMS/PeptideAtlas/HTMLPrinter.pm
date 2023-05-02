@@ -2870,6 +2870,7 @@ sub display_chromosome_coverage_plotly{
 																			 divName => "chr_cov_div_$org",
 																			 ytitle => 'Count',
                                        dtick => 1,
+                                       barlabel => 1,
                                        xtickangle => 'tickangle:25',
                                        yticktype => "type:'log',range:[0,$max],dtick:1",
                                        layoutmargin => 'b:50',
@@ -2883,6 +2884,7 @@ sub display_chromosome_coverage_plotly{
                                        xtickangle => 'tickangle:25',
                                        yticktype => "type:'log',range:[0,$max],dtick:1",
                                        layoutmargin => 'b:50',
+                                       barlabel => 1
                                        );
      }
     $charts .= qq~
@@ -3637,6 +3639,7 @@ sub plotly_barchart {
   my $xtickangle = $args{xtickangle} || '';
   my $layoutmargin = $args{layoutmargin} || '';
   my $yticktype = $args{yticktype} || '';
+  my $barlabel = $args{barlabel} || 0;
 
   my $plot_js = '';
   my $counter = 0;
@@ -3653,16 +3656,22 @@ sub plotly_barchart {
 		my $category_str = join("','", @category);
 		my $cnt_str = join(",", @cnt);
     my $marker = '';
+    my $bartext = '';
+
     if ($colors && $colors->[$counter]){
       $marker = "marker: {color: '$colors->[$counter]";
     }
-    
+    if ($barlabel){
+       $bartext = "text:y$counter.map(String),textposition:'outside',cliponaxis:false,";
+    }
 		$plot_js .= qq~
+        y$counter = [$cnt_str];
 				var t$counter = {
 					x: ['$category_str'],
-					y: [$cnt_str],
+					y: y$counter,
 					name: '$names->[$counter]', 
 					type: 'bar',	
+          $bartext
 				  $marker	
 				};
 			~;
@@ -3777,7 +3786,7 @@ sub create_table {
       barlink => 1,
       visible => 1,
       name => $table_id."_div",
-      content => "$plot_html<TABLE><TR><TD COLSPAN='5'>$heading_info</TD></TR>$table</TABLE>",
+      content =>"<TABLE><TR><TD COLSPAN='5'>$plot_html</td></tr><TR><TD COLSPAN='5'>$heading_info</TD></TR>$table</TABLE>",
   );
 
   return $html;
