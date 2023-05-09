@@ -1592,7 +1592,7 @@ sub generate_html_from_file {
 							if ($row->[0]=~ /^([^\|]+)\|(.*)$/){
 								$row->[0] = "<a href='$ptm_summary_url$2' target='_blank' title='get ptm protein list'>$1</a>";
 							}
-							if ($proteome =~ /(core|^Araport11$)/i){
+							if ($proteome =~ /(core|^Araport11$|^NeXtProt$)/i){
 								foreach my $i(1..scalar @$row -1){ 
 									my $val =  $row->[$i];
 									$val =~ s/\s.*//;
