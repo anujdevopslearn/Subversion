@@ -147,7 +147,7 @@ my $show_image = 0;
 			if (-e "$build_path/analysis/build_detail_tables.tsv") {
          print "$page";
 
-				 generate_html_from_file (file => "$build_path/analysis/build_detail_tables.tsv.tmp",
+				 generate_html_from_file (file => "$build_path/analysis/build_detail_tables.tsv",
                                   build_id => $build_id,
                                   build_path => $build_path);
 				 exit; 
