@@ -364,7 +364,9 @@ sub handle_request {
 
   #### Build ROWCOUNT constraint
   $parameters{row_limit} = 50000 unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
-  my $limit_clause = "TOP $parameters{row_limit}";
+  $parameters{row_limit} = '' if ($parameters{proteome_component} && $parameters{display_options} =~ /proteinView/);
+
+  my $limit_clause = "TOP $parameters{row_limit}" if ($parameters{row_limit});
   my @column_array = (
         ["biosequence_name","BS.biosequence_name","Biosequence Name"],
         ["presence_level","PPL.level_phrase","Presence Level"],
@@ -525,6 +527,13 @@ sub handle_request {
 			my %write_params = ( rs_table => $TBAT_ATLAS_BUILD,
 													 key_field => 'atlas_build_id',
 													 key_value => $parameters{atlas_build_id} );
+			#### Post process the resultset
+			postProcessResultset(
+				rs_params_ref=>\%rs_params,
+				resultset_ref=>$resultset_ref,
+				query_parameters_ref=>\%parameters,
+				column_titles_ref=>\@column_titles,
+			);
 			$sbeams->writeResultSet(
 				resultset_file_ref=>\$rs_params{set_name},
 				resultset_ref=>$resultset_ref,
@@ -535,13 +544,6 @@ sub handle_request {
 				%write_params
 			);
 
-			#### Post process the resultset
-			postProcessResultset(
-				rs_params_ref=>\%rs_params,
-				resultset_ref=>$resultset_ref,
-				query_parameters_ref=>\%parameters,
-				column_titles_ref=>\@column_titles,
-			);
     }
 			my $obs_help = $sbeamsMOD->get_table_help(column_titles_ref=>\@column_titles); 
       #### Display the resultset

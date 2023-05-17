@@ -147,7 +147,7 @@ my $show_image = 0;
 			if (-e "$build_path/analysis/build_detail_tables.tsv") {
          print "$page";
 
-				 generate_html_from_file (file => "$build_path/analysis/build_detail_tables.tsv",
+				 generate_html_from_file (file => "$build_path/analysis/build_detail_tables.tsv.tmp",
                                   build_id => $build_id,
                                   build_path => $build_path);
 				 exit; 
@@ -1514,6 +1514,8 @@ sub generate_html_from_file {
 				 my $headings = shift @data;
 				 my $download_table = 0;
 				 my @noWrap = (1);
+
+
 				 @noWrap = (3,17,19,20) if ($pre_table eq 'exp_contrib_table');
 				 my $table_width = 800;
 				 if ($pre_table eq 'proteome_coverage'){
@@ -1523,6 +1525,7 @@ sub generate_html_from_file {
                                   "apply_action=QUERY";
 																	#'&action=QUERY&proteome_component=';
 					 if (scalar @$headings >= 5){
+              $headings->[0] =~s/^\|//;
 							foreach my $row (@data){
 								$row->[0] =~ /^(.*)\|(.*)$/;
 								$row->[0] = $2;
@@ -1567,7 +1570,7 @@ sub generate_html_from_file {
 
          my %ptm_plot_data =();
 				 if ($pre_table eq 'ptm_coverage'){
-					 my $ptm_summary_url = "$CGI_BASE_DIR/PeptideAtlas/GetPTMSummary?row_limit=50000&atlas_build_id=$build_id".
+					 my $ptm_summary_url = "$CGI_BASE_DIR/PeptideAtlas/GetPTMSummary?atlas_build_id=$build_id".
 																 "&display_options=proteinView&ptm_type=STY%3APhospho&action=QUERY".
 																 "&redundancy_constraint=on&proteome_component=";
 
