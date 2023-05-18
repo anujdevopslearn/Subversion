@@ -4019,7 +4019,7 @@ sub displayResultSetPlot_plotly {
           $xname2 = 'All' if ($compare_to eq 'all');
           $plot .= qq~
 							var trace1 = {
-								y: xa,
+								x: xa,
 								name: "$xname1",
 								//opacity: 0.5, 
 								type: "histogram",
@@ -4027,7 +4027,7 @@ sub displayResultSetPlot_plotly {
 							  $histnorm 
 							};
 							var trace2 = {
-								y: xb,
+								x: xb,
 								name: "$xname2",
 								//opacity: 0.5,
 								type: "histogram",
@@ -4041,9 +4041,9 @@ sub displayResultSetPlot_plotly {
         $plot .= qq~
            var layout = {
 							barmode: "bar", 
-							xaxis: {title: $y_label}, 
-							//yaxis: {title: "Value"},
-              margin: {l: 200,'pad': 10},
+							xaxis: {ticklabeloverflow:'allow'}, 
+							yaxis: {title: $y_label},
+              margin: {b: 100,'pad': 10},
 						};
 						Plotly.newPlot('plot_div', data, layout);
             </script>
@@ -4781,7 +4781,6 @@ sub readResultSet {
 
     #### Read in the resultset
     my $rs_infile = "$RESULTSET_DIR/${resultset_file}.resultset";
- 
     if ( ! -e $rs_infile ) {
         system(" rm $infile" );
         return 0;
