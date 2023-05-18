@@ -485,10 +485,6 @@ sub handle_request {
     $show_sql = 1;
   }
 
-  if($parameters{display_options} =~ /proteinResidueView/){
-    $sql = "$sql\n$order_by_2\n";
-  }
-
   if ($parameters{display_options} =~ /proteinView/){
     $sql = "$sql\n$group_by\n$order_by_1\n";
   }
@@ -500,10 +496,20 @@ sub handle_request {
   my %url_cols = (
      'Biosequence Name' => "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_build_id&protein_name=\%$colnameidx{biosequence_name}V&apply_action=$pass_action",
     'most_observed_ptm_peptide' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$parameters{atlas_build_id}&searchWithinThis=Peptide+Sequence&searchForThis=\%$colnameidx{most_observed_ptm_peptide}V&action=QUERY",
-
-
   );
 
+  if ($parameters{display_options} =~ /proteinResidueView/){
+    $sql = "$sql\n$order_by_2\n";
+    my $get_ptm_spec_url = "$CGI_BASE_DIR/PeptideAtlas/GetPTMSpectra?".
+                             "atlas_build_id=$atlas_build_id&site=\%$colnameidx{offset}V".
+                             "&biosequence_name=\%$colnameidx{biosequence_name}V".
+                             "&ptm_type=\%$colnameidx{ptm_type}V&residue=\%$colnameidx{residue}V".
+                             "&apply_action=QUERY";
+
+    $url_cols{'nP.95-.99'} = "$get_ptm_spec_url&min=0.95&max=0.99";
+    $url_cols{'nP.99-1'} = "$get_ptm_spec_url&min=0.99";
+    $url_cols{'no-choice'} = "$get_ptm_spec_url&nochoice=1";
+  }
 
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
@@ -652,27 +658,39 @@ sub postProcessResultset {
   my $n_rows = scalar(@{$resultset_ref->{data_ref}});
   my $cols = $resultset_ref->{column_hash_ref};
   my $proteome_component = $parameters{proteome_component} || '';
-  return if ($proteome_component eq '');
 
-  $proteome_component =~ /^(.*),(.*)$/;
-  my $source_type = $1;
-  my @patterns = split(/;/, $2);
+  if ($parameters{display_options} =~ /proteinResidueView/){ 
+     for (my $i=0; $i<$n_rows; $i++) {
+        for my $j (5..22){
+          next if($j >= 17 && $j <=19);
+          if ($resultset_ref->{data_ref}->[$i]->[$j] == 0){
+            delete $resultset_ref->{data_ref}->[$i]->[$j];
+          }
+        } 
+     }
+  }elsif($parameters{display_options} =~ /proteinView/){
 
-  my @data=();
-  for (my $i=0; $i<$n_rows; $i++) {
-    my $biosequence_name = $resultset_ref->{data_ref}->[$i]->[$cols->{biosequence_name}];
-    my $biosequence_desc = $resultset_ref->{data_ref}->[$i]->[$cols->{biosequence_desc}];
-    my $matched = $sbeamsMOD->match_proteome_component(pattern=>\@patterns,
-                                                    source_type => $source_type,
-                                                    biosequence_name => $biosequence_name, 
-                                                    biosequence_desc => $biosequence_desc);
+		return if ($proteome_component eq '');
 
-     next if (! $matched);
-     push @data, $resultset_ref->{data_ref}->[$i];
+		$proteome_component =~ /^(.*),(.*)$/;
+		my $source_type = $1;
+		my @patterns = split(/;/, $2);
 
-   }
-   $resultset_ref->{data_ref} = \@data;
+		my @data=();
+		for (my $i=0; $i<$n_rows; $i++) {
+			my $biosequence_name = $resultset_ref->{data_ref}->[$i]->[$cols->{biosequence_name}];
+			my $biosequence_desc = $resultset_ref->{data_ref}->[$i]->[$cols->{biosequence_desc}];
+			my $matched = $sbeamsMOD->match_proteome_component(pattern=>\@patterns,
+																											source_type => $source_type,
+																											biosequence_name => $biosequence_name, 
+																											biosequence_desc => $biosequence_desc);
 
+			 next if (! $matched);
+			 push @data, $resultset_ref->{data_ref}->[$i];
+
+		 }
+		 $resultset_ref->{data_ref} = \@data;
+  }
   return 1;
 
 } # end postProcessResult
