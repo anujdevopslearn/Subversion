@@ -2894,7 +2894,7 @@ sub display_chromosome_coverage_plotly{
   }
 
   my  $html .= $sbeams->make_toggle_section(
-      neutraltext =>"Chromosome Coverage",
+      neutraltext =>"Genome Coverage",
       sticky => 1,
       barlink => 1,
       visible => 1,
@@ -3644,7 +3644,7 @@ sub plotly_barchart {
   my $plot_js = '';
   my $counter = 0;
   my @ts = ();
-  my $layout_title = "title:'$title'";
+  my $layout_title = "title:'<b>$title</b>'";
 
   foreach my $data (@$all_data){
 		my @category = () ;
@@ -3681,6 +3681,15 @@ sub plotly_barchart {
    my $ts_str = join(",", @ts);
    $plot_js .= qq~
 				var data = [$ts_str];
+				var config = {
+					toImageButtonOptions: {
+						format: 'png', // one of png, svg, jpeg, webp
+						filename: 'image',
+						height: 800,
+						width: 1000,
+						scale: 6,
+					}
+				};
 				var layout = {
 					barmode: 'group',
           font: {size: 12},
@@ -3698,7 +3707,7 @@ sub plotly_barchart {
           $layout_title,
           margin:{$layoutmargin}
         };
-        Plotly.newPlot('$divname', data, layout);
+        Plotly.newPlot('$divname', data, layout,config);
    ~;
   my $chart = qq~
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script> 
