@@ -448,6 +448,7 @@ sub handle_request {
       ["mass", "NCM.mass", "mass"],
       ["pI", "NCM.pI","pI"],
       ["gravy","NCM.gravy","gravy"],
+      ["rpkm", "NCM.rpkm","rpkm"],
       ["length", "NCM.length", "length"],
       ["Description", "NCM.Description", "Description"],
       ["accession", "replace(NCM.nextprot_accession,'PeptideAtlas_', '')","Accession"],
