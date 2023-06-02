@@ -579,8 +579,8 @@ Counts only primary reference proteome entries, so final tally may be smaller th
 			 'target_protIDs' => 'target_protIDs, decoy_protIDs, etc. Same as above, except for singleton proteins (those identified by only one PSM) only. ',
 			 'target_protIDns' => 'target_protIDns, decoy_protIDns etc. Same as above, except for multiply-observed proteins only. ',
       # protein 
-      'Canonical' => 'Minimally redundant set of proteins required to explain (virtually) all non-decoy peptides observed in build (<a target=_termdefs href="http://www.peptideatlas.org/docs/protein_ident_terms.php">more info</a>)',
-      'Noncore-Canonical' => 'Noncore canonical means that there are uniquely mapping peptides to this protein that do not map to a protein that is considered part of the core proteome of a species. A non-core canonical protein might be an isoform, contaminant, or protein missing from the core reference proteome.',
+      'Canonical' => 'Proteins with at least two 9AA or greater peptides with a total extent of 18AA or greater that are uniquely mapping within the core reference proteome (excludes isoforms, contaminants, and other sequences). (<a target=_termdefs href="http://www.peptideatlas.org/docs/protein_ident_terms.php">more info</a>)',
+      'Noncore-Canonical' => 'Proteins with at least two 9AA or greater peptides with a total extent of 18AA or greater that do not map in the core reference proteome, but rather to an isoform, contaminant, or other protein missing from the core reference proteome.',
       'Indistinguishable Representative' =>'Protein has no unique peptides, and there are several indistinguishable proteins, but this one is assigned to be an Indistinguishable Representative and the others are Indistinguishable.',
       'Marginally Distinguished'=>'Protein has unique peptides, but there are not more unique peptides than shared peptides, and the extended length of unique peptides is < 18AA.',
       'Representative'=>'Protein has mostly shared peptides, does not fit the description of another category, and is assigned to be the representative protein to explain some of its shared peptides.',
