@@ -1,0 +1,682 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+use FindBin;
+use Data::Dumper;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $accessible_project_ids 
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+
+###############################################################################
+# Set program name and usage banner for command line use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    #permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin'],
+    # connect_read_only=>1,
+    allow_anonymous_access=>1,
+  ));
+
+
+  #### Read in the default input parameters
+  my %parameters;
+
+  $parameters{uploaded_file_not_saved} = 1;
+
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+     #$sbeams->printDebuggingInfo($q);
+
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+  #### Decide what action to take based on information so far
+  if ($parameters{action} eq "???") {
+
+    # Some action
+
+  } else {
+
+    my $project_id = $sbeamsMOD->getProjectID(
+        atlas_build_id => $parameters{atlas_build_id}
+        );
+
+    $sbeamsMOD->display_page_header(
+      project_id => $project_id,
+      use_tabbed_panes=> '1',
+    );
+
+    handle_request(ref_parameters=>\%parameters);
+
+    $sbeamsMOD->display_page_footer(
+      use_tabbed_panes=> '1',
+    );
+
+  }
+} # end main
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+
+  #### Declare some variables
+  my $file_name;
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $sbeamsMOD->getTabMenu(
+    parameters_ref => \%parameters,
+    program_name => $PROG_NAME,
+  );
+  if ( $sbeams->output_mode() eq 'html' ) {
+    print $tabMenu->asHTML();
+    print "<script>document.title = 'PeptideAtlas: Get Protein By Experiment';</script>";
+  }
+
+  #### Get the current atlas_build_id based on parameters or session
+  my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
+    parameters_ref => \%parameters,
+  );
+  if (defined($atlas_build_id) && $atlas_build_id < 0) {
+    return;
+  }
+  $parameters{atlas_build_id} = $atlas_build_id;
+
+  #### Define some generic variables
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql,$biosequence_name_constraint);
+
+  #### Read in the standard form values
+  my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+
+  # for some reason, this returns nothing.
+  # Used to return GetProteins instead of GetProteins_beta
+
+  #### Set some specific settings for this program
+  my $CATEGORY="Get Protein By Experiment";
+  my $TABLE_NAME="AT_GetProteinsByExperiment"; 
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROG_NAME";
+
+  #### Get the columns and input types for this table/query
+  my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
+  my %input_types = $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
+
+  #### Read the input parameters for each column
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters,
+    columns_ref=>\@columns,
+    input_types_ref=>\%input_types);
+   #$sbeams->printDebuggingInfo($q);
+
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+
+  #### Set some reasonable defaults if no parameters supplied
+  #unless ($n_params_found) {
+  #  $parameters{input_form_format} = "minimum_detail";
+  #  $parameters{presence_level_constraint} = "1";
+  #}
+	#### Display the user-interaction input form
+	$sbeams->display_input_form(
+		TABLE_NAME=>$TABLE_NAME,
+		CATEGORY=>$CATEGORY,
+		apply_action=>$apply_action,
+		PROGRAM_FILE_NAME=>$PROG_NAME,
+		parameters_ref=>\%parameters,
+		input_types_ref=>\%input_types,
+		mask_user_context=> '1',
+		use_tabbed_panes=> '1',
+	);
+  #### Display the form action buttons
+  $sbeams->display_form_buttons( TABLE_NAME=>$TABLE_NAME,
+                                 use_tabbed_panes => 1,
+                               );
+
+
+  #### Finish the upper part of the page and go begin the full-width
+  #### data portion of the page
+  $sbeams->display_page_footer( close_tables=>'NO',
+                                use_tabbed_panes => 1,
+                                separator_bar=>'NO',
+                                display_footer=>'NO');
+
+
+  #########################################################################
+  #### Process all the constraints
+
+  #### If no atlas_build_id was selected, stop here
+  unless ($parameters{atlas_build_id}) {
+    $sbeams->reportException(
+      state => 'ERROR',
+      type => 'INSUFFICIENT CONSTRAINTS',
+      message => 'You must select at least one Atlas Build',
+    );
+    return;
+  }
+
+  if (split(",", $parameters{sample_id_constraint})  > 10){
+    $sbeams->reportException(
+      state => 'ERROR',
+      type => 'Too may experiment id selected',
+      message => 'You can at most 10 experiment ids',
+    );
+    return;
+
+  }
+
+  #### Build ATLAS_BUILD constraint
+
+	#### Build BIOSEQUENCE_NAME constraints
+	my $biosequence_name_clauses = $sbeams->parseConstraint2SQL(
+		constraint_column=>"BS.biosequence_name",
+		constraint_type=>"plain_text",
+		constraint_name=>"BioSequence Name",
+		constraint_value=>$parameters{biosequence_name_constraint} );
+	return if ($biosequence_name_clauses eq '-1');
+
+	#### Build BIOSEQUENCE_GENE_NAME constraints
+	my $biosequence_gene_name_clauses = $sbeams->parseConstraint2SQL(
+		constraint_column=>"BS.biosequence_gene_name",
+		constraint_type=>"plain_text",
+		constraint_name=>"BioSequence Gene Name",
+		constraint_value=>$parameters{biosequence_gene_name_constraint} );
+	return if ($biosequence_gene_name_clauses eq '-1');
+
+	#### Build BIOSEQUENCE_DESC constraints
+	my $biosequence_desc_clauses = $sbeams->parseConstraint2SQL(
+		constraint_column=>"BS.biosequence_desc",
+		constraint_type=>"plain_text",
+		constraint_name=>"BioSequence Description",
+		constraint_value=>$parameters{biosequence_desc_constraint} );
+	return if ($biosequence_desc_clauses eq '-1');
+
+  my $repository_identifier_clauses = $sbeams->parseConstraint2SQL(
+    constraint_column=>"S.repository_identifiers",
+    constraint_type=>"plain_text",
+    constraint_name=>"repository_identifier_constraint",
+    constraint_value=>$parameters{repository_identifiers} );
+  return if ($repository_identifier_clauses eq '-1');
+
+  #### Build PRESENCE_LEVEL constraint
+  my $presence_level_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"PPL.protein_presence_level_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Protein Presence Level",
+    constraint_value=>$parameters{presence_level_constraint} );
+  return if ($presence_level_clause eq '-1');
+
+  #### Build SAMPLE_ID constraint
+  my  $samples_clause =  $sbeams->parseConstraint2SQL(
+    constraint_column=>"S.sample_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Samples",
+    constraint_value=>$parameters{sample_id_constraint} );
+     return if ($samples_clause eq '-1');
+  
+  ## get organism_id to pass on to url_cols
+  my $tsql = qq~
+      SELECT BS.organism_id
+      FROM $TBAT_BIOSEQUENCE_SET BS
+      JOIN $TBAT_ATLAS_BUILD AB
+      ON (AB.biosequence_set_id = BS.biosequence_set_id)
+      where AB.atlas_build_id ='$parameters{atlas_build_id}'
+      ~;
+ 
+   my ($organism_id) = $sbeams->selectOneColumn($tsql) or
+       die "\nERROR: Unable to find the organism_id" .
+       " with $tsql\n\n";
+
+  $parameters{organism_id} = $organism_id;
+
+  ## handle file upload and clause for sql for $parameters{upload_file}
+  my $biosequence_names_clauses;
+  my %protein_hash;
+
+  if ( $parameters{upload_file} )
+  {
+     ## upload the file to a file handler
+     my $fh = $q->upload('upload_file');
+
+     if (!$fh && $q->cgi_error)
+     {
+       print $q->header(-status=>$q->cgi_error);
+     } elsif (!$fh) {
+       # We get here when, after successfully uploading, we sort by column.
+       #print "Could not create file handle for $parameters{upload_file}!\n"
+     }
+
+     # if file is a text file and is not too big, upload
+     if ( (-T $fh) && (-s $fh < 1000000)) ##size constraint of 10 MB, restrict $count < 30000
+     {
+       my $count = 0;
+       my $read_file=0;
+       my $prt;
+       ## protein list
+       while ($prt=<$fh>)
+       {
+         chomp($prt);
+         $prt =~ s/\s+$//;
+         if ($prt)
+         {
+             $protein_hash{$prt} = $prt;
+             $count = $count + 1;
+         }
+         last if ($count > 30000);
+      }
+    }
+    ## join with a commas:
+    my $protein_list = "";
+    foreach my $pr (keys %protein_hash)
+    {
+       $protein_list = "'$protein_hash{$pr}',$protein_list"; 
+    }
+    ## trim off last comma:
+    $protein_list =~ s/(.*)(,)$/$1/;
+
+		if ($protein_list =~ m/%/) {
+			my @tmp = split("," , $protein_list);
+			$biosequence_names_clauses = "   AND ( BS.biosequence_name LIKE  $tmp[0] ";
+			for (my $i = 1; $i < scalar(@tmp); $i++ ){
+				if (  $tmp[$i] ){
+					$biosequence_names_clauses .= "   OR BS.biosequence_name LIKE $tmp[$i]  ";
+				} 
+			}
+			$biosequence_names_clauses .=  " ) --end";
+		} else {
+			$log->debug(" in unless % ") ;
+			$biosequence_names_clauses ="   AND BS.biosequence_name IN ( $protein_list )";
+		}
+  } # if upload file
+  my ($sql, %colnameidx, @column_titles, $columns_clause);
+  if ($apply_action =~ /QUERY/i){
+		#### Set flag to display SQL statement if user selected
+		my @column_array = (
+					["biosequence_name","BS.biosequence_name","Biosequence Name"],
+					["biosequence_gene_name","BS.biosequence_gene_name","Biosequence Gene Name"],
+					["presence_level","PPL.level_phrase","Presence Level in Build"],
+					["length", "DATALENGTH(BS.biosequence_seq)", "Biosequence Length"],
+					["sample_id", "S.sample_id", "Sample id"],
+					["sample_tag", "S.sample_tag", "Sample Tag"],
+					["pct_coverage", "BIABSB.percentage_coverage", "Percent Coverage"],
+					["n_pep", "BIABSB.n_distinct_peptides","N Distinct Peptides"],
+					["n_obs", "BIABSB.n_observations", "Total Obs"],
+					["dSIn", "BIABSB.dSIn", "dSIn"],
+          ["dSIn_percentile", "BIABSB.dSIn_percentile", "dSIn_percentile"],
+					["SIn", "BIABSB.SIn", "SIn"],
+          ["SIn_percentile", "BIABSB.SIn_percentile", "SIn_percentile"],
+					["dNSAF", "BIABSB.dNSAF", , "dNSAF"],
+					["NSAF", "BIABSB.NSAF", , "NSAF"],
+					["biosequence_desc","CAST(BS.biosequence_desc AS varchar(255))","Protein Description"],
+				);
+
+		$columns_clause = $sbeams->build_SQL_columns_list(
+			column_array_ref=>\@column_array,
+			colnameidx_ref=>\%colnameidx,
+			column_titles_ref=>\@column_titles
+		);
+
+		$sql = qq~
+			SELECT $columns_clause
+			FROM $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH BIABSB 
+			JOIN $TBAT_BIOSEQUENCE BS ON (BS.BIOSEQUENCE_ID = BIABSB.BIOSEQUENCE_ID)
+			JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON (ABSB.ATLAS_BUILD_SEARCH_BATCH_ID = BIABSB.ATLAS_BUILD_SEARCH_BATCH_ID)
+			JOIN $TBAT_SAMPLE S ON (S.SAMPLE_ID = ABSB.SAMPLE_ID)
+			JOIN $TBAT_PROTEIN_IDENTIFICATION PID ON (PID.BIOSEQUENCE_ID = BIABSB.BIOSEQUENCE_ID) 
+			JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL ON ( PPL.PROTEIN_PRESENCE_LEVEL_ID = PID.PRESENCE_LEVEL_ID )
+			WHERE 1 = 1
+       AND (BIABSB.SIn is not null or BIABSB.dSIn is not null)
+			 AND BIABSB.atlas_build_id = $atlas_build_id
+			 AND PID.atlas_build_id = $atlas_build_id 
+			 AND ABSB.atlas_build_id = $atlas_build_id
+			 $biosequence_name_clauses
+       $biosequence_names_clauses
+			 $biosequence_gene_name_clauses
+			 $biosequence_desc_clauses
+			 $presence_level_clause
+			 $samples_clause
+			 $repository_identifier_clauses
+			ORDER BY BS.biosequence_name, S.sample_tag
+		~;
+  }
+  if ( $parameters{display_options} =~ /ShowSQL/ ) {
+    $show_sql = 1;
+  }
+
+#  if($parameters{display_options} =~ /proteinResidueView/){
+#    $sql = "$sql\n$order_by_2\n";
+#  }
+#
+#  if ($parameters{display_options} =~ /proteinView/){
+#    $sql = "$sql\n$group_by\n$order_by_1\n";
+#  }
+
+  #### Certain types of actions should be passed to links
+  my $pass_action = "QUERY";
+  $pass_action = $apply_action if ($apply_action =~ /QUERY/i);
+
+  my %url_cols = (
+     'Biosequence Name' => "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_build_id&protein_name=\%$colnameidx{biosequence_name}V&apply_action=$pass_action",
+    'most_observed_ptm_peptide' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$parameters{atlas_build_id}&searchWithinThis=Peptide+Sequence&searchForThis=\%$colnameidx{most_observed_ptm_peptide}V&action=QUERY",
+
+
+  );
+  %hidden_cols = (
+		 "start_in_biosequence" => 1,
+		 "end_in_biosequence"=> 1,
+     "biosequence_seq" => 1
+  );
+
+
+
+  #########################################################################
+  #### If QUERY or VIEWRESULTSET was selected, display the data
+  if ($apply_action =~ /QUERY/i || $apply_action =~ /VIEWRESULTSET|VIEWPLOT/ ) {
+    #### If the action contained QUERY, then fetch the results from
+    #### the database
+    if ($apply_action =~ /QUERY/i) {
+      #### Show the SQL that will be or was executed
+      $sbeams->display_sql(
+	     sql=>$sql,
+	     use_tabbed_panes=> '1',
+      )if ($show_sql);
+      #### Fetch the results from the database server
+      $sbeams->fetchResultSet(
+        sql_query=>$sql,
+        resultset_ref=>$resultset_ref,
+        use_caching =>1 
+      );
+      #$resultset_ref->{precisions_list_ref}->[$colnameidx{dNSAF}] = 10;
+      #$resultset_ref->{precisions_list_ref}->[$colnameidx{NSAF}] = 10;
+			#### Store the resultset and parameters to disk resultset cache
+			#### Post process the resultset
+			if ($parameters{display_options} =~ /compareExp/ && ! $resultset_ref->{from_cache}){ 
+  
+				postProcessResultset(
+					rs_params_ref=>\%rs_params,
+					resultset_ref=>$resultset_ref,
+					query_parameters_ref=>\%parameters,
+					column_titles_ref=>\@column_titles,
+          hidden_col_ref => \%hidden_cols
+				);
+      }
+
+    }elsif ($apply_action =~ /VIEWRESULTSET|VIEWPLOT/ ) {
+      my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+			$sbeams->readResultSet(
+					resultset_file=>$rs_params{set_name},
+					resultset_ref=>$resultset_ref,
+					query_parameters_ref=>\%parameters
+			);
+      @column_titles  = @{$resultset_ref->{column_title_ref}};
+	 	}
+		$rs_params{set_name} = "SETME";
+		my %write_params = ( rs_table => $TBAT_ATLAS_BUILD,
+												 key_field => 'atlas_build_id',
+												 key_value => $parameters{atlas_build_id} );
+
+		$sbeams->writeResultSet(
+			resultset_file_ref=>\$rs_params{set_name},
+			resultset_ref=>$resultset_ref,
+			query_parameters_ref=>\%parameters,
+			resultset_params_ref=>\%rs_params,
+			query_name=>"$SBEAMS_SUBDIR/$PROG_NAME",
+			column_titles_ref=>\@column_titles,
+			%write_params
+		);
+		my $obs_help = $sbeamsMOD->get_table_help(column_titles_ref=>\@column_titles); 
+		#### Display the resultset
+		$sbeams->displayResultSet(
+			resultset_ref=>$resultset_ref,
+			query_parameters_ref=>\%parameters,
+			rs_params_ref=>\%rs_params,
+			url_cols_ref=>\%url_cols,
+			hidden_cols_ref=>\%hidden_cols,
+			max_widths=>\%max_widths,
+			use_tabbed_panes => 1,
+			column_titles_ref=>\@column_titles,
+			column_help=>$obs_help,
+			base_url=>$base_url,
+		);
+
+
+			#### Display the resultset controls
+			$sbeams->displayResultSetControls(
+				resultset_ref=>$resultset_ref,
+				query_parameters_ref=>\%parameters,
+				rs_params_ref=>\%rs_params,
+				base_url=>$base_url,
+				use_tabbed_panes=>'1',
+			);
+			#### Display a plot of data from the resultset
+			$sbeams->displayResultSetPlot_plotly(
+				rs_params_ref=>\%rs_params,
+				resultset_ref=>$resultset_ref,
+				query_parameters_ref=>\%parameters,
+				column_titles_ref=>\@column_titles,
+				use_tabbed_panes => 1,
+				mouseover_column => 'peptide_sequence',
+				mouseover_url => $url_cols{'Peptide Sequence'},
+				mouseover_tag => '%1V',
+				base_url=>$base_url,
+			);
+
+   #### If QUERY was not selected, then tell the user to enter some parameters
+   } else {
+     if ($sbeams->invocation_mode() eq 'http') {
+      print "<H4>Select parameters above and press QUERY</H4>\n";
+     } else {
+      print "You need to supply some parameters to constrain the query\n";
+     }
+   }
+
+} # end handle_request
+
+
+
+###############################################################################
+# evalSQL
+#
+# Callback for translating Perl variables into their values,
+# especially the global table variables to table names
+###############################################################################
+sub evalSQL {
+  my $sql = shift;
+
+  return eval "\"$sql\"";
+
+} # end evalSQL
+
+#######################################################################
+sub getOrganismFullName 
+{
+    my %args = @_;
+    
+    my $organism_id = $args{organism_id};
+
+    my $sql = qq~
+        SELECT full_name
+        FROM $TB_ORGANISM
+        WHERE organism_id = '$organism_id'
+        AND record_status != 'D'
+    ~;
+
+    my ($full_name) = $sbeams->selectOneColumn($sql);
+
+    ## replace spaces with _
+    $full_name =~ s/ /\_/g;
+
+    return $full_name;
+}
+###############################################################################
+# postProcessResultset
+#
+# Perform some additional processing on the resultset that would otherwise
+# be very awkward to do in SQL.
+###############################################################################
+sub postProcessResultset {
+  my %args = @_;
+
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+  #### Process the arguments list
+  my $resultset_ref = $args{'resultset_ref'};
+  my $rs_params_ref = $args{'rs_params_ref'};
+  my $query_parameters_ref = $args{'query_parameters_ref'};
+  my $column_titles_ref = $args{'column_titles_ref'};
+  my $hidden_col_ref = $args{'hidden_col_ref'};
+
+  my %rs_params = %{$rs_params_ref};
+  my %parameters = %{$query_parameters_ref};
+
+  my $n_rows = scalar(@{$resultset_ref->{data_ref}});
+  my $cols = $resultset_ref->{column_hash_ref};
+  my %data = ();
+
+  my %sample_tags = ();
+  my @new_result_data =();
+  my $is_dSIn = 0;
+
+  for ($i=0; $i<$n_rows; $i++) {
+    my $val = $resultset_ref->{data_ref}->[$i]->[$cols->{dSIn_percentile}] || $resultset_ref->{data_ref}->[$i]->[$cols->{SIn_percentile}];
+    my $sample_tag = $resultset_ref->{data_ref}->[$i]->[$cols->{sample_tag}];
+    my $prot = $resultset_ref->{data_ref}->[$i]->[$cols->{biosequence_name}];
+    my $prot_desc = $resultset_ref->{data_ref}->[$i]->[$cols->{biosequence_desc}];
+    $data{$prot}{desc} = $prot_desc if (! $data{$prot}{desc});
+    $data{$prot}{$sample_tag} = $val;
+    
+    $sample_tags{$sample_tag} =1;
+    if ($resultset_ref->{data_ref}->[$i]->[$cols->{dSIn}] ne ''){
+      $is_dSIn = 1;
+    }
+  }
+  if ($is_dSIn){
+    $hidden_col_ref->{SIn} =1;
+    $hidden_col_ref->{NSAF} =1;
+    $hidden_col_ref->{SIn_percentile} =1;
+  }else{
+    $hidden_col_ref->{dSIn} =1;
+    $hidden_col_ref->{dNSAF} =1;
+    $hidden_col_ref->{dSIn_percentile} =1;
+  }
+
+  my @sample_tags;
+  my $i=0;
+  my @type_list = qw(varchar);
+  $resultset_ref->{column_hash_ref}{'Biosequence Name'} = $i;
+  foreach my $sample_tag(sort {$a <=> $b} keys %sample_tags){
+    push @sample_tags, $sample_tag;
+    $resultset_ref->{column_hash_ref}{$sample_tag} = $i;
+    push @type_list, 'int';
+    $i++;
+  }
+  foreach my $prot (sort {$a cmp $b}keys %data){
+     my @values = ();
+     push @values, $prot;
+     my $novalue = 1;
+     foreach my $sample_tag (@sample_tags){
+        push @values, $data{$prot}{$sample_tag};
+        if ($data{$prot}{$sample_tag} ne ''){
+           $novalue = 0; 
+        }
+     }
+     push @values, $data{$prot}{desc};
+     if (! $novalue){
+       push @new_result_data, \@values;
+     }
+  } 
+  
+  unshift @sample_tags, 'Biosequence Name';
+  push @sample_tags, 'Protein Description';
+  push @type_list, 'varchar';
+ 
+  my $n_columns = scalar @sample_tags;
+  my $column_list_ref = [@sample_tags];
+  $resultset_ref->{data_ref} = \@new_result_data;
+  $resultset_ref->{column_list_ref} = $column_list_ref; 
+  $resultset_ref->{column_title_ref} = $column_list_ref;
+  $resultset_ref->{precisions_list_ref} = [ (10) x ($n_columns -1) ];
+  push @{$resultset_ref->{precisions_list_ref}}, 255;
+  @$column_titles_ref = @sample_tags; 
+  $resultset_ref->{types_list_ref} = \@type_list; 
+  return 1;
+
+} # end postProcessResult
+
