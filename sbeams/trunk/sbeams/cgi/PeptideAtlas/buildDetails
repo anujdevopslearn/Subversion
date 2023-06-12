@@ -1595,7 +1595,7 @@ sub generate_html_from_file {
 							if ($row->[0]=~ /^([^\|]+)\|(.*)$/){
 								$row->[0] = "<a href='$ptm_summary_url$2' target='_blank' title='get ptm protein list'>$1</a>";
 							}
-							if ($proteome =~ /(core|^Araport11$|^NeXtProt$)/i){
+							if ($proteome =~ /(core|^Araport11$|^NeXtProt$)/i && ! $ptm_plot_data{data} ){
 								foreach my $i(1..scalar @$row -1){ 
 									my $val =  $row->[$i];
 									$val =~ s/\s.*//;
@@ -1663,6 +1663,13 @@ sub generate_html_from_file {
     }
     $pre_table=$table;
   }
+
+	my $mayu_data_path = "$build_path/analysis/Mayu_out.csv";
+	if ( -e $mayu_data_path ) {
+		my $page = get_mayu_info( $mayu_data_path );
+		print $page;
+	}
+
   if ($table eq 'cat_plot'){
     $cat_plot_data=\@data;
   }
