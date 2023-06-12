@@ -682,6 +682,9 @@ sub handle_request {
   #### to each sub-query.
   my @biosequence_id_sql;
   my @biosequence_name_sql;
+  my @biosequence_gene_name_sql;
+  my @biosequence_accession_sql;
+
   my @is_covering_sql;
   my @pct_coverage_sql;
   my @presence_level_sql;
@@ -722,6 +725,9 @@ sub handle_request {
   # Define SQL specific for displaying protein identifications
   $biosequence_id_sql[0] = "BS_REF.biosequence_id";
   $biosequence_name_sql[0] = "BS_REF.biosequence_name";
+  $biosequence_accession_sql[0] = "BS_REF.biosequence_accession";
+  $biosequence_gene_name_sql[0] = "BS_REF.biosequence_gene_name";
+
   $is_covering_sql[0] = "(CASE WHEN PID.is_covering=1 THEN 'C' ELSE '' END)";
   $pct_coverage_sql[0] = "PID.percentage_coverage";
   $presence_level_sql[0] = "PPL.level_phrase";
@@ -752,6 +758,9 @@ sub handle_request {
   # relative to protein identifications
   $biosequence_id_sql[1] = "BS_REL.biosequence_id";
   $biosequence_name_sql[1] = "BS_REL.biosequence_name";
+  $biosequence_accession_sql[1] = "BS_REL.biosequence_accession";
+  $biosequence_gene_name_sql[1] = "BS_REL.biosequence_gene_name";
+
   $is_covering_sql[1] = "NULL";
   $pct_coverage_sql[1] = "BR.related_biosequence_percentage_coverage"; 
   $presence_level_sql[1] = "NULL";
@@ -781,6 +790,9 @@ sub handle_request {
   # indistinguishables
   $biosequence_id_sql[2] = "BS_INDIS.biosequence_id";
   $biosequence_name_sql[2] = "BS_INDIS.biosequence_name";
+  $biosequence_accession_sql[2] = "BS_INDIS.biosequence_accession";
+  $biosequence_gene_name_sql[2] = "BS_INDIS.biosequence_gene_name";
+
   $is_covering_sql[2] = "NULL";
   $pct_coverage_sql[2] = "BR_INDIS.related_biosequence_percentage_coverage";
   $presence_level_sql[2] = "NULL";
@@ -858,6 +870,8 @@ sub handle_request {
      my  @column_array =(
         ["biosequence_id",$biosequence_id_sql[$i],"Biosequence ID"],
         ["biosequence_name",$biosequence_name_sql[$i],"Biosequence Name"],
+        ["biosequence_accession",$biosequence_accession_sql[$i],"Biosequence Accession"],
+        ["biosequence_gene_name",$biosequence_gene_name_sql[$i],"Gene Name"],
         ["is_covering",$is_covering_sql[$i],"Cover ing Set"],
         ["pct_coverage",$pct_coverage_sql[$i],"Percent Coverage"],
         ["presence_level",$presence_level_sql[$i],"Presence Level"],
@@ -884,7 +898,6 @@ sub handle_request {
         ["biosequence_description",$biosequence_description_sql[$i],"Protein Description"],
         ["biosequence_accessor","DBX.accessor","biosequence_accessor"],
         ["biosequence_accessor_suffix","DBX.accessor_suffix","biosequence_accessor_suffix"],
-        ["biosequence_accession","BS_REF.biosequence_accession","biosequence_accession"],
         ["organism_full_name","O.full_name","Organism"],
         ["ppl_sort_order",$presence_level_sort_order_sql[$i], "ppl_sort_order"],
         ["brt_sort_order",$relationship_sort_order_sql[$i],"brt_sort_order"],
@@ -1163,7 +1176,6 @@ sub handle_request {
                   'Origene Accession' => 1,
                   'Group Number' => 1,
                   'Chromosome' => 1,
-		  'biosequence_accession' => 1,
 		  'biosequence_accessor' => 1,
 		  'biosequence_accessor_suffix' => 1,
 	          'ppl_sort_order' => 1,
