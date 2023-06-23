@@ -15,8 +15,6 @@ function sortables_init() {
     }
 }
 
-
-
 function ts_makeSortable(table) {
     if (table.rows && table.rows.length > 0) {
         var firstRow = table.rows[0];
@@ -31,7 +29,6 @@ function ts_makeSortable(table) {
         'TITLE="Click column heading to sort"' +
         'onclick="ts_resortTable(this, '+i+');return false;">' + 
         txt+'<span class="sortarrow">&nbsp;&nbsp;&nbsp;</span></a>';
-
   }
 }
 
@@ -70,11 +67,16 @@ function ts_resortTable(lnk,clid) {
     // Work out a type for the column
     if (table.rows.length <= 1) return;
     var itm = ts_getInnerText(table.rows[1].cells[column]);
+
+    if (itm == undefined && table.rows.length >= 2 ){
+      itm = ts_getInnerText(table.rows[2].cells[column]);
+    }
+
     sortfn = ts_sort_caseinsensitive;
     if (itm.match(/^\d\d[\/-]\d\d[\/-]\d\d\d\d$/)) sortfn = ts_sort_date;
     if (itm.match(/^\d\d[\/-]\d\d[\/-]\d\d$/)) sortfn = ts_sort_date;
     if (itm.match(/^[£$]/)) sortfn = ts_sort_currency;
-    if (itm.match(/^[\d\.]+$/)) sortfn = ts_sort_numeric;
+    if (itm.match(/^[\d\.\,]+$/)) sortfn = ts_sort_numeric;
     SORT_COLUMN_INDEX = column;
     var firstRow = new Array();
     var newRows = new Array();
@@ -147,10 +149,14 @@ function ts_sort_currency(a,b) {
     return parseFloat(aa) - parseFloat(bb);
 }
 
+function parseToNumber(n) {
+  return parseFloat(String(n).split(',').join(''));
+}
+
 function ts_sort_numeric(a,b) { 
-    aa = parseFloat(ts_getInnerText(a.cells[SORT_COLUMN_INDEX]));
+    aa = parseToNumber(ts_getInnerText(a.cells[SORT_COLUMN_INDEX]));
     if (isNaN(aa)) aa = 0;
-    bb = parseFloat(ts_getInnerText(b.cells[SORT_COLUMN_INDEX])); 
+    bb = parseToNumber(ts_getInnerText(b.cells[SORT_COLUMN_INDEX])); 
     if (isNaN(bb)) bb = 0;
     return aa-bb;
 }
