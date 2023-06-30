@@ -232,11 +232,11 @@ sub handle_request {
     return;
   }
 
-  if (split(",", $parameters{sample_id_constraint})  > 10){
+  if (split(",", $parameters{sample_id_constraint})  > 20){
     $sbeams->reportException(
       state => 'ERROR',
       type => 'Too may experiment id selected',
-      message => 'You can at most 10 experiment ids',
+      message => 'You can at most 20 experiment ids',
     );
     return;
 
@@ -461,6 +461,7 @@ sub handle_request {
       $sbeams->fetchResultSet(
         sql_query=>$sql,
         resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters,
         use_caching =>1 
       );
       #$resultset_ref->{precisions_list_ref}->[$colnameidx{dNSAF}] = 10;
