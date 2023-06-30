@@ -486,7 +486,6 @@ sub handle_request {
 					resultset_ref=>$resultset_ref,
 					query_parameters_ref=>\%parameters
 			);
-      @column_titles  = @{$resultset_ref->{column_title_ref}};
 	 	}
 		$rs_params{set_name} = "SETME";
 		my %write_params = ( rs_table => $TBAT_ATLAS_BUILD,
