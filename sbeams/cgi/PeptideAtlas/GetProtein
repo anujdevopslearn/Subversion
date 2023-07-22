@@ -3914,8 +3914,12 @@ sub displayExternalLinksSection {
 			     'PhosPhAt' => 'The Arabidopsis Protein Phosphorylation Site Database',
 			     'PPDB' => 'The Plant Proteome Database');
 
-    my %gene_links       = ('TAIR' => 'http://arabidopsis.org/servlets/TairObject?type=locus&name='); 
-    my %gene_link_titles = ('TAIR' => 'The Arabidopsis Information Resource');
+    my %gene_links       = ('TAIR' => 'http://arabidopsis.org/servlets/TairObject?type=locus&name=',
+                            'ATHENA' => 'https://athena.proteomics.wzw.tum.de/master_arabidopsisshiny/?gene=',
+                           ); 
+    my %gene_link_titles = ('TAIR' => 'The Arabidopsis Information Resource',
+			    'ATHENA' => 'Arabidopsis thaliana Expression Atlas',
+                           );
 
     foreach my $source(keys %prot_links){
       my $title = $source;
