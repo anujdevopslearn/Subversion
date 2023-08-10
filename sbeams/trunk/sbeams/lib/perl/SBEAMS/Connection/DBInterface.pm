@@ -8167,8 +8167,8 @@ sub get_query_parameters_mdsum{
 
 	my %query_parameters =  ();
 	foreach my $key (keys %$query_parameters_ref){
-		##exclude action param
-		if ($key !~ /action/){
+		##exclude action and rs_page_number param
+		if ($key !~ /(action|rs_page|upload)/i){
 			$query_parameters{$key} = $query_parameters_ref->{$key};
 		}
 	}
