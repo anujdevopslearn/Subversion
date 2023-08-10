@@ -71,118 +71,89 @@ sub getTabMenu {
 
     ## parse PROG_NAME to learn tab number
     my $PROG_NAME = $args{program_name};
+    $PROG_NAME =~ s/\s+$//;
+
+    #### Search, tab = 1
+    #### All Builds, tab = 2
+    #### Current Build, tab = 3
+    #### Queries, tab = 4
+    #### SRMAtlas, tab = 5
+    #### PeptideAtlas Submission System PASS tabs, tab = 6
+    #### SWATH tabs, tab = 7
+    my %sub_tabs;
+    my @html_tabs =("Search",
+										"All Builds",
+										"Current Build",
+										"Queries",
+										"SRMAtlas",
+										"Submission",
+										"SWATH/DIA"
+										);
+    
+    %{$sub_tabs{"All Builds"}} = (
+                       "buildDetails" => 1,
+                       "main.cgi" => 1,
+                       "buildInfo" => 2,
+                       "defaultBuildsPepsProts" => 3,
+                       "Summarize_Peptide" => 4,
+                       "viewOrthologs" => 5                  
+                       );
+    %{$sub_tabs{"Current Build"}} = (
+                       "GetPeptide" => 1,
+                       "GetProtein" => 2,
+                       );
+
+   %{$sub_tabs{"Queries"}} = (
+                       "GetPeptides" => 1,
+                       "GetProteins" => 2,
+                       "GetCoreProteomeMapping" => 3,
+                       "GetPTMSummary" => 4,
+                       "GetProteinsByExperiment" => 5, 
+                       "CompareBuildsProteins" => 6,
+                       "SearchProteins" => 7,
+                       "showPathways" => 8,
+                       "proteinList" => 9,
+                       "MapSearch" => 9
+                      );
+  %{$sub_tabs{"SRMAtlas"}} = (
+                       "GetTransitions" => 1,
+                       "ViewSRMList" => 1,
+                       "quant_info" => 1,
+                       "GetTransitionLists" => 2,
+                       "ViewSRMBuild" => 3,
+                       "GetSELExperiments" => 4,
+                       "GetSELTransitions" => 5
+                     );
+  %{$sub_tabs{"Submission"}} = (
+                       "PASS_Summary" => 1,
+                       "PASS_Submit" => 2,
+                       "PASS_View" => 3,
+                     );
+  %{$sub_tabs{"SWATH/DIA"}} = (
+                       "DIA_library_download" => 1,
+                       "DIA_library_subset" => 2,
+                       "AssessDIALibrary" => 3,
+                       "Upload_library" => 4,
+                     );
 
     my $current_tab=1;
     my $current_subtab=1;
+    for (my $i; $i <= $#html_tabs; $i++){
+       if ($PROG_NAME eq 'Search'){
+         last;
+       }elsif($PROG_NAME eq 'none') {
+         $current_tab = 99;
+         last;
+       } 
 
-    if ( ($PROG_NAME =~ /^main.cgi|buildDetails/) ||($PROG_NAME =~ /^main.cgi\?(\S+)/ ))
-    {
-       $current_tab=2;
-    } elsif ( ($PROG_NAME =~ /^buildInfo/) ||   ($PROG_NAME =~ /buildInfo\?(\S+)/ ))
-    {
-       $current_tab=2;
-       $current_subtab=2;
-    } elsif ( ($PROG_NAME =~ /^defaultBuildsPepsProts/) ||   ($PROG_NAME =~ /defaultBuildsPepsProts\?(\S+)/ ))
-    {
-       $current_tab=2;
-       $current_subtab=3;
-    }elsif ( ($PROG_NAME =~ /^Summarize_Peptide/) || ($PROG_NAME =~ /Summarize_Peptide\?(\S+)/ ))
-    {
-       $current_tab=2;
-       $current_subtab=4;
-    }elsif ( ($PROG_NAME =~ /^viewOrthologs/) || ($PROG_NAME =~ /viewOrthologs\?(\S+)/ ))
-    {
-       $current_tab=2;
-       $current_subtab=5;
-    } elsif( ($PROG_NAME =~ /^Search/) ||  ($PROG_NAME =~ /^Search\?(\S+)/ ))
-    {
-       $current_tab=1;
-    } elsif( ($PROG_NAME =~ /^GetPeptide$/) || ($PROG_NAME =~ /^GetPeptide\?(\S+)/ ))
-    {
-       $current_tab=3;
-    } elsif ( ($PROG_NAME =~ /^GetProtein$/) || ($PROG_NAME =~ /GetProtein\?(\S+)/ ))
-    {
-       $current_tab=3;
-       $current_subtab=2;
+       foreach my $sub_tab (keys %{$sub_tabs{$html_tabs[$i]}}){
+          if ($PROG_NAME =~ /(\/$sub_tab|^$sub_tab)$/){
+             $current_tab = $i+1;
+             $current_subtab = $sub_tabs{$html_tabs[$i]}{$sub_tab};
+          } 
+       }
+    }  
 
-    } elsif( ($PROG_NAME =~ /^GetPeptides/) ||  ($PROG_NAME =~ /^GetPeptides\?(\S+)/ ))
-    {
-       $current_tab=4;
-    } elsif ( ($PROG_NAME =~ /^GetProteins/) ||   ($PROG_NAME =~ /GetProteins\?(\S+)/ ))
-    {
-       $current_tab=4;
-       $current_subtab=2;
-    } elsif ($PROG_NAME=~ /^GetCoreProteomeMapping/ || $PROG_NAME =~ /^GetCoreProteomeMapping\?(\S+)/ ) {
-       $current_tab=4;
-       $current_subtab=3;
-    } elsif ( ($PROG_NAME =~ /^GetPTMSummary/) ||  ($PROG_NAME =~ /GetPTMSummary\?(\S+)/ ))
-    {
-       $current_tab=4;
-       $current_subtab=4;
-    }elsif ( ($PROG_NAME =~ /^SearchProteins/) ||   ($PROG_NAME =~ /SearchProteins\?(\S+)/ ))
-    {
-       $current_tab=4;
-       $current_subtab=5;
-    }  elsif ( ($PROG_NAME =~ /^CompareBuildsProteins/) ||($PROG_NAME =~ /CompareBuildsProteins\?(\S+)/ ))
-    {
-       $current_tab=4;
-       $current_subtab=6;
-    } elsif ( ($PROG_NAME =~ /^showPathways/) || ($PROG_NAME =~ /showPathways\?(\S+)/ ))
-    {
-       $current_tab=4;
-       $current_subtab=7;
-    } elsif ( ($PROG_NAME =~ /proteinList/) || ($PROG_NAME =~ /MapSearch/ )) {
-       $current_tab=4;
-       $current_subtab=8;
-    } elsif ( ($PROG_NAME =~ /^GetTransitions/) || ($PROG_NAME =~ /ViewSRMList\?(\S+)/ ))
-    {
-       $current_tab=5;
-    } elsif ( ($PROG_NAME =~ /^quant_info/) || ($PROG_NAME =~ /ViewSRMList\?(\S+)/ ))
-    {
-       $current_tab=5;
-       $current_subtab=1;
-    }elsif ( ($PROG_NAME =~ /^GetTransitionLists/) || ($PROG_NAME =~ /GetTransitionLists\?(\S+)/ ))
-    {
-       $current_tab=5;
-       $current_subtab=2;
-    }elsif ( ($PROG_NAME =~ /^ViewSRMBuild/) || ($PROG_NAME =~ /ViewSRMBuild\?(\S+)/ ))
-    {
-       $current_tab=5;
-       $current_subtab=3;
-    }elsif ( ($PROG_NAME =~ /^GetSELExperiments/) ||  ($PROG_NAME =~ /GetSELExperiments\?(\S+)/ ))
-    {
-       $current_tab=5;
-       $current_subtab=4;
-    }elsif ( ($PROG_NAME =~ /^GetSELTransitions/) || ($PROG_NAME =~ /GetSELTransitions\?(\S+)/ ))
-    {
-       $current_tab=5;
-       $current_subtab=5;
-    #### PeptideAtlas Submission System PASS tabs
-    } elsif ($PROG_NAME =~ /^PASS_Summary/) {
-       $current_tab=6;
-       $current_subtab=1;
-    } elsif ($PROG_NAME =~ /^PASS_Submit/) {
-       $current_tab=6;
-       $current_subtab=2;
-    } elsif ($PROG_NAME =~ /^PASS_View/) {
-       $current_tab=6;
-       $current_subtab=3;
-    #### SWATH Atlas tabs
-    } elsif ($PROG_NAME =~ /DIA_library_download/) {
-       $current_tab=7;
-       $current_subtab=1;
-    } elsif ($PROG_NAME =~ /DIA_library_subset/) {
-       $current_tab=7;
-       $current_subtab=2;
-    } elsif ($PROG_NAME =~ /Upload_library/) {
-       $current_tab=7;
-       $current_subtab=3;
-    } elsif ($PROG_NAME =~ /AssessDIALib/) {
-       $current_tab=7;
-       $current_subtab=4;
-    } elsif ($PROG_NAME eq 'none') {
-      $current_tab=99;
-    }
 
     ## set up tab structure:
     my $tabmenu = SBEAMS::Connection::TabMenu->
@@ -245,7 +216,6 @@ sub getTabMenu {
 			   url => "$CGI_BASE_DIR/PeptideAtlas/viewOrthologs?use_default=1"
 			   );
 
-
     #### Current Build, tab = 3
     $tabmenu->addTab( label => 'Current Build' );
 
@@ -287,6 +257,12 @@ sub getTabMenu {
        helptext => 'Browsing PTM Summary Table in PTM Builds',
        url => "$CGI_BASE_DIR/PeptideAtlas/GetPTMSummary"
        );
+
+    $tabmenu->addMenuItem( tablabel => 'Queries',
+         label => 'Browse Protein By Experiment',
+         helptext => 'Browsing proteins identfied in each expreiment',
+         url => "$CGI_BASE_DIR/PeptideAtlas/GetProteinsByExperiment"
+         );
 
     $tabmenu->addMenuItem( tablabel => 'Queries',
 			   label => 'Compare Proteins in 2 Builds',
@@ -384,14 +360,14 @@ sub getTabMenu {
 			   url => "$CGI_BASE_DIR/SWATHAtlas/GetDIALibs?mode=subset_libs"
 	);
     $tabmenu->addMenuItem( tablabel => 'SWATH/DIA',
-			   label => 'Upload Library',
-			   helptext => 'Uploading DIA spectral ion libraries at SWATHAtlas',
-			   url => "http://www.swathatlas.org/uploadlibrary.php"
-	);
-    $tabmenu->addMenuItem( tablabel => 'SWATH/DIA',
 			   label => 'Assess Library',
 			   helptext => 'Assess physical properties of DIA Library',
 			   url => "$CGI_BASE_DIR/SWATHAtlas/AssessDIALibrary"
+	);
+    $tabmenu->addMenuItem( tablabel => 'SWATH/DIA',
+			   label => 'Upload Library',
+			   helptext => 'Uploading DIA spectral ion libraries at SWATHAtlas',
+			   url => "http://www.swathatlas.org/uploadlibrary.php"
 	);
 
 
