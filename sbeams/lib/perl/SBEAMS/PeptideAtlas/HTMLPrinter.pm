@@ -2145,6 +2145,7 @@ sub get_proteome_coverage_new {
   my $sql = '';
   my $obs_sql = '';
   my @names = ();
+  my @name_desc =();
   my %biosqeuences = ();
   my %entry_cnt = ();
   my %obs=();
@@ -2174,11 +2175,12 @@ sub get_proteome_coverage_new {
   my %biosqeuence_id_obs = $sbeams->selectTwoColumnHash($obs_sql);
  
   foreach my $line (@patterns){
-    my ($org_id, $name, $type, $pat_str)  = split(/,/, $line);
+    my ($org_id, $name, $type, $pat_str, $pat_desc)  = split(/\t/, $line);
     my @pats = split(/;/, $pat_str);
     my %processed = (); 
     my $or = '';
     push @names, $name;
+    push @name_desc, $pat_desc;
     foreach my $id (keys %biosqeuences){
       my $matched = $self->match_proteome_component(pattern=>\@pats,
                                                     source_type => $type,
@@ -2205,13 +2207,14 @@ sub get_proteome_coverage_new {
                     N_unObs_Prots => 'Number of proteins within the subject database to which none of the peptide maps',
                     Pct_Obs => 'The percentage of the subject proteome covered by one or more observed peptides' );
 
-  for my $col_name ( qw( Database N_Prots N_Obs_Prots Pct_Obs N_unObs_Prots ) ) {
+  for my $col_name ( qw( Database N_Prots N_Obs_Prots Pct_Obs N_unObs_Prots Description ) ) {
     push @headings, $col_name, $heading_defs{$col_name};
   }
   my $headings = $self->make_sort_headings( headings => \@headings, default => 'Database' );
   my %result;
   @{$result{table}} = ( $headings );
 
+  my $idx = 0;
   for my $name ( @names ) {
     my $db = $name;
     my $obs  = $obs{$name} || 0;
@@ -2221,7 +2224,14 @@ sub get_proteome_coverage_new {
     if ( $obs && $n_entry_non_redundant ) {
         $pct = sprintf( "%0.1f", 100*($obs/$n_entry_non_redundant) );
     }
-    push  @{$result{table}}, [ $db, $n_entry_redundant, $n_entry_non_redundant, $obs, $pct, $n_entry_non_redundant-$obs];
+    push  @{$result{table}}, [ $db, 
+                               $n_entry_redundant, 
+                               $n_entry_non_redundant, 
+                               $obs, 
+                               $pct, 
+                               $n_entry_non_redundant-$obs,
+                               $name_desc[$idx]];
+    $idx++;
   }
   return '' if (  @{$result{table}} == 1);
   my $table = '<table>';
@@ -2250,7 +2260,7 @@ sub get_proteome_coverage_new {
     #  $row->[0] .="|$type,$pat_str";
     #  $i++;
     #} 
-    unshift @{$result{table}} ,[qw(Database N_Entries N_Prots N_Obs_Prots Pct_Obs N_unObs_Prots)]; 
+    unshift @{$result{table}} ,[qw(Database N_Entries N_Prots N_Obs_Prots Pct_Obs N_unObs_Prots Description)]; 
     return \%result;
   }else{
     return $table;
@@ -2322,7 +2332,7 @@ sub get_ptm_coverage {
   }
   my %processed;
   foreach my $line (@patterns){
-    my ($org_id, $name, $type, $pat_str)  = split(/,/, $line);
+    my ($org_id, $name, $type, $pat_str, $pat_desc)  = split(/\t/, $line);
     my @pats = split(/;/, $pat_str);
     my $or = '';
     push @names, $name;
@@ -2678,43 +2688,47 @@ sub get_what_is_new {
       GROUP BY ATLAS_BUILD_ID
   ~;
   my %sample_cnt = $sbeams->selectTwoColumnHash($sql);
+  push @return , ['# Experiments'];
+  push @return , ['Distinct_Peptides'];
+  push @return , ['Canonical_Proteins'];
 
+  foreach my $bid (($build_id, $previous_build_id)){
+    $sbeams->update_PA_table_variables($bid); 
+		$sql = qq~
+		SELECT  atlas_build_id,  COUNT(distinct PI.peptide_instance_id) cnt
+		FROM $TBAT_PEPTIDE_INSTANCE PI
+		JOIN $TBAT_PEPTIDE_MAPPING PM ON (PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID)
+		JOIN $TBAT_BIOSEQUENCE B ON (PM.MATCHED_BIOSEQUENCE_ID = B.BIOSEQUENCE_ID)
+		WHERE atlas_build_id in ($bid)
+		AND B.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
+		AND B.BIOSEQUENCE_NAME NOT LIKE 'CONTAM%'
+		AND B.biosequence_name NOT LIKE '%UNMAPPED%'
+		AND B.biosequence_desc NOT LIKE '%common contaminant%'
+		GROUP BY atlas_build_id
+		~;
+		my %pep_count = $sbeams->selectTwoColumnHash($sql);
 
-  $sql = qq~
-  SELECT  atlas_build_id,  COUNT(distinct PI.peptide_instance_id) cnt
-  FROM $TBAT_PEPTIDE_INSTANCE PI
-  JOIN $TBAT_PEPTIDE_MAPPING PM ON (PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID)
-  JOIN $TBAT_BIOSEQUENCE B ON (PM.MATCHED_BIOSEQUENCE_ID = B.BIOSEQUENCE_ID)
-  WHERE atlas_build_id in ($build_id, $previous_build_id)
-  AND B.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
-  AND B.BIOSEQUENCE_NAME NOT LIKE 'CONTAM%'
-  AND B.biosequence_name NOT LIKE '%UNMAPPED%'
-  AND B.biosequence_desc NOT LIKE '%common contaminant%'
-  GROUP BY atlas_build_id
-  ~;
-  my %pep_count = $sbeams->selectTwoColumnHash($sql);
+		$sql = qq~ 
+		SELECT PID.atlas_build_id, COUNT(BS.biosequence_name) cnt
+		FROM $TBAT_PROTEIN_IDENTIFICATION PID
+		JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL
+		ON PPL.protein_presence_level_id = PID.presence_level_id
+		JOIN $TBAT_BIOSEQUENCE BS
+		ON BS.biosequence_id = PID.biosequence_id
+		WHERE PID.atlas_build_id in ($bid)
+		AND PPL.level_name = 'canonical'
+		AND BS.biosequence_name NOT LIKE 'DECOY%'
+		AND BS.biosequence_name NOT LIKE '%UNMAPPED%'
+		AND BS.biosequence_desc NOT LIKE '%common contaminant%'
+		AND BS.BIOSEQUENCE_NAME NOT LIKE 'CONTAM%'
+		GROUP BY PID.atlas_build_id
+		~;
+		my %prot_count = $sbeams->selectTwoColumnHash($sql);
 
-  $sql = qq~ 
-  SELECT PID.atlas_build_id, COUNT(BS.biosequence_name) cnt
-  FROM $TBAT_PROTEIN_IDENTIFICATION PID
-  JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL
-  ON PPL.protein_presence_level_id = PID.presence_level_id
-  JOIN $TBAT_BIOSEQUENCE BS
-  ON BS.biosequence_id = PID.biosequence_id
-  WHERE PID.atlas_build_id in ($build_id, $previous_build_id)
-  AND PPL.level_name = 'canonical'
-  AND BS.biosequence_name NOT LIKE 'DECOY%'
-  AND BS.biosequence_name NOT LIKE '%UNMAPPED%'
-  AND BS.biosequence_desc NOT LIKE '%common contaminant%'
-  AND BS.BIOSEQUENCE_NAME NOT LIKE 'CONTAM%'
-  GROUP BY PID.atlas_build_id
-  ~;
-  my %prot_count = $sbeams->selectTwoColumnHash($sql);
-
-  push @return , ['# Experiments', $sample_cnt{$build_id}, $sample_cnt{$previous_build_id}];
-  push @return , ['Distinct_Peptides', $pep_count{$build_id}, $pep_count{$previous_build_id}];
-  push @return , ['Canonical_Proteins', $prot_count{$build_id}, $prot_count{$previous_build_id}];
-
+		push @{$return[2]}, $sample_cnt{$bid};
+		push @{$return[3]}, $pep_count{$bid};
+		push @{$return[4]}, $prot_count{$bid};
+  }
   my $table = '<table>';
   $table .= $self->encodeSectionHeader(
       LMTABS => 1,
@@ -2778,6 +2792,8 @@ sub get_what_is_new {
 					   visible => 1,
 					   content => "<table>$sampleDisplay</table>" );
   }
+
+  $sbeams->update_PA_table_variables($build_id);
   if ($data_only){
     return (\@return,  \@sample_ids);
   }else{ 

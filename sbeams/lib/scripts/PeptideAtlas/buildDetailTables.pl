@@ -38,7 +38,7 @@ my ($organism, $organism_id) = getBuildOrganism( build_id => $build_id );
 $sbeams->update_PA_table_variables($build_id);
 
 my $fh;
-open ($fh, ">$build_path/analysis/build_detail_tables.tsv") or die "cannot open $build_path/analysis/build_detail_tables.tsv\n";
+open ($fh, ">$build_path/analysis/build_detail_tables.tsv.tmp") or die "cannot open $build_path/analysis/build_detail_tables.tsv\n";
 $fh->autoflush;
 
 ##Build Overview
@@ -62,7 +62,7 @@ if (open (O, "<$proteomeComponentOrder_file")){
 	 while (my $line = <O>){
 		 chomp $line;
 		 next if ($line =~ /^#/ ||  $line =~ /^$/);
-		 my ($org_id, $str) = split(/,/, $line);
+		 my ($org_id, $str) = split(/\t/, $line);
 		 if ($org_id == $organism_id){
 				push @patterns,$line;
 		 }
@@ -81,12 +81,7 @@ if (@patterns){
 #print $fh "proteome_coverage|Database\tN_Prots\tN_Obs_Prots\tPct_Obs\n";
 foreach my $row (@{$proteome_coverage->{table}}){
   #next if($row->[1] == 0);
-  print $fh "proteome_coverage|".  join("\t", @$row);
-  if ($proteome_coverage->{missing_prot}{$row->[0]}){
-    print $fh "\t". join(",", @{$proteome_coverage->{missing_prot}{$row->[0]}}) ."\n";
-  }else{
-    print $fh "\t\n";
-  }
+  print $fh "proteome_coverage||".  join("\t", @$row). "\n";;
 }
 
 undef $proteome_coverage;
@@ -118,7 +113,7 @@ foreach my $row (@$dataset_contrib_table){
 }
 
 print "getting Dataset Protein Info\n";
-my $dataset_protein_info = get_dataset_protein_info( build_id => $build_id);
+my $dataset_protein_info = get_dataset_protein_info_old( build_id => $build_id);
 
 foreach my $row (@$dataset_protein_info){
   print $fh "dataset_protein_info|".  join("\t", @$row) ."\n";
@@ -128,6 +123,55 @@ my $dataset_spec_protein_info =  get_dataset_spec_protein_info( build_id => $bui
 foreach my $row (@$dataset_spec_protein_info){
   print $fh "dataset_spec_protein_info|".  join("\t", @$row) ."\n";
 }
+
+if ($organism =~ /Bburgdorferi/i){
+  print "getting chromosome coverage data\n";
+  my $limit = 3;
+  my $sql = qq~
+		SELECT NeXtProt_Mapping_id, chromosome, PeptideAtlas_Category 
+		FROM $TBAT_NEXTPROT_CHROMOSOME_MAPPING
+    WHERE NeXtProt_Mapping_id in (85,86,87)
+    ORDER BY chromosome
+	 ~;
+#			SELECT top $limit NM.id
+#			FROM $TBAT_NEXTPROT_MAPPING NM 
+#			WHERE NM.atlas_build_id = $build_id
+#			ORDER BY pa_mapping_date DESC
+#    )  
+
+  my @result = $sbeams->selectSeveralColumns($sql);
+  my %data = ();
+  my %ncmid2borreliaIso=(
+    85 => 'B31',
+    86 => 'MM1',
+    87 => 'B31-5A4'
+  );
+  foreach my $row (@result){
+     my ($id, $chr,$PAcat) = @$row;
+     die "ERROR: chromosome mapping id $id not found for Borrelia\n" if (! $ncmid2borreliaIso{$id});
+     $chr = 'na' if (! $chr);
+     $chr =~ s/plsm\_//;
+     if ($ncmid2borreliaIso{$id} eq 'B31-5A4'){
+        if ($chr =~ /plasmid/){
+					if ($chr =~ /plasmid\s+p(26|32|9)/){
+						$chr =~ s/plasmid\s+p/plasmid cp/;
+					}else{
+            $chr =~ s/plasmid\s+p/plasmid lp/;
+          }
+        } 
+     }
+     if ($PAcat !~ /not observed/i){
+       $data{$ncmid2borreliaIso{$id}}{$chr}{'Observed'}++;
+     }
+     $data{$ncmid2borreliaIso{$id}}{$chr}{'All'}++;
+  }
+  foreach my $org (qw(B31 MM1 B31-5A4)){
+    foreach my $chr (sort {$a cmp $b} keys %{$data{$org}}){
+      print $fh "chr_plot|$org\t$chr\t$data{$org}{$chr}{'All'}\t$data{$org}{$chr}{'Observed'}\n";
+    }
+  }
+}
+
 print $fh "\n";
 
 if ($organism =~ /(human|Arabidopsis|Maize|Bburgdorferi|mouse)/i){ 
@@ -353,11 +397,11 @@ sub get_build_overview {
 		 }
   }
 
-  my $pep_count = $sbeams->selectrow_hashref( <<"  PEP" );
-  SELECT COUNT(*) cnt,  SUM(n_observations) obs
-  FROM $TBAT_PEPTIDE_INSTANCE 
-  WHERE atlas_build_id = $build_id 
-  PEP
+#  my $pep_count = $sbeams->selectrow_hashref( <<"  PEP" );
+#  SELECT COUNT(*) cnt,  SUM(n_observations) obs
+#  FROM $TBAT_PEPTIDE_INSTANCE 
+#  WHERE atlas_build_id = $build_id 
+#  PEP
 
   my $pep_count = $sbeams->selectrow_hashref( <<"  PEP" );
   SELECT COUNT(*) cnt,  SUM(n_observations) obs
@@ -371,13 +415,27 @@ sub get_build_overview {
 	) A
   PEP
 
+  my $mod_pep_count = $sbeams->selectrow_hashref( <<"  PEP" );
+    SELECT FORMAT (count(DISTINCT MPI.MODIFIED_PEPTIDE_INSTANCE_ID), '#,#') cnt
+    FROM $TBAT_PEPTIDE_INSTANCE PI 
+    JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI ON (MPI.PEPTIDE_INSTANCE_ID = PI.PEPTIDE_INSTANCE_ID)
+    JOIN $TBAT_PEPTIDE_MAPPING PM ON (MPI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID)
+    JOIN $TBAT_BIOSEQUENCE B ON (PM.MATCHED_BIOSEQUENCE_ID = B.BIOSEQUENCE_ID)
+    WHERE  PI.ATLAS_BUILD_ID= $build_id AND B.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
+          AND B.BIOSEQUENCE_NAME NOT LIKE 'CONTAM%'
+  PEP
+
+
   my $smpl_count = $sbeams->selectrow_hashref( <<"  SMPL" );
   SELECT COUNT(*) cnt FROM $TBAT_ATLAS_BUILD_SAMPLE 
   WHERE atlas_build_id = $build_id
   SMPL
 
   my $dataset_count = $sbeams->selectrow_hashref( <<"  DATASET" );
-  SELECT  COUNT(*) cnt, SUM(cast (n_searched_spectra as bigint)) n_searched_spectra 
+  SELECT  COUNT(*) cnt,
+          FORMAT (SUM(cast (n_searched_spectra as bigint)), '#,#') n_searched_spectra,
+          FORMAT (SUM(n_runs),  '#,#') n_runs
+          --SUM(cast (n_good_spectra as bigint)) n_good_spectra
   FROM $TBAT_DATASET_STATISTICS
   WHERE ATLAS_BUILD_ID = $build_id
   DATASET
@@ -410,11 +468,15 @@ sub get_build_overview {
   print $fh "build_overview|build_date\t$build_info->{build_date}\n";
   print $fh "build_overview|smpl_count\t$smpl_count->{cnt}\n";
   print $fh "build_overview|dataset_count\t$dataset_count->{cnt}\n";
+  print $fh "build_overview|n_runs\t$dataset_count->{n_runs}\n";
   print $fh "build_overview|protpro_PSM_FDR_per_expt\t$build_info->{protpro_PSM_FDR_per_expt}\n";
   print $fh "build_overview|probability_threshold\t$build_info->{probability_threshold}\n";
   print $fh "build_overview|n_searched_spectra\t$dataset_count->{n_searched_spectra}\n";
+  #print $fh "build_overview|n_good_spectra\t$dataset_count->{n_good_spectra}\n";
   print $fh "build_overview|pep_count_obs\t$pep_count->{obs}\n";
   print $fh "build_overview|pep_count_cnt\t$pep_count->{cnt}\n";
+  print $fh "build_overview|modpep_count\t$mod_pep_count->{cnt}\n";
+
   foreach my $key (sort {$a cmp $b} keys %prot_count){
      if ($key =~ /canonical/i){
        print $fh "build_overview|Protein Presence Levels|$key\t$prot_count{$key}\n";
@@ -455,7 +517,7 @@ sub get_sample_info {
       ["n_added_canonical_prots", "''", "Added Canonical Proteins"],
       ["cumulative_n_proteins", "cumulative_n_proteins", "Cumulative Canonical Proteins"],
       ["date_created", "CONVERT(VARCHAR(10), PE.date_created, 126)", "Date Added"],
-      ["pubmed_id", "pubmed_id", "Pubmed Id or DOI"],
+      ["pubmed_id", "CONVERT(VARCHAR(20), pubmed_id)", "Pubmed Id or DOI"], 
       ["instrument_name","instrument_name","Instrument Name"],
       ["sample_category", "SC.name", "Sample Category"],
       ["sample_category_id", "S.sample_category_id", "sample_category_id"]
@@ -694,6 +756,7 @@ sub get_dataset_protein_info {
              WHERE RELATIONSHIP_TYPE_ID = 2
           )
   ~;
+
   my %dataset_prot_cnt;
   my $possibly_distinguished = 0;
   my $noncore_canonical = 0;
@@ -767,6 +830,7 @@ sub get_dataset_protein_info_old {
     AND ABSB.atlas_build_id = $atlas_build_id
     AND REPOSITORY_IDENTIFIERS != ''
   ~;
+
   my %sample_repository_ids = ();
   my %absb2sample_id =();
    my @rows = $sbeams->selectSeveralColumns($sql);
