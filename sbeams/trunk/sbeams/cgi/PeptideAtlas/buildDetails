@@ -1416,7 +1416,7 @@ sub generate_html_from_file {
    dataset_protein_info => 'Dataset Protein Info',
    dataset_spec_protein_info => 'Dataset Specific Protein Identification',
    proteome_coverage => 'Proteome Coverage (exhaustive)',
-   ptm_coverage => 'PTM Coverage',
+   ptm_coverage => 'Phosphoproteome Coverage',
  );
  my %column_align = (
    exp_contrib_table => [qw(left left left center center center center center center center center center center center center center)], 
@@ -1648,13 +1648,25 @@ sub generate_html_from_file {
 																				 divName => "ptm_cov_plot_div",
 																				 ytitle => 'Count',
 																				 dtick => 1,
-																				 title => $ptm_plot_data{label},
+																				 title => "Phosphosites for $ptm_plot_data{label}",
                                          barlabel => 1
 																				 #xtickangle => 'tickangle:25',
 																				 #yticktype => "type:'log',range:[0,$max],dtick:1",
 																				 #layoutmargin => 'b:50',
                                          );
-				  	$plot_html .= "<div><div style=\"width: 50vw\" id=\"ptm_cov_plot_div\"</div>$plot_html</div>\n";
+            
+				  	$plot_html .= qq~
+               <div>
+               <p class="help_val"  style="width: 55vw; padding-left:10px;">
+								The combined results from datasets searched with phospho-STY in this build yield the 
+                following numbers of phosphosites at several levels of
+                confidence (nP == number of sites with PTMProphet probability range).
+               The bar chart depicts the results for the core proteome only.
+               The table provides metrics for all subsets of protein entries in the combined mapping proteome.
+              </p>
+              <div style="width: 50vw" id="ptm_cov_plot_div"></div>$plot_html</div>
+            ~;
+
          }
 	 
 				 $html = $atlas->create_table (data => \@data,
