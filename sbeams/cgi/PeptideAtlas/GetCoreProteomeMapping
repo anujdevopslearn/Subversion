@@ -426,6 +426,7 @@ sub handle_request {
        $chromosome = 'NA'
      }
      $chromosome_clause = "AND (NCM.chromosome like '$chromosome' or NCM.chromosome like '$chromosome\[qp\]%')";
+
   }
 
   #### Define some variables needed to build the query
@@ -494,12 +495,12 @@ sub handle_request {
   $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
 
 
-  if ($build_name =~ /borrelia/i){
-    $url_cols{'PeptideAtlas'} = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=".$parameters{atlas_build_id}
-                              ."&apply_action=$pass_action&protein_name=\%2V";
-  }else{
+  if ($build_name =~ /human/i){
     $url_cols{'PeptideAtlas'} = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=".$parameters{atlas_build_id}
                               ."&apply_action=$pass_action&protein_name=\%1V"; 
+  }else{
+    $url_cols{'PeptideAtlas'} = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=".$parameters{atlas_build_id}
+                              ."&apply_action=$pass_action&protein_name=\%2V";
   }
   if ($build_name =~ /^Arabidopsis/){ 
     $url_cols{'Gene Accession'} = "https://www.arabidopsis.org/servlets/Search?type=general&search_action=detail&method=1&show_obsolete=F&name=\%14V&".
