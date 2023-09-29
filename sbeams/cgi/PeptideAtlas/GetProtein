@@ -1085,22 +1085,23 @@ sub handle_request {
     my $cluster_id_file = "$build_path/Orthogroups.txt";
     if (-e $cluster_id_file){
       if (open (C, "<$cluster_id_file")){
-	while (my $line = <C>){
-	  my @prot_in_isolates =split(/\s+/,$line);
-	  next if (@prot_in_isolates == 1);
-	  foreach my $p(@prot_in_isolates){
-	    if ($p eq $biosequence->{biosequence_name}){
-	      my $s ="<a href='$CGI_BASE_DIR/PeptideAtlas/CompareIsolates?". 
-		  "atlas_build_id=$atlas_build_id&protein_name=$p&apply_action=QUERY'" .
-		  ">$p</a>"; 
-	      $htmlcontent .= $sbeamsMOD->encodeSectionItem(
-		key=>'Compare Isolate Sequences',
-		tr_info => $tr,
-		value=>$s,
-		  );
-	    } 
-	  }
-	}
+				while (my $line = <C>){
+					my @prot_in_isolates =split(/\s+/,$line);
+					next if (@prot_in_isolates == 1);
+					foreach my $p(@prot_in_isolates){
+						if ($p eq $biosequence->{biosequence_name}){
+							my $s ="<a href='$CGI_BASE_DIR/PeptideAtlas/CompareIsolates?". 
+											"atlas_build_id=$atlas_build_id&protein_name=$p&apply_action=QUERY'" .
+											">$p</a>"; 
+							$htmlcontent .= $sbeamsMOD->encodeSectionItem(
+								key=>'Compare Isolate Sequences',
+								tr_info => $tr,
+								value=>$s,
+									);
+               last;
+						} 
+					}
+				}
 
       }
     }
@@ -1610,6 +1611,9 @@ sub handle_request {
 					 seq=>$biosequence->{biosequence_seq},
            ptm_obs => \%ptm_obs);
       print "$ptm_summary_chart\n";
+    }else{
+      print qq~<script type="text/javascript" src="https://cdn.plot.ly/plotly-latest.min.js"></script>~;
+
     }
 
     #############################################################################
@@ -1719,8 +1723,10 @@ sub handle_request {
       $row->[0] =  ( $htmlmode ) ? "<A HREF='$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$row->[0]&action=QUERY'>$row->[0] </A>" :$row->[0];
 
       my @errs;
-			push @errs, 'mc' if $mc;
-			push @errs, 'et'.$ntt if $ntt < 2;
+      if ($is_trypsin_build eq 'Y'){
+				push @errs, 'mc' if $mc;
+				push @errs, 'et'.$ntt if $ntt < 2;
+      }
 			push @errs, 'mgl' if $mgl;
 			my $annot = '';
 			if ( @errs) {
@@ -3264,7 +3270,8 @@ sub displayAnnotatedSequence {
                                        seq2instance => $seq2instance,
                                    is_trypsin_build => $args{is_trypsin_build},
                                         digest_type => $digest_type,
-                                       show_clustal => $args{show_clustal} );
+                                       show_clustal => $args{show_clustal},
+                                            caching => $parameters->{caching} );
 
   $seqHTML .= "$html_seq->{seq_display}\n";
 
@@ -3397,18 +3404,19 @@ sub displayAnnotatedSequence {
         }else{
           $variant_list .= join( "\t", @{$var}[0..4] ) . "<div class=$class id=$div_id>$mupit_link</div>" . "\n";
         }
+        last if ($cnt > 1000);
       }
       my $var_toggle_link = '';
       if ( $cnt > 16 ) {
         $variant_list .= "</SPAN>";
-        $var_toggle_link =  qq~ <A NAME=vars HREF="javascript:void(0)" onClick=showVariants() ID=vars_toggle>Show More</A>\n ~;
+        $var_toggle_link =  qq~ <A NAME=vars HREF="javascript:void(0)" onClick=showVariants() ID=vars_toggle>Show More Up to 1000 Enries</A>\n ~;
         $seqHTML .= qq~
         <SCRIPT TYPE="text/javascript">
         function showVariants() {
           var showVar = document.getElementById( "var_list" );
           if ( showVar.style.display == 'block' ) {
             showVar.style.display = 'none';
-            document.getElementById( "vars_toggle" ).innerHTML = 'Show More';
+            document.getElementById( "vars_toggle" ).innerHTML = 'Show More Up to 1000 Enries';
           } else {
             showVar.style.display = 'block';
             document.getElementById( "vars_toggle" ).innerHTML = 'Show Fewer';
@@ -3418,6 +3426,7 @@ sub displayAnnotatedSequence {
         ~;
       }
       $seqHTML .= qq~ <pre style='margin-left:15px;'>$variant_list</PRE> $var_toggle_link <br> ~;
+      
     }
     $seqHTML .= "<BR>\n";
     $seqHTML .= "<B>Annotations in Sequence Context:</B> <BR>\n";
@@ -3901,7 +3910,9 @@ sub displayExternalLinksSection {
 
 
   my $currentOrganism = $current_page->{organism} || $sbeamsMOD->getCurrentAtlasOrganism(parameters_ref=>{});
+
   #### Display links to Plant resources
+  my (%prot_links, %prot_link_titles,%gene_links, %gene_link_titles);
   if ($currentOrganism =~ /Arabidopsis/ && $biosequence->{biosequence_name} =~ /^A/ ){
     my %prot_links=( 'POGS' => 'http://pogs.uoregon.edu/#/search/genemodel/',
                      'SUBA' => 'http://suba.live/factsheet.html?id=',
@@ -3919,7 +3930,19 @@ sub displayExternalLinksSection {
                            ); 
     my %gene_link_titles = ('TAIR' => 'The Arabidopsis Information Resource',
 			    'ATHENA' => 'Arabidopsis thaliana Expression Atlas',
-                           );
+                          );
+
+
+    }elsif( $currentOrganism =~ /Bburgdorferi_B31/){
+      if ($biosequence->{biosequence_desc} =~/OS\=Borreliella burgdorferi/){
+				 $external_links .= qq~
+					<tr class="hoverable">
+					<td class="key" nowrap>UniProt</td>
+								<td class="value"><a href="https://www.uniprot.org/uniprotkb/$biosequence->{biosequence_name}" target="_info">$biosequence->{biosequence_name}</a>
+					</td></tr>
+				 ~; 
+       }
+    }
 
     foreach my $source(keys %prot_links){
       my $title = $source;
@@ -3931,7 +3954,7 @@ sub displayExternalLinksSection {
 	  <b><a href="$prot_links{$source}$biosequence->{biosequence_name}" title="view $biosequence->{biosequence_name} at $source" target="_info">$source</a></b>
           </td></tr>
 	 ~;
-    }
+
     my $gene_name = $biosequence->{biosequence_name};
     $gene_name =~ s/\..*//;
     foreach my $source(keys %gene_links){
