@@ -2010,6 +2010,8 @@ sub get_html_seq_vars {
 
   for my $type ( qw( INIT_MET SIGNAL PROPEP PEPTIDE CHAIN VARIANT ) ) {
     my $snpcnt = 1;
+    print "DDDD$type" if ($type eq 'VARIANT' && $args{caching});
+
     for my $entry ( @{$swiss->{$type}} ) {
       my $alt = $entry->{seq};
       my $snpname = $type2display{$type} .  '_' . $snpcnt;
@@ -2024,11 +2026,11 @@ sub get_html_seq_vars {
 								   pos => $entry->{start},
 								   alt => $alt_aa,
                    primary=>\%{$primary{$snpcnt}});
+          print "$snpcnt..." if ($snpcnt % 1000 == 0 && $args{caching});
         }
       }
       my $var_string = '';
       $snpcnt++;
-
       my ( $vtype, $vnum ) = split( /_/, $snpname );
       if ( $type eq 'VARIANT' ) {
         my %sorted;
@@ -2043,6 +2045,7 @@ sub get_html_seq_vars {
         push @{$return{variant_list}}, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info} ];
       }
     }
+    print "\n" if ($args{caching});
   } 
 
   my %clustal_middle_vnum =();
@@ -2216,7 +2219,7 @@ sub get_html_seq_vars {
   my $trypsites = $primary_clustal->[1];
   $trypsites =~ s/[KR]P/--/g;
   $trypsites =~ s/[^KR]/-/g;
-  push @global_clustal, [ 'TrypticSites', $trypsites ];
+  push @global_clustal, [ 'TrypticSites', $trypsites ] if ($is_trypsin_build eq 'Y');
 
   my $clustal_display .= $self->get_clustal_display( alignments => \@global_clustal, 
 						     dup_seqs => {},
@@ -2653,9 +2656,14 @@ sub get_clustal_display {
   my $style = '';
   my $style2= '';
   my $px = 0;
+  my $counter = 0;
+  my $n_alignment = scalar @{$args{alignments}};
 
-  for my $seq ( @{$args{alignments}} ) {
+  for (my $i=0; $i<$n_alignment; $i++){
+    my $seq = $args{alignments}[$i];
     my $sequence = $seq->[1];
+
+    next if($i>1000 && $seq->[0] =~ /VAR/);
     if ( $seq->[0] =~ /\&nbsp;/  ) {
     } else {
       $sequence = $self->highlight_sites( seq => $sequence, 
@@ -2701,6 +2709,7 @@ sub get_clustal_display {
       $style = '';
       $style2= '';
     }
+    $counter++;
   }
 
 
