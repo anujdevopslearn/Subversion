@@ -2260,7 +2260,7 @@ sub get_proteome_coverage_new {
     #  $row->[0] .="|$type,$pat_str";
     #  $i++;
     #} 
-    unshift @{$result{table}} ,[qw(Database N_Entries N_Prots N_Obs_Prots Pct_Obs N_unObs_Prots Description)]; 
+    unshift @{$result{table}} ,[qw(Database N_Entries N_Seqs N_Obs_Prots Pct_Obs N_unObs_Prots Description)]; 
     return \%result;
   }else{
     return $table;
@@ -2577,11 +2577,11 @@ sub get_proteome_coverage {
 
   my @headings;
   my %head_defs = ( Database => 'Name of databse, which collectively form the reference database for this build',
-                    N_Prots => 'Total number of entries in subject database',
+                    N_Seqs => 'Total number of entries in subject database',
                     N_Obs_Prots => 'Number of proteins within the subject database to which at least one observed peptide maps',
                     Pct_Obs => 'The percentage of the subject proteome covered by one or more observed peptides' );
 
-  for my $head ( qw( Database N_Prots N_Obs_Prots Pct_Obs ) ) {
+  for my $head ( qw( Database N_Seqs N_Obs_Prots Pct_Obs ) ) {
     push @headings, $head, $head_defs{$head};
   }
   my $headings = $self->make_sort_headings( headings => \@headings, default => 'Database' );
@@ -2937,7 +2937,7 @@ sub display_peptide_sample_category_plotly{
     $cols{$_} = $idx;
     $idx++;
   }
-  my (@sample_category, @peptide_count,@links, @obs_per_million );
+  my (@sample_category, @peptide_count,@links, @pect_spec_per_sample );
   my $total_observed_spectra;
   my @n_good_spectra; 
 
@@ -2947,6 +2947,7 @@ sub display_peptide_sample_category_plotly{
     foreach my $row (@$sample_array_ref){
       my $n = scalar @$row; 
       my $sample_cat_id  = $row->[$cols{"sample_category_id"}];
+      $row->[$cols{"Spectra ID'd"}] =~ s/,//g;
       if ($sample_cat_id eq $id){
         $good_spectra +=  $row->[$cols{"Spectra ID'd"}];
         $total_observed_spectra += $row->[$cols{"Spectra ID'd"}]; 
@@ -2956,23 +2957,23 @@ sub display_peptide_sample_category_plotly{
     push @peptide_count, $cnt; 
     push @sample_category,'<a href="'."https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptides?atlas_build_id=$build_id&sample_category_id=$id&QUERY_NAME=AT_GetPeptides&apply_action=QUERY" .'">'. $name .'  </a>';
   }
+ 
+  foreach my $val (@n_good_spectra){
+    push @pect_spec_per_sample,  sprintf( "%0.6f", ($val/$total_observed_spectra)*100 );
+  } 
 
-  foreach my $val (@peptide_count){
-    push @obs_per_million,  sprintf( "%0.1f",($val/$total_observed_spectra) * 1000000 );
-  }
-  
   my $sample_category_str = join("','", @sample_category);
   my $n_good_spectra_str = join(",", @n_good_spectra);  
-  my $obs_per_million_str = join(",", @obs_per_million);
+  my $pect_spec_per_sample_str = join(",", @pect_spec_per_sample);
   my $nc = $#sample_category + 1;
   my $height = $nc*40 > 1100? 1100:$nc*40; 
   $height = $height < 300?300:$height;
   my $plot_js = qq~
 			var pepcnt = {
 				y: ['$sample_category_str'],
-				x: [$obs_per_million_str],
+				x: [$pect_spec_per_sample_str],
         //customdata:['link_str'],
-				name:'Number Distinct Peptide Per Million Observed Spectra',
+				name:'Percentage of PSMs per sample category',
 			  type: 'bar',
         marker: {color: '0x5588bb'},	
         orientation: 'h',
@@ -2981,7 +2982,7 @@ sub display_peptide_sample_category_plotly{
       var obs = {
         y: ['$sample_category_str'],
         x: [$n_good_spectra_str],
-        name:'# Spectrua ID',
+        name:'Total PSMs per sample category',
         type: 'bar',
         marker: {color: '0x5588bb'},
         orientation: 'h',
@@ -2992,13 +2993,13 @@ sub display_peptide_sample_category_plotly{
         legend:{x: 0.029,y: 1.1},
 			  height: $height,
         font: {size: 12},
-				title:'Number of Distinct Peptides Per Million Observed Spectra',
+				title:'Percentage of PSMs per sample category',
         margin:{l: 350},
         hoverlabel:{bgcolor:'white'},
 			};
 			var data1 = [pepcnt];
 			Plotly.newPlot('plot_div3', data1,layout);
-      layout.title = "Total Observed Spectra";
+      layout.title = "Total PSMs per sample category";
       var data2 = [obs];
       Plotly.newPlot('plot_div4', data2,layout);
 
@@ -3012,21 +3013,21 @@ sub display_peptide_sample_category_plotly{
         if (myplot3.style.display == '' ){
            myplot3.style.display = 'none';
            myplot4.style.display = '';
-          document.getElementById('toggle_button').innerHTML = 'Show Distinct Peptide Per Million Observed Spectra Plot';
+          document.getElementById('toggle_button').innerHTML = 'Show Percentage of PSMs per sample category plot';
         } else {
            myplot3.style.display = '';
            myplot4.style.display = 'none';
-          document.getElementById('toggle_button').innerHTML = 'Show Total Observed Spectra Plot';
+          document.getElementById('toggle_button').innerHTML = 'Show Total PSMs per sample category plot';
         }
 			}
 		</script>
        <A NAME='<B>Sample Category</B>'></A><DIV CLASS="hoverabletitle"i onclick="toggle_content('sample_cat_div')">
        <IMG ID='sample_cat_div_gif'  SRC='/devZS/sbeams/images/small_gray_minus.gif'>
-       <B>Peptide Identification by Sample Category</B></DIV>
+       <B>Spectra Identification by Sample Category</B></DIV>
        <DIV ID='sample_cat_div' class="visible">
        <TABLE><TR><TD COLSPAN='5'>
        <TR> 
-        <TD><button type='button' id='toggle_button' onclick=toggle_plot()>Show Distinct Peptide Per Million Observed Spectra Plot</button>
+        <TD><button type='button' id='toggle_button' onclick=toggle_plot()>Show Percentage of PSMs per sample category plot</button>
            <div style="width: 80vw">
             &nbsp;<div id="plot_div3" style="display:none; width: 80vw"> </div>
             &nbsp;<div id="plot_div4"></div>
