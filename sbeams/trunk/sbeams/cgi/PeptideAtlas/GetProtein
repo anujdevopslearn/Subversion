@@ -1072,14 +1072,14 @@ sub handle_request {
     } elsif ( defined $biosequence->{ref_ref_group_rep}) {
       $group_rep = $biosequence->{ref_ref_group_rep};
     }
-    my $group_string=qq~
-<a href="$CGI_BASE_DIR/PeptideAtlas/GetProteins?protein_group_representative_constraint=$group_rep&apply_action=QUERY">$group_rep</a>
-    ~;
-    $htmlcontent .= $sbeamsMOD->encodeSectionItem(
-      key=>'Protein Group',
-      tr_info => $tr,
-      value=>$group_string,
-    );
+#    my $group_string=qq~
+#<a href="$CGI_BASE_DIR/PeptideAtlas/GetProteins?protein_group_representative_constraint=$group_rep&apply_action=QUERY">$group_rep</a>
+#    ~;
+#    $htmlcontent .= $sbeamsMOD->encodeSectionItem(
+#      key=>'Protein Group',
+#      tr_info => $tr,
+#      value=>$group_string,
+#    );
 
     my $build_path = $sbeamsMOD->getAtlasBuildDirectory( atlas_build_id => $atlas_build_id );
     my $cluster_id_file = "$build_path/Orthogroups.txt";
