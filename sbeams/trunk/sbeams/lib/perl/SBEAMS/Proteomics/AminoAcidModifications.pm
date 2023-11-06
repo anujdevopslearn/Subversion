@@ -88,6 +88,7 @@ sub new {
       'L[123]' => 10.062767,    # D10_Label
       'L[135]' => 21.98134,     # Sodiated (mod from Unimod, but L not listed)
       'H[153]' => 15.9949,      # Oxidation  
+      'H[217]' => 79.966331,    # Phosphorylation (UniMod 21)
       'H[441]' => 304.205360,   # 8 plex  
 	'K[132]' => 4.02511,	    # D4_Label
 	'K[134]' =>	6.020129,     # Silac label (UniMod)
@@ -110,7 +111,8 @@ sub new {
       'K[273]' => 145.01975,    # Carboxyamidomethylated cleaved DSP-crosslinker
       'K[300]' => 172.133363,   # ABI iTRAQ + di-Methylation
       'K[357]' => 229.162932,   # 6 plex
-      'K[432]' => 304.199040,   # 8 plex
+#      'K[432]' => 304.199040,   # 8 plex
+      'K[432]' => 304.207146,   # TMTpro
       'K[467]' => 339.161662,   #	NHS-LC-Biotin
       'K[582]' => 454.18121,    # pyroQQTGG SUMO
       'K[599]' => 471.20776,    # QQTGG SUMO
@@ -129,6 +131,7 @@ sub new {
       'R[162]' =>	6.020129,     # 13C(6) Silac label
       'R[184]' => 28.0532,      # di-Methylation (Unimod)
       'R[157]' => 0.984009,     # Citrullination (Unimod)
+      'R[460]' => 304.207146,   # TMTpro
       'P[111]' => 13.979265,    # Pro->pyro-Glu (Pyroglutamic) (UniMod)
       'P[113]' => 15.994915,    # Oxidation (UniMod)
       'P[67]'  => -30.010565,   # Proline oxidation to pyrrolidinone (UniMod)
@@ -147,6 +150,7 @@ sub new {
       'S[166]' => 79.966331,    # Phosphorylation (UniMod 21)
       'S[201]'  => 114.042927,  #   ubiquitinylation residue
       'S[247]' => 159.932662,    # pyrophospho (UNIMOD:898)
+      'S[391]' => 304.207146,   # TMTpro
       'T[83]'  => -18.010565,   # Dehydration
       'T[85]' => -15.994915,    # Deoxy (UniMod)
       'T[129]' => 27.99491,     # Formylation
@@ -209,6 +213,7 @@ sub new {
       'E[151]' => 21.981943, # Cation:Na  UNIMOD:30
       'F[157]' => 9.9273,     # 13C(9)15N(1) Silac label (Unimod)
       'H[153]' => 15.9949,      # Oxidation  
+      'H[217]' => 79.966331,    # Phosphorylation (UniMod 21)
       'I[119]' => 5.9559,     # 13C(6) Silac label (Unimod)
       'I[120]' => 6.9493,     # 13C(6) Silac label (Unimod)
       'L[116]' => 3.0185,     # D3_Label
