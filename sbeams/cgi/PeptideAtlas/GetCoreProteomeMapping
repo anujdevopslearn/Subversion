@@ -437,7 +437,7 @@ sub handle_request {
       ["Uniprot_Accession", "NCM.Uniprot_Accession", "Uniprot"],
       ["Ensembl_Accession", "NCM.Ensembl_Accession", "Ensembl Gene"],
       ["RefSeq_Accession", "NCM.RefSeq_Accession", "RefSeq Protein"],
-      ["GeneBank_Accession", "NCM.GeneBank_Accession", "GeneBank Protein"],
+      ["GenBank_Accession", "NCM.GenBank_Accession", "GenBank Protein"],
       ["Chromosome", "NCM.Chromosome","Chromosome"],
       ["Start","NCM.Start", "Start"],
       ["End","NCM.Stop", "End"],
@@ -465,7 +465,7 @@ sub handle_request {
     column_titles_ref=>\@column_titles
   );
   $hidden_cols{Accession} = 1;
-  $hidden_cols{'GeneBank Protein'} = 1 if ($build_name !~ /borrelia/i);
+  $hidden_cols{'GenBank Protein'} = 1 if ($build_name !~ /borrelia/i);
 
   my $sql = qq~
 		SELECT $columns_clause
@@ -510,7 +510,7 @@ sub handle_request {
   }
   $url_cols{'RefSeq Protein'} = "https://www.ncbi.nlm.nih.gov/protein/\%5V";
   $url_cols{'Uniprot'} = "https://www.uniprot.org/uniprot/\%3V";
-  $url_cols{'GeneBank Protein'} = "https://www.ncbi.nlm.nih.gov/protein/\%6V";
+  $url_cols{'GenBank Protein'} = "https://www.ncbi.nlm.nih.gov/protein/\%6V";
 
 
   #########################################################################
