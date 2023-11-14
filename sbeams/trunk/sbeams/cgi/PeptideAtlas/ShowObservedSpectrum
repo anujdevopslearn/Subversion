@@ -514,8 +514,11 @@ sub processRequest {
 	  next if ( $identifier =~ /RPXD/ );
 	  if ( $identifier =~ /(PXD\d+)/ ) {
 	    $datasetIdentifier = $1;
+      my $chimera_level = $parameters{chimera_level};
+      my $rs = '_rs' x ($chimera_level-1);
 	    my $msrunName = $spectrumName;
-	    $msrunName =~ s/\.\d+\.\d+\.\d+$//;
+	    $msrunName =~ s/$rs\.\d+\.\d+\.\d+$//;
+
 
 	    #### If the peptidoform has a mass mod on it, then feed it through a converter to UniMod form
 	    $convertedPeptidoformStr = $peptidoform;
@@ -571,6 +574,67 @@ sub processRequest {
       }
       return;
     }
+
+    ## add links for chimera ids
+    if ($parameters{atlas_build_id} && $parameters{chimera_level} && $parameters{chimera_level} > 1){
+      my $original_msRunName = $spectrumName;
+      my $chimera_level = $parameters{chimera_level};
+      my $rs = '_rs' x ($chimera_level-1);
+      $original_msRunName =~ s/$rs\.\d+\.\d+\.\d+$\$//;
+      my $sql = qq~
+         SELECT SI.SPECTRUM_IDENTIFICATION_ID,
+                 MPI.MODIFIED_PEPTIDE_SEQUENCE,
+                 MPI.PEPTIDE_CHARGE,
+                 S.CHIMERA_LEVEL,
+                 S.SAMPLE_ID,
+                 S.SPECTRUM_NAME
+          FROM $TBAT_SPECTRUM S
+          JOIN $TBAT_SPECTRUM_IDENTIFICATION SI ON (SI.SPECTRUM_ID = S.SPECTRUM_ID )
+          JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI
+               ON ( SI.modified_peptide_instance_id = MPI.modified_peptide_instance_id )
+          JOIN $TBAT_PEPTIDE_INSTANCE PI
+               ON ( MPI.peptide_instance_id = PI.peptide_instance_id )
+          WHERE PI.atlas_build_id = $parameters{atlas_build_id}
+          AND (S.spectrum_name like '$original_msRunName.%' or 
+               S.spectrum_name like \'$original_msRunName\_rs%\')
+          AND S.start_scan = $scanNumber
+          --AND SI.spectrum_identification_id != '$parameters{spectrum_identification_id}'
+          AND S.sample_id in (
+             SELECT S1.SAMPLE_ID
+              FROM $TBAT_SPECTRUM_IDENTIFICATION SI1
+              JOIN $TBAT_SPECTRUM S1 ON ( SI1.SPECTRUM_ID = S1.SPECTRUM_ID )
+              WHERE SI1.spectrum_identification_id = '$parameters{spectrum_identification_id}'
+          )
+          ORDER BY S.CHIMERA_LEVEL, MPI.MODIFIED_PEPTIDE_SEQUENCE
+      ~;
+      my @rows = $sbeams->selectSeveralColumns($sql);
+      my @row_data = ();
+
+      foreach my $row(@rows){
+        my ($spec_id, $mod_pep,$charge,$level,$sample_id,$spec_name) = @$row;
+        my $chimera_spectra_url = $spec_name;
+        if ($spec_id != $parameters{spectrum_identification_id}){
+          $chimera_spectra_url = "<a href=\"$CGI_BASE_DIR/PeptideAtlas/ShowObservedSpectrum\?".
+                                "atlas_build_id=$parameters{atlas_build_id}\&".
+                                "spectrum_identification_id=$spec_id\&".
+                                "peptide=$mod_pep\&assumed_charge=$charge\&chimera_level=$level\&".
+                                "sample_id=$sample_id\&spectrum_name=$spec_name\" target=\"_blank\">$spec_name<\/a>";
+        }
+        push @row_data, [($scanNumber, $charge, $level, $mod_pep,$chimera_spectra_url)];
+
+      }
+			my $html = $sbeamsMOD->create_table (data => \@row_data,
+										column_names=> [('Scan','Charge','ReSpect level','Peptidoform','Spectrum Name')],
+										table_name => 'Chimera Spectrum Identification', 
+										table_id => 'chimera_table',
+										nowrap => [(4,5)],
+										width => 400,
+										align => [('center', 'center','center','left','left','center')],
+										sortable => 0,
+										download_table => 0);
+      print "$html";
+    }
+
 
     #### If the user is specifying some alternate interpretations, switch to those
     # ToDo: should check these values for integrity
@@ -1727,7 +1791,9 @@ sub interpretUSI {
       FROM $TBAT_SAMPLE S
       JOIN $TBPR_SEARCH_BATCH SB ON ( SB.search_batch_id = S.search_batch_id )
      WHERE repository_identifiers LIKE '\%$usi->{datasetIdentifier}\%'
+     order by SB.search_batch_id desc
     ~;
+
   my @rows = $sbeams->selectSeveralColumns($sql);
   my $nRows = scalar(@rows);
   if ($nRows == 0){
@@ -1752,7 +1818,6 @@ sub interpretUSI {
 
   #### Turn quiet mode on, so that problems are not immediately spit out to STDOUT
   $quiet = 1;
-
   #### If no rows returned, then we don't have this dataset
   if ( $nRows == 0 ) {
 
