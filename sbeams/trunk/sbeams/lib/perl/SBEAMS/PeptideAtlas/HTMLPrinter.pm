@@ -2282,7 +2282,6 @@ sub get_ptm_coverage {
   my %biosqeuences = ();
   my %entry_cnt = ();
   my %obs=();
-  my %ptm_summary =();
   my $sql = qq~
 		  SELECT B.BIOSEQUENCE_ID,B.BIOSEQUENCE_NAME, B.BIOSEQUENCE_Desc, B.biosequence_seq
 			FROM $TBAT_ATLAS_BUILD AB
@@ -2298,150 +2297,157 @@ sub get_ptm_coverage {
     $biosqeuences{$id}{desc} = $desc;
     $biosqeuences{$id}{seq} = $seq;
   }
+  $sql = qq~
+    SELECT distinct ptm_type
+    FROM $TBAT_PTM_SUMMARY PS
+    WHERE atlas_build_id = $build_id
+  ~;
+  my @ptm_types = $sbeams->selectOneColumn($sql);
 
-  my $ptm_sql = qq~
-      SELECT biosequence_id,
-             offset,
-             nobs,
-             residue,
-             nP81,
-             nP95,
-             nP100,      
-             nochoice, 
-             ptm_type
-      FROM $TBAT_PTM_SUMMARY PS
-      WHERE atlas_build_id = $build_id
-      --AND (residue = 'A' or residue = 'S' or residue = 'T' or residue = 'Y')
-      and ptm_type like '%phos%'
-      ~;
-   @rows = $sbeams->selectSeveralColumns($ptm_sql);
-   return if (! @rows);
-   my %biosqeuence_id_ptm_obs = ();
-   my %ptm_residues = ();
-  foreach my $row(@rows){
-    my ($id, $offset,$obs, $residue, $np81,$np95,$np100,$nochoice,$ptm_type) = @$row;
-    $ptm_residues{$residue} =1;
-    $biosqeuence_id_ptm_obs{$id}{$residue}{total}++; 
-    if ($obs > 0){
-      $biosqeuence_id_ptm_obs{$id}{$residue}{obs}++;
-    }
-    $biosqeuence_id_ptm_obs{$id}{$residue}{obsL1}++ if ($np81);
-    $biosqeuence_id_ptm_obs{$id}{$residue}{obsL2}++ if ($np95);
-    $biosqeuence_id_ptm_obs{$id}{$residue}{obsL3}++ if ($np100);
-    $biosqeuence_id_ptm_obs{$id}{$residue}{obsL4}++ if ($nochoice); 
-  }
-  my %processed;
-  foreach my $line (@patterns){
-    my ($org_id, $name, $type, $pat_str, $pat_desc)  = split(/\t/, $line);
-    my @pats = split(/;/, $pat_str);
-    my $or = '';
-    push @names, $name;
-    foreach my $id (keys %biosqeuences){
-      my $matched = $self->match_proteome_component(pattern=>\@pats,
-                                                    source_type => $type,
-                                                    biosequence_name => $biosqeuences{$id}{accession},
-                                                    biosequence_desc => $biosqeuences{$id}{desc});
-      if ($matched == 1 ){
-        next if(defined $processed{$line}{$biosqeuences{$id}{seq}});
-        $processed{$line}{$biosqeuences{$id}{seq}} =1;
-
-			  foreach my $site (qw(A S T Y)){
-					my @m = $biosqeuences{$id}{seq} =~ /$site/g;
-					$biosqeuence_id_ptm{$id}{$site} = scalar @m;
-				}
-
-        foreach my $residue (sort {$a cmp $b} keys %ptm_residues){
-          $ptm_summary{$name}{"total_$residue"} += $biosqeuence_id_ptm{$id}{$residue};
-        }
-        if (defined $biosqeuence_id_ptm_obs{$id}){
-           foreach my $residue (keys %{$biosqeuence_id_ptm_obs{$id}}){
-             $ptm_summary{$name}{"prot_$residue"} += $biosqeuence_id_ptm_obs{$id}{$residue}{total};
-             $ptm_summary{$name}{"covered_$residue"} += $biosqeuence_id_ptm_obs{$id}{$residue}{obs};
-             $ptm_summary{$name}{"obsL1_$residue"} += $biosqeuence_id_ptm_obs{$id}{$residue}{obsL1};
-             $ptm_summary{$name}{"obsL2_$residue"} += $biosqeuence_id_ptm_obs{$id}{$residue}{obsL2};
-             $ptm_summary{$name}{"obsL3_$residue"} += $biosqeuence_id_ptm_obs{$id}{$residue}{obsL3};
-             $ptm_summary{$name}{"obsL4_$residue"} += $biosqeuence_id_ptm_obs{$id}{$residue}{obsL4};
-
-           }
-        } 
-      }
-    }
-  }
-
-  #$log->error($sql);
-  my @col_names;
-  if (%ptm_residues){
-    push @col_names, 'Database';
-    foreach my $residue (sort {$a cmp $b} keys %ptm_residues){
-      push @col_names, ("total_".$residue."_sites", "obs_protein_$residue"."_sites", "covered_$residue"."_sites"
-                        ,"nP.80-.95","nP.95-.99","nP.99-1","no-choice");
-    }
-  }else{
-    return;
-  } 
-  my @headings = @col_names;
-  my $headings = $self->make_sort_headings( headings => \@headings);
-  my @result = ( $headings );
-
-  for my $name ( @names ) {
-    my $db = $name;
-    my $obs  = $obs{$name} || 0;
-    my $n_entry = $entry_cnt{$name} || 0;
-    my $pct =0;
-    if ( $obs && $n_entry ) {
-        $pct = sprintf( "%0.1f", 100*($obs/$n_entry) );
-    }
-    my @ptm_summary =();
-    if (%ptm_residues){
-			foreach my $residue (sort {$a cmp $b} keys %ptm_residues){
-        my $total = $ptm_summary{$name}{"total_$residue"} || '-'; 
-        my $prot_total = $ptm_summary{$name}{"prot_$residue"}  || '-';
-        my $obs = $ptm_summary{$name}{"covered_$residue"} || '-';
-        if ($prot_total ne '-' ){
-          push @ptm_summary, $total;
-           push @ptm_summary,$prot_total;
-          push @ptm_summary, sprintf("%d \(%.2f%\)",  $obs, $obs*100/$prot_total);
-          push @ptm_summary,  sprintf("%d\t%d\t%d\t%d", $ptm_summary{$name}{"obsL1_$residue"},
-                                      $ptm_summary{$name}{"obsL2_$residue"},
-                                      $ptm_summary{$name}{"obsL3_$residue"},
-                                      $ptm_summary{$name}{"obsL4_$residue"});  
-        }else{
-          push @ptm_summary, ($total, '-', '-', '-','-','-','-');
-        }
+  my %result =();
+  my $table = '';
+  my %col_names=(); 
+  my $counter = 0;
+  foreach my $ptm_type (@ptm_types){
+    $counter++;
+    my %ptm_summary =();
+		my $ptm_sql = qq~
+				SELECT biosequence_id,
+							 offset,
+							 nobs,
+							 residue,
+							 nP95,
+							 nP99,
+							 nP100,      
+							 nochoice, 
+							 ptm_type
+				FROM $TBAT_PTM_SUMMARY PS
+				WHERE atlas_build_id = $build_id
+				and ptm_type = '$ptm_type'
+				~;
+		 @rows = $sbeams->selectSeveralColumns($ptm_sql);
+		 return if (! @rows);
+		 my %biosqeuence_id_ptm_obs = ();
+		 my %ptm_residues = ();
+		foreach my $row(@rows){
+			my ($id, $offset,$obs, $residue,$np95,$np99, $np100,$nochoice,$ptm_type) = @$row;
+			$ptm_residues{$residue} =1;
+			$biosqeuence_id_ptm_obs{$id}{$residue}{total}++; 
+			if ($obs > 0){
+				$biosqeuence_id_ptm_obs{$id}{$residue}{obs}++;
 			}
-    }
-    push @result, [ $db, @ptm_summary];
+			$biosqeuence_id_ptm_obs{$id}{$residue}{obsL1}++ if ($np95);
+			$biosqeuence_id_ptm_obs{$id}{$residue}{obsL2}++ if ($np99);
+			$biosqeuence_id_ptm_obs{$id}{$residue}{obsL3}++ if ($np100);
+			$biosqeuence_id_ptm_obs{$id}{$residue}{obsL4}++ if ($nochoice); 
+		}
+		my %processed;
+		foreach my $line (@patterns){
+			my ($org_id, $name, $type, $pat_str, $pat_desc)  = split(/\t/, $line);
+			my @pats = split(/;/, $pat_str);
+			my $or = '';
+			push @names, $name if ($counter == 1);
+			foreach my $id (keys %biosqeuences){
+				my $matched = $self->match_proteome_component(pattern=>\@pats,
+																											source_type => $type,
+																											biosequence_name => $biosqeuences{$id}{accession},
+																											biosequence_desc => $biosqeuences{$id}{desc});
+				if ($matched == 1 ){
+					next if(defined $processed{$line}{$biosqeuences{$id}{seq}});
+					$processed{$line}{$biosqeuences{$id}{seq}} =1;
+
+					foreach my $site (keys %ptm_residues){
+            next if ($site eq 'n');
+						my @m = $biosqeuences{$id}{seq} =~ /$site/g;
+						$biosqeuence_id_ptm{$id}{$site} = scalar @m;
+					}
+
+					foreach my $residue (sort {$a cmp $b} keys %ptm_residues){
+						$ptm_summary{$name}{"total_$residue"} += $biosqeuence_id_ptm{$id}{$residue} || '';
+					}
+					if (defined $biosqeuence_id_ptm_obs{$id}){
+						 foreach my $residue (keys %{$biosqeuence_id_ptm_obs{$id}}){
+							 $ptm_summary{$name}{"prot_$residue"} += $biosqeuence_id_ptm_obs{$id}{$residue}{total};
+							 $ptm_summary{$name}{"covered_$residue"} += $biosqeuence_id_ptm_obs{$id}{$residue}{obs};
+							 $ptm_summary{$name}{"obsL1_$residue"} += $biosqeuence_id_ptm_obs{$id}{$residue}{obsL1};
+							 $ptm_summary{$name}{"obsL2_$residue"} += $biosqeuence_id_ptm_obs{$id}{$residue}{obsL2};
+							 $ptm_summary{$name}{"obsL3_$residue"} += $biosqeuence_id_ptm_obs{$id}{$residue}{obsL3};
+							 $ptm_summary{$name}{"obsL4_$residue"} += $biosqeuence_id_ptm_obs{$id}{$residue}{obsL4};
+
+						 }
+					} 
+				}
+			}
+		}
+
+		#$log->error($sql);
+		push @{$col_names{$ptm_type}}, 'Database';
+		foreach my $residue (sort {$a cmp $b} keys %ptm_residues){
+			push @{$col_names{$ptm_type}}, ("total_".$residue."_sites", "obs_protein_$residue"."_sites", "covered_$residue"."_sites"
+												,"nP.80-.95","nP.95-.99","nP.99-1","no-choice");
+		}
+		my @headings = @{$col_names{$ptm_type}};
+		my $headings = $self->make_sort_headings( headings => \@headings);
+	  push @{$result{$ptm_type}}, $headings;
+
+		for my $name ( @names ) {
+			my $db = $name;
+			my $obs  = $obs{$name} || 0;
+			my $n_entry = $entry_cnt{$name} || 0;
+			my $pct =0;
+			if ( $obs && $n_entry ) {
+					$pct = sprintf( "%0.1f", 100*($obs/$n_entry) );
+			}
+			my @summary =();
+			foreach my $residue (sort {$a cmp $b} keys %ptm_residues){
+				my $total = $ptm_summary{$name}{"total_$residue"} || '-'; 
+				my $prot_total = $ptm_summary{$name}{"prot_$residue"}  || '-';
+				my $obs = $ptm_summary{$name}{"covered_$residue"} || '-';
+				if ($prot_total ne '-' ){
+					push @summary, $total;
+					push @summary,$prot_total;
+					push @summary, sprintf("%d \(%.2f%\)",  $obs, $obs*100/$prot_total);
+					push @summary,  sprintf("%d\t%d\t%d\t%d", $ptm_summary{$name}{"obsL1_$residue"},
+																			$ptm_summary{$name}{"obsL2_$residue"},
+																			$ptm_summary{$name}{"obsL3_$residue"},
+																			$ptm_summary{$name}{"obsL4_$residue"});  
+				}else{
+					push @summary, ($total, '-', '-', '-','-','-','-');
+				}
+			}
+			push @{$result{$ptm_type}}, [ $db, @summary];
+		}
+		#return '' if ( @result == 1);
+		$table .= '<table>';
+
+		$table .= $self->encodeSectionHeader(
+				text => 'PTM Coverage',
+				no_toggle => 1,
+				LMTABS => 1
+		);
+		$table .= $self->encodeSectionTable( rows => $result{$ptm_type}, 
+								 header => 1, 
+								 table_id => 'ptm_coverage',
+								 align => [ qw(left left left left left left left left left left left ) ],
+								 has_key => 1,
+								 nowrap => [qw(5 6 7 8 9 10)], 
+								 rows_to_show => 25,
+								 sortable => 1 );
+		$table .= '</table>';
   }
-  return '' if ( @result == 1);
-  my $table = '<table>';
-
-  $table .= $self->encodeSectionHeader(
-      text => 'PTM Coverage',
-      no_toggle => 1,
-      LMTABS => 1
-  );
-
-  $table .= $self->encodeSectionTable( rows => \@result, 
-				       header => 1, 
-				       table_id => 'ptm_coverage',
-				       align => [ qw(left left left left left left left left left left left ) ],
-				       has_key => 1,
-               nowrap => [qw(5 6 7 8 9 10)], 
-				       rows_to_show => 25,
-				       sortable => 1 );
-  $table .= '</table>';
 
   if ($data_only){
-    shift @result;
-    my $i =0;
-    foreach my $row(@result){
-      my ($org_id, $name, $type, $pat_str)  = split(/,/, $patterns[$i]); 
-      $row->[0] .="|$type,$pat_str"; 
-      $i++;
+    foreach my $ptm_type (sort {$a cmp $b} keys %result){
+			shift @{$result{$ptm_type}};
+			my $i =0;
+			foreach my $row(@{$result{$ptm_type}}){
+				my ($org_id, $name, $type, $pat_str)  = split(/\t/, $patterns[$i]); 
+				$row->[0] .="|$type,$pat_str"; 
+				$i++;
+			}
+			unshift @{$result{$ptm_type}} ,[@{$col_names{$ptm_type}}];
     }
-    unshift @result ,[@col_names];
-    
-    return \@result;
+    return \%result;
   }else{
     return $table;
   }
@@ -3662,6 +3668,8 @@ sub plotly_barchart {
   my $counter = 0;
   my @ts = ();
   my $layout_title = "title:'<b>$title</b>'";
+  my $n_series = scalar @$names;
+  my $bargap = ",'bargap':0.7" if ($n_series == 1);
 
   foreach my $data (@$all_data){
 		my @category = () ;
@@ -3711,7 +3719,7 @@ sub plotly_barchart {
 					barmode: 'group',
           font: {size: 12},
           //legend:{x: 0.02,y: 1.25 ,font: { size: 12}},
-          legend: {x:1,  xanchor: 'right',y:1, font: { size: 12}},
+          legend: {x:1.1,  xanchor: 'right',y:1, font: { size: 12}},
           xaxis: {type: 'category',
                   dtick:$dtick,
                   title: '$xtitle', 
@@ -3723,6 +3731,7 @@ sub plotly_barchart {
                  },
           $layout_title,
           margin:{$layoutmargin}
+          $bargap
         };
         Plotly.newPlot('$divname', data, layout,config);
    ~;
