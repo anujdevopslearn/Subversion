@@ -78,7 +78,7 @@ if (@patterns){
 }
 
 #shift @$proteome_coverage;
-#print $fh "proteome_coverage|Database\tN_Prots\tN_Obs_Prots\tPct_Obs\n";
+#print $fh "proteome_coverage|Database\tN_Seqs\tN_Obs_Prots\tPct_Obs\n";
 foreach my $row (@{$proteome_coverage->{table}}){
   #next if($row->[1] == 0);
   print $fh "proteome_coverage||".  join("\t", @$row). "\n";;
@@ -87,9 +87,11 @@ foreach my $row (@{$proteome_coverage->{table}}){
 undef $proteome_coverage;
 
 if ($ptm_coverage){
-	foreach my $row (@$ptm_coverage){
-		print $fh "ptm_coverage|".  join("\t", @$row) ."\n";
-	}
+	foreach my $ptm_type (sort {$a cmp $b} keys %{$ptm_coverage}){
+    foreach my $row (@{$ptm_coverage->{$ptm_type}}){
+		  print $fh "ptm_coverage_$ptm_type|".  join("\t", @$row) ."\n";
+  	}
+  }
 	undef $ptm_coverage;
 }
 
@@ -130,7 +132,7 @@ if ($organism =~ /Bburgdorferi/i){
   my $sql = qq~
 		SELECT NeXtProt_Mapping_id, chromosome, PeptideAtlas_Category 
 		FROM $TBAT_NEXTPROT_CHROMOSOME_MAPPING
-    WHERE NeXtProt_Mapping_id in (85,86,87)
+    WHERE NeXtProt_Mapping_id in (89, 90,91,92)
     ORDER BY chromosome
 	 ~;
 #			SELECT top $limit NM.id
@@ -142,21 +144,22 @@ if ($organism =~ /Bburgdorferi/i){
   my @result = $sbeams->selectSeveralColumns($sql);
   my %data = ();
   my %ncmid2borreliaIso=(
-    85 => 'B31',
-    86 => 'MM1',
-    87 => 'B31-5A4'
+    89 => 'B31',
+    90 => 'MM1',
+    91 => 'B31-5A4',
+    92 => 'JD1'
   );
   foreach my $row (@result){
      my ($id, $chr,$PAcat) = @$row;
      die "ERROR: chromosome mapping id $id not found for Borrelia\n" if (! $ncmid2borreliaIso{$id});
      $chr = 'na' if (! $chr);
      $chr =~ s/plsm\_//;
-     if ($ncmid2borreliaIso{$id} eq 'B31-5A4'){
+     if ($ncmid2borreliaIso{$id} eq 'B31-5A4' || $ncmid2borreliaIso{$id} eq 'JD1'){
         if ($chr =~ /plasmid/){
 					if ($chr =~ /plasmid\s+p(26|32|9)/){
-						$chr =~ s/plasmid\s+p/plasmid cp/;
+						$chr =~ s/plasmid\s+p/cp/;
 					}else{
-            $chr =~ s/plasmid\s+p/plasmid lp/;
+            $chr =~ s/plasmid\s+p/lp/;
           }
         } 
      }
@@ -165,7 +168,7 @@ if ($organism =~ /Bburgdorferi/i){
      }
      $data{$ncmid2borreliaIso{$id}}{$chr}{'All'}++;
   }
-  foreach my $org (qw(B31 MM1 B31-5A4)){
+  foreach my $org (qw(B31 MM1 B31-5A4 JD1)){
     foreach my $chr (sort {$a cmp $b} keys %{$data{$org}}){
       print $fh "chr_plot|$org\t$chr\t$data{$org}{$chr}{'All'}\t$data{$org}{$chr}{'Observed'}\n";
     }
@@ -369,12 +372,14 @@ sub get_build_overview {
   my $phospho_info;
   if ($build_name =~ /phospho/i){
 		my $sql = qq~
-			 SELECT mp.modified_peptide_sequence
+			 SELECT distinct mp.modified_peptide_sequence
 			 FROM $TBAT_PEPTIDE_INSTANCE PI
 			 JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MP ON (PI.PEPTIDE_INSTANCE_ID = MP.PEPTIDE_INSTANCE_ID)
 			 JOIN $TBAT_PEPTIDE_MAPPING PM ON (PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID)
 			 JOIN $TBAT_BIOSEQUENCE B ON (B.BIOSEQUENCE_ID = PM.MATCHED_BIOSEQUENCE_ID)
 			 AND PI.ATLAS_BUILD_ID = $build_id
+       AND B.BIOSEQUENCE_NAME NOT LIKE 'CONTAM%' 
+       AND B.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
 		 ~;
 
 		 my @rows = $sbeams->selectSeveralColumns($sql);
@@ -411,7 +416,7 @@ sub get_build_overview {
 		JOIN $TBAT_PEPTIDE_MAPPING PM ON (PI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID)
 		JOIN $TBAT_BIOSEQUENCE B ON (PM.MATCHED_BIOSEQUENCE_ID = B.BIOSEQUENCE_ID)
 		WHERE  ATLAS_BUILD_ID= $build_id AND B.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
-          AND B.BIOSEQUENCE_NAME NOT LIKE 'CONTAM%'
+          AND B.BIOSEQUENCE_NAME NOT LIKE 'CONTAM%' 
 	) A
   PEP
 
@@ -422,7 +427,7 @@ sub get_build_overview {
     JOIN $TBAT_PEPTIDE_MAPPING PM ON (MPI.PEPTIDE_INSTANCE_ID = PM.PEPTIDE_INSTANCE_ID)
     JOIN $TBAT_BIOSEQUENCE B ON (PM.MATCHED_BIOSEQUENCE_ID = B.BIOSEQUENCE_ID)
     WHERE  PI.ATLAS_BUILD_ID= $build_id AND B.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
-          AND B.BIOSEQUENCE_NAME NOT LIKE 'CONTAM%'
+          AND B.BIOSEQUENCE_NAME NOT LIKE 'CONTAM%' 
   PEP
 
 
@@ -552,7 +557,7 @@ sub get_sample_info {
   ) AS A ON (A.SAMPLE_ID = S.SAMPLE_ID) 
   JOIN PROTEOMICS.DBO.SEARCH_BATCH PSB  ON (PSB.SEARCH_BATCH_ID = ASB.PROTEOMICS_SEARCH_BATCH_ID)
   JOIN PROTEOMICS.DBO.PROTEOMICS_EXPERIMENT PE ON (PE.EXPERIMENT_ID = PSB.EXPERIMENT_ID)
-  JOIN PROTEOMICS.DBO.INSTRUMENT I ON (I.INSTRUMENT_ID = PE.INSTRUMENT_ID) 
+  LEFT JOIN PROTEOMICS.DBO.INSTRUMENT I ON (I.INSTRUMENT_ID = PE.INSTRUMENT_ID) 
   WHERE ABSB.atlas_build_id = $build_id
   ORDER BY rownum, cumulative_n_peptides, ABSB.atlas_build_search_batch_id ASC
   ~;

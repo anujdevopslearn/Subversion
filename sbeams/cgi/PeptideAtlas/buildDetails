@@ -1416,7 +1416,7 @@ sub generate_html_from_file {
    dataset_protein_info => 'Dataset Protein Info',
    dataset_spec_protein_info => 'Dataset Specific Protein Identification',
    proteome_coverage => 'Proteome Coverage (exhaustive)',
-   ptm_coverage => 'Phosphoproteome Coverage',
+   ptm_coverage => 'PTM Coverage',
  );
  my %column_align = (
    exp_contrib_table => [qw(left left left center center center center center center center center center center center center center)], 
@@ -1518,14 +1518,15 @@ sub generate_html_from_file {
        next;
     }
 
-    $line =~ /([^\|]+)\|(.*)/;   
+    $line =~ /([^\|]+)\|(.*)/; 
     $table = $1;
-    $line = $2;
-    if (($table ne $pre_table && $pre_table ne '')){
+    $line = $2 if ($line !~ /^ptm_coverage/);
+    if ($table ne $pre_table && ($pre_table ne '' && ! 
+        ($table =~ /ptm_coverage/ && $pre_table =~ /ptm_coverage/))){ 
        if ($pre_table eq 'chr_plot'){
          @$chr_plot_data = @data;
        }else{
-				 my $headings = shift @data;
+				 my $headings = shift @data if ($pre_table !~ /ptm_coverage/);
 				 my $download_table = 0;
 				 my @noWrap = (1);
 
@@ -1567,7 +1568,8 @@ sub generate_html_from_file {
 									column_name_ref => $headings,
 									build_id => $build_id,
 									align => $column_align{$pre_table},
-								 );
+								 ) if ($pre_table !~ /ptm_coverage/);
+
 				 if ($pre_table eq 'exp_contrib_table'){
 						if ($headings->[1] eq 'Experiment Annotation'){
 							 $anno=1;
@@ -1586,49 +1588,62 @@ sub generate_html_from_file {
 				 }
 
          my %ptm_plot_data =();
-				 if ($pre_table eq 'ptm_coverage'){
+         my %ptm_table_headings = ();
+         my %ptm_table_data = ();
+				 if ($pre_table =~ /ptm_coverage/){
 					 my $ptm_summary_url = "$CGI_BASE_DIR/PeptideAtlas/GetPTMSummary?atlas_build_id=$build_id".
-																 "&display_options=proteinView&ptm_type=STY%3APhospho&action=QUERY".
+																 "&display_options=proteinView&action=QUERY".
 																 "&redundancy_constraint=on&proteome_component=";
-
 					 my $counter = 0;
            my %colnames = ();
            my %col2residue = ();
            my $residue = '';
-           for (my $i=1; $i < @$headings; $i++){
-              if ($headings->[$i] =~ /^total_(\w)_.*$/){
-                 $residue = $1;
-              }
-              my $colname = $headings->[$i];
-              $colname =~ s/_\w_sites/_sites/;
-              $colnames{$i} = $colname;
-							$col2residue{$i} = $residue;
-           }
-
+           my ($proteome, $ptm_type,);
 					 foreach my $row (@data){
-							my $proteome = $row->[0];
-							$proteome =~ s/\|.*//;
-							## add link to col1
-							if ($row->[0]=~ /^([^\|]+)\|(.*)$/){
-								$row->[0] = "<a href='$ptm_summary_url$2' target='_blank' title='get ptm protein list'>$1</a>";
-							}
-							if ($proteome =~ /(core|^Araport11$|^NeXtProt$)/i && ! $ptm_plot_data{data} ){
-								foreach my $i(1..scalar @$row -1){ 
-									my $val =  $row->[$i];
-									$val =~ s/\s.*//;
-									$val =~ s/,//g;
-                  if ($colnames{$i} =~ /nP(\.\d+)\-([\.\d]+)/){
-                    my $xlabel = '';
-                    if ($2 != 1){
-                      $xlabel = "0$1<=nP>0$2";
-                    }else{
-                      $xlabel = "nP>=0$1";
-                    }
-									  push @{$ptm_plot_data{data}{$col2residue{$i}}},["$xlabel",$val];
-                  }elsif($colnames{$i} =~ /no-choice/){
-                    push @{$ptm_plot_data{data}{$col2residue{$i}}},["$colnames{$i}",$val];
-                  }
-								}
+             if ($row->[0] =~ /Database/){
+               $row->[0] =~ /.*ptm_coverage_([^\|]+)\|(.*)/;
+               $ptm_type = $1;
+               $row->[0] =~ s/.*\|//;
+               push @{$ptm_table_headings{$ptm_type}}, $row;
+               for (my $i=1; $i < @$row; $i++){
+                 if ($row->[$i] =~ /^total_(\w)_.*$/){
+                   $residue = $1;
+								 }
+								 my $colname = $row->[$i];
+								 $colname =~ s/_\w_sites/_sites/;
+								 $colnames{$ptm_type}{$i} = $colname;
+								 $col2residue{$ptm_type}{$i} = $residue;
+               } 
+               next;
+             }
+             push @{$ptm_table_data{$ptm_type}}, $row;
+
+             $row->[0] =~ /^ptm_coverage_([^\|]+)\|([^\|]+).*/;
+						 $proteome = $2;
+             $ptm_type = $1;
+						 ## add link to col1
+						 if ($row->[0]=~ /^ptm_coverage_[^\|]+\|([^\|]+)\|(.*)$/){
+							 $row->[0] = "<a href='$ptm_summary_url$2\&ptm_type=$ptm_type' target='_blank' title='get ptm protein list'>$1</a>";
+						 }else{
+               $row->[0] = $proteome;
+             }
+						 if ($proteome =~ /(core|^Araport11$|^NeXtProt$)/i && ! $ptm_plot_data{$ptm_type}{data} ){
+							 foreach my $i(1..scalar @$row -1){ 
+								 my $val =  $row->[$i];
+								 $val =~ s/\s.*//;
+								 $val =~ s/,//g;
+                 if ($colnames{$ptm_type}{$i} =~ /nP(\.\d+)\-([\.\d]+)/){
+                   my $xlabel = '';
+                   if ($2 != 1){
+                     $xlabel = "0$1<=nP>0$2";
+                   }else{
+                     $xlabel = "nP>=0$1";
+                   }
+									 push @{$ptm_plot_data{$ptm_type}{data}{$col2residue{$ptm_type}{$i}}},["$xlabel",$val];
+                 }elsif($colnames{$ptm_type}{$i} =~ /no-choice/){
+                   push @{$ptm_plot_data{$ptm_type}{data}{$col2residue{$ptm_type}{$i}}},["$colnames{$ptm_type}{$i}",$val];
+                 }
+							  }
 								$ptm_plot_data{label} = $proteome;
 							}
 							my $n = scalar @$row;
@@ -1642,34 +1657,134 @@ sub generate_html_from_file {
 				 }
 				 $download_table = 1 if ($pre_table eq 'dataset_contrib_table');
          my $plot_html = '';
-         if ($pre_table eq 'ptm_coverage' && %ptm_plot_data){
-					 $plot_html .= $atlas ->plotly_barchart (data => [$ptm_plot_data{data}{S}, $ptm_plot_data{data}{T}, $ptm_plot_data{data}{Y}],
-																				 names => ['S', 'T', 'Y'],
-																				 divName => "ptm_cov_plot_div",
+         my $tname = '';
+         my $ptm_chart = '';
+         if ($pre_table =~ /ptm_coverage/ && %ptm_plot_data){
+           my $counter = 0;
+           $plot_html = qq~<div class="tab">
+										<style>
+										/* Style the tab */
+										.tab {
+													overflow: hidden;
+										}
+										/* Style the buttons inside the tab */
+										.tab button {
+										padding: 14px 16px;
+										border: none;
+										outline: none;
+										font-size: 14px;
+										font-weight:bold;
+													float:left;
+													color:#555555;
+													text-decoration:none;
+													background:#f3f1e4;
+										border-right:1.25px solid #AAAAAA;
+										}
+
+										/* Change background color of buttons on hover */
+										.tab button:hover {
+													background-color:#bb0000;
+										color:#ffffff;
+										}
+
+										/* Create an active/current tablink class */
+										.tab button.active {
+													 background:#ffffff;
+											color:#333333;
+										}
+
+										/* Style the tab content */
+										.tabcontent {
+													border-top: none;
+										}
+										</style>
+            ~;
+
+           foreach my $ptm_type (sort {$a cmp $b} keys %ptm_plot_data){
+             next if ($ptm_type eq 'label');
+             $plot_html .="<button type='button' class='ptmtablinks' onclick='openPTM(event,\"ptm_cov_div$counter\")'>$ptm_type</button>\n";
+             $counter++;
+           } 
+           $plot_html .= "</div>\n";
+
+           $counter = -1;
+           foreach my $ptm_type (sort {$a cmp $b} keys %ptm_plot_data){
+             next if ($ptm_type eq 'label');
+             $counter++;
+             my @residues = sort {$a cmp $b} keys %{$ptm_plot_data{$ptm_type}{data}};
+             my @plot_data = ();
+             foreach my $residue (@residues){
+               push @plot_data, $ptm_plot_data{$ptm_type}{data}{$residue};
+             }
+            
+					   $ptm_chart .= $atlas ->plotly_barchart (data => [@plot_data],
+																				 names => [@residues],
+																				 divName => "ptm_cov_plot$counter",
 																				 ytitle => 'Count',
 																				 dtick => 1,
-																				 title => "Phosphosites for $ptm_plot_data{label}",
+																				 title => "$ptm_type for $ptm_plot_data{label}",
                                          barlabel => 1
 																				 #xtickangle => 'tickangle:25',
 																				 #yticktype => "type:'log',range:[0,$max],dtick:1",
 																				 #layoutmargin => 'b:50',
-                                         );
-            
-				  	$plot_html .= qq~
-               <div>
-               <p class="help_val"  style="width: 55vw; padding-left:10px;">
-								The combined results from datasets searched with phospho-STY in this build yield the 
-                following numbers of phosphosites at several levels of
-                confidence (nP == number of sites with PTMProphet probability range).
-               The bar chart depicts the results for the core proteome only.
-               The table provides metrics for all subsets of protein entries in the combined mapping proteome.
-              </p>
-              <div style="width: 50vw" id="ptm_cov_plot_div"></div>$plot_html</div>
-            ~;
-
+                                         );         
+             unshift @{$ptm_table_data{$ptm_type}}, @{$ptm_table_headings{$ptm_type}};
+             my $ptm_table = $atlas->encodeSectionTable (
+                            header => 1,
+														unified_widgets => 1,
+														set_download => 1,
+														align  => [()],
+														bkg_interval => 3,
+														file_prefix => 'ptm_',
+														rows => $ptm_table_data{$ptm_type});
+               my $ptm_plot_desc = qq~
+                 <p class="help_val"  style="width: 55vw; padding-left:10px;">
+                  The combined results from datasets searched with $ptm_type in this build yield the
+                  following numbers of ptm sites at several levels of
+                  confidence (nP == number of sites with PTMProphet probability range).
+                  The bar chart depicts the results for the core proteome only.
+                  The table provides metrics for all subsets of protein entries in the combined mapping proteome.
+                </p>
+              ~;
+              if ($counter == 0){
+								$plot_html .= "\n<div id='ptm_cov_div$counter' style='display:block' class='tabcontent'>\n";
+							}else{
+								$plot_html .= "\n<div id='ptm_cov_div$counter' style='display:none' class='tabcontent'>\n";
+							}
+              $plot_html .= "$ptm_plot_desc<div style='width: 40vw' id='ptm_cov_plot$counter'></div>\n";
+              $plot_html .= "<TABLE width='$table_width'>$ptm_table</TABLE>\n</div>\n";
+           }
+           $plot_html .= qq~
+								 <!-- Latest compiled and minified plotly.js JavaScript -->
+								 <script type="text/javascript" src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+								 <script type="text/javascript" charset="utf-8">
+									function openPTM(evt, Name) {
+													var i, tabcontent, ptmtablinks;
+													tabcontent = document.getElementsByClassName("tabcontent");
+													for (i = 0; i < tabcontent.length; i++) {
+																	tabcontent[i].style.display = "none";
+													}
+													ptmtablinks = document.getElementsByClassName("ptmtablinks");
+													for (i = 0; i < ptmtablinks.length; i++) {
+																	ptmtablinks[i].className = ptmtablinks[i].className.replace(" active", "");
+													}
+													document.getElementById(Name).style.display = "block";
+													evt.currentTarget.className += " active";
+									}
+								 </script>
+           ~;
          }
-	 
-				 $html = $atlas->create_table (data => \@data,
+         if ($pre_table =~ /ptm_coverage/){
+					  $html = $sbeams->make_toggle_section(
+							neutraltext =>"PTM Coverage",
+							sticky => 1,
+							barlink => 1,
+							visible => 1,
+							name => "ptm_div",
+							content => "<TABLE><TR><TD COLSPAN='5'>$plot_html\n$ptm_chart</TD></TR></TABLE>",
+					   );
+         }else{
+				   $html = $atlas->create_table (data => \@data,
 														column_names=> $headings,
 														table_name => $table_names{$pre_table},
 														table_id => $pre_table,
@@ -1680,7 +1795,8 @@ sub generate_html_from_file {
                             plot_html => $plot_html,
 														download_table=> $download_table,
                             );
-				print "$html";
+         }
+			 	print "$html";
       }
       $html ='';
       @data = (); 
