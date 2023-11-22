@@ -1004,6 +1004,7 @@ sub handle_request {
 #     my @acc_is_present = grep (/${acc}.html/, ($available_viz_acc));
 #     my $acc_is_present = scalar @acc_is_present;
 #--------------------------------------------------
+    my $build_path = $sbeamsMOD->getAtlasBuildDirectory( atlas_build_id => $atlas_build_id );
     my $url = $acc_is_present ?  "http://ec2-204-236-255-114.compute-1.amazonaws.com/peptides/protein/pages/${acc}.html": '';
     my $key = $acc_is_present ? "Protein Name and Visualization" : "Protein Name";
     $htmlcontent .= $sbeamsMOD->encodeSectionItem(
@@ -1013,6 +1014,36 @@ sub handle_request {
       url=>$url,
       #url=>"$biosequence->{accessor}$biosequence->{biosequence_accession}$biosequence->{accessor_suffix}",
     );
+
+
+    if (-e "$build_path/../analysis/build_detail_tables.tsv") {
+      #get proteome source for protein
+      open (IN, "<$build_path/../analysis/build_detail_tables.tsv");
+		  while (my $line =<IN>){
+        next if ($line !~ /^proteome_coverage/);
+        $line =~ s/\t.*//;
+        $line =~ s/\s+$//;
+        my @elms = split(/\|/, $line);
+        if (@elms == 4){
+          my $proteome = $elms[2];
+          my ($pat_type, $pat_str) = split(/,/,  $elms[3]);
+          $elms[3] =~ /^(.*),(.*)$/;
+          my $pat_type = $1;
+          my @patterns = split(/;/, $2);
+					my $matched = $sbeamsMOD->match_proteome_component(pattern=>\@patterns,
+																												source_type => $pat_type,
+																												biosequence_name => $biosequence->{biosequence_accession},
+																												biosequence_desc => $biosequence->{biosequence_desc});
+          if ($matched){
+            $htmlcontent .= $sbeamsMOD->encodeSectionItem(
+							key=>'Proteome Database',
+							tr_info => $tr,
+							value=>$proteome,
+						);
+          }
+        }
+      }
+    }
 
     $htmlcontent .= $sbeamsMOD->encodeSectionItem(
       key=>'Gene Name',
@@ -1081,7 +1112,6 @@ sub handle_request {
 #      value=>$group_string,
 #    );
 
-    my $build_path = $sbeamsMOD->getAtlasBuildDirectory( atlas_build_id => $atlas_build_id );
     my $cluster_id_file = "$build_path/Orthogroups.txt";
     if (-e $cluster_id_file){
       if (open (C, "<$cluster_id_file")){

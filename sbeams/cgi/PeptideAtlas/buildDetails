@@ -1545,9 +1545,9 @@ sub generate_html_from_file {
 
               $headings->[0] =~s/^\|//;
 							foreach my $row (@data){
-								$row->[0] =~ /^(.*)\|(.*)$/;
-								$row->[0] = $2;
-                my $mapping_id = $1;
+                my @elms = split(/\|/, $row->[0]);
+                $row->[0] = $elms[1]; 
+                my $mapping_id = $elms[0];
                 my $uniprot_name_contraint = '';
                 if ($row->[0] =~ /Core/i){
                   $uniprot_name_contraint = '&uniprot_name_constraint=%5BA-Z%5D%25';
