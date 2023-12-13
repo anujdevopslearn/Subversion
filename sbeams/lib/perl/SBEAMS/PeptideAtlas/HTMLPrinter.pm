@@ -943,9 +943,9 @@ sub encodeSectionTable {
     } else {
       $tab->setRowAttr( ROWS => [1], BGCOLOR => '#003F72', CLASS => 'sortheader' );
     }
-		if ($args{header_sticky}){
-			$tab->setRowAttr( ROWS => [1], STYLE=>'position:sticky;top:0;')
-		}
+    if ($args{header_sticky}){
+      $tab->setRowAttr( ROWS => [1], STYLE=>'position:sticky;top:0;')
+    }
     $tab->setRowAttr( ROWS => [1], ALIGN => 'CENTER' ) unless $args{nocenter};
   }
 
@@ -1520,9 +1520,10 @@ sub getSampleTableDisplay{
   my $headings = $self->make_sort_headings( headings => \@headings,  default => 'Experiment ID');
   unshift @samples, ($headings);
   my $table = $self->encodeSectionTable( header => 1, 
+					 header_sticky => 1,
                                          tr_info => $args{tr_info},
                                          align  => [@align],
-																				 bkg_interval => 3,
+					 bkg_interval => 3,
                                          nowrap => [qw(4 6)],
                                          rows_to_show => $rows_to_show,
                                          max_rows => $args{max_rows},
@@ -1606,24 +1607,24 @@ sub getPTMTableDisplay {
   my $tr_info = '';
   my $table = '';
   if (@rows > 15){
-     $table = $self->encodeSectionTable( header => 1,
-															 header_sticky => 1,
-															 y_scroll => 'style="overflow-y:scroll; height:300px; display:block;" ', 
-															 unified_widgets => 1,
-															 set_download => 1,
-															 align  => [@align],
-															 bkg_interval => 3,
-															 file_prefix => 'ptm_',
-															 rows => \@rows );
+    $table = $self->encodeSectionTable( header => 1,
+					header_sticky => 1,
+					y_scroll => 'style="overflow-y:scroll; height:300px; display:block;" ', 
+					unified_widgets => 1,
+					set_download => 1,
+					align  => [@align],
+					bkg_interval => 3,
+					file_prefix => 'ptm_',
+					rows => \@rows );
   }else{
     $table = $self->encodeSectionTable( header => 1,
-															 unified_widgets => 1,
-															 set_download => 1,
-															 align  => [@align],
-															 bkg_interval => 3,
-															 file_prefix => 'ptm_',
-															 rows => \@rows );
-
+					unified_widgets => 1,
+					set_download => 1,
+					align  => [@align],
+					bkg_interval => 3,
+					file_prefix => 'ptm_',
+					rows => \@rows );
+    
   }
   return $table;
 }
@@ -3805,6 +3806,7 @@ sub create_table {
   my $table = $self->encodeSectionTable(unified_widgets => 1,
                               rows => $data,
                               header => 1,
+			      header_sticky => 1,
                               bkg_interval => 3,
                               set_download => $download_table,
                               nowrap => $nowrap,
