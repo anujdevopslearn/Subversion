@@ -3061,32 +3061,32 @@ sub getProteinSynonyms {
   $resource_name =~ s/^(tr\||sp\|)//;
   #### Get all the search_key_name in the database, regardless of build
   my $sql = qq~
-			SELECT SEARCH_KEY_NAME,SEARCH_KEY_TYPE,ACCESSOR,ACCESSOR_SUFFIX
-			FROM $TBAT_SEARCH_KEY_ENTITY SKE
-			JOIN $TBBL_DBXREF D ON ( SKE.SEARCH_KEY_DBXREF_ID = D.DBXREF_ID )
-			WHERE SKE.RESOURCE_NAME in (
-        (
-				   SELECT SKE2.PROTEIN_ALIAS_MASTER
-				   FROM $TBAT_SEARCH_KEY_ENTITY SKE2
-				   WHERE SKE2.RESOURCE_NAME = '$resource_name'
-			   ) 
-				UNION 
-				(	SELECT SKE3.SEARCH_KEY_NAME
-					FROM $TBAT_SEARCH_KEY_ENTITY SKE3
-					WHERE  SKE3.RESOURCE_NAME = '$resource_name'
-				)
+	SELECT SEARCH_KEY_NAME,SEARCH_KEY_TYPE,ACCESSOR,ACCESSOR_SUFFIX
+	FROM $TBAT_SEARCH_KEY_ENTITY SKE
+	JOIN $TBBL_DBXREF D ON ( SKE.SEARCH_KEY_DBXREF_ID = D.DBXREF_ID )
+	WHERE SKE.RESOURCE_NAME in (
+          (
+	   SELECT SKE2.PROTEIN_ALIAS_MASTER
+	   FROM $TBAT_SEARCH_KEY_ENTITY SKE2
+	   WHERE SKE2.RESOURCE_NAME = '$resource_name'
+	   ) 
+	UNION 
+	   (	SELECT SKE3.SEARCH_KEY_NAME
+		FROM $TBAT_SEARCH_KEY_ENTITY SKE3
+		WHERE  SKE3.RESOURCE_NAME = '$resource_name'
+	   )
         UNION
-        ( SELECT SKE4.RESOURCE_NAME
-          FROM $TBAT_SEARCH_KEY_ENTITY SKE4
-          WHERE  SKE4.PROTEIN_ALIAS_MASTER = '$resource_name'
-        )
+           ( SELECT SKE4.RESOURCE_NAME
+             FROM $TBAT_SEARCH_KEY_ENTITY SKE4
+             WHERE  SKE4.PROTEIN_ALIAS_MASTER = '$resource_name'
+           )
         UNION 
-        ( 
-					SELECT SKE4.RESOURCE_NAME
+           ( 
+	  SELECT SKE4.RESOURCE_NAME
           FROM $TBAT_SEARCH_KEY_ENTITY SKE4
           WHERE  SKE4.search_key_name = '$resource_name'
-        )
-		  )
+           )
+	 )
  ~;
   my @synonyms = $sbeams->selectSeveralColumns($sql);
   return @synonyms;
