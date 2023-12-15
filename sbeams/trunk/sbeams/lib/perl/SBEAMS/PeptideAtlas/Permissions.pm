@@ -52,25 +52,16 @@ my $log = SBEAMS::Connection::Log->new();
 # FIXME: make id lookup dynamic
 ###############################################################################
 sub isPAGuestUser {
-
   my $self = shift;
-
   my $sbeams = $self->getSBEAMS();
-
   my $currID =  $sbeams->getCurrent_contact_id();
 
   if ( !defined $currID ) {
-
-      return undef;
-
+    return undef;
   } elsif ( $currID == 107 ) {
-
-      return 1;
-
+    return 1;
   } else {
-
-      return 0;
-
+    return 0;
   }
 
 }
@@ -80,32 +71,23 @@ sub isPAGuestUser {
 # Utility routine, checks if current project is yeast development.
 # Returns 1 if true, 0 if false.
 ###############################################################################
-sub isYeastPA
-{
+sub isYeastPA {
+  my $self = shift ;
+  my $sbeams = $self->getSBEAMS();
+  my %args = @_;
+  my $project_id = $args{'project_id'} || $sbeams->getCurrent_project_id();
 
-    my $self = shift ;
-
-    my $sbeams = $self->getSBEAMS();
- 
-    my %args = @_;
-
-    my $project_id = $args{'project_id'} || $sbeams->getCurrent_project_id();
-
-    if ( !defined $project_id ) 
-    {
-        return undef;
-
-    } elsif ($project_id == 491 ) 
-    {
-        return 1;
-
-    } else {
-
-        return 0;
-    }
+  if ( !defined $project_id ) {
+    return undef;
+  }
+  elsif ($project_id == 491 ) {
+    return 1;
+  }
+  else {
+    return 0;
+  }
 
 }
-
 
 
 ###############################################################################
@@ -187,13 +169,9 @@ sub getProjectID
 ###############################################################################
 # prntVar
 ###############################################################################
-sub prntVar
-{
-
+sub prntVar {
   my ($str, $val) = @_;
-
   print "$str = $val\n";
-
 }
 
 
@@ -349,13 +327,41 @@ sub getCurrentAtlasBuildID {
 
 
       #### Check that we got exactly one result or squawk
-      if (scalar(@rows) == 0) {
-	print "ERROR[$METHOD_NAME]: No organism record found for organism name ".
-	  "'$organism_name'<BR>\n";
-	return(-1);
-      } elsif (scalar(@rows) > 1) {
-	print "ERROR[$METHOD_NAME]: Multiple records found for organism name".
-	  "'$organism_name'<BR>\n";
+      if (scalar(@rows) != 1) {
+	my $errmsg = '';
+	if (scalar(@rows) == 0) {
+	  $log->error(
+	    "ERROR[$METHOD_NAME]: No organism record found for organism name ".
+	    "'$organism_name'");
+	  $errmsg = "The organism '$organism_name' was not found in PeptideAtlas";
+	} else {
+	  $log->error(
+	    "ERROR[$METHOD_NAME]: Multiple records found for organism name".
+	    "'$organism_name'");
+          $errmsg = "Multiple records for organism '$organism_name' were found!";
+	}
+
+	if ($display_page_header_footer){
+	  my $sbeamsMOD=$self;
+	  my $tabMenu = $sbeamsMOD->getTabMenu(
+	    parameters_ref => \%parameters,
+	    program_name => $PROG_NAME,
+	      );
+	  $sbeamsMOD->display_page_header(use_tabbed_panes => 1);
+	  print $tabMenu->asHTML();
+	  print "<BR><BR><BR><BR>\n";
+	  $sbeams->reportException(
+	    state => 'ERROR',
+	    type => 'ORGANISM NOT FOUND',
+	    message => $errmsg
+	      );
+	  print "<BR><BR><BR><BR><BR>\n";
+	  $sbeamsMOD->display_page_footer(use_tabbed_panes => 1);
+
+	}
+	else {
+	  print "ERROR[$METHOD_NAME]: $errmsg<BR>\n";
+	}
 	return(-1);
 
       } else {
@@ -541,12 +547,12 @@ sub getCurrentAtlasBuildID {
       $log->printStack( 'debug' );
       if ($display_page_header_footer){
         my %parameters;
-				my $tabMenu = $sbeamsMOD->getTabMenu(
-					parameters_ref => \%parameters,
-					program_name => $PROG_NAME,
-				);
-				$sbeamsMOD->display_page_header(use_tabbed_panes => 1); 
-				print $tabMenu->asHTML();
+	my $tabMenu = $sbeamsMOD->getTabMenu(
+	  parameters_ref => \%parameters,
+	  program_name => $PROG_NAME,
+	    );
+	$sbeamsMOD->display_page_header(use_tabbed_panes => 1); 
+	print $tabMenu->asHTML();
       }
       print qq~
         <BR>Sorry, you are not permitted to access atlas_build_id
@@ -658,7 +664,7 @@ sub getCurrentAtlasOrganism {
 
   my $build_id = $params->{atlas_build_id} || 
                  $self->getCurrentAtlasBuildID(%args);
-  
+
   my $sql = qq~
   SELECT organism_name, O.organism_id
   FROM $TBAT_BIOSEQUENCE_SET BSS
