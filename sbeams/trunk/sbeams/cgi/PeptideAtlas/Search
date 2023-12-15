@@ -6,7 +6,7 @@
 #
 # Description : Searches the search_key table for matching elements
 #
-# SBEAMS is Copyright (C) 2000-2021 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2023 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -151,7 +151,7 @@ sub handle_request {
 
   #### Process the arguments list
   my $ref_parameters = $args{'ref_parameters'}
-      || die "ref_parameters not passed";
+  || die "ref_parameters not passed";
 
   my %parameters = %{$ref_parameters};
 
@@ -195,19 +195,19 @@ sub handle_request {
     #separate the result into exact_resultset and fuzzy_result
     if($apply_action =~ /VIEWRESULT/ and ! $search_type_param{single_table}){
 
-			for my $row ( @{$resultset_ref->{data_ref}} ) {
-				 my $match_string = $row->[8];
-				 if($match_string =~ /exact/){
-					 push(@{$exact_resultset{data_ref}},$row); 
-				 }else{
-					 push(@{$fuzzy_resultset{data_ref}}, $row);
-				}      
-			}
-			foreach my $k ( keys %{$resultset_ref}){
-				next if($k eq 'data_ref');
-				$exact_resultset{$k} = $resultset_ref->{$k};
-				$fuzzy_resultset{$k} = $resultset_ref->{$k};
-			}
+      for my $row ( @{$resultset_ref->{data_ref}} ) {
+	my $match_string = $row->[8];
+	if($match_string =~ /exact/){
+	  push(@{$exact_resultset{data_ref}},$row); 
+	}else{
+	  push(@{$fuzzy_resultset{data_ref}}, $row);
+	}      
+      }
+      foreach my $k ( keys %{$resultset_ref}){
+	next if($k eq 'data_ref');
+	$exact_resultset{$k} = $resultset_ref->{$k};
+	$fuzzy_resultset{$k} = $resultset_ref->{$k};
+      }
     }
   }
 
@@ -218,10 +218,10 @@ sub handle_request {
   #TMF added below 
   my $atlas_build_id = $parameters{"atlas_build_id"};
   if ($build_type_name && $atlas_build_id && 
-         ($sbeams->output_mode() ne 'html')) {
+      ($sbeams->output_mode() ne 'html')) {
     print "Specify only one of build_type_name and atlas_build_id.\n";
     return(0);
-  }   
+  }
 
   #### Check to see whether specified atlas build is accessible
   if ($atlas_build_id) {
@@ -251,13 +251,13 @@ sub handle_request {
     $sbeams->setSessionAttribute(
       key => 'PeptideAtlas_search_string',
       value => $search_key,
-    );
+	);
 
-  #### Else see if we had one stored
+    #### Else see if we had one stored
   } else {
     $search_key = $sbeams->getSessionAttribute(
       key => 'PeptideAtlas_search_string',
-    );
+	);
   }
 
 
@@ -265,12 +265,12 @@ sub handle_request {
   my $build_type_selection = getBuildTypeSelection(
     organism_name => $organism_name,
     build_type_name => $build_type_name,
-  );
+      );
 
   #### This is needed for displaying the page header
   my $project_id = $sbeamsMOD->getProjectID(
     atlas_build_id => $atlas_build_id
-  );
+      );
 
 
   #### Show current user context information
@@ -282,7 +282,7 @@ sub handle_request {
     extra_width => 1,
     parameters_ref => \%parameters,
     program_name => $PROG_NAME,
-  );
+      );
 
 
 
@@ -291,28 +291,28 @@ sub handle_request {
   my $search_types_clause = getSearchTypeClause( params => \%parameters );
 
   if ($sbeams->output_mode() eq 'html') {
-      my $spacer = $sbeams->getGifSpacer(100);
-      my $sm_spacer = '&nbsp;' x 20;
+    my $spacer = $sbeams->getGifSpacer(100);
+    my $sm_spacer = '&nbsp;' x 20;
 
-      $buffer .= $q->start_form(-method=>"POST",
-                           -action=>"$base_url",
-                          );
-      $buffer .= $tabMenu->asHTML();
-      $buffer .= "<BR>$spacer<BR><P>";
-      $buffer .= qq~<nobr><CENTER><IMG SRC="$HTML_BASE_DIR/images/PeptideAtlas_Logo.png"><BR>~;
-      my $advanced = getSearchKeyTypeHTML();
+    $buffer .= $q->start_form(-method=>"POST",
+			      -action=>"$base_url",
+	);
+    $buffer .= $tabMenu->asHTML();
+    $buffer .= "<BR>$spacer<BR><P>";
+    $buffer .= qq~<nobr><CENTER><IMG SRC="$HTML_BASE_DIR/images/PeptideAtlas_Logo.png"><BR>~;
+    my $advanced = getSearchKeyTypeHTML();
       
-      $buffer .= $q->textfield(-name=>"search_key",
-                               -default=>$search_key,
-                               -size=>60,
-                               -maxlength=>2000,
-                               );
+    $buffer .= $q->textfield(-name=>"search_key",
+			     -default=>$search_key,
+			     -size=>60,
+			     -maxlength=>2000,
+	);
 
-      $buffer .= "&nbsp;&nbsp;&nbsp;";
-      $buffer .= $q->submit(-name => "action",
-                       -value => 'QUERY',
-                       -label => 'GO');
-      $buffer .= qq~<BR>
+    $buffer .= "&nbsp;&nbsp;&nbsp;";
+    $buffer .= $q->submit(-name => "action",
+			  -value => 'QUERY',
+			  -label => 'GO');
+    $buffer .= qq~<BR>
       <TABLE WIDTH=50% ALIGN=CENTER BORDER=0 CELLPADDING=0>
       <TR VALIGN=CENTER >
       <TD ALIGN=RIGHT { white-space: nowrap } >
@@ -348,8 +348,8 @@ sub handle_request {
         )<BR>
       ~;
 
-      $buffer .= '</CENTER></nobr></P>';
-      $buffer .= $q->end_form;
+    $buffer .= '</CENTER></nobr></P>';
+    $buffer .= $q->end_form;
   }
 
   #########################################################################
@@ -368,9 +368,9 @@ sub handle_request {
 
   if ( $key_error ) {
     $sbeams->set_page_message( type => 'Error', msg => <<"    END" );
-		<BR>
-      $error_msg
-		<BR>
+    <BR>
+    $error_msg
+    <BR>
     END
     if ($sbeams->output_mode() eq 'html') {
       $sbeamsMOD->display_page_header(project_id => $project_id);
@@ -414,7 +414,7 @@ sub handle_request {
   
   ### search repository
   my $repository_query_result  =  query_repository (file => "/net/dblocal/wwwspecial/peptideatlas/cgi/Repository/PA_Samples_entries.json",
-                                            filterstr=>$filterstr);
+						    filterstr=>$filterstr);
 
   if ($repository_query_result ne '' and $repository_query_result =~ /PAe\d{6}/i){
     my $link = "ftp://ftp.peptideatlas.org/pub/PeptideAtlas/Repository/"; 
@@ -437,10 +437,10 @@ sub handle_request {
   $exact_search_key =~ s/\s+$//;
 
   my $search_key_clause = $sbeams->parseConstraint2SQL(
-      constraint_column=>"search_key_name",
-      constraint_type=>"plain_text",
-      constraint_name=>"Search Key",
-      constraint_value=>$exact_search_key,
+    constraint_column=>"search_key_name",
+    constraint_type=>"plain_text",
+    constraint_name=>"Search Key",
+    constraint_value=>$exact_search_key,
       );
   return if ($search_key_clause eq '-1');
 
@@ -450,7 +450,7 @@ sub handle_request {
 
   #### Command-line specification of a specific atlas build id
   if ($sbeams->output_mode() ne 'html' && defined $atlas_build_id
-         && !defined $build_type_name ) {
+      && !defined $build_type_name ) {
     $atlas_build_ids = $atlas_build_id;
     $atlas_build_column =  ["atlas_build","AB.atlas_build_name","Build Name"];
     $atlas_build_clause = qq~
@@ -659,19 +659,19 @@ sub handle_request {
       my $tmp_resultset_ref = \%tmp_resultset;
 
       if ($apply_action =~ /(QUERY|GO)/i) {
-				#### Fetch the results from the database server
-				$sbeams->fetchResultSet(
-					sql_query=>$sql,
-					resultset_ref=>$tmp_resultset_ref,
-				);
-				%exact_resultset = %$tmp_resultset_ref;
-				%resultset = %$tmp_resultset_ref;
+	#### Fetch the results from the database server
+	$sbeams->fetchResultSet(
+	  sql_query=>$sql,
+	  resultset_ref=>$tmp_resultset_ref,
+	    );
+	%exact_resultset = %$tmp_resultset_ref;
+	%resultset = %$tmp_resultset_ref;
       }
 
       if(defined $exact_resultset{data_ref}){
-				$n_exact_results = scalar(@{$exact_resultset{data_ref}});
+	$n_exact_results = scalar(@{$exact_resultset{data_ref}});
       } else {
-				$n_exact_results = 0;
+	$n_exact_results = 0;
       }
 
       #### If exactly one result came back, then redirect to the one hit
@@ -679,9 +679,9 @@ sub handle_request {
         $buffer ="$buffer";
         $buffer.= $pass_query_result if ($pass_query_result =~ /PASS\d+/);
         $buffer .= $repository_query_result if ($repository_query_result =~ /PAe\d+/);
-				if ($n_exact_results == 1) {
-					print $q -> redirect("$url_base/PeptideAtlas/$exact_resultset{data_ref}->[0]->[$colnameidx{resource_url}]");
-					exit;
+	if ($n_exact_results == 1) {
+	  print $q -> redirect("$url_base/PeptideAtlas/$exact_resultset{data_ref}->[0]->[$colnameidx{resource_url}]");
+	  exit;
 
         } elsif ($n_exact_results > 1) {
 
@@ -713,164 +713,164 @@ sub handle_request {
         } 
       }
 
-		my $print_warning_msg = 0;
-		if ($apply_action =~ /(QUERY|GO)/i){
-			if(! $parameters{exact_match}) {
-				pop @column_array;
-				push @column_array, ["match_string","'fuzzy_match'", "fuzzy_match"];
-				$columns_clause = $sbeams->build_SQL_columns_list(
-					column_array_ref=>\@column_array,
-					colnameidx_ref=>\%colnameidx,
-					column_titles_ref=>\@column_titles
-				);
-					my $search_key_clause = $exact_search_key;
-					$search_key_clause =~ s/\s+/.*/g;
-					my %search_key_ids =();
-					my $counter =0;
-					foreach my $build_id (split(",", $atlas_build_ids)){
-						my $file ="/regis/sbeams5/nobackup/builds_output/cache/search_keys_$build_id.txt";
-						if ( -e $file){
-							open (F, "<$file");
+      my $print_warning_msg = 0;
+      if ($apply_action =~ /(QUERY|GO)/i){
+	if(! $parameters{exact_match}) {
+	  pop @column_array;
+	  push @column_array, ["match_string","'fuzzy_match'", "fuzzy_match"];
+	  $columns_clause = $sbeams->build_SQL_columns_list(
+	    column_array_ref=>\@column_array,
+	    colnameidx_ref=>\%colnameidx,
+	    column_titles_ref=>\@column_titles
+	      );
+	  my $search_key_clause = $exact_search_key;
+	  $search_key_clause =~ s/\s+/.*/g;
+	  my %search_key_ids =();
+	  my $counter =0;
+	  foreach my $build_id (split(",", $atlas_build_ids)){
+	    my $file ="/regis/sbeams5/nobackup/builds_output/cache/search_keys_$build_id.txt";
+	    if ( -e $file){
+	      open (F, "<$file");
               $search_key_clause =~ s/\|/\\|/g;
-							foreach my $line (grep(/$search_key_clause/i, <F>)){
-								chomp $line;
-								my ($key_id,$search_key_name) = split(/\t/, $line);
-								$search_key_ids{$key_id} =1;
-								$counter++;
-							}
-						}
-						if ($counter > 500){
-							$print_warning_msg = 1;
-							last;
-						}
+	      foreach my $line (grep(/$search_key_clause/i, <F>)){
+		chomp $line;
+		my ($key_id,$search_key_name) = split(/\t/, $line);
+		$search_key_ids{$key_id} =1;
+		$counter++;
+	      }
+	    }
+	    if ($counter > 500){
+	      $print_warning_msg = 1;
+	      last;
+	    }
 
-				 }
-					my $search_key_id_str =  join(",", keys %search_key_ids);
+	  }
+	  my $search_key_id_str =  join(",", keys %search_key_ids);
 
-				 if ($search_key_id_str){
-					$sql = qq~
-							$select_sql
-							WHERE 1 = 1
-								$search_types_clause
-								AND SKE.search_key_id in ($search_key_id_str)
-								AND SKL.atlas_build_id IN ( $atlas_build_ids )
-							ORDER BY search_key_name
-					~;
-					#$log->error($sql);
-					$sbeams->fetchResultSet(
-						sql_query=>$sql,
-					  resultset_ref=> \%fuzzy_resultset,
-					);
-				}
-			} else {
-				if ($n_exact_results == 0) {
-					if ($sbeams->output_mode() eq 'html') {
-						$sbeamsMOD->display_page_header(project_id => $project_id);
-						print "$buffer<BR>";
-						print "There were no matches in the index for your search string<BR>";
-					}
-					return(0);
-				}
-			}
-		}
+	  if ($search_key_id_str){
+	    $sql = qq~
+		$select_sql
+		WHERE 1 = 1
+			$search_types_clause
+			AND SKE.search_key_id in ($search_key_id_str)
+			AND SKL.atlas_build_id IN ( $atlas_build_ids )
+		ORDER BY search_key_name
+		~;
+	    #$log->error($sql);
+	    $sbeams->fetchResultSet(
+	      sql_query=>$sql,
+	      resultset_ref=> \%fuzzy_resultset,
+		);
+	  }
+	} else {
+	  if ($n_exact_results == 0) {
+	    if ($sbeams->output_mode() eq 'html') {
+	      $sbeamsMOD->display_page_header(project_id => $project_id);
+	      print "$buffer<BR>";
+	      print "There were no matches in the index for your search string<BR>";
+	    }
+	    return(0);
+	  }
+	}
+      }
 			
       if(defined $fuzzy_resultset{data_ref}){
-				$n_fuzzy_results = scalar(@{$fuzzy_resultset{data_ref}});
+	$n_fuzzy_results = scalar(@{$fuzzy_resultset{data_ref}});
       } else {
-				$n_fuzzy_results = 0;
+	$n_fuzzy_results = 0;
       }
 
       if ($apply_action =~ /(QUERY|GO)/i){
-				foreach my $row(@{$fuzzy_resultset{data_ref}}){
-					push @{$resultset{data_ref}}, $row;
+	foreach my $row(@{$fuzzy_resultset{data_ref}}){
+	  push @{$resultset{data_ref}}, $row;
         }
-				undef %tmp_resultset;
+	undef %tmp_resultset;
       }
 
       #### If exactly one result came back, then redirect to the one hit
       if ($sbeams->output_mode() eq 'html' and $n_exact_results == 0){
-				if ($n_fuzzy_results == 1){
-					#print "Status: 302 Resource Temporarily Moved\r\n";
-					#print "Location: $CGI_BASE_DIR/PeptideAtlas/".
-					#$fuzzy_resultset{data_ref}->[0]->[$colnameidx{resource_url}]."\n\n";
-					#my $newpage = "$url_base/PeptideAtlas/$fuzzy_resultset{data_ref}->[0]->[$colnameidx{resource_url}]";
-					#print 'Status: 302 Moved', "\r\n", 'Location: ', "$newpage\r\n\r\n";
-					print $q -> redirect("$url_base/PeptideAtlas/$fuzzy_resultset{data_ref}->[0]->[$colnameidx{resource_url}]");
-					exit;
-				}elsif( $n_fuzzy_results > 1){
-					if( ! $search_type_param{single_table} ){
-						$sbeamsMOD->display_page_header(project_id =>$project_id,init_tooltip =>0,onload=>'sortables_init()');
-						print $buffer;
+	if ($n_fuzzy_results == 1){
+	  #print "Status: 302 Resource Temporarily Moved\r\n";
+	  #print "Location: $CGI_BASE_DIR/PeptideAtlas/".
+	  #$fuzzy_resultset{data_ref}->[0]->[$colnameidx{resource_url}]."\n\n";
+	  #my $newpage = "$url_base/PeptideAtlas/$fuzzy_resultset{data_ref}->[0]->[$colnameidx{resource_url}]";
+	  #print 'Status: 302 Moved', "\r\n", 'Location: ', "$newpage\r\n\r\n";
+	  print $q -> redirect("$url_base/PeptideAtlas/$fuzzy_resultset{data_ref}->[0]->[$colnameidx{resource_url}]");
+	  exit;
+	}elsif( $n_fuzzy_results > 1){
+	  if( ! $search_type_param{single_table} ){
+	    $sbeamsMOD->display_page_header(project_id =>$project_id,init_tooltip =>0,onload=>'sortables_init()');
+	    print $buffer;
             print "<BR>";
             print "<BR>Exact search results: None";
-					}else{
-						$sbeamsMOD->display_page_header(project_id => $project_id);
-						print $buffer;
-						print "<BR>";
-				 }
-				}else{
-					 $sbeamsMOD->display_page_header(project_id => $project_id);
-					 print "$buffer<BR>";
-					 print "There were no matches in the index for your search string<BR>";
-					 return(0);
+	  }else{
+	    $sbeamsMOD->display_page_header(project_id => $project_id);
+	    print $buffer;
+	    print "<BR>";
+	  }
+	}else{
+	  $sbeamsMOD->display_page_header(project_id => $project_id);
+	  print "$buffer<BR>";
+	  print "<span style='text-align:center;' class='pa-xlb ddmenu'><br>There were no matches in the index for your search string<br><br></span><br><br>";
+	  return(0);
         }
-			}
+      }
       if ($apply_action =~ /(QUERY|GO)/i) {
         $rs_params{set_name} = "SETME";
         #### Store the resultset and parameters to disk resultset cache
         $sbeams->writeResultSet(
-             resultset_file_ref=>\$rs_params{set_name},
-             resultset_ref=>$resultset_ref,
-             query_parameters_ref=>\%parameters,
-             resultset_params_ref=>\%rs_params,
-             query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
-        );
+	  resultset_file_ref=>\$rs_params{set_name},
+	  resultset_ref=>$resultset_ref,
+	  query_parameters_ref=>\%parameters,
+	  resultset_params_ref=>\%rs_params,
+	  query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+	    );
       }
 
-     if($sbeams->output_mode() eq 'html'){
-       if($search_type_param{single_table}){ 
-					$sbeams->displayResultSet(
-							resultset_ref=>$resultset_ref,
-							query_parameters_ref=>\%parameters,
-							rs_params_ref=>\%rs_params,
-							url_cols_ref=>\%url_cols,
-							hidden_cols_ref=>\%hidden_cols,
-							max_widths=>\%max_widths,
-							column_titles_ref=>\@column_titles,
-							base_url=>$base_url,
+      if($sbeams->output_mode() eq 'html'){
+	if($search_type_param{single_table}){ 
+	  $sbeams->displayResultSet(
+	    resultset_ref=>$resultset_ref,
+	    query_parameters_ref=>\%parameters,
+	    rs_params_ref=>\%rs_params,
+	    url_cols_ref=>\%url_cols,
+	    hidden_cols_ref=>\%hidden_cols,
+	    max_widths=>\%max_widths,
+	    column_titles_ref=>\@column_titles,
+	    base_url=>$base_url,
 					);
           if(scalar(@{$resultset_ref->{data_ref}}) >= 500|| $print_warning_msg){
-           print "<BR><font color=\"red\"><b>There were too many matching results, please refine the search key.</b></font><BR><BR>\n";
-         }
+	    print "<BR><font color=\"red\"><b>There were too many matching results, please refine the search key.</b></font><BR><BR>\n";
+	  }
 
           $sbeams-> displayResultSetControls(
-              resultset_ref=> $resultset_ref,
-              query_parameters_ref=>\%parameters,
-              rs_params_ref=>\%rs_params,
-              base_url=>$base_url,
-          );
+	    resultset_ref=> $resultset_ref,
+	    query_parameters_ref=>\%parameters,
+	    rs_params_ref=>\%rs_params,
+	    base_url=>$base_url,
+	      );
 
-			 }else{
+	}else{
           if($n_fuzzy_results > 1){
             print "<BR>Wild card search results: <BR>" ;
-						displayTable(
-								column_array_ref=>\@column_array,
-								colnameidx_ref=>\%colnameidx,
-								column_titles_ref=>\@column_titles,
-								resultset_ref => \%fuzzy_resultset,
-								build_type_selection => $build_type_selection,
-								parameter_ref => \%parameters,
-								rs_param_ref => \%rs_params,
-								url_cols_ref=> \%url_cols,
-								hidden_cols_ref=>\%hidden_cols,
-								max_width_ref=>\%max_widths,
-								search_key => $exact_search_key,
-								base_url  => $base_url
-						);
-					}
-         if(($n_fuzzy_results+ $n_exact_results) >= 500 || $print_warning_msg){
-           print "<BR><font color=\"red\"><b>There were too many matching results, please refine the search keys.</b></font><BR><BR>\n";
-         }
+	    displayTable(
+	      column_array_ref=>\@column_array,
+	      colnameidx_ref=>\%colnameidx,
+	      column_titles_ref=>\@column_titles,
+	      resultset_ref => \%fuzzy_resultset,
+	      build_type_selection => $build_type_selection,
+	      parameter_ref => \%parameters,
+	      rs_param_ref => \%rs_params,
+	      url_cols_ref=> \%url_cols,
+	      hidden_cols_ref=>\%hidden_cols,
+	      max_width_ref=>\%max_widths,
+	      search_key => $exact_search_key,
+	      base_url  => $base_url
+		);
+	  }
+	  if(($n_fuzzy_results+ $n_exact_results) >= 500 || $print_warning_msg){
+	    print "<BR><font color=\"red\"><b>There were too many matching results, please refine the search keys.</b></font><BR><BR>\n";
+	  }
           $sbeams-> displayResultSetControls(
             resultset_ref=> $resultset_ref,
             query_parameters_ref=>\%parameters,
@@ -878,25 +878,24 @@ sub handle_request {
             base_url=>$base_url,
             row_count => $ROW_COUNT,
             search_page => 1,
-         );
-       }
-   }elsif($sbeams->output_mode() eq 'xml' || $sbeams->output_mode() eq 'tsv'  || 
-          $sbeams->output_mode() eq 'excel'  || $sbeams->output_mode() eq 'csv' ){
+	      );
+	}
+      }elsif($sbeams->output_mode() eq 'xml' || $sbeams->output_mode() eq 'tsv'  || 
+	     $sbeams->output_mode() eq 'excel'  || $sbeams->output_mode() eq 'csv' ){
 
-      $sbeams->displayResultSet(
-              resultset_ref=>$resultset_ref,
-              query_parameters_ref=>\%parameters,
-              rs_params_ref=>\%rs_params,
-              url_cols_ref=>\%url_cols,
-              hidden_cols_ref=>\%hidden_cols,
-              max_widths=>\%max_widths,
-              column_titles_ref=>\@column_titles,
-              base_url=>$base_url,
-      );
-   }
-
-  }
-		#### If QUERY was not selected, then tell the user to enter some parameters
+	$sbeams->displayResultSet(
+	  resultset_ref=>$resultset_ref,
+	  query_parameters_ref=>\%parameters,
+	  rs_params_ref=>\%rs_params,
+	  url_cols_ref=>\%url_cols,
+	  hidden_cols_ref=>\%hidden_cols,
+	  max_widths=>\%max_widths,
+	  column_titles_ref=>\@column_titles,
+	  base_url=>$base_url,
+	    );
+      }
+    }
+    #### If QUERY was not selected, then tell the user to enter some parameters
   } else {
     if ($sbeams->invocation_mode() eq 'http') {
       $sbeamsMOD->display_page_header(project_id => $project_id);
@@ -922,66 +921,66 @@ sub query_repository{
   my %selectedID=();
   return '' if ($filterstr eq '');
 
-	$filterstr =~ s/^\s+//;
-	$filterstr =~ s/\s+$//;
-	$filterstr =~ s/[,;]//g;
+  $filterstr =~ s/^\s+//;
+  $filterstr =~ s/\s+$//;
+  $filterstr =~ s/[,;]//g;
   $filterstr =~ s/\|/\\|/g;
 
-	my %tmp;
-	my @qts = split (/\s+/, $filterstr);
-	open (IN, "<$file");
-	my $first = 1;
-	my $str = '';
-	my $id = '';
-	my $releaseDate='';
-	#           "release" : {
-	#              "std" : {
-	#                 "month" : "12",
-	#                 "day" : "30",
-	#                 "year" : "2013"
-	#              }
-	#           },
+  my %tmp;
+  my @qts = split (/\s+/, $filterstr);
+  open (IN, "<$file");
+  my $first = 1;
+  my $str = '';
+  my $id = '';
+  my $releaseDate='';
+  #           "release" : {
+  #              "std" : {
+  #                 "month" : "12",
+  #                 "day" : "30",
+  #                 "year" : "2013"
+  #              }
+  #           },
 
-	while (my $l = <IN>){
-		if($l =~ /^\s{9}\{$/){
-			if($first){
-				$first = 0;
-			}else{
-				$str =~ s/[\{\}\[\]\s+]/ /g;
-				foreach my $q (@qts){
-				if($str =~ /$q/i){
-								$tmp{$id}++;
-				}
-			}
-		 }
-		 $str = '';
-		}elsif($l =~ /"id"\s+:\s+"(PASS\d{5})/ || $l =~ /"acc"\s+:\s+"(PAe\d{6})/){
-			$str .= $1;
-			$id = $1;
-		}else{
-			if ($l =~ /"release"/){
-		   	while ($l !~ /\}/){
-					$l = <IN>;
-					if ($l =~ /"month"\s+:"(\d+)/){
-						 $releaseDate = $1;
-					}elsif($l =~ /"day"\s+:"(\d+)/){
-						 $releaseDate = "$releaseDate-$1";
-					}elsif($l =~ /"year"\s+:"(\d+)/){
-						 $releaseDate = "$1-$$releaseDate";
-					}
-				 $l =~ s/"\w+"\s+://;
-				 $str .= $l;
-				}
-			}else{
-				$l =~ s/"\w+"\s+://;
-				$str .= $l;
+  while (my $l = <IN>){
+    if($l =~ /^\s{9}\{$/){
+      if($first){
+	$first = 0;
+      }else{
+	$str =~ s/[\{\}\[\]\s+]/ /g;
+	foreach my $q (@qts){
+	  if($str =~ /$q/i){
+	    $tmp{$id}++;
+	  }
+	}
+      }
+      $str = '';
+    }elsif($l =~ /"id"\s+:\s+"(PASS\d{5})/ || $l =~ /"acc"\s+:\s+"(PAe\d{6})/){
+      $str .= $1;
+      $id = $1;
+    }else{
+      if ($l =~ /"release"/){
+	while ($l !~ /\}/){
+	  $l = <IN>;
+	  if ($l =~ /"month"\s+:"(\d+)/){
+	    $releaseDate = $1;
+	  }elsif($l =~ /"day"\s+:"(\d+)/){
+	    $releaseDate = "$releaseDate-$1";
+	  }elsif($l =~ /"year"\s+:"(\d+)/){
+	    $releaseDate = "$1-$$releaseDate";
+	  }
+	  $l =~ s/"\w+"\s+://;
+	  $str .= $l;
+	}
+      }else{
+	$l =~ s/"\w+"\s+://;
+	$str .= $l;
       }
     }
   }
-	foreach my $id (keys %tmp){
-		if($tmp{$id} == scalar @qts){
+  foreach my $id (keys %tmp){
+    if($tmp{$id} == scalar @qts){
       if ($date > $releaseDate and $file =~ /peptideatlas2/i){
-				$selectedID{$id} = 1;
+	$selectedID{$id} = 1;
       }else{
         $selectedID{$id} = 1;
       }
