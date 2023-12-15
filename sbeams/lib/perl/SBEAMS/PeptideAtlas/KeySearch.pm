@@ -88,7 +88,7 @@ sub rebuildKeyIndex {
     $TESTONLY = 0;
   }
 
-  #### Retreive parameters
+  #### Retrieve parameters
   my $atlas_build_id = $args{atlas_build_id}
     or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
 
@@ -189,11 +189,11 @@ sub InsertSearchKeyEntity {
 
     #  or die("ERROR[$METHOD]: Parameter GOA_directory not passed");
     print "Loading protein keys from GOA...\n";
-		$self->buildGoaKeyIndex(
-			GOA_directory =>  $GOA_directory,
-				organism_name => lc($organism_name), 
-				biosequence_set_id => $biosequence_set_id,
-			);
+    $self->buildGoaKeyIndex(
+      GOA_directory =>  $GOA_directory,
+      organism_name => lc($organism_name), 
+      biosequence_set_id => $biosequence_set_id,
+	);
   }else{
     $reference_directory = $args{reference_directory} 
       or print ("WARNING[$METHOD]: Parameter reference_directory  not passed");
@@ -321,24 +321,24 @@ sub InsertSearchKeyEntity {
   }
 
   if ($organism_name eq 'C Elegans') {
-      my $reference_directory = $args{reference_directory}
-      or die("ERROR[$METHOD]: Parameter reference_directory not passed");
-      print "Loading protein keys from SBEAMS and reference files...\n";
-      $self->buildCelegansKeyIndex(
-				   reference_directory => $reference_directory,
-           biosequence_set_id => $biosequence_set_id,
-				   );
+    my $reference_directory = $args{reference_directory}
+    or die("ERROR[$METHOD]: Parameter reference_directory not passed");
+    print "Loading protein keys from SBEAMS and reference files...\n";
+    $self->buildCelegansKeyIndex(
+      reference_directory => $reference_directory,
+      biosequence_set_id => $biosequence_set_id,
+	);
   }
   if ( $reference_directory eq ''){
-     print "WARNING: no reference_directory. Will use biosequence description only. Continue?\nyes/no\n"; 
-     my $answer = <STDIN>;
-     chomp $answer;
-     exit if ($answer =~ /no/i);
-     my $proteinList =  $self->getProteinList(
-        biosequence_set_id => $biosequence_set_id,
+    print "WARNING: no reference_directory. Will use biosequence description only. Continue?\nyes/no\n"; 
+    my $answer = <STDIN>;
+    chomp $answer;
+    exit if ($answer =~ /no/i);
+    my $proteinList =  $self->getProteinList(
+      biosequence_set_id => $biosequence_set_id,
         );
 
-     $self -> checkCompleteness(proteinList=> $proteinList);
+    $self -> checkCompleteness(proteinList=> $proteinList);
   }
  
 
@@ -415,30 +415,30 @@ sub buildGoaKeyIndex {
   my %UniprotList = ();
   open (MAP, "gunzip -c $idMapping_file|" ) or print  "WARNING: no $idMapping_file";
   my %cols = (
-     'UniProtKB' => 35,
-		 'Swiss-Prot' => 1,
-     'UniProtKB/TrEMBL' => 54,
-		 'EntrezGene' => 37,
-     'GeneID' => 37,
-		 'RefSeq' => 39,
-		 'GI' => '46', 
-		 'PDB' => 13,
-		 'UNIParc' => 47,
-		 'UniGene' => 59,
-		 'Ensembl Protein' => 31,
-     'H-InvDB' => 49,
-     'HGNC' => 60,
-     'PDB' => 13,
-     'IPI' => 9,
-     'KEGG' => 61,
-     'Definition' => '',
-     'Gene name' => '',
-     'BEEBASE' => 45,
-     'Araport' => 71, 
-     'eggNOG' => 76,
-     'OrthoDB' => 77,
-     'Araport11' => 71,
-   );
+    'UniProtKB' => 35,
+    'Swiss-Prot' => 1,
+    'UniProtKB/TrEMBL' => 54,
+    'EntrezGene' => 37,
+    'GeneID' => 37,
+    'RefSeq' => 39,
+    'GI' => '46', 
+    'PDB' => 13,
+    'UNIParc' => 47,
+    'UniGene' => 59,
+    'Ensembl Protein' => 31,
+    'H-InvDB' => 49,
+    'HGNC' => 60,
+    'PDB' => 13,
+    'IPI' => 9,
+    'KEGG' => 61,
+    'Definition' => '',
+    'Gene name' => '',
+    'BEEBASE' => 45,
+    'Araport' => 71, 
+    'eggNOG' => 76,
+    'OrthoDB' => 77,
+    'Araport11' => 71,
+      );
 
   while (my $line = <MAP>){
     chomp $line;
@@ -447,22 +447,22 @@ sub buildGoaKeyIndex {
     my $db = $elms[1];
     my $value = $elms[2]; 
     if (not defined $cols{$db}){
-       #print "$db not in table, skipping\n";
-       next;
+      #print "$db not in table, skipping\n";
+      next;
     }
     if ($db =~ /unigene/i){
-       $value  =~ s/Dr\.//;
+      $value  =~ s/Dr\.//;
     }
     if($db =~ /Ensembl_PRO/){ $db = 'Ensembl Protein' ;}
     if (defined $proteinList->{$UniprotKB}){
-			if (defined $cols{$db}){
-				push @{$UniprotList{$UniprotKB}{$db}},$value;
-				#P31946-1        RefSeq  NP_647539.1  
-				if ($db eq 'RefSeq' and $value =~ /\.\d+/){
-					$value =~ s/\..*//;
-					push @{$UniprotList{$UniprotKB}{$db}},$value;
-				}
-			}
+      if (defined $cols{$db}){
+	push @{$UniprotList{$UniprotKB}{$db}},$value;
+	#P31946-1        RefSeq  NP_647539.1  
+	if ($db eq 'RefSeq' and $value =~ /\.\d+/){
+	  $value =~ s/\..*//;
+	  push @{$UniprotList{$UniprotKB}{$db}},$value;
+	}
+      }
       $proteinList->{$UniprotKB}{flag} =1;
     }
 
@@ -482,29 +482,29 @@ sub buildGoaKeyIndex {
   close INFILE;
 
   my $counter = 0;
-	foreach my $UniProtKB (keys %UniprotList){
-		$_= '' for my ($Database,$Accession,$UniProtSP,$UniProtTR);
+  foreach my $UniProtKB (keys %UniprotList){
+    $_= '' for my ($Database,$Accession,$UniProtSP,$UniProtTR);
     $UniProtKB =~ s/.*://;
-		$Accession = $UniProtKB;
-		$Database = 'UniProtKB';
+    $Accession = $UniProtKB;
+    $Database = 'UniProtKB';
     #Arabidopsis: PA added mapping 
     if ($UniProtKB =~ /^AT/){
       $Database = 'Araport11';
     }
     next if (not defined $proteinList->{$Accession});
  
-		my $protein_alias_master = $Accession;
-		my $protein_alias_master_source = $Database; 
-		#### Build a list of protein links
+    my $protein_alias_master = $Accession;
+    my $protein_alias_master_source = $Database; 
+    #### Build a list of protein links
     my @links;
     if(defined $proteinList->{$UniProtKB}{dbxref_id}){
-       if ($proteinList->{$UniProtKB}{dbxref_id} == 1){
-         push @{$UniprotList{$UniProtKB}{'Swiss-Prot'}}, $UniProtKB;
-       }elsif($proteinList->{$UniProtKB}{dbxref_id} == 54){
-         push @{$UniprotList{$UniProtKB}{Trembl}}, $UniProtKB;
-       }else{
-          push @{$proteinList->{$UniProtKB}{$Database}}, $UniProtKB;
-       }
+      if ($proteinList->{$UniProtKB}{dbxref_id} == 1){
+	push @{$UniprotList{$UniProtKB}{'Swiss-Prot'}}, $UniProtKB;
+      }elsif($proteinList->{$UniProtKB}{dbxref_id} == 54){
+	push @{$UniprotList{$UniProtKB}{Trembl}}, $UniProtKB;
+      }else{
+	push @{$proteinList->{$UniProtKB}{$Database}}, $UniProtKB;
+      }
     }
 
     foreach my $db (keys %cols){
@@ -523,87 +523,88 @@ sub buildGoaKeyIndex {
       }
     }  
 
-		my $handle = "$Database:$Accession";
-		if ($associations->{$handle}) {
-			if ($associations->{$handle}->{Symbol} &&
-				$associations->{$handle}->{Symbol} ne $Accession) {
-				my @tmp = ('UniProtKB',$associations->{$handle}->{Symbol},54);
-				push(@links,\@tmp);
-			}
-			if ($associations->{$handle}->{DB_Object_Name}) {
-				my @tmp = ('Full Name',$associations->{$handle}->{DB_Object_Name});
-				push(@links,\@tmp);
-			}
-		}
-		$proteinList->{$Accession}{desc} =~ s/>$Accession//g;
-		$proteinList->{$Accession}{desc} =~ s/OS=.*//;
-		$proteinList->{$Accession}{desc} =~ s/pep:known.*//;
-		$proteinList->{$Accession}{desc} =~ s/\'//g;
-		if($proteinList->{$Accession}{desc} ne ''){
-			my @tmp = ('Description', $proteinList->{$Accession}{desc});
-			push @links, \@tmp;
-		}
+    my $handle = "$Database:$Accession";
+    if ($associations->{$handle}) {
+      if ($associations->{$handle}->{Symbol} &&
+	  $associations->{$handle}->{Symbol} ne $Accession) {
+	my @tmp = ('UniProtKB',$associations->{$handle}->{Symbol},54);
+	push(@links,\@tmp);
+      }
+      if ($associations->{$handle}->{DB_Object_Name}) {
+	my @tmp = ('Full Name',$associations->{$handle}->{DB_Object_Name});
+	push(@links,\@tmp);
+      }
+    }
+    $proteinList->{$Accession}{desc} =~ s/>$Accession//g;
+    $proteinList->{$Accession}{desc} =~ s/OS=.*//;
+    $proteinList->{$Accession}{desc} =~ s/pep:known.*//;
+    $proteinList->{$Accession}{desc} =~ s/\'//g;
+    if($proteinList->{$Accession}{desc} ne ''){
+      my @tmp = ('Description', $proteinList->{$Accession}{desc});
+      push @links, \@tmp;
+    }
 
-		#### Write the links for each Ensembl ID
+    #### Write the links for each Ensembl ID
     my @ENSIPI; 
-		if (defined $UniprotList{$UniProtKB}{IPI}){
-			 push @ENSIPI, @{$UniprotList{$UniProtKB}{IPI}};
-		}
-		if(defined $UniprotList{$UniProtKB}{'Ensembl Protein'}){
-       push @ENSIPI, @{$UniprotList{$UniProtKB}{'Ensembl Protein'}} ; 
-		}      
-		foreach my $ID (@ENSIPI) {
-			next if(not defined $proteinList->{$ID});
-			$proteinList->{$ID}{flag} = 1;
-			#### Insert an entry for the Ensembl ID itself
+    if (defined $UniprotList{$UniProtKB}{IPI}){
+      push @ENSIPI, @{$UniprotList{$UniProtKB}{IPI}};
+    }
+    if(defined $UniprotList{$UniProtKB}{'Ensembl Protein'}){
+      push @ENSIPI, @{$UniprotList{$UniProtKB}{'Ensembl Protein'}} ; 
+    }      
+    foreach my $ID (@ENSIPI) {
+      next if(not defined $proteinList->{$ID});
+      $proteinList->{$ID}{flag} = 1;
+      #### Insert an entry for the Ensembl ID itself
       my $resource_type = 'Ensembl Protein';
       my $search_key_dbxref_id = 31;
       if($ID =~ /IPI/){
-         $resource_type = 'IPI';
-         $search_key_dbxref_id = 9;
+	$resource_type = 'IPI';
+	$search_key_dbxref_id = 9;
       }
-			my %rowdata = (
-				search_key_name => $ID,
-				search_key_type => $resource_type,
-				search_key_dbxref_id => $search_key_dbxref_id,
-				resource_name => $ID,
-				resource_type => $resource_type,
-				protein_alias_master => $protein_alias_master,
-			);
-			$self->insertSearchKeyEntity( rowdata => \%rowdata);
+      my %rowdata = (
+	search_key_name => $ID,
+	search_key_type => $resource_type,
+	search_key_dbxref_id => $search_key_dbxref_id,
+	resource_name => $ID,
+	resource_type => $resource_type,
+	protein_alias_master => $protein_alias_master,
+	  );
+      $self->insertSearchKeyEntity( rowdata => \%rowdata);
       my @tmp = ($resource_type, $ID, $search_key_dbxref_id);
       push(@links,\@tmp);
-		} 
+    } 
  
-		foreach my $link (@links) {
-			my $resource_name = $link->[1];
-			my $resource_type = $link->[0]; 
+    foreach my $link (@links) {
+      my $resource_name = $link->[1];
+      my $resource_type = $link->[0]; 
       #print "$resource_name $resource_type \n";
-			if(defined $proteinList->{$resource_name}){
-				$proteinList->{$resource_name}{flag} = 1;
-			}else {
-				$resource_name = $protein_alias_master;
-				$resource_type = $protein_alias_master_source;
-			}
-			my %rowdata = (
-					search_key_name => $link->[1],
-					search_key_type => $link->[0],
-					search_key_dbxref_id => $link->[2],
-					resource_name => $resource_name,
-					resource_type => $resource_type,
-					protein_alias_master => $protein_alias_master,
-				);
-			$self->insertSearchKeyEntity( rowdata => \%rowdata);
-		}
+      if(defined $proteinList->{$resource_name}){
+	$proteinList->{$resource_name}{flag} = 1;
+      }else {
+	$resource_name = $protein_alias_master;
+	$resource_type = $protein_alias_master_source;
+      }
+      my %rowdata = (
+	search_key_name => $link->[1],
+	search_key_type => $link->[0],
+	search_key_dbxref_id => $link->[2],
+	resource_name => $resource_name,
+	resource_type => $resource_type,
+	protein_alias_master => $protein_alias_master,
+	  );
+      $self->insertSearchKeyEntity( rowdata => \%rowdata);
+    }
 
-		$counter++;
-		print "$counter... " if ($counter/100 eq int($counter/100));
-	} #
+    $counter++;
+    print "$counter... " if ($counter/100 eq int($counter/100));
+  } #
   # check if there is any protein in the proteinList have not been entered into the entity table
   $self -> checkCompleteness(proteinList=> $proteinList,
                              count      => $counter); 
 
 } # end buildGoaKeyIndex
+
 sub checkCompleteness{
   my $SUB =  'checkCompleteness';
   my $self = shift;
@@ -628,41 +629,41 @@ sub checkCompleteness{
         push @names, $prot;
         foreach my $name (@names){
           if(! $proteinList->{$prot}{flag}){
-							%rowdata = (
-								search_key_name => "$name",
-								search_key_type => 'RefSeq',
-								search_key_dbxref_id => 39,
-								resource_name => $name,
-								resource_type => 'RefSeq',
-							);
-					  insertSearchKeyEntity( rowdata => \%rowdata);
+	    %rowdata = (
+	      search_key_name => "$name",
+	      search_key_type => 'RefSeq',
+	      search_key_dbxref_id => 39,
+	      resource_name => $name,
+	      resource_type => 'RefSeq',
+		);
+	    insertSearchKeyEntity( rowdata => \%rowdata);
           }
-       }
+	}
       }
     }else{
-			if(! $proteinList->{$prot}{flag}){
-				%rowdata = (
-					search_key_name => $prot,
-					search_key_type => 'Protein Accession',
-					resource_name => $prot,
-					resource_type => 'Protein Accession',
-					protein_alias_master => $prot,
-				 );
-				 $self->insertSearchKeyEntity( rowdata => \%rowdata);
-				 next if ($proteinList->{$prot}{desc} eq '');
-				 $proteinList->{$prot}{desc} =~ s/>$prot//g;
-				 $proteinList->{$prot}{desc} =~ s/OS=.*//;
-				 $proteinList->{$prot}{desc} =~ s/pep:known.*//;
-				 $proteinList->{$prot}{desc} =~ s/\'//g;
-				 %rowdata = (
-					search_key_name => $proteinList->{$prot}{desc},
-					search_key_type => 'Description',
-					resource_name => $prot,
-					resource_type => 'Description',
-					protein_alias_master => $prot,
-				 );
-				 $self->insertSearchKeyEntity( rowdata => \%rowdata);
-			}
+      if(! $proteinList->{$prot}{flag}){
+	%rowdata = (
+	  search_key_name => $prot,
+	  search_key_type => 'Protein Accession',
+	  resource_name => $prot,
+	  resource_type => 'Protein Accession',
+	  protein_alias_master => $prot,
+	    );
+	$self->insertSearchKeyEntity( rowdata => \%rowdata);
+	next if ($proteinList->{$prot}{desc} eq '');
+	$proteinList->{$prot}{desc} =~ s/>$prot//g;
+	$proteinList->{$prot}{desc} =~ s/OS=.*//;
+	$proteinList->{$prot}{desc} =~ s/pep:known.*//;
+	$proteinList->{$prot}{desc} =~ s/\'//g;
+	%rowdata = (
+	  search_key_name => $proteinList->{$prot}{desc},
+	  search_key_type => 'Description',
+	  resource_name => $prot,
+	  resource_type => 'Description',
+	  protein_alias_master => $prot,
+	    );
+	$self->insertSearchKeyEntity( rowdata => \%rowdata);
+      }
     }
     $counter++;
     print "$counter... " if ($counter/100 eq int($counter/100));
@@ -1470,22 +1471,22 @@ sub buildStreptococcusKeyIndex {
       #print "keyvaluepair: $key=$value\n";
 
       if ($key eq 'db_xref') {
-			if ($value =~ /^GI:(\d+)$/) {
-				$gi = $1;
-			} elsif ($value =~ /^GeneID:(\d+)$/) {
-				$geneID = $1;
-			} else {
-				print "WARNING: unable to parse db_ref '$key=$value'\n";
-			}
+	if ($value =~ /^GI:(\d+)$/) {
+	  $gi = $1;
+	} elsif ($value =~ /^GeneID:(\d+)$/) {
+	  $geneID = $1;
+	} else {
+	  print "WARNING: unable to parse db_ref '$key=$value'\n";
+	}
       }
 
       if ($key eq 'protein_id') {
-				$refseq = $value;
-			}
+	$refseq = $value;
+      }
 
       if ($key eq 'note') {
-				$note = $value;
-				$note =~ s/\%([A-Fa-f0-9]{2})/pack('C', hex($1))/seg;
+	$note = $value;
+	$note =~ s/\%([A-Fa-f0-9]{2})/pack('C', hex($1))/seg;
       }
 
     }
@@ -1808,42 +1809,43 @@ sub buildDogKeyIndex {
     foreach my $Accession ($uniprotKB, $ensp){
       my $prot = '';
       
-			if ($Accession =~ /^ENS/){
-				 $db="Ensembl";
-				 $id = 31;
-         $prot = $ensp;
-         $resource_name = $uniprotKB;
-         $resource_type = 'UniprotKB';         
-			}else{
-				 $db="UniProtKB";
-				 $id=37;
-         $prot = $uniprotKB;
-         $resource_name = $ensp;
-         $resource_type= 'ENSEMBL';
-			}
+      if ($Accession =~ /^ENS/){
+	$db="Ensembl";
+	$id = 31;
+	$prot = $ensp;
+	$resource_name = $uniprotKB;
+	$resource_type = 'UniprotKB';         
+      }else{
+	$db="UniProtKB";
+	$id=37;
+	$prot = $uniprotKB;
+	$resource_name = $ensp;
+	$resource_type= 'ENSEMBL';
+      }
       my @tmp = ($db, $Accession, $id );
-			push(@links,\@tmp);
-		  my @tmp = ('Gene Symbol',$gene);
-		  push(@links,\@tmp);
-		  foreach my $link (@links) {
-			  my %rowdata = (
-				  search_key_name => $link->[1],
-				  search_key_type => $link->[0],
-				  search_key_dbxref_id => $link->[2],
-				  resource_name => $resource_name,
-				  resource_type => $resource_type,
-			  	protein_alias_master => $ensp,
-			  );
-			  $self -> insertSearchKeyEntity( rowdata => \%rowdata);
-			}
-     }
+      push(@links,\@tmp);
+      my @tmp = ('Gene Symbol',$gene);
+      push(@links,\@tmp);
+      foreach my $link (@links) {
+	my %rowdata = (
+	  search_key_name => $link->[1],
+	  search_key_type => $link->[0],
+	  search_key_dbxref_id => $link->[2],
+	  resource_name => $resource_name,
+	  resource_type => $resource_type,
+	  protein_alias_master => $ensp,
+	    );
+	$self -> insertSearchKeyEntity( rowdata => \%rowdata);
+      }
+    }
     $counter++;
     print "$counter... " if ($counter/100 eq int($counter/100));
-	 }
+  }
   $self -> checkCompleteness(proteinList=> $proteinList,
                              count      => $counter);
 
 }
+
 ###############################################################################
 # buildMTBKeyIndex
 ###############################################################################
@@ -1874,13 +1876,13 @@ sub buildMTBKeyIndex {
     if ($line =~ /^>/) {
       my ($FullName, $uniprotKB, $gene);
       if($line =~ /^>/){        
-          $line =~ />(\S+)\|(\S+)/;
-          $FullName = "$1|$2";
-          $uniprotKB= $1;
-					if($1 ne $2){
-            $gene = $2;
-					}
-       }
+	$line =~ />(\S+)\|(\S+)/;
+	$FullName = "$1|$2";
+	$uniprotKB= $1;
+	if($1 ne $2){
+	  $gene = $2;
+	}
+      }
       print "uniprotKB $uniprotKB FullName $FullName $gene\n" if ($VERBOSE);
       $proteins{$uniprotKB}{'Gene Symbol'} = $gene;
       $proteins{$uniprotKB}{'Full Name'} = $FullName;
@@ -2100,18 +2102,18 @@ sub buildDrosophilaKeyIndex {
       my @list = splitEntities(list=>$aliases,delimiter=>'\|');
       foreach my $item ( @list ) {
         my @tmp = ('Gene Alias',$item);
-	    if ($item =~ /^CG.+/) {
+	if ($item =~ /^CG.+/) {
           if(defined $genemapping{$item}){
             $cggene_name = $item;
-	        $gene_name = $genemapping{$item};
+	    $gene_name = $genemapping{$item};
           }
           else{
             print "UNMAPPED $item ";
           }
           push(@links,\@tmp);
-	    }else {
-	      push(@links,\@tmp);
-	    }
+	}else {
+	  push(@links,\@tmp);
+	}
       }
     }
     my @feature_names;
@@ -2136,51 +2138,51 @@ sub buildDrosophilaKeyIndex {
     $protein_alias_master = $feature_names[0];
 
     foreach my $feature_name ( @feature_names ) {
-        next if ($feature_name eq 'UNKNOWN');
-        my @temp_links;
-        @temp_links = @links;
-        my $protein_alias;
-        foreach my $key (qw (FlyBase GeneBank RefSeq Annotation_ID)){
-          if (exists $xref{$feature_name}{$key}) {
-           my @tmp;
-           if($key ne 'Annotation_ID'){
-             @tmp = ($key,$xref{$feature_name}{$key}, $dbxref_ids{$key});
-           }
-           else{
-               @tmp = ('Annotation ID',$xref{$feature_name}{$key});
+      next if ($feature_name eq 'UNKNOWN');
+      my @temp_links;
+      @temp_links = @links;
+      my $protein_alias;
+      foreach my $key (qw (FlyBase GeneBank RefSeq Annotation_ID)){
+	if (exists $xref{$feature_name}{$key}) {
+	  my @tmp;
+	  if($key ne 'Annotation_ID'){
+	    @tmp = ($key,$xref{$feature_name}{$key}, $dbxref_ids{$key});
+	  }
+	  else{
+	    @tmp = ('Annotation ID',$xref{$feature_name}{$key});
           }
-           push(@temp_links,\@tmp);
-           $protein_alias .= $xref{$feature_name}{$key}."|";
+	  push(@temp_links,\@tmp);
+	  $protein_alias .= $xref{$feature_name}{$key}."|";
         }
-        }  
-        if($full_name){
-          my @tmp;
-          if($protein_alias){
-            my $fullname = "Protein: $protein_alias $full_name";
-            @tmp = ('Full Name',$fullname);
-            push(@temp_links,\@tmp);
-          }
-          else{
-            @tmp = ('Full Name',$full_name);
-            push(@temp_links,\@tmp);
-          }
-        }
-        foreach my $link (@temp_links) {
-          if(defined $proteinList->{$link->[1]}{flag}){
-            $proteinList->{$link->[1]}{flag} = 1;
-          }
-				#print "    ".join("=",@{$link})."\n";
-					my %rowdata = (
-						search_key_name => $link->[1],
-						search_key_type => $link->[0],
-						search_key_dbxref_id => $link->[2],
-						resource_name => $feature_name,
-						resource_type => 'Drosophila Protein',
-						protein_alias_master => $protein_alias_master,
-						);
-						$self->insertSearchKeyEntity( rowdata => \%rowdata);
-        }
-        $full_name = '';
+      }  
+      if($full_name){
+	my @tmp;
+	if($protein_alias){
+	  my $fullname = "Protein: $protein_alias $full_name";
+	  @tmp = ('Full Name',$fullname);
+	  push(@temp_links,\@tmp);
+	}
+	else{
+	  @tmp = ('Full Name',$full_name);
+	  push(@temp_links,\@tmp);
+	}
+      }
+      foreach my $link (@temp_links) {
+	if(defined $proteinList->{$link->[1]}{flag}){
+	  $proteinList->{$link->[1]}{flag} = 1;
+	}
+	#print "    ".join("=",@{$link})."\n";
+	my %rowdata = (
+	  search_key_name => $link->[1],
+	  search_key_type => $link->[0],
+	  search_key_dbxref_id => $link->[2],
+	  resource_name => $feature_name,
+	  resource_type => 'Drosophila Protein',
+	  protein_alias_master => $protein_alias_master,
+	    );
+	$self->insertSearchKeyEntity( rowdata => \%rowdata);
+      }
+      $full_name = '';
     }
 
 
@@ -2360,47 +2362,47 @@ sub buildEcoliKeyIndex {
 
   #### Load data
   while (my $line = <INFILE>) {
-      $line =~ s/[\r\n]//g;
-      if ($line =~ /^>/) {
-	  if ($line =~ /^>(\S+)/) {
-	      my $protein_name = $1;
-	      if ($line =~ /^>\S+\s+(.+)$/) {
-		  my $description = $1;
+    $line =~ s/[\r\n]//g;
+    if ($line =~ /^>/) {
+      if ($line =~ /^>(\S+)/) {
+	my $protein_name = $1;
+	if ($line =~ /^>\S+\s+(.+)$/) {
+	  my $description = $1;
 		  
-		  if ($description =~ /^(.+) - Sus scrofa \(Pig\)\s*/) {
-		      $proteins{$protein_name}->{full_name} = $1;
-		  } 
+	  if ($description =~ /^(.+) - Sus scrofa \(Pig\)\s*/) {
+	    $proteins{$protein_name}->{full_name} = $1;
+	  } 
 	  
-		  elsif ($description =~ /^(.+) \(PRRSV\)\s*$/) {
-		      $proteins{$protein_name}->{full_name} = $1;
-		  } 
+	  elsif ($description =~ /^(.+) \(PRRSV\)\s*$/) {
+	    $proteins{$protein_name}->{full_name} = $1;
+	  } 
 
-		  elsif ($description =~ /^(.+) \([A-Z0-9]+\)\s*$/) {
-		      $proteins{$protein_name}->{full_name} = $1;
-		  } 
+	  elsif ($description =~ /^(.+) \([A-Z0-9]+\)\s*$/) {
+	    $proteins{$protein_name}->{full_name} = $1;
+	  } 
 
-		  elsif ($description =~ /^(.+) \[Sus scrofa\]\s*$/) {
-		      my $description = $1;
+	  elsif ($description =~ /^(.+) \[Sus scrofa\]\s*$/) {
+	    my $description = $1;
 	  
 
-		      if ($description =~ /\](.+?)$/) {
-			  $proteins{$protein_name}->{full_name} = $1;
-		      }
-		      if ($description =~ /([PQ][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9])/) {
-			  $proteins{$protein_name}->{UniProt} = $1;
-		      }
-		      if ($description =~ /([PQ][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9]_PIG)/) {
-			  $proteins{$protein_name}->{UniProt} = $1;
-		      }
-		      if ($description =~ /(NP_[\d\.])/) {
-			  $proteins{$protein_name}->{RefSeq} = $1;
-		      }
-		  } else {
-		      $proteins{$protein_name}->{full_name} = $description;
-		  }
-	      }
+	    if ($description =~ /\](.+?)$/) {
+	      $proteins{$protein_name}->{full_name} = $1;
+	    }
+	    if ($description =~ /([PQ][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9])/) {
+	      $proteins{$protein_name}->{UniProt} = $1;
+	    }
+	    if ($description =~ /([PQ][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9]_PIG)/) {
+	      $proteins{$protein_name}->{UniProt} = $1;
+	    }
+	    if ($description =~ /(NP_[\d\.])/) {
+	      $proteins{$protein_name}->{RefSeq} = $1;
+	    }
+	  } else {
+	    $proteins{$protein_name}->{full_name} = $description;
 	  }
+	}
       }
+    }
   }
   close(INFILE);
 
@@ -2793,23 +2795,23 @@ sub buildHoneyBeeKeyIndex {
 
 
 } # end buildHoneyBeeKeyIndex
-sub insertPeptideSearchKey {
 
+sub insertPeptideSearchKey {
   my $SUB = 'insertPeptideSearchKey';
   my $self = shift || die ("self not passed");
   my %args = @_;
   my $rowdata = $args{rowdata};
 
-	my $search_key_name = $rowdata->{search_key_name};
-	my $search_key_type = $rowdata->{search_key_type};
-	my $search_key_dbxref_id = $rowdata->{search_key_dbxref_id};
-	my $organism_id = $rowdata->{organism_id};
-	my $atlas_build_id = $rowdata->{atlas_build_id};
-	my $resource_name = $rowdata->{resource_name};
-	my $resource_type = $rowdata->{resource_type};
-	my $resource_url = $rowdata->{resource_url};
-	my $resource_n_matches = $rowdata->{resource_n_matches};
-	my $protein_alias_master = $rowdata->{protein_alias_master} || $resource_name;
+  my $search_key_name = $rowdata->{search_key_name};
+  my $search_key_type = $rowdata->{search_key_type};
+  my $search_key_dbxref_id = $rowdata->{search_key_dbxref_id};
+  my $organism_id = $rowdata->{organism_id};
+  my $atlas_build_id = $rowdata->{atlas_build_id};
+  my $resource_name = $rowdata->{resource_name};
+  my $resource_type = $rowdata->{resource_type};
+  my $resource_url = $rowdata->{resource_url};
+  my $resource_n_matches = $rowdata->{resource_n_matches};
+  my $protein_alias_master = $rowdata->{protein_alias_master} || $resource_name;
 
 
   $search_key_name =~ s/'/''/g; 
@@ -2823,22 +2825,22 @@ sub insertPeptideSearchKey {
   my @rows = $sbeams->selectOneColumn($sql);
   my %rowdata=();
   if(! @rows){
-		  %rowdata = (
-			search_key_name => $search_key_name, 
-			search_key_type => $search_key_type,
-			search_key_dbxref_id => $search_key_dbxref_id,
-			resource_name => $resource_name,
-			resource_type => $resource_type,
-			protein_alias_master => $protein_alias_master,
-		);
+    %rowdata = (
+      search_key_name => $search_key_name, 
+      search_key_type => $search_key_type,
+      search_key_dbxref_id => $search_key_dbxref_id,
+      resource_name => $resource_name,
+      resource_type => $resource_type,
+      protein_alias_master => $protein_alias_master,
+	);
 
-		$sbeams->updateOrInsertRow(
-			insert => 1,
-			table_name => "$TBAT_SEARCH_KEY_ENTITY",
-			rowdata_ref => \%rowdata,
-			verbose=>$VERBOSE,
-			testonly=>$TESTONLY,
-		);
+    $sbeams->updateOrInsertRow(
+      insert => 1,
+      table_name => "$TBAT_SEARCH_KEY_ENTITY",
+      rowdata_ref => \%rowdata,
+      verbose=>$VERBOSE,
+      testonly=>$TESTONLY,
+	);
   }
 
   $sql = qq~
@@ -2851,21 +2853,21 @@ sub insertPeptideSearchKey {
   @rows = $sbeams->selectOneColumn($sql);
   %rowdata=();
   if(! @rows){
-		%rowdata = (
-			organism_id => $organism_id, 
-			atlas_build_id => $atlas_build_id,
-			resource_name => $resource_name,
-			resource_url => $resource_url,
-			resource_n_matches => $resource_n_matches
-		);
+    %rowdata = (
+      organism_id => $organism_id, 
+      atlas_build_id => $atlas_build_id,
+      resource_name => $resource_name,
+      resource_url => $resource_url,
+      resource_n_matches => $resource_n_matches
+	);
 
-		$sbeams->updateOrInsertRow(
-			insert => 1,
-			table_name => "$TBAT_SEARCH_KEY_LINK",
-			rowdata_ref => \%rowdata,
-			verbose=>$VERBOSE,
-			testonly=>$TESTONLY,
-		);
+    $sbeams->updateOrInsertRow(
+      insert => 1,
+      table_name => "$TBAT_SEARCH_KEY_LINK",
+      rowdata_ref => \%rowdata,
+      verbose=>$VERBOSE,
+      testonly=>$TESTONLY,
+	);
   }
 }
 
