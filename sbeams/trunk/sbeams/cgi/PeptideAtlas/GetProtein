@@ -3933,7 +3933,8 @@ sub displayExternalLinksSection {
 			 'ATHENA' => 'Arabidopsis thaliana Expression Atlas',
 	);
 
-  } elsif( $currentOrganism =~ /Bburgdorferi_B31/) {
+  }
+  elsif( $currentOrganism =~ /Bburgdorferi_B31/) {
     if ($biosequence->{biosequence_desc} =~/OS\=Borreliella burgdorferi/){
       $external_links .= qq~
 			<tr class="hoverable">
@@ -3942,6 +3943,14 @@ sub displayExternalLinksSection {
 			</td></tr>
 			 ~; 
     }
+  }
+  elsif ($currentOrganism =~ /Maize/ && $biosequence->{biosequence_name} =~ /^Zm/ ){
+    $external_links .= qq~
+                        <tr class="hoverable">
+                        <td class="key" nowrap>MaizeGDB</td>
+                        <td class="value"><a href="https://www.maizegdb.org/gene_center/gene/$biosequence->{biosequence_name}" target="_info">$biosequence->{biosequence_name}</a>
+                        </td></tr>
+                         ~;
   }
 
   foreach my $source(keys %prot_links){
