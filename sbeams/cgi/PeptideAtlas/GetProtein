@@ -880,7 +880,8 @@ sub handle_request {
               BS_REF.biosequence_name as "reference_biosequence_name",
               BS_REF_REP.biosequence_name as "ref_group_rep",
               BS_REF_REF_REP.biosequence_name as "ref_ref_group_rep",
-              BPS.tm_sigp_source
+              BPS.tm_sigp_source,
+              BS_SUBSUMED_BY.biosequence_name as "subsumed_by_biosequence_name"
          FROM $TBAT_BIOSEQUENCE_SET BSS
         INNER JOIN $TBAT_BIOSEQUENCE BS
               ON ( BSS.biosequence_set_id = BS.biosequence_set_id )
@@ -921,6 +922,8 @@ sub handle_request {
          LEFT JOIN $TBAT_BIOSEQUENCE BS_REF_REF_REP
               ON ( BS_REF_REF_REP.biosequence_id =
                     PID_REF_REF.represented_by_biosequence_id )
+        LEFT JOIN $TBAT_BIOSEQUENCE BS_SUBSUMED_BY
+              ON ( BS_SUBSUMED_BY.biosequence_id = PID.subsumed_by_biosequence_id)
        WHERE BS.biosequence_id = $biosequence_id
   ~;
   my @rows = $sbeams->selectHashArray($sql);
@@ -959,7 +962,11 @@ sub handle_request {
   }
 
   if ($prepositions{$identification_status}) {
-    $identification_status .= " $prepositions{$identification_status} $biosequence->{reference_biosequence_name}";
+    if ($biosequence->{subsumed_by_biosequence_name}){
+      $identification_status .= " $prepositions{$identification_status} $biosequence->{subsumed_by_biosequence_name}";
+    }else{
+      $identification_status .= " $prepositions{$identification_status} $biosequence->{reference_biosequence_name}";
+    }
   }
 
 
