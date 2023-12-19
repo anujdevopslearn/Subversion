@@ -3933,31 +3933,29 @@ sub displayExternalLinksSection {
 			  'PhosPhAt' => 'The Arabidopsis Protein Phosphorylation Site Database',
 			  'PPDB' => 'The Plant Proteome Database');
 
-    %gene_links       = ('TAIR' => 'http://arabidopsis.org/servlets/TairObject?type=locus&name=',
+    %gene_links = ('TAIR' => 'http://arabidopsis.org/servlets/TairObject?type=locus&name=',
 			 'ATHENA' => 'https://athena.proteomics.wzw.tum.de/master_arabidopsisshiny/?gene=',
-	); 
+	  ); 
     %gene_link_titles = ('TAIR' => 'The Arabidopsis Information Resource',
 			 'ATHENA' => 'Arabidopsis thaliana Expression Atlas',
-	);
+    );
 
   }
   elsif( $currentOrganism =~ /Bburgdorferi_B31/) {
     if ($biosequence->{biosequence_desc} =~/OS\=Borreliella burgdorferi/){
       $external_links .= qq~
 			<tr class="hoverable">
-			<td class="key" nowrap>UniProt</td>
+			<td class="key" nowrap>UniProtKB</td>
 			<td class="value"><a href="https://www.uniprot.org/uniprotkb/$biosequence->{biosequence_name}" target="_info">$biosequence->{biosequence_name}</a>
 			</td></tr>
 			 ~; 
     }
   }
   elsif ($currentOrganism =~ /Maize/ && $biosequence->{biosequence_name} =~ /^Zm/ ){
-    $external_links .= qq~
-                        <tr class="hoverable">
-                        <td class="key" nowrap>MaizeGDB</td>
-                        <td class="value"><a href="https://www.maizegdb.org/gene_center/gene/$biosequence->{biosequence_name}" target="_info">$biosequence->{biosequence_name}</a>
-                        </td></tr>
-                         ~;
+    %prot_links=( 'MaizeGDB' => "https://www.maizegdb.org/gene_center/gene/",
+                  'PPDB' => 'http://ppdb.tc.cornell.edu/dbsearch/gene.aspx?acc=');
+    %prot_link_titles = ('MaizeGDB' => 'Maize Genetics and Genomics Database',
+                         'PPDB' => 'The Plant Proteome Database');         
   }
 
   foreach my $source(keys %prot_links){
