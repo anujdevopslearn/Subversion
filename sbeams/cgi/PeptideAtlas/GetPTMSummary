@@ -539,6 +539,7 @@ sub handle_request {
 				resultset_ref=>$resultset_ref,
 				query_parameters_ref=>\%parameters,
 				column_titles_ref=>\@column_titles,
+        show_redundant_prot=> $show_redundant_prot,
 			);
 			$sbeams->writeResultSet(
 				resultset_file_ref=>\$rs_params{set_name},
@@ -651,6 +652,7 @@ sub postProcessResultset {
   my $rs_params_ref = $args{'rs_params_ref'};
   my $query_parameters_ref = $args{'query_parameters_ref'};
   my $column_titles_ref = $args{'column_titles_ref'};
+  my $show_redundant_prot = $args{'show_redundant_prot'};
 
   my %rs_params = %{$rs_params_ref};
   my %parameters = %{$query_parameters_ref};
@@ -661,8 +663,14 @@ sub postProcessResultset {
 
   if ($parameters{display_options} =~ /proteinResidueView/){ 
      for (my $i=0; $i<$n_rows; $i++) {
-        for my $j (5..22){
-          next if($j >= 17 && $j <=19);
+        my $val1= 5;
+        my $val2 = 22;
+        if ($show_redundant_prot eq 'on'){
+           $val1 = 7;
+           $val2 = 24;
+        }
+        for my $j ($val1..$val2){
+          next if($j >= $val1+12 && $j <= $val1+14);
           if ($resultset_ref->{data_ref}->[$i]->[$j] == 0){
             delete $resultset_ref->{data_ref}->[$i]->[$j];
           }
