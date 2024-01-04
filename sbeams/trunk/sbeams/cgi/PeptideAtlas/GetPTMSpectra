@@ -197,6 +197,12 @@ sub handle_request {
     constraint_value=>$parameters{atlas_build_id} );
   return if ($atlas_build_clause eq '-1');
 
+  my $chimera_clause = '';
+  if ($parameters{ptm_type} =~ /\_respect/){
+    $chimera_clause = 'AND S.chimera_level > 1';
+    $parameters{ptm_type} =~ s/_respect//;
+  }
+
   my $ptm_type_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"SPI.ptm_type",
     constraint_type=>"plain_text",
@@ -228,7 +234,7 @@ sub handle_request {
     constraint_value=>$parameters{biosequence_name} );
 
   return if ($biosequence_name_clause eq '-1');
-
+  
 	my %colnameidx = ();
 	my @column_titles = ();
 	my @column_array = (
@@ -278,6 +284,7 @@ sub handle_request {
     $protein_site_clause
     $ptm_type_clause
     $biosequence_name_clause
+    $chimera_clause
   ~;
   my $show_sql = 0;
   #### Apply any parameter adjustment logic
