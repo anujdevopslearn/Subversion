@@ -347,6 +347,7 @@ sub get_table_help {
                  { key => '# Identified Spectra', value => 'The total number of spectra that yeilded identifications above the build threshold.  Observations of the same base peptide sequences multiple times or in <br>various charge states/modifications, whould each contribute to the total' },
                  { key => 'Distinct Modified Peptides', value => 'This shows the number of distinct modified peptide sequences that were seen in this build.  Observations of the peptide in different charge states or with different modifications are not coalesced.' } ,
                  { key => 'Distinct Stripped Peptides', value => 'This shows the number of distinct peptide sequences that were seen in this build.  Observations of the peptide in different charge states or with different modifications are coalesced.' } ,
+                 { key => 'Unique Stripped Peptides From Respect', value => 'This shows the number of distinct peptide sequences that were only identified by the Respect search.  Observations of the peptide in different charge states or with different modifications are coalesced.' } ,
                  { key => 'Canonical Proteins', value => 'Minimally redundant set of proteins required to explain (virtually) all non-decoy peptides observed in build (<a target=_termdefs href="http://www.peptideatlas.org/docs/protein_ident_terms.php">more info</a>)' },
                  { key => 'Noncore-Canonical', value => 'Noncore canonical means that there are uniquely mapping peptides to this protein that do not map to a protein that is considered part of the core proteome <br>of a species. A non-core canonical protein might be an isoform, contaminant, or protein missing from the core reference proteome.  Contaminants are not included in the count.'},
                  { key => 'Indistinguishable Representative Protein', value=>'Indistinguishable representative means that there are peptides that map uniquely to a set of non-canonical proteins, thereby indicating that at least<br> one of the proteins in the set must be present, but it cannot be determined which it is. Contaminants are not included in the count.'},
@@ -727,8 +728,21 @@ sub build_overview_html {
                value => $sbeams->commifyNumber($build_info->{modpep_count}), align => 'right' ) . "\n";
   }
 
+  my $url = "<a href='$CGI_BASE_DIR/PeptideAtlas/GetPeptides?atlas_build_id=$build_info->{atlas_build_id}\&".
+              'biosequence_name_constraint=%21CONTAM%25%3B%21DECOY%25&QUERY_NAME=AT_GetPeptides&apply_action=QUERY'.
+              "\&row_limit=1500000'>".
+              $sbeams->commifyNumber($build_info->{pep_count}{cnt}) .
+              '</a>';
+    
   $table .= $atlas->encodeSectionItem( key   => 'Distinct Stripped Peptides', tr_info => $tr,
-				       value => $sbeams->commifyNumber($build_info->{pep_count}->{cnt}), align => 'right' ) . "\n";
+				       value => $url, align => 'right' ) . "\n";
+
+  if ($build_info->{pep_count_respect}){
+    $table .= $atlas->encodeSectionItem( key   => 'Unique Stripped Peptides From Respect', tr_info => $tr,
+               value => $sbeams->commifyNumber($build_info->{pep_count_respect}), align => 'right' ) . "\n";
+  }
+
+
 
   $table .= $atlas->encodeSectionItem( key   => 'Protein Presence Levels', tr_info => $tr, value => '', align => 'right' ) . "\n";
 
@@ -1088,7 +1102,7 @@ sub get_dataset_contrib_info {
                           column_names=> \@column_titles,
                           table_name => "Dataset Contribution",
                           table_id => "datasetContri_info",
-			  header_sticky => 1,
+													header_sticky => 1,
                           align => \@align,
                           sortable => 0,
                           download_table => 1);
@@ -1443,6 +1457,9 @@ sub generate_html_from_file {
   my $anno =0;
   my $cat_plot_data; 
   my $chr_plot_data;
+
+  $build_info->{atlas_build_id} = $build_id;
+
   while (my $line =<IN>){
     chomp $line;
     if ($line =~ /^build_overview/){
@@ -1706,54 +1723,55 @@ sub generate_html_from_file {
            } 
            $plot_html .= "</div>\n";
 
-	  $counter = -1;
-	  foreach my $ptm_type (sort {$a cmp $b} keys %ptm_plot_data){
-	    next if ($ptm_type eq 'label');
-	    $counter++;
-	    my @residues = sort {$a cmp $b} keys %{$ptm_plot_data{$ptm_type}{data}};
-	    my @plot_data = ();
-	    foreach my $residue (@residues){
-	      push @plot_data, $ptm_plot_data{$ptm_type}{data}{$residue};
-	    }
-            
-	    $ptm_chart .= $atlas ->plotly_barchart (data => [@plot_data],
-						    names => [@residues],
-						    divName => "ptm_cov_plot$counter",
-						    ytitle => 'Count',
-						    dtick => 1,
-						    title => "$ptm_type for $ptm_plot_data{label}",
-						    barlabel => 1
-						    #xtickangle => 'tickangle:25',
-						    #yticktype => "type:'log',range:[0,$max],dtick:1",
-						    #layoutmargin => 'b:50',
-		);         
-	    unshift @{$ptm_table_data{$ptm_type}}, @{$ptm_table_headings{$ptm_type}};
-	    my $ptm_table = $atlas->encodeSectionTable (
-	      header => 1,
-	      unified_widgets => 1,
-	      set_download => 1,
-	      align  => [()],
-	      bkg_interval => 3,
-	      file_prefix => 'ptm_',
-	      rows => $ptm_table_data{$ptm_type});
-	    my $ptm_plot_desc = qq~
-                 <p class="help_val"  style="width: 55vw; padding-left:10px;">
-                  The combined results from datasets searched with $ptm_type in this build yield the
-                  following numbers of ptm sites at several levels of
-                  confidence (nP == number of sites with PTMProphet probability range).
-                  The bar chart depicts the results for the core proteome only.
-                  The table provides metrics for all subsets of protein entries in the combined mapping proteome.
-                </p>
-              ~;
-	    if ($counter == 0){
-	      $plot_html .= "\n<div id='ptm_cov_div$counter' style='display:block' class='tabcontent'>\n";
-	    }else{
-	      $plot_html .= "\n<div id='ptm_cov_div$counter' style='display:none' class='tabcontent'>\n";
-	    }
-	    $plot_html .= "$ptm_plot_desc<div style='width: 40vw' id='ptm_cov_plot$counter'></div>\n";
-	    $plot_html .= "<TABLE width='$table_width'>$ptm_table</TABLE>\n</div>\n";
-	  }
-	  $plot_html .= qq~
+						$counter = -1;
+						foreach my $ptm_type (sort {$a cmp $b} keys %ptm_plot_data){
+							next if ($ptm_type eq 'label');
+							$counter++;
+							my @residues = sort {$a cmp $b} keys %{$ptm_plot_data{$ptm_type}{data}};
+							my @plot_data = ();
+							foreach my $residue (@residues){
+								push @plot_data, $ptm_plot_data{$ptm_type}{data}{$residue};
+							}
+										
+							$ptm_chart .= $atlas ->plotly_barchart (data => [@plot_data],
+												names => [@residues],
+												divName => "ptm_cov_plot$counter",
+												ytitle => 'Count',
+												dtick => 1,
+												title => "$ptm_type for $ptm_plot_data{label}",
+												barlabel => 1
+												#xtickangle => 'tickangle:25',
+												#yticktype => "type:'log',range:[0,$max],dtick:1",
+												#layoutmargin => 'b:50',
+						);         
+							unshift @{$ptm_table_data{$ptm_type}}, @{$ptm_table_headings{$ptm_type}};
+							my $ptm_table = $atlas->encodeSectionTable (
+								header => 1,
+								unified_widgets => 1,
+								set_download => 1,
+								align  => [()],
+								bkg_interval => 3,
+								file_prefix => 'ptm_',
+								rows => $ptm_table_data{$ptm_type});
+							my $ptm_plot_desc = qq~
+												 <p class="help_val"  style="width: 55vw; padding-left:10px;">
+													The combined results from datasets searched with $ptm_type in this build yield the
+													following numbers of ptm sites at several levels of
+													confidence (nP == number of sites with PTMProphet probability range).
+													The bar chart depicts the results for the core proteome only.
+													The table provides metrics for all subsets of protein entries in the combined mapping proteome.
+												</p>
+											~;
+
+							if ($counter == 0){
+								$plot_html .= "\n<div id='ptm_cov_div$counter' style='display:block' class='tabcontent'>\n";
+							}else{
+								$plot_html .= "\n<div id='ptm_cov_div$counter' style='display:none' class='tabcontent'>\n";
+							}
+							$plot_html .= "$ptm_plot_desc<div style='width: 40vw' id='ptm_cov_plot$counter'></div>\n";
+							$plot_html .= "<TABLE width='$table_width'>$ptm_table</TABLE>\n</div>\n";
+						}
+						$plot_html .= qq~
 								 <!-- Latest compiled and minified plotly.js JavaScript -->
 								 <script type="text/javascript" src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 								 <script type="text/javascript" charset="utf-8">
@@ -1774,13 +1792,14 @@ sub generate_html_from_file {
            ~;
 	}
 	if ($pre_table =~ /ptm_coverage/){
+    my $ptm_table_help = $atlas->get_table_help(column_titles_ref=>[qw(nP.95-.99 nP.99-1 no-choice)]);
 	  $html = $sbeams->make_toggle_section(
 	    neutraltext =>"PTM Coverage",
 	    sticky => 1,
 	    barlink => 1,
 	    visible => 1,
 	    name => "ptm_div",
-	    content => "<TABLE><TR><TD COLSPAN='5'>$plot_html\n$ptm_chart</TD></TR></TABLE>",
+	    content => "$ptm_table_help<TABLE><TR><TD COLSPAN='5'>$plot_html\n$ptm_chart</TD></TR></TABLE>",
 	      );
 	}else{
 	  $html = $atlas->create_table (data => \@data,
