@@ -7,7 +7,7 @@
 # Description : Prints summary of a given protein given selection
 #               atlas build and protein name.
 #
-# SBEAMS is Copyright (C) 2000-2023 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2024 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -3952,10 +3952,18 @@ sub displayExternalLinksSection {
     }
   }
   elsif ($currentOrganism =~ /Maize/ && $biosequence->{biosequence_name} =~ /^Zm/ ){
-    %prot_links=( 'MaizeGDB' => "https://www.maizegdb.org/gene_center/gene/",
-                  'PPDB' => 'http://ppdb.tc.cornell.edu/dbsearch/gene.aspx?acc=');
-    %prot_link_titles = ('MaizeGDB' => 'Maize Genetics and Genomics Database',
-                         'PPDB' => 'The Plant Proteome Database');         
+    # links with special logic...
+    my $maize = $biosequence->{biosequence_name};
+    $maize =~ s/_.*$//;
+    $external_links .= qq~
+                        <tr class="hoverable">
+                        <td class="key" nowrap>Maize Genetics and Genomics Database</td>
+                        <td class="value"><a href="https://www.maizegdb.org/gene_center/gene/$maize" title="view $maize at MaizeGDB" target="_info">MaizeGDB</a>
+                        </td></tr>
+                         ~;
+
+    %prot_links=( 'PPDB' => 'http://ppdb.tc.cornell.edu/dbsearch/gene.aspx?acc=');
+    %prot_link_titles = ('PPDB' => 'The Plant Proteome Database');         
   }
 
   foreach my $source(keys %prot_links){
