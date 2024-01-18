@@ -449,7 +449,7 @@ sub handle_request {
       ["mass", "NCM.mass", "mass"],
       ["pI", "NCM.pI","pI"],
       ["gravy","NCM.gravy","gravy"],
-      ["rpkm", "NCM.rpkm","rpkm"],
+      ["rpkm", "RQ.rpkm","rpkm"],
       ["length", "NCM.length", "length"],
       ["Description", "NCM.Description", "Description"],
       ["accession", "replace(NCM.nextprot_accession,'PeptideAtlas_', '')","Accession"],
@@ -470,8 +470,12 @@ sub handle_request {
   my $sql = qq~
 		SELECT $columns_clause
     FROM $TBAT_NEXTPROT_CHROMOSOME_MAPPING NCM
-		JOIN $TBAT_NEXTPROT_MAPPING NM  ON (NM.ID = NCM.NEXTPROT_MAPPING_ID) 
-		WHERE 1=1 
+		JOIN $TBAT_NEXTPROT_MAPPING NM  ON (NM.ID = NCM.NEXTPROT_MAPPING_ID)
+    JOIN $TBAT_ATLAS_BUILD AB ON (AB.atlas_build_id = NM.atlas_build_id)
+    LEFT JOIN $TBAT_BIOSEQUENCE BS ON (BS.BIOSEQUENCE_SET_ID = AB.BIOSEQUENCE_SET_ID 
+                                       AND BS.BIOSEQUENCE_NAME = NCM.REFSEQ_ACCESSION)
+    LEFT JOIN $TBAT_RNASEQ_QUANT RQ ON (BS.biosequence_id = RQ.biosequence_id)
+		WHERE 1=1
    $mapping_id_clause
    $gene_symbol_clause
    $ensembl_name_clause
