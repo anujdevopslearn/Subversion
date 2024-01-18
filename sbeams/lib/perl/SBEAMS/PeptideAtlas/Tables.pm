@@ -185,6 +185,8 @@ use vars qw(@ISA @EXPORT
 
     $TBAT_INITIATOR_METHIONINE_EVIDENCE
     $TBAT_DIRTY_PEPTIDES
+    
+    $TBAT_RNASEQ_QUANT
 );
 
 ###############################################################################
@@ -367,6 +369,8 @@ require Exporter;
 
     $TBAT_INITIATOR_METHIONINE_EVIDENCE
     $TBAT_DIRTY_PEPTIDES
+
+    $TBAT_RNASEQ_QUANT
 );
 
 
@@ -555,6 +559,7 @@ $TBAT_INITIATOR_METHIONINE_EVIDENCE = "${mod}initiator_methionine_evidence";
 
 $TBAT_DIRTY_PEPTIDES                = "${mod}dirty_peptides";
 
+$TBAT_RNASEQ_QUANT                  = "${mod}rnaseq_quant";
 ###############################################################################
 ## Constructor
 ################################################################################
@@ -593,7 +598,7 @@ sub update_PA_table_variables{
     $TBAT_SPECTRUM                   = "${mod}spectrum";
     $TBAT_SPECTRUM_IDENTIFICATION    = "${mod}spectrum_identification";
     $TBAT_SPECTRUM_PTM_IDENTIFICATION    = "${mod}spectrum_ptm_identification";
-    $TBAT_SPECTRA_DESCRIPTION_SET = "${mod}spectra_description_set";
+    #$TBAT_SPECTRA_DESCRIPTION_SET = "${mod}spectra_description_set";
     $TBAT_PROTEIN_IDENTIFICATION        = "${mod}protein_identification";
     $TBAT_BIOSEQUENCE_RELATIONSHIP      = "${mod}biosequence_relationship";
     $TBAT_BIOSEQUENCE_ID_ATLAS_BUILD_SEARCH_BATCH = "${mod}biosequence_id_atlas_build_search_batch";
