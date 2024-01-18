@@ -250,6 +250,7 @@ sub handle_request {
     ["site_ptm_score", "''", "PTM Score"],
 		["ptm_sequence", "SPI.ptm_sequence","PTM Sequence"],
 		["ptm_lability","SPI.ptm_lability", "PTM Lability"],
+    ["ptm_norm_info_gain", "SPI.ptm_norm_info_gain", "PTM Normalized Information Content"],
 		["frg_type", "FRG.FRAGMENTATION_TYPE","Fragmentation Type"],
 		["precursor_intensity", "S.precursor_intensity", "Precursor Intensity (x10^6)"],
 		["total_ion_current", "S.total_ion_current", "TIC (x10^6)"],
