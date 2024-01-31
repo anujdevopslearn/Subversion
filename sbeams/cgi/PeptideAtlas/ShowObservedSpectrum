@@ -1782,16 +1782,16 @@ sub interpretUSI {
   #### Otherwise it must be a PXD, try to find it
   #print "datasetIdentifier=$datasetIdentifier\n";
   my $sql = qq~ 
-    SELECT SAMPLE_ID,
+    SELECT S.SAMPLE_ID,
            SAMPLE_ACCESSION,
-           S.SEARCH_BATCH_ID,
+           ASB.PROTEOMICS_SEARCH_BATCH_ID,
            IS_PUBLIC,
            REPOSITORY_IDENTIFIERS,
            DATA_LOCATION
       FROM $TBAT_SAMPLE S
-      JOIN $TBPR_SEARCH_BATCH SB ON ( SB.search_batch_id = S.search_batch_id )
+      JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ( ASB.sample_id = S.sample_id)
      WHERE repository_identifiers LIKE '\%$usi->{datasetIdentifier}\%'
-     order by SB.search_batch_id desc
+     order by ASB.PROTEOMICS_search_batch_id desc
     ~;
 
   my @rows = $sbeams->selectSeveralColumns($sql);
