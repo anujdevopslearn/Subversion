@@ -7,6 +7,7 @@
 use strict;
 use Getopt::Long;
 use FindBin;
+use Storable qw(nstore retrieve);
 
 use lib "$FindBin::Bin/../../perl";
 
@@ -52,7 +53,6 @@ Options:
   --proteomics_search_batch_id  Modifies --update_n_searched, only update 
 	                              specified search batches.
 
-
 EOU
 
 my %OPTIONS;
@@ -63,7 +63,7 @@ my %args = ( build_id => [],
 
 #### Process options, die with usage if it fails.
 unless (GetOptions(\%args,"verbose:s","debug:s","testonly",
-        "build_id:i", "reload", "nukem", "update_n_searched_spectra",
+        "build_id:i", "reload", "nukem", "update_n_searched_spectra", "proteomics_search_batch_id:s",
 				"atlas_search_batch_id:s" ) ) {
 	die "\n$USAGE";
 }
@@ -90,7 +90,6 @@ my $DEBUG = $OPTIONS{"debug"} || 0;
 
 my $TESTONLY = $OPTIONS{"testonly"} || 0;
 
-my $UPDATE_ALL = $OPTIONS{"update_all"} || 0;
 
 my $pr2atlas;
 my $at2pr;
@@ -138,31 +137,6 @@ sub handleRequest {
   my $build_id_str = join( ",", @{$args{build_id}} );
 
   die "must specify build_id(s)" unless $build_id_str || $args{reload} || $args{nukem};
-  
-  # Delete any old info
-  my $limit = '';
-  $limit = <<"  END" if $build_id_str;
-  WHERE atlas_build_search_batch_id IN
-    ( SELECT atlas_build_search_batch_id FROM
-      $TBAT_ATLAS_BUILD_SEARCH_BATCH WHERE atlas_build_id IN ($build_id_str)
-    )
-  END
- 
-  my $delsql = <<"  END";
-  DELETE FROM $TBAT_SEARCH_BATCH_STATISTICS 
-  $limit
-  END
-  
-  $sbeams->do( $delsql );
-  print "Deleted SEARCH_BATCH_STATISTICS information for builds $build_id_str\n";
-
-  $delsql = <<"  END";
-  DELETE FROM $TBAT_DATASET_STATISTICS
-  where atlas_build_id in ( $build_id_str)
-  END
-
-  $sbeams->do( $delsql );
-  print "Deleted DATASET_STATISTICS information for builds $build_id_str\n";
 
   # returns ref to array of build_id/data_path arrayrefs
   my $build_info = get_build_info( \@{$args{build_id}} );
@@ -172,13 +146,40 @@ sub handleRequest {
 		update_n_searched();
 	}
 
-  for my $builds ( @$build_info ) {
-    my $stats = get_build_stats( $builds );
-    insert_stats( $stats );
-    $stats = get_dataset_statistics ($builds);
-    insert_dataset_stats( $stats );
-  }
-  
+		# Delete any old info
+		print "Deleted SEARCH_BATCH_STATISTICS information for builds $build_id_str\n";
+		my $limit = '';
+		$limit = <<"		END" if $build_id_str;
+		WHERE atlas_build_search_batch_id IN
+			( SELECT atlas_build_search_batch_id FROM
+				$TBAT_ATLAS_BUILD_SEARCH_BATCH WHERE atlas_build_id IN ($build_id_str)
+			)
+		END
+	 
+		my $delsql = <<"	END";
+		DELETE FROM $TBAT_SEARCH_BATCH_STATISTICS 
+		$limit
+	END
+		$sbeams->do( $delsql );
+		for my $builds ( @$build_info ) {
+			my $msg = $sbeams->update_PA_table_variables ($builds->[0]);
+			my $stats = get_build_stats( $builds );
+			insert_stats( $stats );
+		}
+ 
+		my $delsql = <<"		END";
+		DELETE FROM $TBAT_DATASET_STATISTICS
+		where atlas_build_id in ( $build_id_str)
+		END
+
+		$sbeams->do( $delsql );
+		print "Deleted DATASET_STATISTICS information for builds $build_id_str\n";
+
+		for my $builds ( @$build_info ) {
+			my $msg = $sbeams->update_PA_table_variables ($builds->[0]);
+			my $stats = get_dataset_statistics ($builds);
+			insert_dataset_stats( $stats );
+		}
 
 }
 
@@ -200,11 +201,14 @@ sub update_n_searched {
 		                                                        batch_clause => $batch_clause );
 
 		for my $batch ( @{$search_batches} ) {
+      if (! -d "$batch->{data_location}"){
+         print STDERR "$batch->{data_location} not found\n";
+      }
 
 	    my ($n_runs, $n_spec) = $sbeamsMOD->getNSpecFromFlatFiles( search_batch_path => $batch->{data_location} );
-      print "$batch->{data_location} n_runs=$n_runs, n_spec=$n_spec \n";
-			print STDERR "n_spec is $n_spec! for id $batch->{atlas_search_batch_id}\n";
-      print "n_spec is $n_spec! for id $batch->{atlas_search_batch_id}\n";
+      print "atlas_search_batch_id=$batch->{atlas_search_batch_id} $batch->{data_location} n_runs=$n_runs, n_spec=$n_spec \n";
+			#print STDERR "n_spec is $n_spec! for id $batch->{atlas_search_batch_id}\n";
+      #print "n_spec is $n_spec! for id $batch->{atlas_search_batch_id}\n";
 			
 			if ( $n_spec ) {
 			  my $rowdata = { n_searched_spectra => $n_spec, n_runs=>$n_runs};
@@ -244,27 +248,29 @@ sub get_build_stats {
   $analysis_path =~ s/DATA_FILES\/*/analysis\//;
 
   # Fetch peptide counts, hash of hashrefs keyed by asb_id
-  # my @keys = qw( atlas_build_search_batch_id n_observations
-  # n_searched_spectra, data_location );
   my $build_info = get_peptide_counts( $build_id );
   # Read peptide prophet model info from analysis directory
   my $models = get_models( $analysis_path ); 
+  print "get_build_contributions\n";
+
   my $progressive = get_build_contributions( $analysis_path );
     
   # Fetch search_batch contributions, hash of arrayrefs keyed by asb_id
   # SELECT ASB.atlas_search_batch_id, COUNT(*) num_unique, sample_title, ASB.sample_id
+  print "get_contributions\n";
+
   my $contributions = get_contributions( $build_id);
 
   # Loop over builds
   use Data::Dumper;
   for my $batch ( sort { $a <=> $b } keys( %$build_info ) ) {
-#  print Dumper( $build_info->{$batch} ) . "\n";
+
     my $p_batch = $progressive->{$at2pr->{$batch}};
-#    print "pbatch is " . Dumper( $p_batch );
+
     my $m_batch = $models->{$at2pr->{$batch}};
-#    print "mbatch is " . Dumper( $m_batch );
+
     my $c_batch = $contributions->{$batch};
-#    print "cbatch is " . Dumper( $c_batch );
+
     for my $k ( keys( %$p_batch ) ) { 
       $build_info->{$batch}->{$k} = $p_batch->{$k};
     }
@@ -275,6 +281,7 @@ sub get_build_stats {
       $build_info->{$batch}->{$k} = $c_batch->{$k};
     }
   }
+
   return $build_info;
 }
 sub get_build_contributions {
@@ -404,26 +411,59 @@ sub get_peptide_counts {
   print "DECOY and CONTAM peptides exclued: " . scalar keys %pep_exclude;
   print "\n";
 
+#   $sql =<<"  STATS";
+#  SELECT ASB.atlas_search_batch_id, 
+#         n_searched_spectra,
+#         COUNT(PI.n_observations) as total_distinct, 
+#         SUM(PI.n_observations) as total_obs,
+#         data_location, 
+#         atlas_build_search_batch_id, 
+#         n_runs
+#  FROM $TBAT_PEPTIDE_INSTANCE PI
+#  JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB ON (PISB.peptide_instance_id = PI.peptide_instance_id )
+#  JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON (PISB.atlas_search_batch_id = ASB.atlas_search_batch_id)
+#  JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON ( ABSB.atlas_search_batch_id = ASB.atlas_search_batch_id ) 
+#  WHERE PI.atlas_build_id = $build_id
+#  AND ABSB.atlas_build_id = $build_id     
+#  $peptide_id_constraint
+#  GROUP BY ASB.atlas_search_batch_id, n_runs, n_searched_spectra, data_location,
+#           atlas_build_search_batch_id
+#  STATS
+#  
+#  my @all_cnts = $sbeams->selectSeveralColumns( $sql );
+#  $log->debug( "Getting peptide counts:\n $sql" );
+#
+#  # Loop and cache 'all' stats
+#  my %batch_stats;
+#  my %results;
+#  for my $build ( @all_cnts ) {
+#     my %batch = ( 
+#                  n_searched_spectra               => $build->[1],
+#                  n_distinct_peptides              => $build->[2],
+#                  n_observations                   => $build->[3],
+#                  data_location                    => $build->[4],
+#                  atlas_build_search_batch_id     => $build->[5],
+#                  n_runs                           => $build->[6],
+#                );
+#    $results{$build->[0]} = \%batch;
+#  }
+
    $sql =<<"  STATS";
-  SELECT ASB.atlas_search_batch_id, 
+  SELECT ASB.atlas_search_batch_id,
          n_searched_spectra,
-         COUNT(PI.n_observations) as total_distinct, 
-         SUM(PI.n_observations) as total_obs,
-         data_location, 
-         atlas_build_search_batch_id, 
+         PI.n_observations,
+         data_location,
+         atlas_build_search_batch_id,
          n_runs
-  FROM $TBAT_ATLAS_SEARCH_BATCH ASB
-  JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON ( ABSB.atlas_search_batch_id = ASB.atlas_search_batch_id )    
-  JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB
-    ON PISB.atlas_search_batch_id = ASB.atlas_search_batch_id
-  JOIN $TBAT_PEPTIDE_INSTANCE PI
-    ON PISB.peptide_instance_id = PI.peptide_instance_id
+  FROM $TBAT_PEPTIDE_INSTANCE PI
+  JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB ON (PISB.peptide_instance_id = PI.peptide_instance_id )
+  JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON (PISB.atlas_search_batch_id = ASB.atlas_search_batch_id)
+  JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON ( ABSB.atlas_search_batch_id = ASB.atlas_search_batch_id )
   WHERE PI.atlas_build_id = $build_id
+  AND ABSB.atlas_build_id = $build_id
   $peptide_id_constraint
-  GROUP BY ASB.atlas_search_batch_id, n_runs, n_searched_spectra, data_location,
-           atlas_build_search_batch_id
   STATS
-  
+
   my @all_cnts = $sbeams->selectSeveralColumns( $sql );
   $log->debug( "Getting peptide counts:\n $sql" );
 
@@ -431,16 +471,17 @@ sub get_peptide_counts {
   my %batch_stats;
   my %results;
   for my $build ( @all_cnts ) {
-     my %batch = ( 
-                  n_searched_spectra               => $build->[1],
-                  n_distinct_peptides              => $build->[2],
-                  n_observations                   => $build->[3],
-                  data_location                    => $build->[4],
-                  atlas_build_search_batch_id     => $build->[5],
-                  n_runs                           => $build->[6],
-                );
-    $results{$build->[0]} = \%batch;
+     if (! $results{$build->[0]}){
+       $results{$build->[0]} = {};
+     }
+     $results{$build->[0]}->{n_searched_spectra} = $build->[1];
+     $results{$build->[0]}->{n_distinct_peptides}++;
+     $results{$build->[0]}->{n_observations} += $build->[2];
+     $results{$build->[0]}->{data_location} = $build->[3];
+     $results{$build->[0]}->{atlas_build_search_batch_id} = $build->[4];
+     $results{$build->[0]}->{n_runs} = $build->[5];
   }
+
   return \%results;
 }
 
@@ -490,14 +531,9 @@ sub get_contributions {
 sub insert_stats {
   my $stats = shift;
 
-  # print "rownum  n_distinct_peptides n_uniq_contributed_peptides cumulative_n_peptides  cumulative_n_proteins\n";
   for my $build_id ( keys %$stats ) {
     my $build = $stats->{$build_id};
     my %rowdata;
-    #for my $k ( qw(rownum  n_distinct_peptides n_uniq_contributed_peptides cumulative_n_peptides  cumulative_n_proteins)){
-    #  print  $build->{$k} . ", " if ($build->{rownum} =~ /^[1234]$/);  
-    #}
-    #print "\n"  if ($build->{rownum} =~ /^[1234]$/);
 
     for my $k ( qw( n_observations atlas_build_search_batch_id 
                     n_runs n_searched_spectra n_uniq_contributed_peptides 
@@ -507,6 +543,7 @@ sub insert_stats {
                     cumulative_n_proteins ) ) {
       $rowdata{$k} = $build->{$k};
     }
+
     # Assertion!
     if (defined  $rowdata{n_uniq_contributed_peptides} ){
 		  unless ( $rowdata{n_progressive_peptides} >= $rowdata{n_uniq_contributed_peptides} ) {
@@ -522,7 +559,7 @@ sub insert_stats {
                                            PK => 'search_batch_statistics_id',
                                     return_PK => 1 );
   }
-  
+
 }
 
 sub process_params {
@@ -540,7 +577,7 @@ sub get_dataset_statistics{
 	print "update dataset_statistics for buid_id=$atlas_build_id\n";
 
   my @stats = ();
-  my $experiment_list = "$data_path/../Experiments.list";
+  my $experiment_list = "$data_path/AtlasProphet/Experiments.list.new";
   my $outfile2="$data_path/experiment_contribution_summary_dataset.out";
   my $prot_summary_exp_file = "$data_path/AtlasProphet_by_dataset.tsv";
   my $prot_summary_cum_file = "$data_path/AtlasProphet_by_dataset_cum.tsv";
@@ -548,13 +585,15 @@ sub get_dataset_statistics{
     die "can't find \n\t$prot_summary_exp_file or \n\t$prot_summary_cum_file\n";
   }
 
+  my %spectra_cnt = ();
   my @psb_order = ();
   my %psb_rp_id =();
   my %peptides = ();
   my %canonicalProteins=();
   my %canonicalProteinSummary;
-  my %prot_dataset = ();
+  my %proteins = ();
   my $pre_n_canonical =0;
+  my %repository_ids_exp = ();
   open (PROTEXP , "<$prot_summary_exp_file") or die "cannot open $prot_summary_exp_file\n";
   while (my $line =<PROTEXP>){
     next if($line =~ /canonical/);
@@ -581,8 +620,10 @@ sub get_dataset_statistics{
     chomp $line;
     next if ($line =~ /^#/);
     next if ($line =~ /^$/);
+    my ($sbid, $loc, $rpid) = split("\t", $line);
     $line =~ /^(\d+)\s.*/;
     push @psb_order , $1;
+    $repository_ids_exp{$rpid}=1;
   }
 
 	open (P, "<$data_path/PeptideAtlasInput.PAprotIdentlist") or die "cannot open $data_path/PeptideAtlasInput.PAprotIdentlist file\n";
@@ -601,6 +642,8 @@ sub get_dataset_statistics{
     JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON (ASB.sample_id = S.sample_id)
     JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON(ABSB.ATLAS_SEARCH_BATCH_ID = ASB.ATLAS_SEARCH_BATCH_ID)
     WHERE ABSB.atlas_build_id = $atlas_build_id
+    AND ASB.record_status != 'D'
+    AND ABSB.record_status != 'D'
 	~;
   my @results = $sbeams->selectSeveralColumns($sql);
   my %runs = ();
@@ -610,88 +653,6 @@ sub get_dataset_statistics{
     $psb_rp_id{$psb_id} = $rp_id;
     $runs{$rp_id} += $n_runs;
   }
-
-  print "reading peptde_mapping\n"; 
-  open (MAP, "<$data_path/peptide_mapping.tsv") or die "cannot open $data_path/peptide_mapping.tsv\n";
-  while (my $line =<MAP>){
-		my ($pep_acc,$pep_seq, $prot_acc,$start,$end,$pre,$fol) = split("\t", $line);
-		next if (! $prot_acc);
-		next if ($prot_acc =~ /(^CONTAM|^DECOY|^UNMAP)/i);
-    $peptides{length}{$pep_acc} = length($pep_seq); 
-		if ( defined $canonicalProteins{$prot_acc}){ 
-      $peptides{proteinAccession}{$prot_acc}{$pep_acc}{start} = $start;
-      $peptides{proteinAccession}{$prot_acc}{$pep_acc}{end} = $end;
-		}
-  }  
-
-	print "reading PAidentlist\n";
-  open (IDENT, "<$data_path/PeptideAtlasInput_concat.PAidentlist") or die "cannot open $data_path/PeptideAtlasInput_concat.PAidentlist file\n";
-  while (my $line = <IDENT>){
-    my @tmp = split("\t", $line);
-    my $psb_id = $tmp[0];
-    my $id = $psb_rp_id{$psb_id} || 'NA';
-    my $pep_acc = $tmp[2];
-    ## decoy and contam mapping peptides
-    next if (not defined $peptides{length}{$pep_acc}); 
-    $peptides{datasetID}{$id}{$pep_acc} =1;
-    $peptides{peptideAccession}{$pep_acc}{$id} =1;
-  }
-
-  foreach my $prot_acc (keys %canonicalProteins){
-    foreach my $pep_acc (keys %{$peptides{proteinAccession}{$prot_acc}}){
-      foreach my $datasetID (keys %{$peptides{peptideAccession}{$pep_acc}}){
-         $prot_dataset{$datasetID}{$prot_acc} = 1; 
-      }
-    } 
-  }
-
-	my %unique_peptides = ();
-	my %unique_proteins = ();
-	my @ids = keys %{$peptides{datasetID}};
-
-	foreach my $id (@ids){
-		my %list = ();
-		foreach my $pep(keys %{$peptides{datasetID}{$id}}){
-			$list{$pep} = 1;
-		}
-		foreach my $id2(@ids){
-			next if ($id2 eq $id);
-			foreach my $pep(keys %{$peptides{datasetID}{$id2}}){
-				if (defined $list{$pep}){
-					 $list{$pep} = 0;
-				}
-			}
-		}
-		my $cnt =0;
-		foreach my $pep (keys %list){
-		 if ( $list{$pep}){
-			 $cnt++;
-		 }
-		}
-		$unique_peptides{$id} = $cnt;
-	}
-
-	foreach my $id (@ids){
-		my %list = ();
-		foreach my $protein(keys %{$prot_dataset{$id}}){
-			$list{$protein} = 1;
-		}
-		foreach my $id2(@ids){
-			next if ($id2 eq $id);
-			foreach my $protein(keys %{$prot_dataset{$id2}}){
-				if (defined $list{$protein}){
-					 $list{$protein} = 0;
-				}
-			}
-		}
-		my $cnt =0;
-		foreach my $protein (keys %list){
-		 if ( $list{$protein}){
-			 $cnt++;
-		 }
-		}
-		$unique_proteins{$id} = $cnt;
-	}
 
 	print "getting n_spectra\n";
 
@@ -704,13 +665,17 @@ sub get_dataset_statistics{
 		JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ( ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id )
 		JOIN $TBAT_SAMPLE S ON (S.sample_id = ASB.sample_id)
 		WHERE ABSB.atlas_build_id = $atlas_build_id
+    AND ASB.record_status != 'D'
+    AND ABSB.record_status != 'D'
 		GROUP BY S.repository_identifiers
 	~;
   my @rows = $sbeams->selectSeveralColumns($sql);
-  my %spectra_cnt = ();
   foreach my $row(@rows){
 	  my ($id, $n_searched_spectra, $n_good_spectra) = @$row;
     $id = 'NA' if (! $id || $id eq '');
+    if (not defined $repository_ids_exp{$id}){
+      die "ERROR: $id not in $experiment_list\n";
+    }
  	  $spectra_cnt{$id}{n_searched_spectra} = $n_searched_spectra;
 	  $spectra_cnt{$id}{n_good_spectra} = $n_good_spectra;
   }
@@ -724,6 +689,91 @@ sub get_dataset_statistics{
      }
      $processed{$rp_id} = 1;
   }
+  
+  #if (! -e "peptides.savedState"){
+		print "reading peptde_mapping\n"; 
+		open (MAP, "<$data_path/peptide_mapping.tsv") or die "cannot open $data_path/peptide_mapping.tsv\n";
+		while (my $line =<MAP>){
+			my ($pep_acc,$pep_seq, $prot_acc,$start,$end,$pre,$fol) = split("\t", $line);
+			next if (! $prot_acc);
+			next if ($prot_acc =~ /(^CONTAM|^DECOY|^UNMAP)/i);
+			$peptides{length}{$pep_acc} = length($pep_seq); 
+			if ( defined $canonicalProteins{$prot_acc}){ 
+				$peptides{proteinAccession}{$prot_acc}{$pep_acc}{start} = $start;
+				$peptides{proteinAccession}{$prot_acc}{$pep_acc}{end} = $end;
+			}
+		}  
+
+		print "reading PAxml\n";
+    my $paxml= `ls $data_path/APD*.PAxml`;
+    chomp $paxml;
+		open (IDENT, "<$paxml") or die "cannot open $paxml file\n";
+		my $counter = 0;
+    my $pep_acc = '';
+    my $flag = 0;
+		while (my $line = <IDENT>){
+		  if ($line =~ /peptide_accession="(PAp\d+)"/){
+       	$pep_acc= $1;
+        $flag = 0;
+      }elsif($line =~ /search_batch_ids="(.*)"/ && ! $flag){
+        foreach my $psb_id (split(",", $1)){
+					my $id = $psb_rp_id{$psb_id} || 'NA';
+					## decoy and contam mapping peptides
+					if (defined $peptides{length}{$pep_acc}){
+						$peptides{datasetID}{$id}{$pep_acc} =1;
+						$peptides{peptideAccession}{$pep_acc}{$id} =1;
+          }
+          $pep_acc = '';
+        }
+				$counter++;
+				if ($counter % 100000 == 0){
+					print "$counter...";
+				}
+			}elsif($line =~ /modified_peptide_instance/){
+        $flag =1;
+      }
+   }
+  #  nstore(\%peptides, "peptides.savedState");
+  #}else{
+  #  my $tmp = retrieve("peptides.savedState");
+  #  %peptides = %$tmp;
+  #}
+
+  print "\ngetting dataset protein ids\n";
+
+  foreach my $prot_acc (keys %canonicalProteins){
+    foreach my $pep_acc (keys %{$peptides{proteinAccession}{$prot_acc}}){
+      foreach my $datasetID (keys %{$peptides{peptideAccession}{$pep_acc}}){
+         $proteins{datasetID}{$datasetID}{$prot_acc} = 1; 
+         $proteins{proteinAccession}{$prot_acc}{$datasetID} =1;
+      }
+    } 
+  }
+  print "getting unique peptides\n";
+
+	my %unique_peptides = ();
+	my %unique_proteins = ();
+	my @ids = keys %{$peptides{datasetID}};
+
+	foreach my $id (@ids){
+    my $cnt = 0;
+		foreach my $pep(keys %{$peptides{datasetID}{$id}}){
+		  my $n = scalar keys %{$peptides{peptideAccession}{$pep}};
+      $cnt++ if ($n == 1);
+		}
+		$unique_peptides{$id} = $cnt;
+	}
+
+  print "getting unique proteins\n";
+
+	foreach my $id (@ids){
+    my $cnt = 0;
+    foreach my $prot(keys %{$proteins{datasetID}{$id}}){
+      my $n = scalar keys %{$proteins{proteinAccession}{$prot}};
+      $cnt++ if ($n == 1);
+    }
+		$unique_proteins{$id} = $cnt;
+	}
 
 	open (OUTFILE2, ">", $outfile2) or die "can't open $outfile2 ($!)";
 	#print OUTFILE2 "pxd  ngoodspec     cum_nspec n_unique_pep cum_nspec cum_n_new_pep nprot  cum_nprot\n";
@@ -744,9 +794,9 @@ sub get_dataset_statistics{
 		my $n_goodspec = $spectra_cnt{$id}{n_good_spectra};
     my $n_searched_spectra = $spectra_cnt{$id}{n_searched_spectra};
 		my $n_peptides = scalar keys %{$peptides{datasetID}{$id}};
-		my $n_prots =  scalar keys %{$prot_dataset{$id}};
-		my $n_unique_pep = $unique_peptides{$id};
-		my $n_unique_prots = $unique_proteins{$id};
+		my $n_prots =  scalar keys %{$proteins{datasetID}{$id}};
+		my $n_unique_pep = $unique_peptides{$id} || 0;
+		my $n_unique_prots = $unique_proteins{$id} || 0;
 		my ($n_new_pep,$n_new_canonical_prots); 
 		if ($first){
 			$first =0;
