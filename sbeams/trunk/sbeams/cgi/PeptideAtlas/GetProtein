@@ -2242,7 +2242,7 @@ sub get_sequence_graphic {
                                          -pad_right => 50 );
 
   my $ruler = Bio::SeqFeature::Generic->new( -end => $protlen,
-                                           -start => 2,
+                                           -start => 1,
                                     -display_name => 'Sequence Position');
 
   my $sequence = Bio::SeqFeature::Generic->new( -end => $protlen,
