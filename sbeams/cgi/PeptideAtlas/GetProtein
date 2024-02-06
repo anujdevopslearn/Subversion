@@ -969,8 +969,8 @@ sub handle_request {
     }
   }
 
-
   #### Display a large title, status, and status description
+
   renderProteinAccessionAndStatus(
     identification_status => $identification_status,
     biosequence => $biosequence,
@@ -1081,6 +1081,17 @@ sub handle_request {
     }
 
     my $presence_level_string = "";
+		my $hidden_form_fields = qq~
+		 <INPUT TYPE="hidden" NAME="ann" VALUE="1">
+		~;
+		my $user_annotation = &printUserAnnotations( protein_name => $protein_name,
+				 parameters_href => \%parameters,
+				 form_fields => $hidden_form_fields
+			 );
+		if ($user_annotation !~ /no user annotations/ && ! $parameters{'ann'}){
+       $user_annotation =~ s/User annotations.*neXtProt\?/Manual Annotations:/;
+			 $identification_status .= $user_annotation;
+		}
     $htmlcontent .= $sbeamsMOD->encodeSectionItem(
       key=>'Identification Status',
       tr_info => $tr,
@@ -1392,10 +1403,10 @@ sub handle_request {
       $htmlcontent .= $sbeamsMOD->encodeSectionItem( tr_info => $tr,
 						         key => 'Total Observations',
 						       value => $obs );
-      $htmlcontent .= $sbeamsMOD->encodeSectionItem( tr_info => $tr,
-						         key => 'ProteinProphet-adjusted N Obs',
-						       value => $biosequence->{n_observations} )
-	  if (defined $biosequence->{n_observations} and ! $tube);
+      #$htmlcontent .= $sbeamsMOD->encodeSectionItem( tr_info => $tr,
+			#			         key => 'ProteinProphet-adjusted N Obs',
+			#			       value => $biosequence->{n_observations} )
+	    #if (defined $biosequence->{n_observations} and ! $tube);
 
       $htmlcontent .= $sbeamsMOD->encodeSectionItem( tr_info => $tr,
 						         key => 'Normalized PSMs per 100K',
