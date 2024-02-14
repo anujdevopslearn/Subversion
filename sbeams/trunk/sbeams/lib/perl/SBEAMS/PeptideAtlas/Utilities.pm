@@ -3935,9 +3935,11 @@ sub get_alignment_display {
 
   my $curr_bid = $args{atlas_build_id}; 
   my $bioseq_strain = $args{bioseq_strain};
-  my $order_by = $args{order_by} || ''; 
+  my $order_by = $args{order_by} || '';
+  my $sample_category_contraint = $args{sample_category_contraint} ||  '';  
   my $clustal_display = '';
   my $bioseq_clause = '';
+  my $sample_category_clause = '';
   my $warningstr='';
 
   $clustal_display .= "<form method='post' name='compareProteins'>\n";
@@ -4121,9 +4123,9 @@ sub get_alignment_display {
   SELECT biosequence_name,
   ORG.organism_name, 
   'search_key_name',
-  CAST( biosequence_seq AS VARCHAR(4000) ),
+  CAST( biosequence_seq AS VARCHAR(max) ),
   biosequence_id,
-  LEN( CAST(biosequence_seq AS VARCHAR(4000) ) ),
+  LEN( CAST(biosequence_seq AS VARCHAR(max) ) ),
   biosequence_desc
   FROM $TBAT_ATLAS_BUILD AB 
 	JOIN $TBAT_BIOSEQUENCE_SET BSS ON AB.biosequence_set_id = BSS.biosequence_set_id
@@ -4187,9 +4189,7 @@ sub get_alignment_display {
   foreach my $row (@rows){
     my @row = @$row;
     my $acc = $row[0];
-    $acc = $acc.'_'. $bioseq_strain->{$row[4]} if ($bioseq_strain->{$row[4]});
-    $acc =~ s/[:,]/_/g;
-
+    #$acc = $acc.'_'. $bioseq_strain->{$row[4]} if ($bioseq_strain->{$row[4]});
     if ( $acc =~ /^DECOY/ ) {
       $seqtype{decoy}++;
     } else {
@@ -4207,7 +4207,8 @@ sub get_alignment_display {
 
     $log->debug( "Get build coverage " .time() );
     my $peptide_list = $self->get_protein_build_coverage( build_id => $curr_bid,
-							       biosequence_ids => $row[4] );
+																													 biosequence_ids => $row[4],
+																													sample_category_contraint => $sample_category_contraint);
     
     $peptide_map{'protein_list'} .= $acc.' '; # preserves order
     my @mapped_peptides = ();
@@ -4334,6 +4335,7 @@ sub get_alignment_display {
 					       coverage => \%coverage,
 					       acc2bioseq_id => \%acc2bioseq_id,
                  accessions => $peptide_map{'protein_list'},
+                 bioseq_strain => $bioseq_strain,
 					       %args );
     }
   }
@@ -4458,7 +4460,7 @@ sub get_peptide_mapping_display_graphic{
                     -glyph  => 'arrow',
                     -tick   => 2,
                     -height => 8,
-                    -key  => 'Sequence Alignement and Peptide Mapping' );
+                    -key  => 'Sequence Alignment and Peptide Mapping' );
 
 
   my $html = "<br>";
@@ -4619,6 +4621,7 @@ sub get_clustal_alignment_display {
   my $sbeams = $self->getSBEAMS();
   my %args = ( acc_color => '#0090D0', @_ );
   my $accessions = $args{accessions} || '';
+  my $bioseq_strain = $args{bioseq_strain} || {};
   my $display = qq~
 	<br><br>
         <div class='hoverabletitle'>Sequence Coverage</div>
@@ -4682,32 +4685,62 @@ sub get_clustal_alignment_display {
 				$checkbox = "<input id='bioseq_id' type='checkbox' checked name='bioseq_id' value='$args{acc2bioseq_id}->{$acc}'></input>";
       }
     }
-
+    my $left_px = 'left:20px';
+    my $left_px1 = 'left:20px';
+    my $left_px2 = 'left:20px';
+    my $max_width = 'max-width:150px;word-wrap: break-word;';
+    my $style = "padding:3px; background-color: #f3f1e4; position:sticky;z-index:6";
     if ( $seq->[0] eq 'consensus') {
       $display .= qq~
 			<tr>
-			<td style="padding:3px; background-color: #f3f1e4; position:sticky; left: 0px; z-index:6;"></td>
-			<td style="padding:3px; background-color: #f3f1e4; position:sticky; left: 20px; z-index:6; border-right: 1px solid #aaa; text-align: right;" class="sequence_font">consensus</td>
+			<td style="$style; left: 0px; "></td>
+      ~;
+      $display .= qq~
+        <td style="$style;$left_px; $max_width;" class="sequence_font"></td>
+      ~ if ($bioseq_strain);
+      $left_px = $left_px2 if ($bioseq_strain);
+      $display .= qq~
+			<td style="$style; $left_px;  border-right: 1px solid #aaa; text-align: right;" class="sequence_font">consensus</td>
 			<td style="padding:3px; white-space: nowrap;" class="sequence_font">$sequence</td>
 			</tr>
 			<tr>
-			<td style="padding:3px; background-color: #f3f1e4; position:sticky; left: 0px; z-index:6;"></td>
-			<td style="padding:3px; background-color: #f3f1e4; position:sticky; left: 20px; z-index:6; border-right: 1px solid #aaa; text-align: right;" class="sequence_font"></td>
+			<td style="$style; left: 0px; "></td>
+      ~;
+
+      $left_px = $left_px1; 
+      $display .= qq~
+        <td style="$style;$left_px; $max_width;" class="sequence_font"></td>
+      ~ if ($bioseq_strain);
+      $left_px = $left_px2 if ($bioseq_strain);
+      $display .= qq~
+			<td style="$style;$left_px;  border-right: 1px solid #aaa; text-align: right;" class="sequence_font"></td>
 			<td style="padding:3px; white-space: nowrap;" class="sequence_font">$position_bar_track</td>
 			</tr>
       <tr>
-      <td style="padding:3px; background-color: #f3f1e4; position:sticky; left: 0px; z-index:6;"></td>
-      <td style="padding:3px; background-color: #f3f1e4; position:sticky; left: 20px; z-index:6; border-right: 1px solid #aaa; text-align: right;" class="sequence_font">position</td>
+      <td style="$style; left: 0px; "></td>
+      ~;
+ 
+      $left_px = $left_px1; 
+      $display .= qq~
+        <td style="$style;$left_px; $max_width;" class="sequence_font"></td>
+      ~ if ($bioseq_strain);
+      $left_px = $left_px2 if ($bioseq_strain);
+      $display .= qq~
+      <td style="$style;$left_px; border-right:1px solid #aaa;text-align: right;" class="sequence_font">position</td>
       <td style="padding:3px; white-space: nowrap;" class="sequence_font">$position_number_track</td>
       </tr>
-
 			~;
-
     }else{
 			$display .= qq~
 			<tr>
-			<td style="padding:3px; background-color: #f3f1e4; position:sticky; left: 0px; z-index:6;">$checkbox </td>
-			<td style="padding:3px; background-color: #f3f1e4; position:sticky; left: 20px; z-index:6; border-right: 1px solid #aaa; text-align: right;" class="sequence_font">$acc$dup</td>
+			<td style="$style;left:0px; ">$checkbox </td>
+      ~;
+      $display .= qq~
+       <td style="$style;$left_px; $max_width;" class="sequence_font">$bioseq_strain->{$args{acc2bioseq_id}->{$acc}}</td>
+      ~ if ($bioseq_strain->{$args{acc2bioseq_id}->{$acc}});
+      $left_px = $left_px2 if ($bioseq_strain);
+      $display .= qq~
+			<td style="$style;$left_px;border-right:1px solid #aaa;text-align: right;" class="sequence_font">$acc$dup</td>
 			<td style="padding:3px; white-space: nowrap;" class="sequence_font">$sequence</td>
 			</tr>
 			~;

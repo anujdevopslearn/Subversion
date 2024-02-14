@@ -1095,9 +1095,10 @@ sub getSampleMapDisplay {
   my $self = shift;
   my $sbeams = $self->getSBEAMS();
   my %args = ( peptide_field => 'peptide_accession', @_ );
-
   my $in = join( ", ", keys( %{$args{instance_ids}} ) );
   my $sample_category = $args{sample_category} || 0;
+  my $sample_category_contraint = $args{sample_category_contraint} || '';
+
   return unless $in;
 
   
@@ -1118,9 +1119,13 @@ sub getSampleMapDisplay {
   my $trinfo = $args{tr_info} || '';
   my $order_by = 'ORDER BY sample_tag ASC';
   my $sample_tag = 'sample_tag';
+  my $sample_category_clause = '';
   if ($sample_category){
     $order_by = 'ORDER BY sample_name ASC';
     $sample_tag = "SC.name + ':' + sample_tag  as sample_name";
+  }
+  if ($sample_category_contraint ne "''"){
+     $sample_category_clause = "AND SC.name in ($sample_category_contraint)";
   }
 
   my $sql = qq~     
@@ -1135,6 +1140,7 @@ sub getSampleMapDisplay {
     LEFT JOIN $TBAT_SAMPLE_CATEGORY SC ON (SC.id = S.sample_category_id)
     WHERE PI.peptide_instance_id IN ( $in )
     AND S.record_status != 'D'
+    $sample_category_clause
     -- ORDER BY PISB.n_observations, $args{peptide_field} ASC
     $order_by 
   ~;
@@ -2255,12 +2261,12 @@ sub get_proteome_coverage_new {
 
   if ($data_only){
     shift @{$result{table}};
-    #my $i=0;
-    #foreach my $row(@{$result{table}}){
-    #  my ($org_id, $name, $type, $pat_str)  = split(/,/, $patterns[$i]);
-    #  $row->[0] .="|$type,$pat_str";
-    #  $i++;
-    #} 
+    my $i=0;
+    foreach my $row(@{$result{table}}){
+      my ($org_id, $name, $type, $pat_str)  = split(/\t/, $patterns[$i]);
+      $row->[0] .="|$type,$pat_str";
+      $i++;
+    } 
     unshift @{$result{table}} ,[qw(Database N_Entries N_Seqs N_Obs_Prots Pct_Obs N_unObs_Prots Description)]; 
     return \%result;
   }else{
@@ -3005,10 +3011,20 @@ sub display_peptide_sample_category_plotly{
         hoverlabel:{bgcolor:'white'},
 			};
 			var data1 = [pepcnt];
-			Plotly.newPlot('plot_div3', data1,layout);
+      var config = {
+        toImageButtonOptions: {
+          format: 'png', // one of png, svg, jpeg, webp
+          filename: 'image',
+          height: 800,
+          width: 1000,
+          scale: 6,
+        }
+      };
+
+			Plotly.newPlot('plot_div3', data1,layout,config);
       layout.title = "Total PSMs per sample category";
       var data2 = [obs];
-      Plotly.newPlot('plot_div4', data2,layout);
+      Plotly.newPlot('plot_div4', data2,layout,config);
 
   ~;
   my $chart = qq~
@@ -3509,7 +3525,16 @@ sub displayExperiment_contri_plotly{
 				yaxis:{title:'Number of Distinct Peptides'}
 			};
 			var data = [idv,cum];
-			Plotly.newPlot('plot_div', data,layout);
+			var config = {
+				toImageButtonOptions: {
+					format: 'png', // one of png, svg, jpeg, webp
+					filename: 'image',
+					height: 800,
+					width: 1000,
+					scale: 6,
+				}
+			};
+			Plotly.newPlot('plot_div', data,layout,config);
 
       var cum2 = {
         x: [$cumpepx_str],
@@ -3547,9 +3572,8 @@ sub displayExperiment_contri_plotly{
         xaxis:{title:'Cumulative Number of MS/MS Spectra Identified'},
         yaxis:{title:'Number of Distinct Proteins'}
       };
-
       var data2 = [idv2,cum2];
-      Plotly.newPlot('plot_div2', data2,layout);
+      Plotly.newPlot('plot_div2', data2,layout,config);
   ~;
   #print "$plot_js<BR>";
 
