@@ -376,6 +376,8 @@ sub cntObsFromIdentlist {
   my $cnt = 0;
   while ( my $line = <IDLIST> ) {
     chomp $line;
+    next if ($line =~ /^$/);
+
     $cnt++;
     my @line = split( "\t", $line, -1 );
     if ($line[5] =~ /\(/){
@@ -409,10 +411,15 @@ sub cntObsFromIdentlist {
 sub get_protein_build_coverage {
   my $self = shift;
   my %args = @_;
+  my $sample_category_contraint = $args{sample_category_contraint} || '';
+
   for my $arg ( qw( build_id biosequence_ids ) ) {
     die "Missing required param $arg" unless defined $args{$arg};
   }
-
+  my $sample_category_clause = '';
+  if ($sample_category_contraint ne "''"){
+    $sample_category_clause = "AND SC.name in ($sample_category_contraint)";
+  }
   # SQL defined peptides that have been observed for given bioseqs and build 
   my $sql =<<"  ENDSQL";
   SELECT 
@@ -424,11 +431,15 @@ sub get_protein_build_coverage {
   FROM $TBAT_PEPTIDE_MAPPING PM
   JOIN $TBAT_PEPTIDE_INSTANCE PI ON PI.peptide_instance_id = PM.peptide_instance_id
   JOIN $TBAT_PEPTIDE P ON ( PI.peptide_id = P.peptide_id )
-  JOIN $TBAT_ATLAS_BUILD AB ON ( PI.atlas_build_id = AB.atlas_build_id )
-  WHERE AB.atlas_build_id = $args{build_id}
+  JOIN $TBAT_PEPTIDE_INSTANCE_SAMPLE PIS ON (PIS.PEPTIDE_INSTANCE_ID = PI.PEPTIDE_INSTANCE_ID )
+  JOIN $TBAT_SAMPLE S ON (S.SAMPLE_ID = PIS.SAMPLE_ID)
+  JOIN $TBAT_SAMPLE_CATEGORY SC ON (SC.ID = S.SAMPLE_CATEGORY_ID)
+  WHERE PI.atlas_build_id = $args{build_id}
   AND PM.matched_biosequence_id IN ( $args{biosequence_ids} )
+  $sample_category_clause
   --ORDER BY matched_biosequence_id
   ENDSQL
+
   my @rows = $sbeams->selectSeveralColumns( $sql );
   my %peps;
   foreach my $row(@rows) {
