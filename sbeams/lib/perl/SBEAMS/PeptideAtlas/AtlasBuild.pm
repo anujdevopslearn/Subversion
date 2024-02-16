@@ -417,7 +417,7 @@ sub get_protein_build_coverage {
     die "Missing required param $arg" unless defined $args{$arg};
   }
   my $sample_category_clause = '';
-  if ($sample_category_contraint ne "''"){
+  if ($sample_category_contraint  && $sample_category_contraint ne "''"){
     $sample_category_clause = "AND SC.name in ($sample_category_contraint)";
   }
   # SQL defined peptides that have been observed for given bioseqs and build 
