@@ -1124,7 +1124,7 @@ sub getSampleMapDisplay {
     $order_by = 'ORDER BY sample_name ASC';
     $sample_tag = "SC.name + ':' + sample_tag  as sample_name";
   }
-  if ($sample_category_contraint ne "''"){
+  if ($sample_category_contraint && $sample_category_contraint ne "''"){
      $sample_category_clause = "AND SC.name in ($sample_category_contraint)";
   }
 
