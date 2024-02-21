@@ -3934,12 +3934,11 @@ sub get_alignment_display {
   my $sbeams = $self->getSBEAMS();
 
   my $curr_bid = $args{atlas_build_id}; 
-  my $bioseq_strain = $args{bioseq_strain};
+  my $bioseq_strain = $args{bioseq_strain} || {};
   my $order_by = $args{order_by} || '';
   my $sample_category_contraint = $args{sample_category_contraint} ||  '';  
   my $clustal_display = '';
   my $bioseq_clause = '';
-  my $sample_category_clause = '';
   my $warningstr='';
 
   $clustal_display .= "<form method='post' name='compareProteins'>\n";
@@ -4697,8 +4696,8 @@ sub get_clustal_alignment_display {
       ~;
       $display .= qq~
         <td style="$style;$left_px; $max_width;" class="sequence_font"></td>
-      ~ if ($bioseq_strain);
-      $left_px = $left_px2 if ($bioseq_strain);
+      ~ if (%$bioseq_strain);
+      $left_px = $left_px2 if (%$bioseq_strain);
       $display .= qq~
 			<td style="$style; $left_px;  border-right: 1px solid #aaa; text-align: right;" class="sequence_font">consensus</td>
 			<td style="padding:3px; white-space: nowrap;" class="sequence_font">$sequence</td>
@@ -4710,8 +4709,8 @@ sub get_clustal_alignment_display {
       $left_px = $left_px1; 
       $display .= qq~
         <td style="$style;$left_px; $max_width;" class="sequence_font"></td>
-      ~ if ($bioseq_strain);
-      $left_px = $left_px2 if ($bioseq_strain);
+      ~ if (%$bioseq_strain);
+      $left_px = $left_px2 if (%$bioseq_strain);
       $display .= qq~
 			<td style="$style;$left_px;  border-right: 1px solid #aaa; text-align: right;" class="sequence_font"></td>
 			<td style="padding:3px; white-space: nowrap;" class="sequence_font">$position_bar_track</td>
@@ -4723,8 +4722,8 @@ sub get_clustal_alignment_display {
       $left_px = $left_px1; 
       $display .= qq~
         <td style="$style;$left_px; $max_width;" class="sequence_font"></td>
-      ~ if ($bioseq_strain);
-      $left_px = $left_px2 if ($bioseq_strain);
+      ~ if (%$bioseq_strain);
+      $left_px = $left_px2 if (%$bioseq_strain);
       $display .= qq~
       <td style="$style;$left_px; border-right:1px solid #aaa;text-align: right;" class="sequence_font">position</td>
       <td style="padding:3px; white-space: nowrap;" class="sequence_font">$position_number_track</td>
@@ -4737,8 +4736,8 @@ sub get_clustal_alignment_display {
       ~;
       $display .= qq~
        <td style="$style;$left_px; $max_width;" class="sequence_font">$bioseq_strain->{$args{acc2bioseq_id}->{$acc}}</td>
-      ~ if ($bioseq_strain->{$args{acc2bioseq_id}->{$acc}});
-      $left_px = $left_px2 if ($bioseq_strain);
+      ~ if (%$bioseq_strain);
+      $left_px = $left_px2 if (%$bioseq_strain);
       $display .= qq~
 			<td style="$style;$left_px;border-right:1px solid #aaa;text-align: right;" class="sequence_font">$acc$dup</td>
 			<td style="padding:3px; white-space: nowrap;" class="sequence_font">$sequence</td>
