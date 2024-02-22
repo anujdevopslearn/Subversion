@@ -377,22 +377,30 @@ sub handle_request {
 
   my ($tube, $origene_accession,$expected_prot);
 
+
   #### If a new protein_name was supplied, store it
+  my $protein_name = $parameters{"protein_name"};
+  my $cached_protein_name = $sbeams->getSessionAttribute(
+      key => 'PeptideAtlas_protein_name',
+    );
   if ($protein_name) {
     $sbeams->setSessionAttribute(
       key => 'PeptideAtlas_protein_name',
-      value => $protein_name,
+      value => "$protein_name",
     );
-
+    if ($protein_name ne $cached_protein_name){
+      $parameters{exp_cat_full} = '';
+      $parameters{exp_cat} = '';
+    }
   #### Else see if we had one stored
   } else {
-    $protein_name = $sbeams->getSessionAttribute(
-      key => 'PeptideAtlas_protein_name',
-    );
-    if ($protein_name) {
+    if ($cached_protein_name){
+      $protein_name = $cached_protein_name;
       $parameters{'apply_action'} = 'GO';
     }
   }
+
+
   $parameters{use_nextprot} = ( $parameters->{use_nextprot} ne '' && $parameters->{use_nextprot} == 0  ) ? 0 : 1; 
   $swiss = $sbeamsMOD->get_uniprot_annotation( show_all_snps => 1,
 					       accession => $protein_name,
@@ -476,6 +484,11 @@ sub handle_request {
       ORDER BY atlas_build_name
   ~;
   my %atlas_build_names = $sbeams->selectTwoColumnHash($sql);
+  my $sample_category_display=0;
+
+	if ($atlas_build_names{$atlas_build_id} =~ /(human|mouse|arabidop|maize|Escherichia|canine)/i){
+		 $sample_category_display=1;
+	}
 
   my %name2build = reverse( %atlas_build_names );
   my @ordered_atlas_build_ids;
@@ -525,6 +538,12 @@ sub handle_request {
       print qq~
         <script LANGUAGE="Javascript">
           function switchAtlasBuild() {
+            var sel = document.getElementById("exp_cat");
+            var options = [];
+            for (var i=0; i<sel.length; i++) {
+              options.push(sel[i].value);
+            }
+            document.SearchForm.exp_cat_full.value = options.toString();
             document.SearchForm.apply_action.value = "GO";
             document.SearchForm.submit();
           }
@@ -564,12 +583,38 @@ sub handle_request {
       print "<BR>";
       print "Protein Name: ";
       print $q->textfield( -name => "protein_name", -size=>50, -default=>$protein_name );
-
-      print $q->submit(-name => "action",
-                       -value => 'QUERY',
-		       -style => 'margin-left:30px;',
-                       -label => 'GO');
-
+      if ($sample_category_display){
+				print $q->br;
+				print $q->br;
+				print "\n<div style='display: flex;align-items: center;'>Experiment Categories: \n";
+				print '<img src="/sbeams/images/greyqmark.gif" title="show peptides observed in the selected sample categories.showing all peptides by default.">';
+				print "\n";
+				print $q->scrolling_list(-id=>'exp_cat',
+																 -name=>'exp_cat',
+																 -values=>[],
+																 -size=>5,
+																 -style =>'margin-left:5px;',
+																 -multiple=>'true');
+				print "\n";
+				print $q->hidden( "apply_action", '');
+				print "\n";
+				print $q->hidden( "exp_cat_full", '');
+				print "\n";
+				print $q->submit(-name => "action",
+												 -value => 'QUERY',
+												 -style => 'margin-left:30px;',
+												 -label => 'GO',
+												 -onClick => 'switchAtlasBuild()',
+												 );
+				print "\n</div>\n";
+      }else{
+        print $q->submit(-name => "action",
+                         -value => 'QUERY',
+                         -style => 'margin-left:30px;',
+                         -label => 'GO',
+                         );
+        print "\n";
+      }
 
       my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'extra_fields',
 						      visible => 0,
@@ -589,7 +634,6 @@ sub handle_request {
       }
       print "</table>\n";
 
-
       $current_page->{organism} = $sbeamsMOD->getCurrentAtlasOrganism( parameters_ref => { atlas_build_id => $atlas_build_id } );
       my $gaggle = $sbeams->getGaggleMicroformat(
                                           organism => $current_page->{organism},
@@ -608,9 +652,7 @@ sub handle_request {
       }
       print $q->hidden( "apply_action", '');
       print $q->end_form;
-
       print "</nobr>";
-
       print "</P>";
       print "$gaggle\n";
   }
@@ -1229,7 +1271,10 @@ sub handle_request {
 #
 #    ["peptide_accession","P.peptide_accession","Accession DIV"],
 #
+  my $exp_cat_str = "'". join("','", split(",", $parameters{exp_cat})) ."'";
+ 
   my $group_by_clause = '';
+  my $sample_category_clause = '';
   my @labels = ( 'Accession', 'Start', 'Pre AA','Sequence', 'Fol AA', 'ESS', 'NET', 'NMC' ,'Best Prob', 'Best Adj Prob', 'N Obs', 'EOS', 'SSRT', 'N Prot Map', 'N Gen Loc', 'N Experiments', 'Subpep of' );
   push @labels, 'Avg Eval' if $parameters{'ann'};
 
@@ -1274,6 +1319,9 @@ sub handle_request {
                       "PM.highest_n_enzymatic_termini,PM.lowest_n_missed_cleavages,peptide_preceding_residue,peptide_following_residue," .
                       "PM.is_unique";
 
+  if ($parameters{exp_cat}){
+    $sample_category_clause = "AND SC.name in ($exp_cat_str)";
+  }
 
   #### Build the columns part of the SQL statement
   my %colnameidx = ();
@@ -1308,31 +1356,26 @@ sub handle_request {
   $sql = qq~
      SELECT DISTINCT $columns_clause
      FROM $TBAT_PEPTIDE_INSTANCE PI
-     JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB 
-    ON (PISB.peptide_instance_id = PI.peptide_instance_id)
-    INNER JOIN $TBAT_PEPTIDE P
-          ON ( PI.peptide_id = P.peptide_id )
-     LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
-          ON ( PI.peptide_instance_id = PM.peptide_instance_id )
-    $peptide_instance_clause
-    INNER JOIN $TBAT_ATLAS_BUILD AB
-          ON ( PI.atlas_build_id = AB.atlas_build_id )
-     LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
-          ON ( AB.biosequence_set_id = BSS.biosequence_set_id )
-     LEFT JOIN $TB_ORGANISM O
-          ON ( BSS.organism_id = O.organism_id )
-     LEFT JOIN $TBAT_BIOSEQUENCE BS
-          ON ( PM.matched_biosequence_id = BS.biosequence_id )
+	   JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB ON (PISB.peptide_instance_id = PI.peptide_instance_id)
+	   JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ASB ON (ASB.ATLAS_SEARCH_BATCH_ID = PISB.ATLAS_SEARCH_BATCH_ID)
+	   JOIN $TBAT_SAMPLE S ON (S.SAMPLE_ID = ASB.SAMPLE_ID)
+	   LEFT JOIN $TBAT_SAMPLE_CATEGORY SC ON (SC.id = S.sample_category_id)
+	   INNER JOIN $TBAT_PEPTIDE P ON ( PI.peptide_id = P.peptide_id )
+     LEFT JOIN $TBAT_PEPTIDE_MAPPING PM ON ( PI.peptide_instance_id = PM.peptide_instance_id )
+     $peptide_instance_clause
+     INNER JOIN $TBAT_ATLAS_BUILD AB ON ( PI.atlas_build_id = AB.atlas_build_id )
+     LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS ON ( AB.biosequence_set_id = BSS.biosequence_set_id )
+     LEFT JOIN $TB_ORGANISM O ON ( BSS.organism_id = O.organism_id )
+     LEFT JOIN $TBAT_BIOSEQUENCE BS ON ( PM.matched_biosequence_id = BS.biosequence_id )
      LEFT JOIN $TBAT_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
-    LEFT JOIN $TBAT_PEPTIDE_INSTANCE_ANNOTATION PIA
-         ON  PIA.peptide_instance_id = PI.peptide_instance_id
-    LEFT JOIN $TBAT_SPECTRUM_ANNOTATION_LEVEL  SAL
-         ON  SAL.spectrum_annotation_level_id =
-	     PIA.spectrum_annotation_level_id
-	  AND PIA.record_status != 'D'
+     LEFT JOIN $TBAT_PEPTIDE_INSTANCE_ANNOTATION PIA ON  PIA.peptide_instance_id = PI.peptide_instance_id
+     LEFT JOIN $TBAT_SPECTRUM_ANNOTATION_LEVEL  SAL
+         ON  SAL.spectrum_annotation_level_id = PIA.spectrum_annotation_level_id
+	       AND PIA.record_status != 'D'
     WHERE 1 = 1
           AND AB.atlas_build_id IN ( $atlas_build_id )
 					AND BS.biosequence_id = $biosequence_id
+          $sample_category_clause
 	  $group_by_clause
     ORDER BY P.peptide_accession
   ~;
@@ -1981,11 +2024,6 @@ sub handle_request {
     #
 
     if ($htmlmode) {
-      my $sample_category_display=0;
-      if ($atlas_build_names{$atlas_build_id} =~ /(human|mouse|arabidop|maize)/i){
-         $sample_category_display=1;
-      }
-
       my $sampleDisplay = $sbeamsMOD->getProteinSampleDisplay( sample_ids => $sample_ids,
 						      no_header => 1,
 						      rows_to_show => 25,
@@ -2004,6 +2042,7 @@ sub handle_request {
 						     instance_ids => \%instance_ids,
 						     atlas_build_id => $atlas_build_id,
 						     no_header => 1,
+                 sample_category_contraint => $exp_cat_str,
 						     header_text => "Per-experiment expression for $max_peptides most highly observed peptides",
 						     second_header => "(Peptides listed by accession, * denotes single genome mapping)"
 						   );
@@ -2016,6 +2055,27 @@ sub handle_request {
 						 visible => 1,
 						 content => "<A NAME='samplemap'></A><TABLE>$sampleMap</TABLE>" );
 
+      print "<script type='text/javascript'>\n";
+      if ($sample_category_display){
+				if ($parameters{exp_cat_full}){
+					 print "var options=['". join("','",split(",", $parameters{exp_cat_full})) ."'];\n";
+				}else{
+					 print 'var options=data[0].labels.sort()' .";\n";
+				}
+				print qq~
+						 var selected_val = [$exp_cat_str];
+						 var sel = document.getElementById("exp_cat");
+						 for (var i=0; i<options.length; i++) {
+								 var opt = document.createElement('option');
+								 opt.text = opt.value = options[i] ;
+								 if (selected_val.includes(options[i])){
+										opt.selected=true;
+								 }
+								 sel.add(opt);
+							}
+					</script>
+				~;
+      }
     }
 
 
@@ -3422,6 +3482,12 @@ sub displayAnnotatedSequence {
         $mupit_link = '' unless $var->[0] eq 'VARIANT';
         my $div_id = $prot . '_' . $var->[1];
         if ($var->[4] =~ /[IL]\s{0,}->\s{0,}[IL]\s+/){
+           if ($var->[4] =~ /Obs\s+100\.0\s+%\s+.(\d+)\/\d+./){
+              my $n= $1;
+              if ($var->[4] =~ /supporting peptides also seen in other/){
+                $var->[4] =~ s/(Obs\s+100\.0\s+%\s+.\d+\/\d+.)/$n dengenerate PSMs/;;
+              }
+           }
            $variant_list .= join( "\t", @{$var}[0..4] ) . "<b style='color:orange' >(I/L indistinguishable)</b><div class=$class id=$div_id>$mupit_link</div>" . "\n";
         }else{
           $variant_list .= join( "\t", @{$var}[0..4] ) . "<div class=$class id=$div_id>$mupit_link</div>" . "\n";
