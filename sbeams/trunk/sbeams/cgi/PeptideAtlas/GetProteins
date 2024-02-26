@@ -698,6 +698,7 @@ sub handle_request {
   my @abundance_uncertainty_sql;
   my @norm_PSMs_per_100K_sql;
   my @n_distinct_peptides_sql;
+  my @n_distinct_synpeptides_sql;
   my @relationship_sort_order_sql;
   my @presence_level_sort_order_sql;
   my @reference_biosequence_sql;
@@ -740,6 +741,7 @@ sub handle_request {
   $abundance_uncertainty_sql[0] = "PID.abundance_uncertainty";
   $norm_PSMs_per_100K_sql[0] = "STR(PID.norm_PSMs_per_100K,7,3)";
   $n_distinct_peptides_sql[0] = "PID.n_distinct_peptides";
+  $n_distinct_synpeptides_sql[0] = 'NULL';
   $relationship_phrase_sql[0] = "NULL";
   $relationship_sort_order_sql[0] = "NULL";
   $presence_level_sort_order_sql[0] = "PPL.sort_order";
@@ -773,6 +775,7 @@ sub handle_request {
   $abundance_uncertainty_sql[1] = "NULL";
   $norm_PSMs_per_100K_sql[1] = "NULL";
   $n_distinct_peptides_sql[1] = "NULL";
+  $n_distinct_synpeptides_sql[1] = 'NULL';
   $relationship_phrase_sql[1] = "BRT.relationship_phrase";
   $relationship_sort_order_sql[1] = "BRT.sort_order";
   $presence_level_sort_order_sql[1] = "PPL.sort_order";
@@ -805,6 +808,7 @@ sub handle_request {
   $abundance_uncertainty_sql[2] = "NULL";
   $norm_PSMs_per_100K_sql[2] = "NULL";
   $n_distinct_peptides_sql[2] = "NULL";
+  $n_distinct_synpeptides_sql[2] = 'NULL';
   $relationship_phrase_sql[2] = "BRT.relationship_phrase";
   $relationship_sort_order_sql[2] = "BRT.sort_order";
   $presence_level_sort_order_sql[2] = "PPL.sort_order";
@@ -827,7 +831,7 @@ sub handle_request {
         ["biosequence_name","BS.biosequence_name","Biosequence Name"],           
         ["biosequence_gene_name","BS.biosequence_gene_name","Biosequence Gene Name"],
         ["group_number","PID.protein_group_number","Group Number"],
-        ["expected_prot","case When Pid.biosequence_id = bps.biosequence_id then 'YES' else 'NO' end","Expected"],                                     ["observed_in","NULL","Observed in"],                                  
+        ["expected_prot","case When Pid.biosequence_id = bps.biosequence_id then 'YES' else 'NO' end","Expected"],                                       ["observed_in","NULL","Observed in"], 
         ["n_observations","PID.n_observations","N Obs"],                                          
         ["n_distinct_peptides","PID.n_distinct_peptides","N Distinct Peptides"],
         ["protein_content","PID.origenetube_emPAI","mol % (emPAI)"],                       
@@ -880,6 +884,7 @@ sub handle_request {
         ["n_observations",$n_observations_sql[$i],"N Obs"],
         ["norm_PSMs_per_100K",$norm_PSMs_per_100K_sql[$i],"Norm Obs per 100K"],
         ["n_distinct_peptides",$n_distinct_peptides_sql[$i],"N Distinct Peptides"],
+        ["n_distinct_synpeptides",$n_distinct_synpeptides_sql[$i],"N Distinct Synthetic Peptides"],
         ["chromosome","BPS.chromosome", "Chromosome"],
         ["genetic_locus","BPS.genetic_locus", "Genetic Locus"],
         ["start_in_chromosome","BPS.start_in_chromosome","Start in Chrom"],
@@ -1182,7 +1187,9 @@ sub handle_request {
                   'brt_sort_order' => 1,
                   'Organism' => 1,
   );
-
+  if ($atlas_build_id != 575){
+    $hidden_cols{'n_distinct_synpeptides'} =1;
+  }
   
   if($atlas_build_name =~/Origene/i){
   
@@ -1928,8 +1935,14 @@ sub postProcessResultset {
 
   my $n_rows = scalar(@{$resultset_ref->{data_ref}});
 
-  my $cols = $resultset_ref->{column_hash_ref};                                                                                                  my $atlas_build_id = $parameters{atlas_build_id};
+  my $cols = $resultset_ref->{column_hash_ref};                                                                                                    my $atlas_build_id = $parameters{atlas_build_id};
   my %biosequence_names = ();
+  my %biosequence_synpep_cnt =();
+  if ($atlas_build_id == 575){
+     #get synthetic peptide count
+     get_biosequence_synthetic_peptide_cnt (biosequence_synpep_cnt => \%biosequence_synpep_cnt,
+                                            atlas_build_id => $atlas_build_id);
+  }
 
   if ($parameters{dataset_id}){
     $sql .= qq~
@@ -1970,6 +1983,12 @@ sub postProcessResultset {
     $nloc = $resultset_ref->{data_ref}->[$i]->[$cols->{n_genome_locations}];
     my $biosequence_name = $resultset_ref->{data_ref}->[$i]->[$cols->{biosequence_name}];
 
+    if ($atlas_build_id == 575){
+      if (defined $biosequence_synpep_cnt{$biosequence_name}){
+        $resultset_ref->{data_ref}->[$i]->[$cols->{n_distinct_synpeptides}] = $biosequence_synpep_cnt{$biosequence_name};
+      }
+
+    }
     next if (%biosequence_names  && not defined $biosequence_names{$biosequence_name});
                                                                 
     if ($nprot > 1) {                                                    
@@ -1996,7 +2015,32 @@ sub postProcessResultset {
 
 } # end postProcessResult
  
+######################################
+sub get_biosequence_synthetic_peptide_cnt{
+  my %args = @_;
+  my $biosequence_synpep_cnt = $args{biosequence_synpep_cnt};
+  my $atlas_build_id = $args{atlas_build_id};
+  my $sql = qq~
+     SELECT BS.biosequence_name, count (distinct PI.peptide_instance_id) 
+     FROM $TBAT_PEPTIDE_INSTANCE PI
+     JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB ON (PISB.peptide_instance_id = PI.peptide_instance_id)
+     JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ASB ON (ASB.ATLAS_SEARCH_BATCH_ID = PISB.ATLAS_SEARCH_BATCH_ID)
+     JOIN $TBAT_SAMPLE S ON (S.SAMPLE_ID = ASB.SAMPLE_ID)
+     JOIN $TBAT_SAMPLE_CATEGORY SC ON (SC.id = S.sample_category_id)
+     JOIN $TBAT_PEPTIDE P ON ( PI.peptide_id = P.peptide_id )
+     JOIN $TBAT_PEPTIDE_MAPPING PM ON ( PI.peptide_instance_id = PM.peptide_instance_id )
+     JOIN $TBAT_ATLAS_BUILD AB ON ( PI.atlas_build_id = AB.atlas_build_id )
+     LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS ON ( AB.biosequence_set_id = BSS.biosequence_set_id )
+     LEFT JOIN $TBAT_BIOSEQUENCE BS ON ( PM.matched_biosequence_id = BS.biosequence_id )
+     WHERE 1 = 1
+     AND AB.atlas_build_id IN ( $atlas_build_id )
+     AND PI.atlas_build_id IN ( $atlas_build_id )
+     AND SC.name like '%Synthetic%' 
+     GROUP BY BS.biosequence_name        
+  ~;
+  %{$biosequence_synpep_cnt} = $sbeams->selectTwoColumnHash($sql);
 
+}
 
 #######################################################################
 sub getOrganismFullName 
