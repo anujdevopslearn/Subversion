@@ -1783,12 +1783,10 @@ sub getProteinSampleDisplay {
     }
     my @sc = keys %sc;
     my @vals = values %sc;
-    if (@sc > 1){
-      $html = qq~
-        <div  id ='sample_cat_pie' style='display:block'>
-       ~;
-      $html .= $self->plotly_pie(data => \@vals, names=>\@sc , divName=>"sample_cat_pie"); 
-    }
+		$html = qq~
+			<div  id ='sample_cat_pie' style='display:block'>
+		 ~;
+		$html .= $self->plotly_pie(data => \@vals, names=>\@sc , divName=>"sample_cat_pie"); 
   }
   $html .= $self -> getSampleTableDisplay(data => \@rows,
                                rows_to_show => $rows_to_show, 
