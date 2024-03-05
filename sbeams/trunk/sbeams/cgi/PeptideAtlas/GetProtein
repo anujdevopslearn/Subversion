@@ -496,16 +496,6 @@ sub handle_request {
     push @ordered_atlas_build_ids, $name2build{$name};
   }
 
-  #### Get a list of id's sorted by name
-#  my $sql = qq~
-#      SELECT DISINCT atlas_build_id,atlas_build_name
-#      FROM $TBAT_ATLAS_BUILD
-#      WHERE project_id IN ( $accessible_project_ids )
-#      AND record_status!='D'
-#      ORDER BY atlas_build_name
-#  ~;
-#  my @ordered_atlas_build_ids = $sbeams->selectOneColumn($sql);
-
 
   unless ( grep /^$atlas_build_id$/, @ordered_atlas_build_ids ) {
     my ($build_name) = $sbeams->selectOneColumn( "SELECT atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE atlas_build_id = $atlas_build_id" );
@@ -1083,7 +1073,7 @@ sub handle_request {
     }
 
     $htmlcontent .= $sbeamsMOD->encodeSectionItem(
-      key=>'Gene Name',
+      key=>'Gene Symbol',
       tr_info => $tr,
       value=>$biosequence->{biosequence_gene_name},
     );
@@ -1464,42 +1454,39 @@ sub handle_request {
 
       my %syn_types;
       foreach my $synonym ( @synonyms ) {
-	next if $synonym->[1] =~ /Description/i;
-	$syn_types{$synonym->[1]} ||= [];
-	chomp( $synonym->[0] );
-	#### Store the synonym information $biosequence for later use
-	$biosequence->{synonyms}->{$synonym->[1]} = $synonym->[0];
-	if ( $synonym->[2] ) {
-	  my $str;
-	  if($synonym->[2] =~ /DisplayGoTerm/ and $synonym->[0] =~ /GO:\d+:/){
-	    $synonym->[0]  =~ /GO:(\d+):(.*)/;
-	    $str = "GO:$1";
-	    $synonym->[0] = "<A HREF=\"$synonym->[2]$str$synonym->[3]\">$synonym->[0]</A>";
-	    # Force GO terms to sort first #hackAlert!
-	    delete $syn_types{$synonym->[1]};
-	    $synonym->[1] = ' GO '.$synonym->[1];
-	  } else {
-	    if ( $synonym->[3] ) {
-	      $synonym->[0] = "<A HREF=\"$synonym->[2]$synonym->[3]$synonym->[0]\">$synonym->[0]</A>";
-	    } else {
-	      $synonym->[0] = "<A HREF=\"$synonym->[2]$synonym->[0]\">$synonym->[0]</A>";
-	    }
-	  }
-	}
-	push @{$syn_types{$synonym->[1]}}, $synonym->[0];
+				next if $synonym->[1] =~ /Description/i;
+				$syn_types{$synonym->[1]} ||= [];
+				chomp( $synonym->[0] );
+				#### Store the synonym information $biosequence for later use
+				$biosequence->{synonyms}->{$synonym->[1]} = $synonym->[0];
+				if ( $synonym->[2] ) {
+					my $str;
+					if($synonym->[2] =~ /DisplayGoTerm/ and $synonym->[0] =~ /GO:\d+:/){
+						$synonym->[0]  =~ /GO:(\d+):(.*)/;
+						$str = "GO:$1";
+						$synonym->[0] = "<A HREF=\"$synonym->[2]$str$synonym->[3]\">$synonym->[0]</A>";
+						# Force GO terms to sort first #hackAlert!
+						delete $syn_types{$synonym->[1]};
+						$synonym->[1] = ' GO '.$synonym->[1];
+					} else {
+						if ( $synonym->[3] ) {
+							$synonym->[0] = "<A HREF=\"$synonym->[2]$synonym->[3]$synonym->[0]\">$synonym->[0]</A>";
+						} else {
+							$synonym->[0] = "<A HREF=\"$synonym->[2]$synonym->[0]\">$synonym->[0]</A>";
+						}
+					}
+				}
+        $synonym->[0] =~ s/"//g;
+				push @{$syn_types{$synonym->[1]}}, $synonym->[0];
       }
 
       for my $key ( sort( keys( %syn_types ) ) ) {
-	my $cnt = 0;
-	my $max = 7;
-	my $syn_string = '';
-	my $delim = '';
-	for my $entry ( @{$syn_types{$key}} ) {
-	  $cnt++;
-	  $syn_string .= "$delim $entry";
-	  $delim = ',';
-	}
-	$htmlcontent .= $sbeamsMOD->encodeSectionItem( key => $key,
+				my $cnt = 0;
+				my $max = 7;
+				my $syn_string = '';
+				my $delim = '';
+        $syn_string = join(", ", uniq @{$syn_types{$key}});
+				$htmlcontent .= $sbeamsMOD->encodeSectionItem( key => $key,
 						       value => $syn_string,
 						       tr_info => $tr );
       }
@@ -2055,8 +2042,8 @@ sub handle_request {
 						 visible => 1,
 						 content => "<A NAME='samplemap'></A><TABLE>$sampleMap</TABLE>" );
 
-      print "<script type='text/javascript'>\n";
       if ($sample_category_display){
+        print "<script type='text/javascript'>\n";
 				if ($parameters{exp_cat_full}){
 					 print "var options=['". join("','",split(",", $parameters{exp_cat_full})) ."'];\n";
 				}else{
@@ -3705,9 +3692,9 @@ sub printUserAnnotations {
     ~;
     my ($protein_identification_id) = $sbeams->selectOneColumn($sql);
     $parameters_href->{protein_identification_id} = $protein_identification_id;
-    if (! $protein_identification_id) {
-      print "<P>ERROR: printUserAnnotations could not find protein_identification_id.</p>\n";
-    }
+    #if (! $protein_identification_id) {
+    #  print "<P>ERROR: printUserAnnotations could not find protein_identification_id.</p>\n";
+    #}
 
     # TMF removed items 4,5,6 from SELECT statement; changed SPECTRUM_ANNOTATION SA to
     # PEPTIDE_INSTANCE_ANNOTATION PIA
