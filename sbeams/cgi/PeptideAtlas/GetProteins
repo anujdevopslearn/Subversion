@@ -1278,15 +1278,6 @@ sub handle_request {
 													key_value => $atlas_build_id );
 
 
-			$sbeams->writeResultSet(
-				resultset_file_ref=>\$rs_params{set_name},
-				resultset_ref=>$resultset_ref,
-				query_parameters_ref=>\%parameters,
-				resultset_params_ref=>\%rs_params,
-				query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
-				column_titles_ref=>\@column_titles,
-				%write_params
-			);
        
       if ( $resultset_ref->{from_cache} ) {
         #### Post process the resultset
@@ -1312,6 +1303,15 @@ sub handle_request {
           column_titles_ref=>\@column_titles,
         ); 
       }
+			$sbeams->writeResultSet(
+				resultset_file_ref=>\$rs_params{set_name},
+				resultset_ref=>$resultset_ref,
+				query_parameters_ref=>\%parameters,
+				resultset_params_ref=>\%rs_params,
+				query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+				column_titles_ref=>\@column_titles,
+				%write_params
+			);
     }
 
     #### Draw the protein and gene location graph
