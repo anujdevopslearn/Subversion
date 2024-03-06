@@ -85,6 +85,10 @@ sub display_page_header {
     # Caller may want header printing to be handled here
     if ( $args{force_header} ) { 
 
+      # Add CORS headers. - Not working...?
+      #$http_header = "Access-Control-Allow-Origin : *\n" . $http_header;
+      #print(STDERR "ACK\n");
+
       # Print http header
       print $http_header if $sbeams->invocation_mode() eq 'http';
     }
