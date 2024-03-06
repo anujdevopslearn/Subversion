@@ -884,7 +884,7 @@ sub handle_request {
     }elsif($sbeams->output_mode() eq 'xml' || $sbeams->output_mode() eq 'tsv'  || 
 	     $sbeams->output_mode() eq 'excel'  || $sbeams->output_mode() eq 'csv' || 
        $sbeams->output_mode() =~ /json/i ){
-
+                                print("Access-Control-Allow-Origin: *\n");
 				$sbeams->displayResultSet(
 					resultset_ref=>$resultset_ref,
 					query_parameters_ref=>\%parameters,
